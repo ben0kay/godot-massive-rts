@@ -5,3 +5,7 @@
 ## FB0 — Future hit-feedback ownership
 
 [Hit feedback](../FEEDBACK/README.md) supplies flash and scale to the shared packed transforms. Both upload paths use the same scale and ground-anchored centre offset.
+
+## VIS2 — Refined soldier silhouettes
+
+`FacetedSoldierMeshes.cs` now generates a narrow sloped top-edge bevel with an intermediate baked lightness for each shape. Circle infantry has 16 radial sides instead of 12. The diamond cavalry is about 1.9:1 in XZ silhouette, elongated along the default X-axis marching direction (~1.21 long × 0.64 wide) while remaining inside its unchanged 0.63 gameplay footprint radius. Geometry is created once per unit type using one unshaded material, with the existing faction/type MultiMesh batches, packed transforms and feedback effects unchanged. Slightly more triangles per soldier can increase GPU geometry throughput, so compare FPS at 10k–20k units.

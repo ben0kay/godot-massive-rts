@@ -1,15 +1,18 @@
-// Creates shared low-poly soldier meshes with baked top/side face tones.
-// These vertex tints multiply the existing per-instance blue/red/white colors.
+// Creates shared beveled low-poly soldier meshes with baked top, chamfer and side tones.
+// All shapes use one unshaded material and remain compatible with MultiMesh batching.
 using Godot;
 namespace MassiveRts;
 
 public static class FacetedSoldierMeshes
 {
+    private const int CircleSides = 16;
+    private const float TopInsetFraction = 0.11f;
+    private const float DiamondLengthFootprintFraction = 0.96f;
     private static readonly Color TopTint = Colors.White;
     private static readonly Color BottomTint = new(0.48f, 0.48f, 0.48f);
 
     // =========================================================
-    // All materials stay unshaded. Shading is authored once per mesh, not per frame.
+    // Construct one reusable mesh per unit type. No per-soldier geometry or lighting work.
     public static Mesh[] Create(RuntimeUnitCatalog catalog)
     {
         var material = new StandardMaterial3D
@@ -25,11 +28,20 @@ public static class FacetedSoldierMeshes
             float radius = type.Width * 0.5f;
             meshes[i] = type.Shape switch
             {
-                UnitShape.Circle => CreatePrism(12, radius, type.Height, 0f, material),
-                UnitShape.Square => CreateBox(type.Width, type.Height, type.Width, material),
-                UnitShape.Triangle => CreatePrism(3, type.Width / Mathf.Sqrt(3), type.Height, -Mathf.Pi * 0.5f, material),
-                UnitShape.Diamond => CreatePrism(4, radius, type.Height, 0f, material),
-                UnitShape.Pentagon => CreatePrism(5, type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)), type.Height, -Mathf.Pi * 0.5f, material),
+                UnitShape.Circle => CreateBeveledPrism(CircleSides, radius, radius, type.Height, 0f, material),
+                // A four-vertex square rotated 45 degrees in polar coordinates gives axis-aligned edges.
+                UnitShape.Square => CreateBeveledPrism(4, type.Width / Mathf.Sqrt(2f),
+                    type.Width / Mathf.Sqrt(2f), type.Height, Mathf.Pi * 0.25f, material),
+                UnitShape.Triangle => CreateBeveledPrism(3, type.Width / Mathf.Sqrt(3f),
+                    type.Width / Mathf.Sqrt(3f), type.Height, -Mathf.Pi * 0.5f, material),
+                // A genuinely long, narrow rhombus, rather than the old equal-axis rotated square.
+                // Longest point follows the default X-axis march, staying inside the existing collision footprint.
+                UnitShape.Diamond => CreateBeveledPrism(4,
+                    Mathf.Max(radius, type.Footprint * DiamondLengthFootprintFraction), radius, type.Height, 0f, material),
+                UnitShape.Pentagon => CreateBeveledPrism(5,
+                    type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
+                    type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
+                    type.Height, -Mathf.Pi * 0.5f, material),
                 _ => throw new System.ArgumentOutOfRangeException()
             };
         }
@@ -37,65 +49,66 @@ public static class FacetedSoldierMeshes
     }
 
     // =========================================================
-    private static ArrayMesh CreatePrism(int sides, float radius, float height, float rotation, Material material)
+    // A narrow inset top ring creates a single, lightly shaded bevel around every silhouette.
+    // The shoulders retain the original outer footprint, and the bottoms remain at -height/2.
+    private static ArrayMesh CreateBeveledPrism(int sides, float radiusX, float radiusZ,
+        float height, float rotation, Material material)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
+
         float half = height * 0.5f;
-        var upper = new Vector3[sides];
-        var lower = new Vector3[sides];
+        float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
+        float insetDistance = Mathf.Min(radiusX, radiusZ) * TopInsetFraction;
+        var top = new Vector3[sides];
+        var shoulder = new Vector3[sides];
+        var bottom = new Vector3[sides];
 
         for (int i = 0; i < sides; i++)
         {
-            float angle = rotation + i * 2f * Mathf.Pi / sides;
-            float x = Mathf.Cos(angle) * radius, z = Mathf.Sin(angle) * radius;
-            upper[i] = new Vector3(x, half, z);
-            lower[i] = new Vector3(x, -half, z);
+            float angle = rotation + i * Mathf.Tau / sides;
+            float x = Mathf.Cos(angle) * radiusX, z = Mathf.Sin(angle) * radiusZ;
+            top[i] = new Vector3(x * (1f - TopInsetFraction), half, z * (1f - TopInsetFraction));
+            shoulder[i] = new Vector3(x, half - bevelRise, z);
+            bottom[i] = new Vector3(x, -half, z);
         }
 
         for (int i = 0; i < sides; i++)
         {
             int next = (i + 1) % sides;
-            AddTriangle(surface, new Vector3(0, half, 0), upper[next], upper[i], Vector3.Up, TopTint);
-            AddTriangle(surface, new Vector3(0, -half, 0), lower[i], lower[next], Vector3.Down, BottomTint);
+            Vector3 edge = shoulder[next] - shoulder[i];
+            Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
 
-            Vector3 outward = new Vector3(upper[i].X + upper[next].X, 0, upper[i].Z + upper[next].Z).Normalized();
-            AddQuad(surface, lower[i], upper[i], upper[next], lower[next], outward, SideTint(outward));
+            AddTriangle(surface, new Vector3(0, half, 0), top[next], top[i], Vector3.Up, TopTint);
+            AddTriangle(surface, new Vector3(0, -half, 0), bottom[i], bottom[next], Vector3.Down, BottomTint);
+
+            AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
+                outward, SideTint(outward));
+            Vector3 bevelNormal = (outward * bevelRise + Vector3.Up * insetDistance).Normalized();
+            AddQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
+                bevelNormal, BevelTint(outward));
         }
-
         return surface.Commit();
     }
 
     // =========================================================
-    private static ArrayMesh CreateBox(float width, float height, float depth, Material material)
+    private static float SideBrightness(Vector3 outward)
     {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(material);
-        float x = width * 0.5f, y = height * 0.5f, z = depth * 0.5f;
-
-        AddQuad(surface, new(-x, y, -z), new(-x, y, z), new(x, y, z), new(x, y, -z),
-            Vector3.Up, TopTint);
-        AddQuad(surface, new(-x, -y, z), new(-x, -y, -z), new(x, -y, -z), new(x, -y, z),
-            Vector3.Down, BottomTint);
-        AddQuad(surface, new(-x, -y, z), new(x, -y, z), new(x, y, z), new(-x, y, z),
-            new Vector3(0, 0, 1), SideTint(new Vector3(0, 0, 1)));
-        AddQuad(surface, new(x, -y, -z), new(-x, -y, -z), new(-x, y, -z), new(x, y, -z),
-            new Vector3(0, 0, -1), SideTint(new Vector3(0, 0, -1)));
-        AddQuad(surface, new(x, -y, z), new(x, -y, -z), new(x, y, -z), new(x, y, z),
-            Vector3.Right, SideTint(Vector3.Right));
-        AddQuad(surface, new(-x, -y, -z), new(-x, -y, z), new(-x, y, z), new(-x, y, -z),
-            Vector3.Left, SideTint(Vector3.Left));
-        return surface.Commit();
+        // Fixed fake northwest sun, with no run-time lighting or per-instance material cost.
+        return Mathf.Clamp(0.73f - 0.10f * outward.X - 0.12f * outward.Z, 0.58f, 0.86f);
     }
 
-    // =========================================================
     private static Color SideTint(Vector3 outward)
     {
-        // A fixed fake sun from northwest. Slightly different faces stay readable
-        // even when no DirectionalLight3D or shadow rendering exists.
-        float brightness = Mathf.Clamp(0.73f - 0.10f * outward.X - 0.12f * outward.Z, 0.58f, 0.86f);
+        float brightness = SideBrightness(outward);
+        return new Color(brightness, brightness, brightness);
+    }
+
+    private static Color BevelTint(Vector3 outward)
+    {
+        // Extra intermediate tone makes the top chamfer read as a softened edge.
+        float brightness = Mathf.Lerp(SideBrightness(outward), 1f, 0.58f);
         return new Color(brightness, brightness, brightness);
     }
 
@@ -111,8 +124,7 @@ public static class FacetedSoldierMeshes
     {
         surface.SetNormal(normal);
         surface.SetColor(tint);
-        // Arguments are ordered outward using the cross product; Godot's
-        // front-face convention is clockwise, so reverse them when submitted.
+        // Preserve the project's existing Godot clockwise front-face convention.
         surface.AddVertex(a);
         surface.AddVertex(c);
         surface.AddVertex(b);

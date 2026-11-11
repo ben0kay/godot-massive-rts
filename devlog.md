@@ -48,3 +48,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Ranged firing-line movement | Source implemented.** Stationary ranged units hold for any target already in range, settle slightly inside range after advancing, and ease in over 0.32 seconds. Owner visual validation pending.
 
 - **2026-11-11 | Three-team painted battles | Source implemented.** Added Green, removed paint-side restrictions, and updated targeting, projectiles, area damage and ally yielding for all opposing teams. Owner testing pending.
+
+- **2026-11-11 | VIS2 refined soldier silhouettes | Source implemented; awaiting owner visual/FPS validation.** Changed cavalry from a square-like diamond to a ~1.9:1 long rhombus within its original footprint, increased Circle to 16 sides, and added top-edge bevels/intermediate baked shading to all shared soldier meshes. Preserved MultiMesh batches and game balance.
