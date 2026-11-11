@@ -4,6 +4,14 @@ namespace MassiveRts;
 
 public static class CombatSystem
 {
+    private const int ExtraPursuitQueriesPerTick = 128;
+
+    public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
+    {
+        for (int i = start; i < end; i++)
+            units.Target[i] = grid.FindPursuitEnemy(units, i, -1);
+    }
+
     // =========================================================
     public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick)
     {
@@ -11,11 +19,12 @@ public static class CombatSystem
         int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
         int localPhase = tick % localInterval;
         int pursuitPhase = tick % pursuitInterval;
+        int extraPursuitQueries = ExtraPursuitQueriesPerTick;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
-            int target = units.Target[i];
-            if (target >= 0 && units.Health[target] <= 0) target = -1;
+            int previous = units.Target[i];
+            int target = previous >= 0 && units.Health[previous] > 0 ? previous : -1;
 
             bool refreshLocal = i % localInterval == localPhase;
             bool refreshPursuit = i % pursuitInterval == pursuitPhase;
@@ -39,8 +48,18 @@ public static class CombatSystem
                 }
                 if (refreshPursuit && distance >= radius * radius)
                     target = grid.FindPursuitEnemy(units, i, target);
+                else if (refreshLocal && target < 0 && previous >= 0 && extraPursuitQueries > 0)
+                {
+                    int enemyAlive = units.Faction[i] == 0 ? units.Red : units.Blue;
+                    if (enemyAlive > 0)
+                    {
+                        extraPursuitQueries--;
+                        target = grid.FindPursuitEnemy(units, i, -1);
+                    }
+                }
             }
-            units.Target[i] = target;
+            // A dead target remains a movement waypoint until replacement. Attacks require a live target.
+            units.Target[i] = target >= 0 ? target : previous;
         }
     }
     // =========================================================

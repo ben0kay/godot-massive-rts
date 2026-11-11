@@ -15,8 +15,10 @@ public static class MovementSystem
             if (units.Flash[i] > 0) { units.Flash[i] = Mathf.Max(0, units.Flash[i] - dt); units.Dirty[i] = true; }
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
-            if (!hasTarget && !movementMode) continue;
-            Vector3 destination = hasTarget ? units.Position[target] : units.Goal[i];
+            bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
+                (units.Faction[i] == 0 ? units.Red : units.Blue) > 0;
+            if (!hasTarget && !movementMode && !followingLastPosition) continue;
+            Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
             Vector3 offset = destination - units.Position[i]; offset.Y = 0;
             ref readonly UnitStats type = ref catalog[units.Type[i]];
             float stop = 0.2f;
@@ -27,7 +29,7 @@ public static class MovementSystem
                 stop = type.Ranged ? reach * 0.85f :
                     Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
             }
-            bool marchingInLane = !hasTarget && offset.Z == 0f;
+            bool marchingInLane = movementMode && offset.Z == 0f;
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
             if (distance <= stop)
             {

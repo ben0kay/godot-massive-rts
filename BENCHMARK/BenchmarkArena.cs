@@ -20,7 +20,8 @@ public partial class BenchmarkArena : Node3D
     private DeploymentFactory deployment;
     private DeploymentPainter painter;
     private BenchmarkMode mode;
-    private int requested, targetCount, tick;
+    private const int InitialTargetsPerFrame = 512;
+    private int requested, targetCount, tick, preparedTargets;
     private bool spawning, paused;
     private double accumulator, hudClock;
     private long skippedSteps;
@@ -75,7 +76,7 @@ public partial class BenchmarkArena : Node3D
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         units = null; projectiles = null; grid = null; deployment = null; spawning = false;
-        accumulator = 0; tick = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
+        accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
     }
     private void Spawn()
@@ -144,8 +145,21 @@ public partial class BenchmarkArena : Node3D
         frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
         if (spawning)
         {
-            deployment.Append(units, Config.SpawnPerFrame);
-            panel.Status.Text = $"Preparing {units.Count:N0} / {requested:N0}\nSimulation starts after deployment.";
+            if (units.Count < targetCount)
+            {
+                deployment.Append(units, Config.SpawnPerFrame);
+                panel.Status.Text = $"Preparing {units.Count:N0} / {requested:N0} soldiers";
+                if (units.Count < targetCount) return;
+                grid?.Rebuild(units);
+            }
+            if (grid != null && preparedTargets < targetCount)
+            {
+                int end = Math.Min(targetCount, preparedTargets + InitialTargetsPerFrame);
+                CombatSystem.PrepareTargets(units, grid, preparedTargets, end);
+                preparedTargets = end;
+                panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {targetCount:N0}";
+                if (preparedTargets < targetCount) return;
+            }
             if (units.Count == targetCount)
             {
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
