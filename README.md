@@ -85,6 +85,12 @@ TESTS/                # Small automated checks, only when needed
 
 **BENCH0 specifically:** Place its arena, scenarios, controls and benchmark-only settings under `BENCHMARK/`. Reusable simulation, renderer and camera components belong under their own major system folders. Subfolders group related concerns; create them only when actual files exist. Avoid unnecessary nesting, empty folders and cross-system duplicates.
 
+## Soldier roster — UNIT0 planned
+
+The intended first five independently configured soldiers are **Circle (basic melee)**, **Square (stronger melee)**, **Equilateral Triangle (ranged)**, **Diamond (fast cavalry)** and **Pentagon (large slow elite infantry)**. Each will remain a simple shaded 3D primitive with blue/red team tints. UNIT0 is a **planned implementation**, not a claim that these are playable yet.
+
+Codex implementation instructions: [UNITS/UNIT0_IMPLEMENTATION_PLAN.md](UNITS/UNIT0_IMPLEMENTATION_PLAN.md). Proposed editable starting stats: [UNITS/DEFINITIONS/STARTING_ROSTER.md](UNITS/DEFINITIONS/STARTING_ROSTER.md). The capitalized `UNITS/` major folder owns definitions and catalogue; combat, simulation, rendering and deployment retain their existing ownership.
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.
