@@ -41,9 +41,9 @@ Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon i
 
 ## Painted deployments
 
-Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue places on negative X and red on positive X. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
+Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
 
-**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. New saves store stable unit IDs. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires both armies and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected benchmark layout.
+**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. New saves store stable unit IDs. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires at least two different teams and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected Blue vs Red benchmark layout. Existing saves keep Blue and Red IDs, and Green uses ID 2.
 
 The deployment cells are 2.1 world units wide and independent of the combat grid. The combat index uses direct cell lookups within its central array, a dictionary outside it, and clears only occupied array entries each tick. Both paths retain the same soldier order within each cell.
 

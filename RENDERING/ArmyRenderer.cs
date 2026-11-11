@@ -27,7 +27,7 @@ public partial class ArmyRenderer : Node3D
     {
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
         typeCount = state.Catalog.Count;
-        int batchCount = typeCount * 2;
+        int batchCount = typeCount * Factions.Count;
         members = new int[batchCount][];
         buffers = new float[batchCount][];
         changedSlots = new int[batchCount][];
@@ -45,7 +45,7 @@ public partial class ArmyRenderer : Node3D
             members[b] = new int[capacity];
             buffers[b] = new float[capacity * InstanceStride];
             changedSlots[b] = new int[SparseUpdateLimit];
-            Color faction = b < typeCount ? Blue : Red;
+            Color faction = FactionColor(b / typeCount);
             for (int offset = 0; offset < buffers[b].Length; offset += InstanceStride)
             {
                 buffers[b][offset] = buffers[b][offset + 5] = buffers[b][offset + 10] = 1f;
@@ -59,8 +59,13 @@ public partial class ArmyRenderer : Node3D
         Sync();
     }
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
-    internal static readonly Color Blue = new(0.12f, 0.45f, 1f);
-    internal static readonly Color Red = new(1f, 0.15f, 0.12f);
+    private static readonly Color[] FactionColors =
+    {
+        new(0.12f, 0.45f, 1f),
+        new(1f, 0.15f, 0.12f),
+        new(0.22f, 0.91f, 0.29f)
+    };
+    internal static Color FactionColor(int faction) => FactionColors[faction];
 
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
@@ -81,7 +86,7 @@ public partial class ArmyRenderer : Node3D
         buffer[offset + 3] = position.X;
         buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
-        Color color = white ? Colors.White : batch < typeCount ? Blue : Red;
+        Color color = white ? Colors.White : FactionColor(units.Faction[id]);
         if (buffer[offset + 12] != color.R || buffer[offset + 13] != color.G ||
             buffer[offset + 14] != color.B || buffer[offset + 15] != color.A)
             StoreColor(buffer, offset, color);

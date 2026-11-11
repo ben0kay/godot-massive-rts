@@ -15,7 +15,7 @@ public sealed class SeparationSystem
     private const int MaxGridCells = 1 << 20;
 
     // Indexed by soldier id.
-    private const byte RangedRole = 1, RedFaction = 2, VoluntaryMove = 4;
+    private const byte RangedRole = 1, FactionMask = 6, VoluntaryMove = 8;
     private readonly int[] cellOfId;
     private byte[] slotFlags;
     private bool[] rangedByType = Array.Empty<bool>();
@@ -179,7 +179,7 @@ public sealed class SeparationSystem
             slotRadius[slot] = footprintByType[type[id]];
             if (voluntaryMovement != null)
             {
-                slotFlags[slot] = (byte)((units.Faction[id] == 0 ? 0 : RedFaction) |
+                slotFlags[slot] = (byte)((units.Faction[id] << 1) |
                     (rangedByType[type[id]] ? RangedRole : 0) |
                     (voluntaryMovement[id] != 0 ? VoluntaryMove : 0));
             }
@@ -261,7 +261,7 @@ public sealed class SeparationSystem
             byte a = slotFlags[i], b = slotFlags[j];
             int difference = a ^ b;
             // Gate the exception on faction before considering the two roles.
-            if ((difference & RedFaction) == 0 && (difference & RangedRole) != 0)
+            if ((difference & FactionMask) == 0 && (difference & RangedRole) != 0)
             {
                 ResolveAlliedPair(i, j, dx, dz, d2, limit, a, b);
                 return;

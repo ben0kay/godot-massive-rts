@@ -19,3 +19,5 @@ When enabled alongside Normal or Strong, advancing melee can approach stationary
 Combat movement ramps to the authored top speed over 0.15 seconds for melee and 0.32 seconds for ranged, with braking near the existing stop distance. The benchmark resource exposes both ramp durations. A zero duration gives immediate movement for that role. Movement-only keeps its constant-speed lanes.
 
 Stationary ranged soldiers hold their position while a living target is in exact attack range and wait for a replacement target after a kill. An advancing ranged soldier settles up to 0.25 world units inside range to absorb small shifts in target distance. Firing still uses the authored range.
+
+Blue, Red and Green treat every other team as hostile. Local targeting picks the nearest examined enemy within its existing candidate budget. Long-range pursuit compares the nearest live candidates across opposing team trees. Area attacks and projectile sweeps use the same faction filter, and SEP2 compares the full team ID for ally yielding.

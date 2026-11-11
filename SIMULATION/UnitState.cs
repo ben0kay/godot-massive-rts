@@ -10,8 +10,15 @@ public sealed class UnitState
     public readonly int[] Target;
     public readonly byte[] Faction, Type;
     public readonly bool[] Dirty;
-    public int Count, Blue, Red;
-    public int Alive => Blue + Red;
+    public readonly int[] FactionAlive = new int[Factions.Count];
+    public int Count;
+    public int Alive { get; private set; }
+
+    public void RegisterSpawn(byte faction)
+    {
+        FactionAlive[faction]++;
+        Alive++;
+    }
     public RuntimeUnitCatalog Catalog { get; }
     public HitFeedbackSystem HitFeedback { get; }
     public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null)
@@ -31,7 +38,8 @@ public sealed class UnitState
         Health[id] = Mathf.Max(0, previous - Mathf.Max(0, damage * Catalog[Type[id]].DamageTaken));
         if (Health[id] == 0)
         {
-            if (Faction[id] == 0) Blue--; else Red--;
+            FactionAlive[Faction[id]]--;
+            Alive--;
             Dirty[id] = true;
         }
         else if (Health[id] < previous && HitFeedback != null)

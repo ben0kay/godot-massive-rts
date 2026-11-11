@@ -60,6 +60,6 @@ internal sealed class DeploymentPreview
         SoldierPlacement placement = placements[slot];
         Vector3 position = placement.Position() + Vector3.Up * halfHeight;
         mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
-        mesh.SetInstanceColor(slot, placement.Faction == 0 ? ArmyRenderer.Blue : ArmyRenderer.Red);
+        mesh.SetInstanceColor(slot, ArmyRenderer.FactionColor(placement.Faction));
     }
 }

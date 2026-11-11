@@ -20,7 +20,7 @@ public static class MovementSystem
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
-                (units.Faction[i] == 0 ? units.Red : units.Blue) > 0;
+                units.Alive > units.FactionAlive[units.Faction[i]];
             if (!hasTarget && !movementMode && !followingLastPosition)
             {
                 units.MoveSpeed[i] = 0f;

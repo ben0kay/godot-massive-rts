@@ -95,7 +95,6 @@ public sealed class DeploymentFactory
         units.Target[i] = -1;
         units.Cooldown[i] = random.RandfRange(0, type.Interval);
         units.Dirty[i] = true;
-        if (units.Faction[i] == 0) units.Blue++;
-        else units.Red++;
+        units.RegisterSpawn(units.Faction[i]);
     }
 }

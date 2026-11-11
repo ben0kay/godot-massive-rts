@@ -146,16 +146,16 @@ public partial class BenchmarkArena : Node3D
     private void StartPaintedBattle()
     {
         var placements = painter.Layout.Placements;
-        bool blue = false, red = false, ranged = false;
+        int factionMask = 0;
+        bool ranged = false;
         foreach (SoldierPlacement placement in placements)
         {
-            blue |= placement.Faction == 0;
-            red |= placement.Faction == 1;
+            factionMask |= 1 << placement.Faction;
             ranged |= catalog[placement.Type].Ranged;
         }
-        if (!blue || !red || placements.Count > painter.Limit)
+        if (System.Numerics.BitOperations.PopCount((uint)factionMask) < 2 || placements.Count > painter.Limit)
         {
-            panel.Status.Text = "Place both armies within the troop limit.\n" + DeploymentCount();
+            panel.Status.Text = "Place at least two teams within the troop limit.\n" + DeploymentCount();
             return;
         }
         var snapshot = new SoldierPlacement[placements.Count];
@@ -287,7 +287,7 @@ public partial class BenchmarkArena : Node3D
             : "";
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
-            $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
+            $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.FactionAlive[Factions.Blue] ?? 0:N0} • Red {units?.FactionAlive[Factions.Red] ?? 0:N0} • Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\nSampled penetration avg/max: {separationSamples}\n\n" +

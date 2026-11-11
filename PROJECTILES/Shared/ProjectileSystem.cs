@@ -9,7 +9,7 @@ public sealed class ProjectileSystem
     public readonly int[] Type;
     private readonly Vector3[] origin, displacement;
     private readonly float[] elapsed, duration, arc, damage;
-    private readonly byte[] enemyFaction;
+    private readonly byte[] sourceFaction;
     private readonly ProjectileCatalog catalog;
     public int Count { get; private set; }
     public int Dropped { get; private set; }
@@ -21,7 +21,7 @@ public sealed class ProjectileSystem
         Position = new Vector3[capacity]; Direction = new Vector3[capacity];
         origin = new Vector3[capacity]; displacement = new Vector3[capacity];
         elapsed = new float[capacity]; duration = new float[capacity]; arc = new float[capacity];
-        damage = new float[capacity]; Type = new int[capacity]; enemyFaction = new byte[capacity];
+        damage = new float[capacity]; Type = new int[capacity]; sourceFaction = new byte[capacity];
     }
 
     public void Fire(int shooter, int victim, UnitState units)
@@ -42,7 +42,7 @@ public sealed class ProjectileSystem
         Direction[i] = path + Vector3.Up * (4f * arc[i]);
         damage[i] = type.Damage;
         Type[i] = type.ProjectileType;
-        enemyFaction[i] = units.Faction[victim];
+        sourceFaction[i] = units.Faction[shooter];
         Dirty = true;
     }
 
@@ -58,7 +58,7 @@ public sealed class ProjectileSystem
             float t = elapsed[i] / duration[i];
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
-            int victim = grid.FirstProjectileHit(units, enemyFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding);
+            int victim = grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding);
             if (victim >= 0) units.Damage(victim, damage[i]);
             else if (elapsed[i] < endTime)
             {
@@ -77,6 +77,6 @@ public sealed class ProjectileSystem
         Position[index] = Position[last]; Direction[index] = Direction[last];
         origin[index] = origin[last]; displacement[index] = displacement[last];
         elapsed[index] = elapsed[last]; duration[index] = duration[last]; arc[index] = arc[last];
-        damage[index] = damage[last]; Type[index] = Type[last]; enemyFaction[index] = enemyFaction[last];
+        damage[index] = damage[last]; Type[index] = Type[last]; sourceFaction[index] = sourceFaction[last];
     }
 }

@@ -1,6 +1,7 @@
 // Reused linked-cell index with candidate-bounded local enemy queries.
 using System;
 using System.Collections.Generic;
+using BitOperations = System.Numerics.BitOperations;
 using Godot;
 namespace MassiveRts;
 
@@ -12,20 +13,22 @@ public sealed class SpatialGrid
     private int occupiedCount;
     private readonly int[] next;
     private readonly float cellSize;
-    private readonly Vector2[] factionMin = new Vector2[2];
-    private readonly Vector2[] factionMax = new Vector2[2];
+    private readonly Vector2[] factionMin = new Vector2[Factions.Count];
+    private readonly Vector2[] factionMax = new Vector2[Factions.Count];
     private readonly OccupiedCellTree[] pursuitTrees;
     private bool pursuitTreesReady;
+    private int occupiedFactions;
     public int LimitedQueries { get; private set; }
     public SpatialGrid(int capacity, float size)
     {
         next = new int[capacity];
         occupied = new int[capacity];
         cellSize = size;
-        pursuitTrees = new[] { new OccupiedCellTree(size), new OccupiedCellTree(size) };
+        pursuitTrees = new OccupiedCellTree[Factions.Count];
+        for (int i = 0; i < pursuitTrees.Length; i++) pursuitTrees[i] = new OccupiedCellTree(size);
         halfWidth = Mathf.CeilToInt(640f / size);
         width = halfWidth * 2;
-        heads = new int[width * width * 2];
+        heads = new int[width * width * Factions.Count];
     }
 
     // Zero denotes an empty cell. Stored IDs are offset by one.
@@ -33,7 +36,7 @@ public sealed class SpatialGrid
     {
         x += halfWidth;
         z += halfWidth;
-        return (uint)x < (uint)width && (uint)z < (uint)width ? (z * width + x) * 2 + faction : -1;
+        return (uint)x < (uint)width && (uint)z < (uint)width ? (z * width + x) * Factions.Count + faction : -1;
     }
 
     private int Head(int x, int z, int faction)
@@ -48,10 +51,11 @@ public sealed class SpatialGrid
     {
         for (int i = 0; i < occupiedCount; i++) heads[occupied[i]] = 0;
         occupiedCount = 0;
+        occupiedFactions = 0;
         overflowHeads.Clear();
         LimitedQueries = 0;
         pursuitTreesReady = false;
-        for (int faction = 0; faction < 2; faction++)
+        for (int faction = 0; faction < Factions.Count; faction++)
         {
             factionMin[faction] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
             factionMax[faction] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
@@ -62,6 +66,7 @@ public sealed class SpatialGrid
             if (units.Health[i] <= 0) continue;
             Vector3 position = units.Position[i];
             int faction = units.Faction[i];
+            occupiedFactions |= 1 << faction;
             var point = new Vector2(position.X, position.Z);
             factionMin[faction] = factionMin[faction].Min(point);
             factionMax[faction] = factionMax[faction].Max(point);
@@ -86,11 +91,17 @@ public sealed class SpatialGrid
     public int FindEnemy(UnitState units, int id, float radius, int budget, int tick)
     {
         Vector3 position = units.Position[id];
-        int enemy = 1 - units.Faction[id];
-        Vector2 min = factionMin[enemy], max = factionMax[enemy];
-        // A disjoint XZ interval proves the spherical query cannot find a target.
-        if (position.X + radius < min.X || position.X - radius > max.X ||
-            position.Z + radius < min.Y || position.Z - radius > max.Y) return -1;
+        int enemies = EnemiesOf(units.Faction[id]);
+        // A disjoint XZ interval proves the spherical query cannot reach that faction.
+        for (int mask = enemies; mask != 0; mask &= mask - 1)
+        {
+            int faction = BitOperations.TrailingZeroCount(mask);
+            Vector2 min = factionMin[faction], max = factionMax[faction];
+            if (position.X + radius < min.X || position.X - radius > max.X ||
+                position.Z + radius < min.Y || position.Z - radius > max.Y)
+                enemies &= ~(1 << faction);
+        }
+        if (enemies == 0) return -1;
         Vector2I center = Cell(position);
         int cells = Mathf.CeilToInt(radius / cellSize), examined = 0, best = -1;
         float bestDistance = radius * radius;
@@ -108,16 +119,16 @@ public sealed class SpatialGrid
                 else if (edge < width + width - 1) { dx = ring; dz = edge - width - ring + 1; }
                 else if (edge < width * 3 - 2) { dx = ring - 1 - (edge - (width * 2 - 1)); dz = ring; }
                 else { dx = -ring; dz = ring - 1 - (edge - (width * 3 - 2)); }
-                int other = Head(center.X + dx, center.Y + dz, enemy);
-                while (other >= 0)
+                for (int mask = enemies; mask != 0; mask &= mask - 1)
                 {
-                    if (++examined > budget) { LimitedQueries++; return best; }
-                    if (units.Health[other] > 0 && units.Faction[other] != units.Faction[id])
+                    int faction = BitOperations.TrailingZeroCount(mask);
+                    for (int other = Head(center.X + dx, center.Y + dz, faction); other >= 0; other = next[other])
                     {
-                        float distance = units.Position[id].DistanceSquaredTo(units.Position[other]);
+                        if (++examined > budget) { LimitedQueries++; return best; }
+                        if (units.Health[other] <= 0f) continue;
+                        float distance = position.DistanceSquaredTo(units.Position[other]);
                         if (distance < bestDistance) { bestDistance = distance; best = other; }
                     }
-                    other = next[other];
                 }
             }
         }
@@ -127,63 +138,76 @@ public sealed class SpatialGrid
     // Long-range queries share a tree built once per tick, only when needed.
     public int FindPursuitEnemy(UnitState units, int id, int previous)
     {
-        int enemy = 1 - units.Faction[id];
-        if (factionMin[enemy].X == float.PositiveInfinity) return -1;
+        int enemies = EnemiesOf(units.Faction[id]);
+        if (enemies == 0) return -1;
         if (!pursuitTreesReady)
         {
             foreach (OccupiedCellTree tree in pursuitTrees) tree.Clear();
             for (int i = 0; i < occupiedCount; i++)
             {
                 int index = occupied[i];
-                int cell = index / 2;
-                pursuitTrees[index % 2].Add(cell % width - halfWidth, cell / width - halfWidth, heads[index] - 1);
+                int cell = index / Factions.Count;
+                pursuitTrees[index % Factions.Count].Add(cell % width - halfWidth, cell / width - halfWidth, heads[index] - 1);
             }
             foreach (var entry in overflowHeads)
                 pursuitTrees[entry.Key.Z].Add(entry.Key.X, entry.Key.Y, entry.Value);
             foreach (OccupiedCellTree tree in pursuitTrees) tree.Build();
             pursuitTreesReady = true;
         }
-        return pursuitTrees[enemy].FindNearest(units, next, id, previous);
+        int best = previous;
+        for (int mask = enemies; mask != 0; mask &= mask - 1)
+        {
+            int faction = BitOperations.TrailingZeroCount(mask);
+            int found = pursuitTrees[faction].FindNearest(units, next, id, best);
+            if (found >= 0) best = found;
+        }
+        return best;
     }
 
-    // Enumerate the faction's pre-movement cells without allocating a candidate list.
-    public CandidateCursor GetCandidates(Vector3 center, float radius, int faction)
+    private int EnemiesOf(int faction) => occupiedFactions & ~(1 << faction);
+
+    // Enumerate opposing pre-movement cells without allocating a candidate list.
+    public CandidateCursor GetCandidates(Vector3 center, float radius, int sourceFaction)
     {
         Vector3 extent = new(radius, 0f, radius);
-        return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), faction);
+        return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), EnemiesOf(sourceFaction));
     }
 
     public struct CandidateCursor
     {
         private readonly SpatialGrid grid;
         private readonly Vector2I min, max;
-        private readonly int faction;
-        private int x, z, nextId;
+        private readonly int enemies;
+        private int x, z, nextId, remainingFactions;
         public int Current { get; private set; }
 
-        internal CandidateCursor(SpatialGrid grid, Vector2I min, Vector2I max, int faction)
+        internal CandidateCursor(SpatialGrid grid, Vector2I min, Vector2I max, int enemies)
         {
             this.grid = grid;
             this.min = min;
             this.max = max;
-            this.faction = faction;
+            this.enemies = enemies;
             x = min.X;
             z = min.Y;
+            remainingFactions = enemies;
             nextId = Current = -1;
         }
 
         public bool MoveNext()
         {
+            if (enemies == 0) return false;
             while (nextId < 0)
             {
-                if (z > max.Y) return false;
-                nextId = grid.Head(x, z, faction);
-                if (x == max.X)
+                if (remainingFactions == 0)
                 {
-                    x = min.X;
-                    z++;
+                    if (x == max.X) { x = min.X; z++; }
+                    else x++;
+                    remainingFactions = enemies;
                 }
-                else x++;
+                if (z > max.Y) return false;
+                int faction = BitOperations.TrailingZeroCount(remainingFactions);
+                remainingFactions &= remainingFactions - 1;
+                nextId = grid.Head(x, z, faction);
             }
             Current = nextId;
             nextId = grid.next[Current];
@@ -192,7 +216,7 @@ public sealed class SpatialGrid
     }
 
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
-    public int FirstProjectileHit(UnitState units, int enemy, Vector3 from, Vector3 segment, float radius, float movementPadding)
+    public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding)
     {
         float padding = Mathf.Max(radius, units.Catalog.MaxFootprint) + movementPadding;
         Vector3 end = from + segment;
@@ -201,30 +225,28 @@ public sealed class SpatialGrid
         float lengthSquared = segment.LengthSquared();
         float earliest = float.PositiveInfinity;
         int hit = -1;
-        for (int z = min.Y; z <= max.Y; z++)
-        for (int x = min.X; x <= max.X; x++)
+        var candidates = new CandidateCursor(this, min, max, EnemiesOf(sourceFaction));
+        while (candidates.MoveNext())
         {
-            for (int id = Head(x, z, enemy); id >= 0; id = next[id])
+            int id = candidates.Current;
+            if (units.Health[id] <= 0) continue;
+            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            float hitRadius = Mathf.Max(radius, type.Footprint);
+            Vector3 relative = units.Position[id] + Vector3.Up * (type.Height * 0.5f) - from;
+            float outside = relative.LengthSquared() - hitRadius * hitRadius;
+            float entry = 0;
+            if (outside > 0)
             {
-                if (units.Health[id] <= 0) continue;
-                ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
-                float hitRadius = Mathf.Max(radius, type.Footprint);
-                Vector3 relative = units.Position[id] + Vector3.Up * (type.Height * 0.5f) - from;
-                float outside = relative.LengthSquared() - hitRadius * hitRadius;
-                float entry = 0;
-                if (outside > 0)
-                {
-                    float projection = relative.Dot(segment);
-                    float discriminant = projection * projection - lengthSquared * outside;
-                    if (lengthSquared <= 0 || projection <= 0 || discriminant < 0) continue;
-                    entry = (projection - Mathf.Sqrt(discriminant)) / lengthSquared;
-                    if (entry > 1) continue;
-                }
-                if (entry >= earliest) continue;
-                earliest = entry;
-                hit = id;
-                if (entry == 0) return hit;
+                float projection = relative.Dot(segment);
+                float discriminant = projection * projection - lengthSquared * outside;
+                if (lengthSquared <= 0 || projection <= 0 || discriminant < 0) continue;
+                entry = (projection - Mathf.Sqrt(discriminant)) / lengthSquared;
+                if (entry > 1) continue;
             }
+            if (entry >= earliest) continue;
+            earliest = entry;
+            hit = id;
+            if (entry == 0) return hit;
         }
         return hit;
     }

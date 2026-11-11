@@ -48,8 +48,9 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintControls = new VBoxContainer { Visible = false };
         column.AddChild(paintControls);
-        FactionChoice.AddItem("Blue (left side)", 0);
-        FactionChoice.AddItem("Red (right side)", 1);
+        FactionChoice.AddItem("Blue", Factions.Blue);
+        FactionChoice.AddItem("Red", Factions.Red);
+        FactionChoice.AddItem("Green", Factions.Green);
         Field(paintControls, "Paint faction", FactionChoice);
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);

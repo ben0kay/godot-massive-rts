@@ -50,7 +50,7 @@ public static class CombatSystem
                     target = grid.FindPursuitEnemy(units, i, target);
                 else if (refreshLocal && target < 0 && previous >= 0 && extraPursuitQueries > 0)
                 {
-                    int enemyAlive = units.Faction[i] == 0 ? units.Red : units.Blue;
+                    int enemyAlive = units.Alive - units.FactionAlive[units.Faction[i]];
                     if (enemyAlive > 0)
                     {
                         extraPursuitQueries--;

@@ -12,7 +12,7 @@ public readonly record struct SoldierPlacement(int X, int Z, byte Faction, byte 
 public sealed class DeploymentLayout
 {
     public const float CellSize = 2.1f;
-    public const int HalfWidth = 256;
+    public const int HalfWidth = 1190; // 2.1-unit cells spanning the 5,000-unit battlefield.
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
     private readonly RuntimeUnitCatalog catalog;
@@ -37,7 +37,7 @@ public sealed class DeploymentLayout
         slot = -1;
         if (placement.X < -HalfWidth || placement.X >= HalfWidth ||
             placement.Z < -HalfWidth || placement.Z >= HalfWidth ||
-            placement.Faction != (placement.X < 0 ? 0 : 1) || placement.Type >= catalog.Count) return false;
+            placement.Faction >= Factions.Count || placement.Type >= catalog.Count) return false;
 
         var cell = new Vector2I(placement.X, placement.Z);
         float radius = catalog[placement.Type].Footprint;

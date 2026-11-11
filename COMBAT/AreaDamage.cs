@@ -14,12 +14,12 @@ public static class AreaDamage
         units.Damage(primary, type.Damage);
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f) return;
 
-        int enemy = 1 - units.Faction[attacker];
+        int sourceFaction = units.Faction[attacker];
         float queryRadius = type.Reach + units.Catalog.MaxFootprint + movementPadding;
         int first = -1, second = -1;
         float firstDistance = float.PositiveInfinity, secondDistance = float.PositiveInfinity;
 
-        var candidates = grid.GetCandidates(origin, queryRadius, enemy);
+        var candidates = grid.GetCandidates(origin, queryRadius, sourceFaction);
         while (candidates.MoveNext())
         {
             int id = candidates.Current;
@@ -58,7 +58,7 @@ public static class AreaDamage
         if (!float.IsFinite(radius) || radius <= 0f || damage <= 0f) return;
         float edge = Mathf.Clamp(edgeDamageFraction, 0f, 1f);
         float radiusSquared = radius * radius;
-        var candidates = grid.GetCandidates(impact, radius + movementPadding, 1 - sourceFaction);
+        var candidates = grid.GetCandidates(impact, radius + movementPadding, sourceFaction);
         while (candidates.MoveNext())
         {
             int id = candidates.Current;
