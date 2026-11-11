@@ -23,25 +23,27 @@ Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters**
 
 ## Configuration and ownership
 
-`CONFIG/DefaultBenchmark.tres`, assigned to the arena's exported `Config`, is the single master tuning resource. Defaults and fields live in `CONFIG/BenchmarkConfig.cs`:
+`CONFIG/DefaultBenchmark.tres`, assigned to the arena's exported `Config`, controls benchmark workloads. Defaults and fields live in `CONFIG/BenchmarkConfig.cs`:
 
 - 30 Hz simulation, at most 3 steps per rendered frame. Excess elapsed ticks are discarded and counted, avoiding unlimited catch-up spirals.
 - Maximum 100,000 soldiers; prepare 4,000 array entries per frame before initializing visuals. GPU buffers and initial renderer upload are still a single finalization pass, which may briefly hitch at large counts.
-- Speed 5 world units/sec; spatial cell 6; targets refreshed every 6 ticks, staggered by ID; maximum 96 enemy candidates/query.
-- Melee reach 1.7, ranged reach 35; health 100, damage 25; melee interval 0.8 sec; flash 0.12 sec.
-- Projectile cap 30,000; speed 45; lifetime 4 sec; hit radius 0.8. Full pools drop new shots and count drops. UI firing rate is shots/sec per ranged soldier, bounded by the fixed tick; composition is percent of all spawned soldiers.
+- Spatial cell 6; targets refreshed every 6 ticks, staggered by ID; maximum 96 enemy candidates/query.
+- Unit speed, health, damage, reach and interval come from the [roster](../UNITS/DEFINITIONS/STARTING_ROSTER.md). Damage flash lasts 0.12 sec.
+- Projectile cap 30,000, lifetime 4 sec, minimum hit radius 0.8. Full pools drop new shots and count drops. The live ranged fire-rate multiplier defaults to 1× and scales the authored attack rate.
 
 Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; `UI/` owns controls and overlay. `BenchmarkArena.cs` handles lifecycle and orchestration. `SIMULATION/` owns compact arrays, movement and spatial indexing. `COMBAT/` owns benchmark damage/attacks and projectiles. `RENDERING/` owns instance slots and geometry. `CAMERA/` owns independent pan/zoom.
 
-Flow: prepare unit arrays → allocate six mesh/faction batches → fixed-step spatial/targeting/movement/combat/projectile passes → dirty render sync → throttled overlay. No soldier or projectile has its own Node, processing callback, scene, timer or physics body. Flat ground uses a shared height-query seam; elevation-aware combat is future work.
+Flow: prepare unit arrays → allocate up to ten mesh/faction batches → fixed-step spatial/targeting/movement/combat/projectile passes → dirty render sync → throttled overlay. No soldier or projectile has its own Node, processing callback, scene, timer or physics body. Flat ground uses a shared height-query seam; elevation-aware combat is future work.
 
 Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells.
 
+Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon in approximate proportions 60/25/10/5. Render-only and Movement use about 20% ranged. Ranged mode uses the selected ranged percentage, with the remaining soldiers drawn from the melee mix. The added shapes, spacing and stats change the workload from earlier benchmarks.
+
 ## Painted deployments
 
-Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a blue or red melee or ranged brush. Left drag paints a 3×3 area and right drag erases. Blue places on negative X and red on positive X. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
+Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue places on negative X and red on positive X. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
 
-**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. **Start painted battle** requires both armies and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected benchmark layout.
+**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. New saves store stable unit IDs. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires both armies and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected benchmark layout.
 
 The deployment cells are 2.1 world units wide and independent of the combat grid. The combat index uses direct cell lookups within its central array, a dictionary outside it, and clears only occupied array entries each tick. Both paths retain the same soldier order within each cell.
 
@@ -59,7 +61,7 @@ Skipped ticks, capped local queries (latest completed combat tick) and dropped s
 
 - Candidate-bounded queries search cells center-out and may miss better targets in dense cells. The grid indexes factions separately so friendly crowds cannot exhaust enemy-query budgets. This is approximate targeting, not guaranteed global nearest selection.
 - Combat soldiers pursue living targets directly. Local searches use the existing candidate cap. Soldiers without a target in local range stagger longer-range nearest-enemy searches roughly every 0.8 simulation seconds, using a shared tree over occupied cells. Movement-only mode keeps mirrored march lanes. Combat can bunch at the front and will need obstacle navigation for maps with impassable terrain.
-- Projectiles fly straight at the target's launch-time position. Swept tests use current soldier positions and remove the shot on its first enemy hit, including intervening enemies. Friendly soldiers are ignored. No ballistics, splash or physics. Projectile visuals have fixed orientation. Heavy units have no unique combat stats.
+- Projectiles fly straight at the target's launch-time position. Swept tests use current soldier positions and remove the shot on its first enemy hit, including intervening enemies. Friendly soldiers are ignored. No ballistics, splash or physics. Projectile visuals have fixed orientation.
 - Fixed steps have no visual interpolation. At low FPS they may visibly step. MultiMesh batches have broad aggregate bounds, without spatial chunk culling or per-instance LOD. The dirty pass scans IDs and stages changed slots in reusable buffers. Batches with more than 64 staged writes upload their buffer once, while smaller changes use individual setters. Deaths pack active slots using swap removal. Render-only skips the pass entirely.
 - Array allocation, deployment finalization, clear and GPU allocation can hitch. Spawning is bounded but not a background loading pipeline. UI allocations are throttled; dictionary storage is reused after capacity grows. No multithreading.
 - State determinism assumes identical settings and simulation tick counts, not identical wall-clock results across different FPS or live rate edits. Melee applies damage in stable ID order; it is a workload, not a fairness/balance model.

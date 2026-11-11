@@ -1,12 +1,11 @@
 // Staggered local acquisition and simple benchmark attacks; no per-unit nodes.
 using Godot;
-using Godot;
 namespace MassiveRts;
 
 public static class CombatSystem
 {
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, BenchmarkMode mode, int tick)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick)
     {
         int localInterval = config.TargetRefreshTicks;
         int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
@@ -22,7 +21,8 @@ public static class CombatSystem
             bool refreshPursuit = i % pursuitInterval == pursuitPhase;
             if (refreshLocal || refreshPursuit)
             {
-                float radius = mode == BenchmarkMode.Ranged && units.Kind[i] == 1 ? config.RangedReach : config.CellSize * 2;
+                ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
+                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.Reach + units.Catalog.MaxFootprint);
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
@@ -44,7 +44,7 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, ProjectileSystem projectiles, BenchmarkConfig config, BenchmarkMode mode, float fireRate, float dt)
+    public static void Step(UnitState units, ProjectileSystem projectiles, BenchmarkConfig config, float fireRateMultiplier, float dt)
     {
         for (int i = 0; i < units.Count; i++)
         {
@@ -52,11 +52,12 @@ public static class CombatSystem
             units.Cooldown[i] = Mathf.Max(0, units.Cooldown[i] - dt);
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
-            bool ranged = mode == BenchmarkMode.Ranged && units.Kind[i] == 1;
-            float radius = ranged ? config.RangedReach : config.MeleeReach;
+            ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
+            float radius = type.AttackReach(units.Catalog[units.Type[target]]);
             if (units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius) continue;
-            if (ranged) { projectiles.Fire(units.Position[i], target, units, config); units.Cooldown[i] = 1f / fireRate; }
-            else { units.Damage(target, config.Damage, config.FlashSeconds); units.Cooldown[i] = config.MeleeInterval; }
+            if (type.Ranged) projectiles.Fire(i, target, units, config);
+            else units.Damage(target, type.Damage, config.FlashSeconds);
+            units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }
     }
 }

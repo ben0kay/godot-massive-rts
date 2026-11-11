@@ -22,7 +22,7 @@ public sealed class DeploymentFactory
         random.Seed = seed;
     }
     // =========================================================
-    public void Append(UnitState units, BenchmarkConfig config, int budget)
+    public void Append(UnitState units, int budget)
     {
         int end = Mathf.Min(total, units.Count + budget);
         for (int i = units.Count; i < end; i++)
@@ -34,14 +34,14 @@ public sealed class DeploymentFactory
                 position.Y = BattlefieldHeight.At(position.X, position.Z);
                 units.Position[i] = position;
                 units.Faction[i] = placement.Faction;
-                units.Kind[i] = placement.Kind;
-                InitializeSoldier(units, config, i);
+                units.Type[i] = placement.Type;
+                InitializeSoldier(units, i);
                 continue;
             }
             byte faction = (byte)(i < sideCount ? 0 : 1);
             int local = faction == 0 ? i : i - sideCount;
             float sign = faction == 0 ? -1 : 1;
-            float spacing = layout == Deployment.DenseClusters ? 1.25f : 2.1f;
+            float spacing = units.Catalog.MaxFootprint * 2f + (layout == Deployment.DenseClusters ? 0f : 0.5f);
             float x = 14 + local / columns * spacing;
             float z = (local % columns - columns * 0.5f) * spacing;
             if (layout == Deployment.DistributedBattlefield)
@@ -49,17 +49,51 @@ public sealed class DeploymentFactory
             units.Position[i] = new Vector3(sign * x, BattlefieldHeight.At(sign * x, z), z);
             if (mode == BenchmarkMode.Movement) units.Goal[i] = new Vector3(-sign * x, 0, z);
             units.Faction[i] = faction;
-            units.Kind[i] = mode == BenchmarkMode.Ranged && random.Randf() < ranged ? (byte)1 : (byte)(local % 20 == 0 ? 2 : 0);
-            InitializeSoldier(units, config, i);
+            units.Type[i] = PickType(units.Catalog);
+            InitializeSoldier(units, i);
         }
         units.Count = end;
     }
 
-    private void InitializeSoldier(UnitState units, BenchmarkConfig config, int i)
+    private byte PickType(RuntimeUnitCatalog catalog)
     {
-        units.Health[i] = config.Health;
+        bool allowRanged = mode != BenchmarkMode.Melee;
+        float rangedFraction = mode == BenchmarkMode.Ranged ? ranged : 0.2f;
+        bool rangedPick = allowRanged && random.Randf() < rangedFraction;
+        int totalWeight = 0;
+        for (byte i = 0; i < catalog.Count; i++)
+            if (catalog[i].Ranged == rangedPick) totalWeight += TypeWeight(i);
+        if (totalWeight == 0)
+        {
+            for (byte i = 0; i < catalog.Count; i++)
+                if (!catalog[i].Ranged || allowRanged) return i;
+            throw new System.InvalidOperationException("Melee benchmarks need a melee unit definition.");
+        }
+        int roll = random.RandiRange(1, totalWeight);
+        for (byte i = 0; i < catalog.Count; i++)
+        {
+            if (catalog[i].Ranged != rangedPick) continue;
+            roll -= TypeWeight(i);
+            if (roll <= 0) return i;
+        }
+        throw new System.InvalidOperationException("Invalid preset unit weights.");
+    }
+
+    private static int TypeWeight(byte type) => type switch
+    {
+        RuntimeUnitCatalog.Circle => 60,
+        RuntimeUnitCatalog.Square => 25,
+        RuntimeUnitCatalog.Diamond => 10,
+        RuntimeUnitCatalog.Pentagon => 5,
+        _ => 20
+    };
+
+    private void InitializeSoldier(UnitState units, int i)
+    {
+        ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
+        units.Health[i] = type.Health;
         units.Target[i] = -1;
-        units.Cooldown[i] = random.RandfRange(0, config.MeleeInterval);
+        units.Cooldown[i] = random.RandfRange(0, type.Interval);
         units.Dirty[i] = true;
         if (units.Faction[i] == 0) units.Blue++;
         else units.Red++;

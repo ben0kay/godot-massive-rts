@@ -1,6 +1,6 @@
 # UNIT0 — Five-Shape Soldier Catalogue Implementation Plan
 
-**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** Planned, not implemented · **Owner:** `UNITS/`
+**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** Source Implemented / Awaiting Owner Validation · **Owner:** `UNITS/`
 
 ## Objective and scope
 

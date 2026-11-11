@@ -1,6 +1,6 @@
 # UNIT0 — Starting Soldier Roster
 
-**Status:** Proposed tuning values for the future `UnitDefinition` resources. These are *not* currently active in-game. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view.
+**Status:** Initial tuning values authored in the five `UnitDefinition` resources. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view.
 
 | Unit (stable ID) | Shape | Combat | HP | Damage/hit | Attack interval | Speed | Reach | Armour reduction | Mesh scale vs square |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -15,5 +15,5 @@
 - Armour reduction is **multiplicative** after attack damage and applies consistently to melee and ranged. Example: square takes 85% of nominal incoming damage. No special damage types or resistance matrix in UNIT0.
 - **2× pentagon** means roughly twice the width, depth **and** height of the square, not merely twice the volume. This implies ~4× ground footprint and must be reflected in placement clearance and reach.
 - Initial mesh shaping: circle as 12-sided cylinder; square as axis-aligned cube/prism; equilateral triangle as 3-sided prism; diamond as square prism rotated 45°; pentagon as regular 5-sided prism. Flat brighter top and darker pseudo-lit sides, no dynamic lighting.
-- `Attack interval` is seconds between attacks (smaller is faster); `Speed` is world units per second. Ranged triangle uses the project's pooled projectile system with its existing global projectile speed initially.
+- `Attack interval` is seconds between attacks (smaller is faster); `Speed` is world units per second. Ranged triangle uses the project's pooled projectile system with its authored speed of 45 world units per second initially.
 - Faction colours remain blue and red; no separate stats for factions. Avoid persistent `byte Kind` interpretation when saving; new saves should use stable string IDs or explicitly versioned mappings.

@@ -1,4 +1,4 @@
-// Six packed MultiMesh batches with dirty-instance updates and constant-time death removal.
+// Packed MultiMesh batches with dirty-instance updates and constant-time death removal.
 using Godot;
 namespace MassiveRts;
 
@@ -6,53 +6,56 @@ public partial class ArmyRenderer : Node3D
 {
     private const int InstanceStride = 16; // Three affine rows, then RGBA.
     private const int SparseUpdateLimit = 64;
-    private readonly float[][] buffers = new float[6][];
-    private readonly int[][] changedSlots = new int[6][];
-    private readonly int[] changeCounts = new int[6];
-    private readonly MultiMesh[] batches = new MultiMesh[6];
+    private float[][] buffers;
+    private int[][] changedSlots;
+    private int[] changeCounts;
+    private MultiMesh[] batches;
     private int[][] members;
     private int[] slots;
-    private readonly int[] counts = new int[6];
+    private int[] counts;
+    private int typeCount;
+    private float[] halfHeights;
     private UnitState units;
     public int InstanceCount { get; private set; }
     // =========================================================
-    public void Initialize(UnitState state)
+    public void Initialize(UnitState state, Mesh[] shapes)
     {
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
-        members = new int[6][];
-        // Three low-poly meshes are built once; all blue/red soldiers share them.
-        // Per-face vertex tints fake a fixed light direction without dynamic lighting.
-        var material = new StandardMaterial3D
+        typeCount = state.Catalog.Count;
+        int batchCount = typeCount * 2;
+        members = new int[batchCount][];
+        buffers = new float[batchCount][];
+        changedSlots = new int[batchCount][];
+        changeCounts = new int[batchCount];
+        batches = new MultiMesh[batchCount];
+        counts = new int[batchCount];
+        halfHeights = new float[typeCount];
+        for (int i = 0; i < typeCount; i++) halfHeights[i] = state.Catalog[i].Height * 0.5f;
+        var capacities = new int[batchCount];
+        for (int i = 0; i < state.Count; i++) capacities[Batch(i)]++;
+        for (int b = 0; b < batchCount; b++)
         {
-            AlbedoColor = Colors.White,
-            VertexColorUseAsAlbedo = true,
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
-        };
-        Mesh[] shapes = FacetedSoldierMeshes.Create(material);
-        for (int b = 0; b < 6; b++)
-        {
-            // Capacity is counted from the completed deployment before allocating GPU buffers.
-            int capacity = 0;
-            for (int i = 0; i < state.Count; i++) if (Batch(i) == b) capacity++;
+            int capacity = capacities[b];
+            if (capacity == 0) continue;
             members[b] = new int[capacity];
             buffers[b] = new float[capacity * InstanceStride];
             changedSlots[b] = new int[SparseUpdateLimit];
-            Color faction = b < 3 ? Blue : Red;
+            Color faction = b < typeCount ? Blue : Red;
             for (int offset = 0; offset < buffers[b].Length; offset += InstanceStride)
             {
                 buffers[b][offset] = buffers[b][offset + 5] = buffers[b][offset + 10] = 1f;
                 StoreColor(buffers[b], offset, faction);
             }
-            Mesh mesh = shapes[b % 3];
+            Mesh mesh = shapes[b % typeCount];
             var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh };
             mm.InstanceCount = capacity; mm.VisibleInstanceCount = 0; batches[b] = mm;
             AddChild(new MultiMeshInstance3D { Multimesh = mm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
         Sync();
     }
-    private int Batch(int id) => units.Faction[id] * 3 + units.Kind[id];
-    private static readonly Color Blue = new(0.12f, 0.45f, 1f);
-    private static readonly Color Red = new(1f, 0.15f, 0.12f);
+    private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
+    internal static readonly Color Blue = new(0.12f, 0.45f, 1f);
+    internal static readonly Color Red = new(1f, 0.15f, 0.12f);
 
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
@@ -69,9 +72,9 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
         buffer[offset + 3] = position.X;
-        buffer[offset + 7] = position.Y + (units.Kind[id] == 2 ? 0.65f : 0.55f);
+        buffer[offset + 7] = position.Y + halfHeights[units.Type[id]];
         buffer[offset + 11] = position.Z;
-        Color color = units.Flash[id] > 0 ? Colors.White : batch < 3 ? Blue : Red;
+        Color color = units.Flash[id] > 0 ? Colors.White : batch < typeCount ? Blue : Red;
         if (buffer[offset + 12] != color.R || buffer[offset + 13] != color.G ||
             buffer[offset + 14] != color.B || buffer[offset + 15] != color.A)
             StoreColor(buffer, offset, color);
@@ -83,6 +86,7 @@ public partial class ArmyRenderer : Node3D
     private void Upload(int batch)
     {
         MultiMesh mesh = batches[batch];
+        if (mesh == null) return;
         int changed = changeCounts[batch];
         int visible = counts[batch];
         if (changed > SparseUpdateLimit && visible > 0)
@@ -127,6 +131,6 @@ public partial class ArmyRenderer : Node3D
                 Write(id, batch, slot);
             }
         }
-        for (int b = 0; b < 6; b++) Upload(b);
+        for (int b = 0; b < batches.Length; b++) Upload(b);
     }
 }

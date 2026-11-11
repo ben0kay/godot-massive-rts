@@ -7,12 +7,14 @@ public partial class BenchmarkPanel : CanvasLayer
 {
     public event Action SpawnRequested, ClearRequested, PauseRequested;
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
+    public RuntimeUnitCatalog Catalog { private get; set; }
     public readonly OptionButton BrushChoice = new();
+    public readonly OptionButton FactionChoice = new();
     private VBoxContainer paintControls;
     public bool EditingDeployment { set => paintControls.Visible = value; }
     public readonly OptionButton CountChoice = new(), ModeChoice = new(), LayoutChoice = new();
     public readonly SpinBox Seed = new() { MinValue = 0, MaxValue = 2147483647, Value = 12345, Step = 1 };
-    public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 2 };
+    public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 1 };
     public readonly SpinBox RangedPercent = new() { MinValue = 0, MaxValue = 100, Step = 5, Value = 40 };
     public readonly Label Status = new(), Metrics = new();
     public readonly Button PauseButton = new() { Text = "Pause" };
@@ -30,13 +32,16 @@ public partial class BenchmarkPanel : CanvasLayer
         foreach (string layout in new[] { "Opposing lines", "Dense clusters", "Distributed battlefield" }) LayoutChoice.AddItem(layout);
         Field(column, "Total soldiers", CountChoice); Field(column, "Mode (applies on spawn)", ModeChoice);
         Field(column, "Layout (applies on spawn)", LayoutChoice); Field(column, "Seed (applies on spawn)", Seed);
-        Field(column, "Shots/sec per ranged unit (live)", FireRate); Field(column, "Ranged % (applies on spawn)", RangedPercent);
+        Field(column, "Ranged fire-rate multiplier (live)", FireRate); Field(column, "Ranged % (applies on spawn)", RangedPercent);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintControls = new VBoxContainer { Visible = false };
         column.AddChild(paintControls);
-        foreach (string brush in new[] { "Blue melee (left side)", "Blue ranged (left side)",
-            "Red melee (right side)", "Red ranged (right side)" }) BrushChoice.AddItem(brush);
+        FactionChoice.AddItem("Blue (left side)", 0);
+        FactionChoice.AddItem("Red (right side)", 1);
+        Field(paintControls, "Paint faction", FactionChoice);
+        for (int type = 0; type < Catalog.Count; type++)
+            BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
         Field(paintControls, "Drag left to paint • right to erase", BrushChoice);
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());

@@ -149,12 +149,11 @@ public sealed class SpatialGrid
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
     public int FirstProjectileHit(UnitState units, int enemy, Vector3 from, Vector3 segment, float radius, float movementPadding)
     {
-        float padding = radius + movementPadding;
+        float padding = Mathf.Max(radius, units.Catalog.MaxFootprint) + movementPadding;
         Vector3 end = from + segment;
         var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
         var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));
         float lengthSquared = segment.LengthSquared();
-        float radiusSquared = radius * radius;
         float earliest = float.PositiveInfinity;
         int hit = -1;
         for (int z = min.Y; z <= max.Y; z++)
@@ -163,8 +162,10 @@ public sealed class SpatialGrid
             for (int id = Head(x, z, enemy); id >= 0; id = next[id])
             {
                 if (units.Health[id] <= 0) continue;
-                Vector3 relative = units.Position[id] + Vector3.Up * 0.7f - from;
-                float outside = relative.LengthSquared() - radiusSquared;
+                ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+                float hitRadius = Mathf.Max(radius, type.Footprint);
+                Vector3 relative = units.Position[id] + Vector3.Up * (type.Height * 0.5f) - from;
+                float outside = relative.LengthSquared() - hitRadius * hitRadius;
                 float entry = 0;
                 if (outside > 0)
                 {

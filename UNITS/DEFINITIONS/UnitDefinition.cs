@@ -1,0 +1,26 @@
+// Inspector-editable soldier definition. Stable IDs are used in deployment saves.
+using Godot;
+namespace MassiveRts;
+
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon }
+public enum AttackStyle { Melee, Ranged }
+
+[GlobalClass]
+public partial class UnitDefinition : Resource
+{
+    [Export] public string Id { get; set; } = "";
+    [Export] public string DisplayName { get; set; } = "";
+    [Export] public string Role { get; set; } = "";
+    [Export] public UnitShape Shape { get; set; }
+    [Export] public float Width { get; set; } = 0.8f;
+    [Export] public float Height { get; set; } = 1.1f;
+    [Export] public float FootprintRadius { get; set; } = 0.57f;
+    [Export] public float Health { get; set; } = 100f;
+    [Export] public float Speed { get; set; } = 5f;
+    [Export] public float Damage { get; set; } = 20f;
+    [Export] public float Interval { get; set; } = 0.9f;
+    [Export] public float Reach { get; set; } = 1.6f;
+    [Export] public float Armour { get; set; }
+    [Export] public AttackStyle Style { get; set; }
+    [Export] public float ProjectileSpeed { get; set; } = 45f;
+}

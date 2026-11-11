@@ -1,34 +1,27 @@
 // Mouse placement and an instanced preview for the benchmark deployment layout.
+using System.Text.Json;
 using Godot;
 
 namespace MassiveRts;
 
-public partial class DeploymentPainter : MultiMeshInstance3D
+public partial class DeploymentPainter : Node3D
 {
-    public DeploymentLayout Layout { get; } = new();
+    public DeploymentLayout Layout { get; private set; }
+    private RuntimeUnitCatalog catalog;
+    private DeploymentPreview[] previews;
     public Camera3D Camera { get; set; }
-    public int Capacity { get; set; }
     public int Limit { get; set; }
-    public int Brush { get; set; }
+    public byte BrushFaction { get; set; }
+    public byte BrushType { get; set; }
     public event System.Action Changed;
 
-    public void InitializePreview()
+    public void Initialize(RuntimeUnitCatalog unitCatalog, Mesh[] shapes)
     {
-        if (Multimesh != null) return;
-        var material = new StandardMaterial3D
-        {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            VertexColorUseAsAlbedo = true
-        };
-        Multimesh = new MultiMesh
-        {
-            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true,
-            Mesh = new BoxMesh { Size = new Vector3(1.7f, 0.1f, 1.7f), Material = material },
-            InstanceCount = Capacity,
-            VisibleInstanceCount = 0
-        };
-        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        catalog = unitCatalog;
+        Layout = new DeploymentLayout(catalog);
+        previews = new DeploymentPreview[catalog.Count];
+        for (int i = 0; i < previews.Length; i++)
+            previews[i] = new DeploymentPreview(this, shapes[i], catalog[i].Height);
     }
 
     public override void _UnhandledInput(InputEvent input)
@@ -61,32 +54,41 @@ public partial class DeploymentPainter : MultiMeshInstance3D
         for (int x = -1; x <= 1; x++)
         {
             var point = cell + new Vector2I(x, z);
-            int slot;
-            bool edited = erase ? Layout.TryErase(point, out slot) :
-                Layout.TryPaint(new SoldierPlacement(point.X, point.Y, (byte)(Brush / 2), (byte)(Brush % 2)), Limit, out slot);
+            bool existed = Layout.TryGet(point, out SoldierPlacement previous);
+            var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
+            bool edited = erase ? Layout.TryErase(point, out _) : Layout.TryPaint(placement, Limit, out _);
             if (!edited) continue;
-            if (slot < Layout.Placements.Count) Write(slot);
+            if (existed) previews[previous.Type].Remove(point);
+            if (!erase) previews[placement.Type].Add(placement);
             changed = true;
         }
-        if (!changed) return;
-        Multimesh.VisibleInstanceCount = Layout.Placements.Count;
-        Changed?.Invoke();
+        if (changed) Changed?.Invoke();
     }
 
     public void Clear()
     {
         Layout.Clear();
-        Multimesh.VisibleInstanceCount = 0;
+        foreach (DeploymentPreview preview in previews) preview.Clear();
         Changed?.Invoke();
     }
 
     private const string SavePath = "user://deployment.json";
 
+    private sealed record SavedPlacement(int X, int Z, byte Faction, string UnitId);
+    private sealed record SavedDeployment(int Version, SavedPlacement[] Placements);
+    private readonly record struct LegacyPlacement(int X, int Z, byte Faction, byte Kind);
+
     public string Save()
     {
+        var saved = new SavedPlacement[Layout.Placements.Count];
+        for (int i = 0; i < saved.Length; i++)
+        {
+            SoldierPlacement placement = Layout.Placements[i];
+            saved[i] = new SavedPlacement(placement.X, placement.Z, placement.Faction, catalog[placement.Type].Id);
+        }
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
         if (file == null) return $"Save failed ({FileAccess.GetOpenError()}).";
-        file.StoreString(System.Text.Json.JsonSerializer.Serialize(Layout.Placements));
+        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(1, saved)));
         return file.GetError() == Error.Ok ? "Deployment saved." : "Could not write deployment.";
     }
 
@@ -94,40 +96,56 @@ public partial class DeploymentPainter : MultiMeshInstance3D
     {
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
         if (file == null) return "No readable saved deployment.";
-        if (file.GetLength() > 10_000_000) return "Saved deployment is too large.";
-        SoldierPlacement[] saved;
+        if (file.GetLength() > 16_000_000) return "Saved deployment is too large.";
+
+        var validated = new DeploymentLayout(catalog);
         try
         {
-            saved = System.Text.Json.JsonSerializer.Deserialize<SoldierPlacement[]>(file.GetAsText());
+            using var document = JsonDocument.Parse(file.GetAsText());
+            if (document.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                var legacy = document.RootElement.Deserialize<LegacyPlacement[]>();
+                if (legacy.Length > Limit) return "Saved deployment exceeds the current troop limit.";
+                foreach (LegacyPlacement placement in legacy)
+                {
+                    byte type = placement.Kind switch
+                    {
+                        0 => RuntimeUnitCatalog.Circle,
+                        1 => RuntimeUnitCatalog.Triangle,
+                        _ => byte.MaxValue
+                    };
+                    if (!TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type))
+                        return "Saved deployment contains invalid placements.";
+                }
+            }
+            else
+            {
+                var saved = document.RootElement.Deserialize<SavedDeployment>();
+                if (saved == null || saved.Version != 1 || saved.Placements == null) return "Unsupported deployment format.";
+                if (saved.Placements.Length > Limit) return "Saved deployment exceeds the current troop limit.";
+                foreach (SavedPlacement placement in saved.Placements)
+                {
+                    if (placement == null || !catalog.TryResolve(placement.UnitId, out byte type) ||
+                        !TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type))
+                        return "Saved deployment contains invalid placements.";
+                }
+            }
         }
-        catch (System.Text.Json.JsonException)
+        catch (JsonException)
         {
             return "Saved deployment is invalid.";
         }
-        if (saved == null || saved.Length > Limit) return "Saved deployment exceeds the current limit or is invalid.";
-        var validated = new DeploymentLayout();
-        foreach (SoldierPlacement placement in saved)
-            if (!validated.TryPaint(placement, Limit, out _))
-                return "Saved deployment contains invalid placements.";
-        if (validated.Placements.Count != saved.Length) return "Saved deployment contains duplicate cells.";
 
-        Layout.Clear();
-        foreach (SoldierPlacement placement in saved)
-        {
-            Layout.TryPaint(placement, Limit, out int slot);
-            Write(slot);
-        }
-        Multimesh.VisibleInstanceCount = Layout.Placements.Count;
+        Layout = validated;
+        foreach (DeploymentPreview preview in previews) preview.Clear();
+        foreach (SoldierPlacement placement in Layout.Placements) previews[placement.Type].Add(placement);
         Changed?.Invoke();
         return "Deployment loaded.";
     }
 
-    private void Write(int slot)
+    private bool TryLoadPlacement(DeploymentLayout draft, int x, int z, byte faction, byte type)
     {
-        SoldierPlacement placement = Layout.Placements[slot];
-        Vector3 position = placement.Position() + Vector3.Up * 0.07f;
-        Basis basis = placement.Kind == 0 ? Basis.Identity : Basis.Identity.Scaled(new Vector3(0.65f, 1, 0.65f));
-        Multimesh.SetInstanceTransform(slot, new Transform3D(basis, position));
-        Multimesh.SetInstanceColor(slot, placement.Faction == 0 ? new Color(0.12f, 0.45f, 1f) : new Color(1f, 0.15f, 0.12f));
+        return !draft.TryGet(new Vector2I(x, z), out _) &&
+            draft.TryPaint(new SoldierPlacement(x, z, faction, type), Limit, out _);
     }
 }

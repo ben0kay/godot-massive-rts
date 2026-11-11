@@ -7,6 +7,9 @@ namespace MassiveRts;
 public partial class BenchmarkArena : Node3D
 {
     [Export] public BenchmarkConfig Config { get; set; } = new();
+    [Export] public UnitCatalog SoldierCatalog { get; set; }
+    private RuntimeUnitCatalog catalog;
+    private Mesh[] soldierMeshes;
     private UnitState units;
     private SpatialGrid grid;
     private ProjectileSystem projectiles;
@@ -30,6 +33,8 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Ready()
     {
+        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile();
+        soldierMeshes = FacetedSoldierMeshes.Create(catalog);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
         Config.SpawnPerFrame = Mathf.Clamp(Config.SpawnPerFrame, 100, 10000);
         Config.TickSeconds = Mathf.Clamp(Config.TickSeconds, 1f / 120, 0.1f);
@@ -42,9 +47,10 @@ public partial class BenchmarkArena : Node3D
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
         AddChild(ground);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        panel = new BenchmarkPanel(); AddChild(panel);
-        painter = new DeploymentPainter { Camera = camera, Capacity = Config.MaxSoldiers, Visible = false };
+        panel = new BenchmarkPanel { Catalog = catalog }; AddChild(panel);
+        painter = new DeploymentPainter { Camera = camera, Visible = false };
         AddChild(painter);
+        painter.Initialize(catalog, soldierMeshes);
         painter.Changed += UpdateDeploymentStatus;
         panel.SpawnRequested += Spawn;
         panel.ClearRequested += () => { if (painter.Visible) painter.Clear(); else Clear(); };
@@ -52,7 +58,8 @@ public partial class BenchmarkArena : Node3D
         panel.BattleRequested += StartPaintedBattle;
         panel.SaveRequested += () => panel.Status.Text = painter.Save();
         panel.LoadRequested += () => panel.Status.Text = painter.Load() + "\n" + DeploymentCount();
-        panel.BrushChoice.ItemSelected += index => painter.Brush = (int)index;
+        panel.BrushChoice.ItemSelected += index => painter.BrushType = (byte)panel.BrushChoice.GetItemId((int)index);
+        panel.FactionChoice.ItemSelected += index => painter.BrushFaction = (byte)panel.FactionChoice.GetItemId((int)index);
         panel.CountChoice.ItemSelected += _ =>
         {
             if (!painter.Visible) return;
@@ -77,7 +84,7 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
-        units = new UnitState(targetCount);
+        units = new UnitState(targetCount, catalog);
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
@@ -98,7 +105,6 @@ public partial class BenchmarkArena : Node3D
         if (painter.Visible) return;
         Clear();
         painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
-        painter.InitializePreview();
         SetDeploymentEditing(true);
         camera.Frame(100);
         UpdateDeploymentStatus();
@@ -112,7 +118,7 @@ public partial class BenchmarkArena : Node3D
         {
             blue |= placement.Faction == 0;
             red |= placement.Faction == 1;
-            ranged |= placement.Kind == 1;
+            ranged |= catalog[placement.Type].Ranged;
         }
         if (!blue || !red || placements.Count > painter.Limit)
         {
@@ -125,7 +131,7 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
-        units = new UnitState(targetCount);
+        units = new UnitState(targetCount, catalog);
         grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles);
         deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
@@ -138,11 +144,11 @@ public partial class BenchmarkArena : Node3D
         frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
         if (spawning)
         {
-            deployment.Append(units, Config, Config.SpawnPerFrame);
+            deployment.Append(units, Config.SpawnPerFrame);
             panel.Status.Text = $"Preparing {units.Count:N0} / {requested:N0}\nSimulation starts after deployment.";
             if (units.Count == targetCount)
             {
-                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units);
+                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 frameSamples = 0; frameCursor = 0;
@@ -172,12 +178,12 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
-            start = Stamp(); CombatSystem.Acquire(units, grid, Config, mode, tick); targetingMs += Elapsed(start);
+            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick); targetingMs += Elapsed(start);
         }
-        start = Stamp(); MovementSystem.Step(units, Config, mode, dt); movementMs += Elapsed(start);
+        start = Stamp(); MovementSystem.Step(units, mode, dt); movementMs += Elapsed(start);
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
-            start = Stamp(); CombatSystem.Step(units, projectiles, Config, mode, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
+            start = Stamp(); CombatSystem.Step(units, projectiles, Config, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt); projectileMs += Elapsed(start); }
         }
         tick++; simulationMs += Elapsed(total);

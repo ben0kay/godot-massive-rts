@@ -1,4 +1,4 @@
-// Creates three shared low-poly soldier meshes with baked top/side face tones.
+// Creates shared low-poly soldier meshes with baked top/side face tones.
 // These vertex tints multiply the existing per-instance blue/red/white colors.
 using Godot;
 namespace MassiveRts;
@@ -10,12 +10,31 @@ public static class FacetedSoldierMeshes
 
     // =========================================================
     // All materials stay unshaded. Shading is authored once per mesh, not per frame.
-    public static Mesh[] Create(Material material) =>
-    [
-        CreatePrism(3, 0.50f, 1.10f, -Mathf.Pi * 0.5f, material), // Melee wedge
-        CreateBox(0.80f, 1.10f, 0.80f, material),                 // Ranged cube
-        CreatePrism(6, 0.65f, 1.30f, Mathf.Pi / 6f, material)    // Heavy hex column
-    ];
+    public static Mesh[] Create(RuntimeUnitCatalog catalog)
+    {
+        var material = new StandardMaterial3D
+        {
+            AlbedoColor = Colors.White,
+            VertexColorUseAsAlbedo = true,
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+        };
+        var meshes = new Mesh[catalog.Count];
+        for (int i = 0; i < meshes.Length; i++)
+        {
+            ref readonly UnitStats type = ref catalog[i];
+            float radius = type.Width * 0.5f;
+            meshes[i] = type.Shape switch
+            {
+                UnitShape.Circle => CreatePrism(12, radius, type.Height, 0f, material),
+                UnitShape.Square => CreateBox(type.Width, type.Height, type.Width, material),
+                UnitShape.Triangle => CreatePrism(3, type.Width / Mathf.Sqrt(3), type.Height, -Mathf.Pi * 0.5f, material),
+                UnitShape.Diamond => CreatePrism(4, radius, type.Height, 0f, material),
+                UnitShape.Pentagon => CreatePrism(5, type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)), type.Height, -Mathf.Pi * 0.5f, material),
+                _ => throw new System.ArgumentOutOfRangeException()
+            };
+        }
+        return meshes;
+    }
 
     // =========================================================
     private static ArrayMesh CreatePrism(int sides, float radius, float height, float rotation, Material material)

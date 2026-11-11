@@ -85,11 +85,11 @@ TESTS/                # Small automated checks, only when needed
 
 **BENCH0 specifically:** Place its arena, scenarios, controls and benchmark-only settings under `BENCHMARK/`. Reusable simulation, renderer and camera components belong under their own major system folders. Subfolders group related concerns; create them only when actual files exist. Avoid unnecessary nesting, empty folders and cross-system duplicates.
 
-## Soldier roster — UNIT0 planned
+## Soldier roster
 
-The intended first five independently configured soldiers are **Circle (basic melee)**, **Square (stronger melee)**, **Equilateral Triangle (ranged)**, **Diamond (fast cavalry)** and **Pentagon (large slow elite infantry)**. Each will remain a simple shaded 3D primitive with blue/red team tints. UNIT0 is a **planned implementation**, not a claim that these are playable yet.
+**UNIT0 is source implemented and awaiting owner validation.** Both factions can field Circle (basic melee), Square (stronger melee), Equilateral Triangle (ranged), Diamond (fast cavalry), and Pentagon (large slow elite infantry). Their faceted meshes use faction tints and share instanced batches.
 
-Codex implementation instructions: [UNITS/UNIT0_IMPLEMENTATION_PLAN.md](UNITS/UNIT0_IMPLEMENTATION_PLAN.md). Proposed editable starting stats: [UNITS/DEFINITIONS/STARTING_ROSTER.md](UNITS/DEFINITIONS/STARTING_ROSTER.md). The capitalized `UNITS/` major folder owns definitions and catalogue; combat, simulation, rendering and deployment retain their existing ownership.
+Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
 ## Development order (proposed, not completed)
 

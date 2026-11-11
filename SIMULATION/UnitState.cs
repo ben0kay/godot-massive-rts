@@ -8,22 +8,24 @@ public sealed class UnitState
     public readonly Vector3[] Goal;
     public readonly float[] Health, Cooldown, Flash;
     public readonly int[] Target;
-    public readonly byte[] Faction, Kind;
+    public readonly byte[] Faction, Type;
     public readonly bool[] Dirty;
     public int Count, Blue, Red;
     public int Alive => Blue + Red;
-    public UnitState(int capacity)
+    public RuntimeUnitCatalog Catalog { get; }
+    public UnitState(int capacity, RuntimeUnitCatalog catalog)
     {
+        Catalog = catalog;
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
         Health = new float[capacity]; Cooldown = new float[capacity]; Flash = new float[capacity];
-        Target = new int[capacity]; Faction = new byte[capacity]; Kind = new byte[capacity];
+        Target = new int[capacity]; Faction = new byte[capacity]; Type = new byte[capacity];
         Dirty = new bool[capacity];
     }
     // =========================================================
     public void Damage(int id, float damage, float flashSeconds)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
-        Health[id] = Mathf.Max(0, Health[id] - damage); Flash[id] = flashSeconds; Dirty[id] = true;
+        Health[id] = Mathf.Max(0, Health[id] - Mathf.Max(0, damage * Catalog[Type[id]].DamageTaken)); Flash[id] = flashSeconds; Dirty[id] = true;
         if (Health[id] == 0) { if (Faction[id] == 0) Blue--; else Red--; }
     }
 }

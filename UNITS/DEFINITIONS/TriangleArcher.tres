@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "triangle_archer"
+DisplayName = "Archer"
+Role = "Fragile ranged infantry"
+Shape = 2
+Width = 0.8
+Height = 1.1
+FootprintRadius = 0.57
+Health = 70.0
+Speed = 4.5
+Damage = 16.0
+Interval = 1.25
+Reach = 32.0
+Armour = 0.0
+Style = 1
+ProjectileSpeed = 45.0

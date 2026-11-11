@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "pentagon_elite"
+DisplayName = "Elite Infantry"
+Role = "Large slow armoured infantry"
+Shape = 4
+Width = 1.6
+Height = 2.2
+FootprintRadius = 1.14
+Health = 300.0
+Speed = 2.7
+Damage = 34.0
+Interval = 1.65
+Reach = 2.3
+Armour = 0.2
+Style = 0
+ProjectileSpeed = 45.0

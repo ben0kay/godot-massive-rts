@@ -5,12 +5,9 @@ namespace MassiveRts;
 public static class MovementSystem
 {
     // =========================================================
-    public static void Step(UnitState units, BenchmarkConfig config, BenchmarkMode mode, float dt)
+    public static void Step(UnitState units, BenchmarkMode mode, float dt)
     {
-        float stepDistance = config.Speed * dt;
-        float meleeStop = config.MeleeReach * 0.85f;
-        float rangedStop = config.RangedReach * 0.85f;
-        bool rangedMode = mode == BenchmarkMode.Ranged;
+        var catalog = units.Catalog;
         bool movementMode = mode == BenchmarkMode.Movement;
         for (int i = 0; i < units.Count; i++)
         {
@@ -21,7 +18,15 @@ public static class MovementSystem
             if (!hasTarget && !movementMode) continue;
             Vector3 destination = hasTarget ? units.Position[target] : units.Goal[i];
             Vector3 offset = destination - units.Position[i]; offset.Y = 0;
-            float stop = hasTarget ? (rangedMode && units.Kind[i] == 1 ? rangedStop : meleeStop) : 0.2f;
+            ref readonly UnitStats type = ref catalog[units.Type[i]];
+            float stop = 0.2f;
+            if (hasTarget)
+            {
+                ref readonly UnitStats defender = ref catalog[units.Type[target]];
+                float reach = type.AttackReach(defender);
+                stop = type.Ranged ? reach * 0.85f :
+                    Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
+            }
             bool marchingInLane = !hasTarget && offset.Z == 0f;
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
             if (distance <= stop)
@@ -30,7 +35,7 @@ public static class MovementSystem
                 if (movementMode) units.Goal[i].X = -units.Goal[i].X;
                 continue;
             }
-            float travel = Mathf.Min(stepDistance, distance - stop);
+            float travel = Mathf.Min(type.Speed * dt, distance - stop);
             if (marchingInLane)
                 units.Position[i].X += offset.X < 0f ? -travel : travel;
             else
