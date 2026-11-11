@@ -6,7 +6,8 @@ namespace MassiveRts;
 
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
-    float DamageTaken, bool Ranged, int ProjectileType)
+    float DamageTaken, bool Ranged, int ProjectileType,
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -56,11 +57,15 @@ public sealed class RuntimeUnitCatalog
             if (!Enum.IsDefined(d.Shape) || !Enum.IsDefined(d.Style)) throw new ArgumentException($"Invalid shape or attack style for {id}.");
             float width = Positive(d.Width, 0.8f);
             float footprint = Mathf.Max(width * 0.707107f, Positive(d.FootprintRadius, 0.57f));
+            float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
+            float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
+            float secondary = float.IsFinite(d.CleaveSecondaryFraction) ? Mathf.Clamp(d.CleaveSecondaryFraction, 0f, 1f) : 0.65f;
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 width, Positive(d.Height, 1.1f), footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f),
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), Positive(d.Reach, 1.6f),
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), d.Style == AttackStyle.Ranged,
-                d.Style == AttackStyle.Ranged ? Projectiles.Register(d.Projectile) : -1);
+                d.Style == AttackStyle.Ranged ? Projectiles.Register(d.Projectile) : -1,
+                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

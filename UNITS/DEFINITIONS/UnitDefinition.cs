@@ -23,4 +23,8 @@ public partial class UnitDefinition : Resource
     [Export] public float Armour { get; set; }
     [Export] public AttackStyle Style { get; set; }
     [Export] public ProjectileDefinition Projectile { get; set; }
+    [ExportGroup("Melee cleave")]
+    [Export] public bool CleaveEnabled { get; set; }
+    [Export(PropertyHint.Range, "1,180,1")] public float CleaveAngleDegrees { get; set; } = 100f;
+    [Export(PropertyHint.Range, "0,1,0.05")] public float CleaveSecondaryFraction { get; set; } = 0.65f;
 }

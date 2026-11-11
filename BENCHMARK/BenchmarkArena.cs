@@ -256,7 +256,7 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp();
             units.HitFeedback?.Advance(units, dt);
-            CombatSystem.Step(units, projectiles, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, separationPadding); combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, separationPadding); projectileMs += Elapsed(start); }
         }
         tick++;

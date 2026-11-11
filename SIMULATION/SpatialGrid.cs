@@ -146,6 +146,51 @@ public sealed class SpatialGrid
         return pursuitTrees[enemy].FindNearest(units, next, id, previous);
     }
 
+    // Enumerate the faction's pre-movement cells without allocating a candidate list.
+    public CandidateCursor GetCandidates(Vector3 center, float radius, int faction)
+    {
+        Vector3 extent = new(radius, 0f, radius);
+        return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), faction);
+    }
+
+    public struct CandidateCursor
+    {
+        private readonly SpatialGrid grid;
+        private readonly Vector2I min, max;
+        private readonly int faction;
+        private int x, z, nextId;
+        public int Current { get; private set; }
+
+        internal CandidateCursor(SpatialGrid grid, Vector2I min, Vector2I max, int faction)
+        {
+            this.grid = grid;
+            this.min = min;
+            this.max = max;
+            this.faction = faction;
+            x = min.X;
+            z = min.Y;
+            nextId = Current = -1;
+        }
+
+        public bool MoveNext()
+        {
+            while (nextId < 0)
+            {
+                if (z > max.Y) return false;
+                nextId = grid.Head(x, z, faction);
+                if (x == max.X)
+                {
+                    x = min.X;
+                    z++;
+                }
+                else x++;
+            }
+            Current = nextId;
+            nextId = grid.next[Current];
+            return true;
+        }
+    }
+
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
     public int FirstProjectileHit(UnitState units, int enemy, Vector3 from, Vector3 segment, float radius, float movementPadding)
     {
