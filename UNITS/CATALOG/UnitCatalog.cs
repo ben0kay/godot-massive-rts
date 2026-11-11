@@ -17,7 +17,7 @@ public partial class UnitCatalog : Resource
 {
     [Export] public Godot.Collections.Array<UnitDefinition> Definitions { get; set; } = new();
 
-    public RuntimeUnitCatalog Compile() => new(Definitions);
+    public RuntimeUnitCatalog Compile(float movementScale) => new(Definitions, movementScale);
 }
 
 public sealed class RuntimeUnitCatalog
@@ -29,7 +29,7 @@ public sealed class RuntimeUnitCatalog
     private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
-    public ProjectileCatalog Projectiles { get; } = new();
+    public ProjectileCatalog Projectiles { get; }
     public int Count => stats.Length;
     public float MaxSpeed { get; }
     public float MaxFootprint { get; }
@@ -40,8 +40,9 @@ public sealed class RuntimeUnitCatalog
         return id != null && indices.TryGetValue(id, out index);
     }
 
-    public RuntimeUnitCatalog(IEnumerable<UnitDefinition> definitions)
+    public RuntimeUnitCatalog(IEnumerable<UnitDefinition> definitions, float movementScale)
     {
+        Projectiles = new ProjectileCatalog(movementScale);
         var byId = new Dictionary<string, UnitDefinition>(StringComparer.Ordinal);
         if (definitions == null) throw new ArgumentNullException(nameof(definitions));
         foreach (UnitDefinition definition in definitions)
@@ -73,7 +74,7 @@ public sealed class RuntimeUnitCatalog
                 Mathf.Clamp(d.TrampleMaxHits, 1, 6));
             float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
-                baseWidth * size, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f),
+                baseWidth * size, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,

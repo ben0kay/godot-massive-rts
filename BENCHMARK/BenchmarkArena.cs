@@ -9,6 +9,7 @@ public partial class BenchmarkArena : Node3D
     [Export] public BenchmarkConfig Config { get; set; } = new();
     [Export] public UnitCatalog SoldierCatalog { get; set; }
     private RuntimeUnitCatalog catalog;
+    private float projectileLifetime;
     private Mesh[] soldierMeshes;
     private UnitState units;
     private SpatialGrid grid;
@@ -46,7 +47,11 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Ready()
     {
-        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile();
+        var simulationSettings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
+        float movementScale = simulationSettings.EffectiveMovementSpeedMultiplier;
+        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile(movementScale);
+        // Keep the distance cap implied by the authored projectile lifetime.
+        projectileLifetime = Config.ProjectileLifetime / movementScale;
         soldierMeshes = FacetedSoldierMeshes.Create(catalog);
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
@@ -134,7 +139,7 @@ public partial class BenchmarkArena : Node3D
         }
         units = CreateUnitState();
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
-        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
+        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
         camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
@@ -199,7 +204,7 @@ public partial class BenchmarkArena : Node3D
         SetBattleObstacles(painter.Layout.Obstacles.Field, painter.ObstacleMesh);
         units = CreateUnitState();
         grid = new SpatialGrid(targetCount, Config.CellSize);
-        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
+        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
         spawning = true;
     }

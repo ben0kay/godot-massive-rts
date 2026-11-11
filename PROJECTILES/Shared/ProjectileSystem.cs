@@ -11,13 +11,15 @@ public sealed class ProjectileSystem
     private readonly float[] elapsed, duration, arc, damage;
     private readonly byte[] sourceFaction;
     private readonly ProjectileCatalog catalog;
+    private readonly float lifetime;
     public int Count { get; private set; }
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
 
-    public ProjectileSystem(int capacity, ProjectileCatalog catalog)
+    public ProjectileSystem(int capacity, ProjectileCatalog catalog, float lifetime)
     {
         this.catalog = catalog;
+        this.lifetime = lifetime;
         Position = new Vector3[capacity]; Direction = new Vector3[capacity];
         origin = new Vector3[capacity]; displacement = new Vector3[capacity];
         elapsed = new float[capacity]; duration = new float[capacity]; arc = new float[capacity];
@@ -53,7 +55,7 @@ public sealed class ProjectileSystem
         float movementPadding = units.Catalog.MaxSpeed * dt + separationPadding;
         for (int i = Count - 1; i >= 0; i--)
         {
-            float endTime = Mathf.Min(duration[i], config.ProjectileLifetime);
+            float endTime = Mathf.Min(duration[i], lifetime);
             elapsed[i] = Mathf.Min(elapsed[i] + dt, endTime);
             float t = elapsed[i] / duration[i];
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));

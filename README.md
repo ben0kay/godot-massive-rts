@@ -111,6 +111,10 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the 
 
 **Source implemented. Awaiting owner validation.** Paint dark-gray rectangular walls in the deployment editor or enable **Test wall in preset** for a repeatable benchmark. Walls block ground movement and direct attacks. See [OBSTACLES](OBSTACLES/README.md) and [NAVIGATION](NAVIGATION/README.md).
 
+## Movement baseline
+
+Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATION/CONFIG/DefaultSimulationSettings.tres) and restart the arena. The default is **0.8×**. The arena compiles soldier, charge and projectile speeds from their authored values. Set it to **1.0×** for authored speed. Attack timing, damage and range use their own settings. A future battle time control can use a separate setting.
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.

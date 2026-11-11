@@ -14,6 +14,9 @@ public sealed class ProjectileCatalog
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private Mesh sharedArrowMesh;
+    private readonly float movementScale;
+
+    public ProjectileCatalog(float movementScale) => this.movementScale = movementScale;
 
     public int Count => flights.Count;
     public ProjectileFlight Flight(int index) => flights[index];
@@ -30,7 +33,7 @@ public sealed class ProjectileCatalog
         index = flights.Count;
         indices.Add(definition, index);
         flights.Add(new ProjectileFlight(
-            float.IsFinite(definition.Speed) && definition.Speed > 0 ? definition.Speed : 45f,
+            (float.IsFinite(definition.Speed) && definition.Speed > 0 ? definition.Speed : 45f) * movementScale,
             float.IsFinite(definition.ArcHeight) ? Mathf.Max(0, definition.ArcHeight) : 0f,
             float.IsFinite(definition.ArcHeightPerDistance) ? Mathf.Clamp(definition.ArcHeightPerDistance, 0, 1) : 0f,
             definition.ObstacleFire, definition.BlocksOnObstacles));
