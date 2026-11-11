@@ -21,3 +21,4 @@ Reach = 32.0
 Armour = 0.0
 Style = 1
 Projectile = ExtResource("2")
+ChargeResistance = 0.18

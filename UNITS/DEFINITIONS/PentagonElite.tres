@@ -19,3 +19,4 @@ Reach = 2.3
 Armour = 0.2
 Style = 0
 CleaveEnabled = true
+ChargeResistance = 1.2

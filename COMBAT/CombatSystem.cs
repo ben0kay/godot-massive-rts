@@ -63,12 +63,13 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding)
+    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null)
     {
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
             units.Cooldown[i] = Mathf.Max(0, units.Cooldown[i] - dt);
+            if (trample?.OverridesAttack(i) == true) continue;
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];

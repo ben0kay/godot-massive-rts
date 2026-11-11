@@ -7,7 +7,7 @@ namespace MassiveRts;
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction)
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -60,18 +60,28 @@ public sealed class RuntimeUnitCatalog
             float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
             float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
             float secondary = float.IsFinite(d.CleaveSecondaryFraction) ? Mathf.Clamp(d.CleaveSecondaryFraction, 0f, 1f) : 0.65f;
+            var trample = new TrampleStats(d.TrampleEnabled && d.Style == AttackStyle.Melee,
+                ClampStat(d.TrampleRunUp, 0.5f, 10f, 2f),
+                ClampStat(d.TrampleDistance, 0.5f, 12f, 5.5f),
+                ClampStat(d.TrampleEfficiency, 0.1f, 4f, 1f),
+                ClampStat(d.TrampleDamageMultiplier, 0f, 4f, 1.35f),
+                ClampStat(d.ChargeResistance, 0.01f, 4f, 0.30f),
+                Mathf.Clamp(d.TrampleMaxHits, 1, 6));
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 width, Positive(d.Height, 1.1f), footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f),
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), Positive(d.Reach, 1.6f),
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), d.Style == AttackStyle.Ranged,
                 d.Style == AttackStyle.Ranged ? Projectiles.Register(d.Projectile) : -1,
-                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary);
+                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, trample);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);
         }
         if (Array.TrueForAll(stats, type => type.Ranged)) throw new ArgumentException("The catalogue needs a melee unit.");
     }
+
+    private static float ClampStat(float value, float min, float max, float fallback) =>
+        float.IsFinite(value) ? Mathf.Clamp(value, min, max) : fallback;
 
     private static float Positive(float value, float fallback) => float.IsFinite(value) && value > 0 ? value : fallback;
 }

@@ -27,4 +27,12 @@ public partial class UnitDefinition : Resource
     [Export] public bool CleaveEnabled { get; set; }
     [Export(PropertyHint.Range, "1,180,1")] public float CleaveAngleDegrees { get; set; } = 100f;
     [Export(PropertyHint.Range, "0,1,0.05")] public float CleaveSecondaryFraction { get; set; } = 0.65f;
+    [ExportGroup("Trample")]
+    [Export] public bool TrampleEnabled { get; set; }
+    [Export(PropertyHint.Range, "0.5,10,0.1")] public float TrampleRunUp { get; set; } = 2f;
+    [Export(PropertyHint.Range, "0.5,12,0.1")] public float TrampleDistance { get; set; } = 5.5f;
+    [Export(PropertyHint.Range, "0.1,4,0.05")] public float TrampleEfficiency { get; set; } = 1f;
+    [Export(PropertyHint.Range, "0,4,0.05")] public float TrampleDamageMultiplier { get; set; } = 1.35f;
+    [Export(PropertyHint.Range, "0.01,4,0.05")] public float ChargeResistance { get; set; } = 0.30f;
+    [Export(PropertyHint.Range, "1,6,1")] public int TrampleMaxHits { get; set; } = 3;
 }

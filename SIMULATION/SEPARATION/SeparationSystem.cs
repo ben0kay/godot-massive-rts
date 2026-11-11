@@ -21,6 +21,7 @@ public sealed class SeparationSystem
     private bool[] rangedByType = Array.Empty<bool>();
     private Vector2[] yieldPush;
     private bool yieldEnabled;
+    private TrampleSystem trample;
     private AlliedYieldSettings yieldSettings;
     // Indexed by slot, which is the soldier's position in cell order. Neighbours are adjacent in memory.
     private readonly int[] slotId, slotContacts;
@@ -56,10 +57,11 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null)
     {
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
         yieldEnabled = voluntaryMovement != null;
+        this.trample = trample;
         MaxPenetration = CandidatesPerSoldier = 0f;
         penetrationSum = 0;
         candidateTotal = 0;
@@ -256,6 +258,7 @@ public sealed class SeparationSystem
 
     private void Resolve(int i, int j, float dx, float dz, float d2, float limit)
     {
+        if (trample?.IgnoreSeparation(slotId[i], slotId[j]) == true) return;
         if (yieldEnabled)
         {
             byte a = slotFlags[i], b = slotFlags[j];

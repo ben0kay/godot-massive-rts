@@ -7,7 +7,7 @@ public static class MovementSystem
     private const float RangedStandOffBuffer = 0.25f;
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
-        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds)
+        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null)
     {
         var catalog = units.Catalog;
         bool movementMode = mode == BenchmarkMode.Movement;
@@ -16,7 +16,7 @@ public static class MovementSystem
         for (int i = 0; i < units.Count; i++)
         {
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
-            if (units.Health[i] <= 0) continue;
+            if (units.Health[i] <= 0 || trample?.OverridesMovement(i) == true) continue;
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&

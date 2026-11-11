@@ -13,6 +13,7 @@ public partial class BenchmarkArena : Node3D
     private UnitState units;
     private SpatialGrid grid;
     private SeparationSystem separation;
+    private TrampleSystem trample;
     private byte[] voluntaryMovement;
     private AlliedYieldSettings alliedYieldSettings;
     private ProjectileSystem projectiles;
@@ -99,7 +100,7 @@ public partial class BenchmarkArena : Node3D
     {
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
-        units = null; projectiles = null; grid = null; separation = null; voluntaryMovement = null; deployment = null; spawning = false;
+        units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
     }
@@ -194,6 +195,7 @@ public partial class BenchmarkArena : Node3D
             }
             if (units.Count == targetCount)
             {
+                if (grid != null) trample = TrampleSystem.Create(units);
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
@@ -233,14 +235,17 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
             start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick); targetingMs += Elapsed(start);
+            start = Stamp(); units.HitFeedback?.Advance(units, dt); combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
         start = Stamp();
+        trample?.BeginTick(units, dt);
         byte[] movementFlags = separate && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample);
+        float tramplePadding = trample?.MoveCharges(units, grid, dt) ?? 0f;
         movementMs += Elapsed(start);
         float separationPadding = 0f;
         if (separate)
@@ -249,15 +254,19 @@ public partial class BenchmarkArena : Node3D
             separation ??= new SeparationSystem(units.Position.Length);
             separationPadding = Config.SeparationMaxPushPerTick;
             separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
-                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings);
+                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample);
             separationMs += Elapsed(start);
         }
+        if (trample != null)
+        {
+            start = Stamp(); trample.MeasureRunUp(units, dt); movementMs += Elapsed(start);
+        }
+        float extraMovementPadding = separationPadding + tramplePadding;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            units.HitFeedback?.Advance(units, dt);
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, separationPadding); combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, separationPadding); projectileMs += Elapsed(start); }
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, trample); combatMs += Elapsed(start);
+            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding); projectileMs += Elapsed(start); }
         }
         tick++;
         double tickMs = Elapsed(total);
