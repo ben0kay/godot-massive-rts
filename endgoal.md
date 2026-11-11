@@ -82,3 +82,14 @@ Desired user interaction:
 7. **Later sophistication:** shared obstacle navigation, formations, smarter orders, terrain elevation, production/economy balance, and polish.
 
 **Design principle:** prioritize very large, mostly autonomous battles. Give the player strategic control at the group/base level without turning every soldier into an expensive independent agent.
+
+## Style and inspiration — UEBS2 meets Age of Empires
+
+The intended feel is **Ultimate Epic Battle Simulator 2-scale mass battles mixed with simplified Age of Empires-style RTS mechanics**.
+
+- **From Ultimate Epic Battle Simulator 2:** enormous armies, dramatic clashes, satisfying swarms and emergent battle outcomes, with performance and unit count taking priority over visual fidelity.
+- **From Age of Empires:** approachable base construction, barracks production, resource gathering, workers, walls, defensive towers, group selection, right-click orders, and opposing Citadels as strategic objectives.
+- **Deliberately lightweight:** units remain basic geometric shapes, buildings can be simple primitives, maps are relatively modest/basic, and visuals/UI/economy are intentionally simpler than either reference game. No requirement for complex character models, detailed animations, sprawling worlds, or a full Age of Empires feature set.
+- **Core identity:** a huge, mostly self-running battle simulation with a small amount of meaningful player strategy layered on top. Simulation scale and responsiveness matter more than graphical complexity or micro-management.
+
+These are **design references, not a commitment to reproduce either game's full mechanics or scope**.
