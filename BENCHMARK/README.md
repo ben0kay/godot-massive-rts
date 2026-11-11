@@ -19,7 +19,7 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 | C — Melee | Grid rebuilding, staggered local acquisition, nearest-enemy pursuit, health, attack cooldowns, damage flashes and deaths. |
 | D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept first-enemy hit checks and lifetime expiry. |
 
-Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. All remain reproducible with the same count, mode, composition, resource settings and seed. Heavy hexagonal soldiers are visual-only and behave like melee soldiers. Ranged soldiers are cubes; melee are triangular prisms.
+Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
 ## Configuration and ownership
 
@@ -41,7 +41,7 @@ Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon i
 
 ## Painted deployments
 
-Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. The selected soldier count is the total troop limit. **Clear all** clears soldiers and walls from the draft while editing.
+Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the six unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. Painted armies have no troop-count cap. The count selector applies to seeded presets. **Clear all** clears soldiers and walls from the draft while editing.
 
 **Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. Version 2 saves include the wall rectangles and stable unit IDs. Version 1 and legacy layouts load with no walls. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires at least two different teams and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected Blue vs Red benchmark layout. Existing saves keep Blue and Red IDs, and Green uses ID 2.
 

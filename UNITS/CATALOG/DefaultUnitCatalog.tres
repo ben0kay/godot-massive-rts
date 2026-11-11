@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitCatalog" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="UnitCatalog" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://UNITS/CATALOG/UnitCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="2"]
@@ -8,6 +8,8 @@
 [ext_resource type="Resource" path="res://UNITS/DEFINITIONS/DiamondCavalry.tres" id="6"]
 [ext_resource type="Resource" path="res://UNITS/DEFINITIONS/PentagonElite.tres" id="7"]
 
+[ext_resource type="Resource" path="res://UNITS/DEFINITIONS/HexagonSiege.tres" id="8"]
+
 [resource]
 script = ExtResource("1")
-Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])

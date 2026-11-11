@@ -42,6 +42,7 @@ public static class FacetedSoldierMeshes
                     type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
                     type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
                     type.Height, -Mathf.Pi * 0.5f, material),
+                UnitShape.Hexagon => CreateBeveledPrism(6, radius, radius, type.Height, -Mathf.Pi * 0.5f, material),
                 _ => throw new System.ArgumentOutOfRangeException()
             };
         }

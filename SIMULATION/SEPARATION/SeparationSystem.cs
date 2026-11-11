@@ -74,7 +74,7 @@ public sealed class SeparationSystem
             yieldPush ??= new Vector2[cellOfId.Length];
             yieldSettings = settings with { PairCap = settings.PairCap / passes, ExitCap = settings.ExitCap / passes };
         }
-        float cellWidth = Mathf.Max(0.1f, units.Catalog.MaxFootprint * 2f + gap);
+        float cellWidth = Mathf.Max(0.1f, units.MaxFootprint * 2f + gap);
         float passCap = tickPushCap / passes;
         float gapLimit = gap - Slop;
         int aliveTotal = 0;

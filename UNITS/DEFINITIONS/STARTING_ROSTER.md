@@ -1,6 +1,6 @@
 # UNIT0 — Starting Soldier Roster
 
-**Status:** Current tuning values authored in the five `UnitDefinition` resources. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view. The table lists base dimensions and reach before Size Multiplier is applied.
+**Status:** Current tuning values authored in the six `UnitDefinition` resources. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view. The table lists base dimensions and reach before Size Multiplier is applied.
 
 | Unit (stable ID) | Shape | Combat | HP | Damage/hit | Attack interval | Speed | Reach | Armour reduction | Height | Mesh scale vs square |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -9,8 +9,9 @@
 | Archer (`triangle_archer`) | Equilateral triangle prism | Ranged | **15** | 16 | 1.25 s | 4.5 | 32 | 0% | 0.4125 | ~1.0× |
 | Cavalry (`diamond_cavalry`) | Long narrow diamond / rhombus | Melee | **65** | **14** | 0.80 s | 9.0 | 1.9 | 0% | 0.300 | ~1.5× long, ~0.8× wide |
 | Elite Infantry (`pentagon_elite`) | Regular pentagon prism | Melee | 300 | 34 | 1.65 s | 2.7 | 2.3 | 20% | 0.825 | **2.0× linear dimensions** |
+| Siege Infantry (`hexagon_siege`) | Hexagon prism | Melee | 600 | 34 | 1.65 s | 2.2 | 2.3 | 20% | 0.825 | 2× the Pentagon scale |
 
-- These values are **current owner-requested starting values** and may be revised through the five definition resources. All five heights were first reduced by 25%, then halved again on 2026-11-11. Widths, footprints, speeds, health, damage and attack ranges remain unchanged by this second adjustment.
+- These values are **current owner-requested starting values** and may be revised through the definition resources. All five heights were first reduced by 25%, then halved again on 2026-11-11. Widths, footprints, speeds, health, damage and attack ranges remain unchanged by this second adjustment.
 - **Circle**: durable baseline with deliberately low 3-damage melee hits. **Square**: hard-hitting and armoured but only 45 HP, making it more fragile overall than the circle. **Triangle**: high-risk ranged damage dealer with just 15 HP, very fragile if reached. **Diamond**: fast hit-and-run/flanking shock unit; lower sustained melee damage and HP leave it vulnerable in prolonged fights, while its existing trample charge remains active. **Pentagon**: tanky and imposing, slow and vulnerable to being outmaneuvered.
 - Armour reduction is **multiplicative** after attack damage and applies consistently to melee and ranged. Example: square takes 85% of nominal incoming damage. No special damage types or resistance matrix in UNIT0.
 - **2× pentagon** means roughly twice the width, depth **and** height of the square, not merely twice the volume. Square is 0.4125 high and pentagon is 0.825 high. This implies ~4× ground footprint and must be reflected in placement clearance and reach.

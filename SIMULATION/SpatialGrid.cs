@@ -219,7 +219,7 @@ public sealed class SpatialGrid
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
     public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding, float before = float.PositiveInfinity)
     {
-        float padding = Mathf.Max(radius, units.Catalog.MaxFootprint) + movementPadding;
+        float padding = Mathf.Max(radius, units.MaxFootprint) + movementPadding;
         Vector3 end = from + segment;
         var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
         var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));

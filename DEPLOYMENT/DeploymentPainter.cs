@@ -10,7 +10,6 @@ public partial class DeploymentPainter : Node3D
     private RuntimeUnitCatalog catalog;
     private DeploymentPreview[] previews;
     public Camera3D Camera { get; set; }
-    public int Limit { get; set; }
     public byte BrushFaction { get; set; }
     public byte BrushType { get; set; }
     public event System.Action Changed;
@@ -89,7 +88,7 @@ public partial class DeploymentPainter : Node3D
             var point = cell + new Vector2I(x, z);
             bool existed = Layout.TryGet(point, out SoldierPlacement previous);
             var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
-            bool edited = erase ? Layout.TryErase(point, out _) : Layout.TryPaint(placement, Limit, out _);
+            bool edited = erase ? Layout.TryErase(point, out _) : Layout.TryPaint(placement, out _);
             if (!edited) continue;
             if (existed) previews[previous.Type].Remove(point);
             if (!erase) previews[placement.Type].Add(placement);
@@ -199,7 +198,6 @@ public partial class DeploymentPainter : Node3D
     {
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
         if (file == null) return "No readable saved deployment.";
-        if (file.GetLength() > 16_000_000) return "Saved deployment is too large.";
 
         var validated = new DeploymentLayout(catalog);
         try
@@ -208,7 +206,6 @@ public partial class DeploymentPainter : Node3D
             if (document.RootElement.ValueKind == JsonValueKind.Array)
             {
                 var legacy = document.RootElement.Deserialize<LegacyPlacement[]>();
-                if (legacy.Length > Limit) return "Saved deployment exceeds the current troop limit.";
                 foreach (LegacyPlacement placement in legacy)
                 {
                     byte type = placement.Kind switch
@@ -225,7 +222,6 @@ public partial class DeploymentPainter : Node3D
             {
                 var saved = document.RootElement.Deserialize<SavedDeployment>();
                 if (saved == null || saved.Version is not (1 or 2) || saved.Placements == null) return "Unsupported deployment format.";
-                if (saved.Placements.Length > Limit) return "Saved deployment exceeds the current troop limit.";
                 if (saved.Version == 2)
                 {
                     if (!ObstacleLayout.TryLoad(saved.Obstacles, out ObstacleLayout obstacles))
@@ -257,6 +253,6 @@ public partial class DeploymentPainter : Node3D
     private bool TryLoadPlacement(DeploymentLayout draft, int x, int z, byte faction, byte type)
     {
         return !draft.TryGet(new Vector2I(x, z), out _) &&
-            draft.TryPaint(new SoldierPlacement(x, z, faction, type), Limit, out _);
+            draft.TryPaint(new SoldierPlacement(x, z, faction, type), out _);
     }
 }

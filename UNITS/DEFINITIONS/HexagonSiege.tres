@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "hexagon_siege"
+DisplayName = "Siege Infantry"
+Role = "Heavy melee infantry with a ground stomp"
+Shape = 5
+Width = 1.6
+Height = 0.825
+FootprintRadius = 1.14
+SizeMultiplier = 2.0
+Health = 600.0
+Speed = 2.2
+Damage = 34.0
+Interval = 1.65
+Reach = 2.3
+Armour = 0.2
+Style = 0
+CleaveEnabled = true
+ShockwaveEveryAttacks = 10
+ShockwaveBaseRadius = 4.0
+ShockwaveDamage = 50.0
+ShockwaveEdgeDamageFraction = 0.5
+ShockwaveRespectsCover = true
+ChargeResistance = 2.4

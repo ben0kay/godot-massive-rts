@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon }
 public enum AttackStyle { Melee, Ranged }
 
 [GlobalClass]
@@ -30,6 +30,12 @@ public partial class UnitDefinition : Resource
     [Export] public bool CleaveEnabled { get; set; }
     [Export(PropertyHint.Range, "1,180,1")] public float CleaveAngleDegrees { get; set; } = 100f;
     [Export(PropertyHint.Range, "0,1,0.05")] public float CleaveSecondaryFraction { get; set; } = 0.65f;
+    [ExportGroup("Shockwave")]
+    [Export(PropertyHint.Range, "0,255,1")] public int ShockwaveEveryAttacks { get; set; }
+    [Export(PropertyHint.Range, "0.1,64,0.1")] public float ShockwaveBaseRadius { get; set; } = 4f;
+    [Export] public float ShockwaveDamage { get; set; } = 50f;
+    [Export(PropertyHint.Range, "0,1,0.05")] public float ShockwaveEdgeDamageFraction { get; set; } = 0.5f;
+    [Export] public bool ShockwaveRespectsCover { get; set; } = true;
     [ExportGroup("Trample")]
     [Export] public bool TrampleEnabled { get; set; }
     [Export(PropertyHint.Range, "0.5,10,0.1")] public float TrampleRunUp { get; set; } = 2f;

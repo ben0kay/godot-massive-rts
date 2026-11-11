@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using Godot;
 namespace MassiveRts;
 
+public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, float Damage, float EdgeDamageFraction, bool RespectsCover);
+
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateOverride)
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -23,10 +25,10 @@ public partial class UnitCatalog : Resource
 public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
-        DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite";
+        DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public ProjectileCatalog Projectiles { get; }
@@ -50,7 +52,13 @@ public sealed class RuntimeUnitCatalog
             if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || !byId.TryAdd(definition.Id, definition))
                 throw new ArgumentException("Unit definitions require unique, nonempty IDs.");
         }
-        if (byId.Count != Count) throw new ArgumentException("UNIT0 requires five unit definitions.");
+        // Older custom catalogues can keep their five authored definitions.
+        if (byId.Count == Count - 1 && !byId.ContainsKey(HexagonId))
+        {
+            var hexagon = GD.Load<UnitDefinition>("res://UNITS/DEFINITIONS/HexagonSiege.tres");
+            if (hexagon != null) byId.Add(HexagonId, hexagon);
+        }
+        if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         for (byte i = 0; i < Count; i++)
         {
             string id = OrderedIds[i];
@@ -73,13 +81,18 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.ChargeResistance, 0.01f, 4f, 0.30f),
                 Mathf.Clamp(d.TrampleMaxHits, 1, 6));
             float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
+            int shockwaveCadence = ranged ? 0 : Mathf.Clamp(d.ShockwaveEveryAttacks, 0, byte.MaxValue);
+            var shockwave = new ShockwaveStats(shockwaveCadence,
+                ClampStat(Positive(d.ShockwaveBaseRadius, 4f), 0.1f, 64f, 4f) * size,
+                Positive(d.ShockwaveDamage, 50f),
+                ClampStat(d.ShockwaveEdgeDamageFraction, 0f, 1f, 0.5f), d.ShockwaveRespectsCover);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 baseWidth * size, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,
                 d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, trample,
-                accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f);
+                accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

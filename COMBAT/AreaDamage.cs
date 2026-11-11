@@ -15,7 +15,7 @@ public static class AreaDamage
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f) return;
 
         int sourceFaction = units.Faction[attacker];
-        float queryRadius = type.Reach + units.Catalog.MaxFootprint + movementPadding;
+        float queryRadius = type.Reach + units.MaxFootprint + movementPadding;
         int first = -1, second = -1;
         float firstDistance = float.PositiveInfinity, secondDistance = float.PositiveInfinity;
 
@@ -55,7 +55,7 @@ public static class AreaDamage
 
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.
     public static void Radial(UnitState units, SpatialGrid grid, int sourceFaction, Vector3 impact,
-        float radius, float damage, float edgeDamageFraction, float movementPadding)
+        float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null)
     {
         if (!float.IsFinite(radius) || radius <= 0f || damage <= 0f) return;
         float edge = Mathf.Clamp(edgeDamageFraction, 0f, 1f);
@@ -67,7 +67,7 @@ public static class AreaDamage
             if (units.Health[id] <= 0f) continue;
             Vector3 offset = units.Position[id] - impact;
             float distanceSquared = offset.X * offset.X + offset.Z * offset.Z;
-            if (distanceSquared > radiusSquared) continue;
+            if (distanceSquared > radiusSquared || cover?.BlocksSight(impact, units.Position[id]) == true) continue;
             float fraction = Mathf.Sqrt(distanceSquared) / radius;
             units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction));
         }

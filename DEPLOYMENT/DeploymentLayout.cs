@@ -33,7 +33,7 @@ public sealed class DeploymentLayout
 
     public IReadOnlyList<SoldierPlacement> Placements => placements;
 
-    public bool TryPaint(SoldierPlacement placement, int limit, out int slot)
+    public bool TryPaint(SoldierPlacement placement, out int slot)
     {
         slot = -1;
         if (placement.X < -HalfWidth || placement.X >= HalfWidth ||
@@ -64,7 +64,6 @@ public sealed class DeploymentLayout
             placements[slot] = placement;
             return true;
         }
-        if (placements.Count >= limit) return false;
 
         slot = placements.Count;
         slots.Add(cell, slot);

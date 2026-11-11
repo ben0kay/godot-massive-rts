@@ -239,7 +239,7 @@ public sealed class TrampleSystem
         float radius = units.Catalog[units.Type[id]].Footprint;
         Vector2 middle = from + heading * (length * 0.5f);
         var candidates = grid.GetCandidates(new Vector3(middle.X, 0f, middle.Y),
-            length * 0.5f + radius + units.Catalog.MaxFootprint + padding, units.Faction[id]);
+            length * 0.5f + radius + units.MaxFootprint + padding, units.Faction[id]);
         earliest = length;
         int result = -1;
         while (candidates.MoveNext())

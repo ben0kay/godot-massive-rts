@@ -72,3 +72,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Movement baseline | Source implemented.** Added a shared 0.8× movement speed multiplier for soldiers, cavalry charges and projectiles. Attack settings retain their authored values.
 
 - **2026-11-11 | Footprint separation and obstacle pursuit | Source implemented.** Weighted ordinary contact by effective footprint radius and reduced detour pauses by allowing a safe approach while routes queue and carrying speed through waypoints. Awaiting owner validation.
+
+- **2026-11-11 | Hexagon Siege Infantry | Source implemented.** Added a double-size melee unit with cleave and a reusable radial stomp/ring. Removed the preset troop-count cap from painting and saved deployments. Awaiting Godot validation.

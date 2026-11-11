@@ -12,13 +12,16 @@ public sealed class UnitState
     public readonly byte[] Faction, Type;
     public readonly bool[] Dirty;
     public readonly int[] FactionAlive = new int[Factions.Count];
+    private byte[] completedAttacks;
     public int Count;
+    public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
 
-    public void RegisterSpawn(byte faction)
+    public void RegisterSpawn(byte faction, byte type)
     {
         FactionAlive[faction]++;
         Alive++;
+        MaxFootprint = Mathf.Max(MaxFootprint, Catalog[type].Footprint);
     }
     public RuntimeUnitCatalog Catalog { get; }
     public HitFeedbackSystem HitFeedback { get; }
@@ -33,6 +36,14 @@ public sealed class UnitState
         Dirty = new bool[capacity];
     }
     // =========================================================
+    public bool IsShockwaveAttack(int id, int cadence)
+    {
+        completedAttacks ??= new byte[Health.Length];
+        if (++completedAttacks[id] < cadence) return false;
+        completedAttacks[id] = 0;
+        return true;
+    }
+
     public void Damage(int id, float damage)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;

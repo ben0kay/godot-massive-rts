@@ -20,6 +20,7 @@ public partial class BenchmarkArena : Node3D
     private ProjectileSystem projectiles;
     private ArmyRenderer armyRenderer;
     private ProjectileRenderer projectileRenderer;
+    private ShockwaveRenderer shockwaves;
     private IsometricCamera camera;
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
@@ -106,18 +107,15 @@ public partial class BenchmarkArena : Node3D
         panel.LoadRequested += () => panel.Status.Text = painter.Load() + "\n" + DeploymentCount();
         panel.BrushChoice.ItemSelected += index => painter.BrushType = (byte)panel.BrushChoice.GetItemId((int)index);
         panel.FactionChoice.ItemSelected += index => painter.BrushFaction = (byte)panel.FactionChoice.GetItemId((int)index);
-        panel.CountChoice.ItemSelected += _ =>
-        {
-            if (!painter.Visible) return;
-            painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
-            UpdateDeploymentStatus();
-        };
         panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
+        shockwaves = new ShockwaveRenderer();
+        AddChild(shockwaves);
         Spawn();
     }
     // =========================================================
     private void Clear()
     {
+        shockwaves.Clear();
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null;
@@ -159,7 +157,7 @@ public partial class BenchmarkArena : Node3D
         panel.EditingDeployment = editing;
     }
 
-    private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} / {painter.Limit:N0} • " +
+    private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} • " +
         $"{painter.Layout.Obstacles.Field?.RectangleCount ?? 0} wall rectangles";
 
     private void SetBattleObstacles(ObstacleField field, Mesh mesh)
@@ -174,7 +172,6 @@ public partial class BenchmarkArena : Node3D
     {
         if (painter.Visible) return;
         Clear();
-        painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
         SetDeploymentEditing(true);
         camera.Frame(100);
         UpdateDeploymentStatus();
@@ -190,9 +187,9 @@ public partial class BenchmarkArena : Node3D
             factionMask |= 1 << placement.Faction;
             ranged |= catalog[placement.Type].Ranged;
         }
-        if (System.Numerics.BitOperations.PopCount((uint)factionMask) < 2 || placements.Count > painter.Limit)
+        if (System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
         {
-            panel.Status.Text = "Place at least two teams within the troop limit.\n" + DeploymentCount();
+            panel.Status.Text = "Place at least two teams.\n" + DeploymentCount();
             return;
         }
         var snapshot = new SoldierPlacement[placements.Count];
@@ -213,6 +210,7 @@ public partial class BenchmarkArena : Node3D
     public override void _Process(double delta)
     {
         frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
+        if (!paused) shockwaves.Advance((float)delta);
         if (spawning)
         {
             if (units.Count < targetCount)
@@ -300,6 +298,7 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
         }
+        shockwaves.Sync();
         measuredFrames++; hudClock += delta;
         if (hudClock >= 0.3) { UpdateOverlay(); hudClock = 0; ResetTimings(); }
     }
@@ -360,7 +359,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, trample, obstacles); combatMs += Elapsed(start);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, trample, obstacles, shockwaves); combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, obstacles); projectileMs += Elapsed(start); }
         }
         tick++;

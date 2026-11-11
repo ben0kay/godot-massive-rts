@@ -31,7 +31,7 @@ public static class CombatSystem
             if (refreshLocal || refreshPursuit)
             {
                 ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
-                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.Reach + units.Catalog.MaxFootprint);
+                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.Reach + units.MaxFootprint);
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
@@ -74,7 +74,8 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null, ObstacleField obstacles = null)
+    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null, ObstacleField obstacles = null,
+        ShockwaveRenderer shockwaves = null)
     {
         for (int i = 0; i < units.Count; i++)
         {
@@ -90,6 +91,14 @@ public static class CombatSystem
                 (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                 obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
             if (type.Ranged) projectiles.Fire(i, target, units);
+            else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
+            {
+                ShockwaveStats stomp = type.Shockwave;
+                Vector3 impact = units.Position[i];
+                AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, stomp.Damage, stomp.EdgeDamageFraction,
+                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null);
+                shockwaves?.Emit(impact, stomp.Radius);
+            }
             else if (type.CleaveEnabled)
                 AreaDamage.Cleave(units, grid, i, target, type, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
             else units.Damage(target, type.Damage);
