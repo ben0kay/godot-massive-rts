@@ -30,6 +30,8 @@ public partial class BenchmarkArena : Node3D
     private int frameCursor, frameSamples;
     private double movementMs, separationMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
     private int measuredFrames, measuredTicks, maxTicksInFrame;
+    private int measuredSyncs, denseUploads, sparseUploads, changedWrites;
+    private double worstTickMs, armyUploadMs;
     private static long Stamp() => Stopwatch.GetTimestamp();
     private static double Elapsed(long start) => (Stamp() - start) * 1000.0 / Stopwatch.Frequency;
     // =========================================================
@@ -37,6 +39,7 @@ public partial class BenchmarkArena : Node3D
     {
         catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile();
         soldierMeshes = FacetedSoldierMeshes.Create(catalog);
+        RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
         Config.SpawnPerFrame = Mathf.Clamp(Config.SpawnPerFrame, 100, 10000);
         Config.TickSeconds = Mathf.Clamp(Config.TickSeconds, 1f / 120, 0.1f);
@@ -191,7 +194,15 @@ public partial class BenchmarkArena : Node3D
             maxTicksInFrame = Math.Max(maxTicksInFrame, steps);
             if (steps > 0)
             {
-                long start = Stamp(); armyRenderer.Sync(); projectileRenderer.Sync(projectiles); renderMs += Elapsed(start);
+                long start = Stamp();
+                armyRenderer.Sync();
+                projectileRenderer.Sync(projectiles);
+                renderMs += Elapsed(start);
+                measuredSyncs++;
+                armyUploadMs += armyRenderer.UploadMilliseconds;
+                denseUploads += armyRenderer.DenseUploads;
+                sparseUploads += armyRenderer.SparseUploads;
+                changedWrites += armyRenderer.ChangedWrites;
             }
         }
         measuredFrames++; hudClock += delta;
@@ -226,7 +237,10 @@ public partial class BenchmarkArena : Node3D
             start = Stamp(); CombatSystem.Step(units, projectiles, Config, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, separationPadding); projectileMs += Elapsed(start); }
         }
-        tick++; simulationMs += Elapsed(total);
+        tick++;
+        double tickMs = Elapsed(total);
+        simulationMs += tickMs;
+        worstTickMs = Math.Max(worstTickMs, tickMs);
     }
     // =========================================================
     private void UpdateOverlay()
@@ -239,15 +253,23 @@ public partial class BenchmarkArena : Node3D
         bool separating = panel.Separation != SeparationMode.Off && units?.Alive > 1 && !spawning && mode != BenchmarkMode.RenderingOnly;
         int overlapPairs = separating ? separation?.OverlapPairs ?? 0 : 0;
         int separationCaps = separating ? separation?.BudgetHits ?? 0 : 0;
+        var viewport = GetViewport().GetViewportRid();
+        double renderCpu = RenderingServer.ViewportGetMeasuredRenderTimeCpu(viewport);
+        double renderGpu = RenderingServer.ViewportGetMeasuredRenderTimeGpu(viewport);
+        double syncDivisor = Math.Max(1, measuredSyncs);
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
-            $"Simulation per tick {costPerTick}\nSeparation per tick {separationPerTick}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
+            $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\n\n" +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
-            $"GPU frame time: N/A\nGPU utilization: N/A";
+            $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
+    }
+    private static string ViewportTime(double milliseconds)
+    {
+        return double.IsFinite(milliseconds) && milliseconds > 0 ? $"{milliseconds:F2} ms" : "N/A";
     }
     private static string StaticMemory()
     {
@@ -255,5 +277,9 @@ public partial class BenchmarkArena : Node3D
         return bytes > 0 ? $"{bytes / 1048576.0:F1} MiB" : "N/A";
     }
     private void ResetTimings()
-    { movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0; measuredFrames = measuredTicks = maxTicksInFrame = 0; }
+    {
+        movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0;
+        worstTickMs = armyUploadMs = 0;
+        measuredFrames = measuredTicks = maxTicksInFrame = measuredSyncs = denseUploads = sparseUploads = changedWrites = 0;
+    }
 }

@@ -1,4 +1,5 @@
 // Packed MultiMesh batches with dirty-instance updates and constant-time death removal.
+using System.Diagnostics;
 using Godot;
 namespace MassiveRts;
 
@@ -16,6 +17,10 @@ public partial class ArmyRenderer : Node3D
     private int typeCount;
     private float[] halfHeights;
     private UnitState units;
+    public int DenseUploads { get; private set; }
+    public int SparseUploads { get; private set; }
+    public int ChangedWrites { get; private set; }
+    public double UploadMilliseconds { get; private set; }
     public int InstanceCount { get; private set; }
     // =========================================================
     public void Initialize(UnitState state, Mesh[] shapes)
@@ -89,12 +94,15 @@ public partial class ArmyRenderer : Node3D
         if (mesh == null) return;
         int changed = changeCounts[batch];
         int visible = counts[batch];
+        ChangedWrites += changed;
         if (changed > SparseUpdateLimit && visible > 0)
         {
+            DenseUploads++;
             mesh.Buffer = buffers[batch];
         }
         else if (changed > 0 && visible > 0)
         {
+            SparseUploads++;
             float[] buffer = buffers[batch];
             for (int i = 0; i < changed; i++)
             {
@@ -131,6 +139,9 @@ public partial class ArmyRenderer : Node3D
                 Write(id, batch, slot);
             }
         }
+        DenseUploads = SparseUploads = ChangedWrites = 0;
+        long uploadStart = Stopwatch.GetTimestamp();
         for (int b = 0; b < batches.Length; b++) Upload(b);
+        UploadMilliseconds = Stopwatch.GetElapsedTime(uploadStart).TotalMilliseconds;
     }
 }
