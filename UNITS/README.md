@@ -6,6 +6,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[Five-unit roster and proposed stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
+- **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — one `.tres` SizeMultiplier per soldier type, with consistent effective mesh, footprint, melee/cleave radius and cavalry trample contact; **planned, not implemented**.
 
 ## Folder structure
 
@@ -31,3 +32,7 @@ The arena loads the catalogue once and builds a shared stat lookup and mesh set.
 Open a definition resource to tune its silhouette, dimensions, footprint, speed, health, armour, reach, damage or attack interval. The arena reads changes on restart. Both factions use the same definitions. Melee reach adds the defender’s footprint radius to the authored reach. Armour multiplies damage by the fraction left after reduction for both melee and projectiles.
 
 The painter enforces circular body clearance. Two default pentagons cannot occupy edge-adjacent cells. Movement respects footprint when stopping to attack, and full crowd separation is a future system.
+
+## UNIT1 — Planned uniform size multiplier
+
+The [UNIT1 implementation plan](UNIT1_SIZE_SCALING_PLAN.md) proposes an editable `SizeMultiplier` on each `UnitDefinition` resource. It compiles physical and visual dimensions once per type, including melee swipe reach and trample contact radius where applicable. **Diamond Cavalry's desired default is 1.25×**, while every other type stays 1.0×. Ranged attack distance, damage and movement speed stay unchanged. **This is planning documentation; the runtime does not yet support the multiplier.**

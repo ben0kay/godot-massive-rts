@@ -103,6 +103,10 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue 
 
 **Source implemented and awaiting owner visual validation.** The [FEEDBACK](FEEDBACK/README.md) system owns the 0.12-second white damage flash and the grounded 6% visual pulse, which returns to normal over 0.18 seconds. Both effects use the existing MultiMesh instances.
 
+## UNIT1 — Soldier size scaling (planned)
+
+[UNIT1](UNITS/UNIT1_SIZE_SCALING_PLAN.md) proposes a per-type `SizeMultiplier` in existing soldier `.tres` definitions, compiling uniform visual size, gameplay footprint, melee/cleave reach and trample contact size once. The target is **1.25× Cavalry** with unchanged damage, movement speed and 2-second acceleration. **Plan only; not yet implemented.**
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.
