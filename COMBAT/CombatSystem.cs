@@ -14,7 +14,17 @@ public static class CombatSystem
             float radius = mode == BenchmarkMode.Ranged && units.Kind[i] == 1 ? config.RangedReach : config.CellSize * 2;
             if (target >= 0 && (units.Health[target] <= 0 || units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius)) units.Target[i] = -1;
             if (i % config.TargetRefreshTicks == tick % config.TargetRefreshTicks)
-                units.Target[i] = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
+            {
+                int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
+                if (found < 0 && units.SeekingSurvivors[i])
+                {
+                    // A capped local query can miss the enemy the soldier is already pursuing.
+                    int enemy = grid.LivingRepresentative(1 - units.Faction[i]);
+                    if (enemy >= 0 && units.Position[i].DistanceSquaredTo(units.Position[enemy]) < radius * radius)
+                        found = enemy;
+                }
+                units.Target[i] = found;
+            }
         }
     }
     // =========================================================

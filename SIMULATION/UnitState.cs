@@ -6,6 +6,7 @@ public sealed class UnitState
 {
     public readonly Vector3[] Position;
     public readonly Vector3[] Goal;
+    public readonly bool[] SeekingSurvivors;
     public readonly float[] Health, Cooldown, Flash;
     public readonly int[] Target;
     public readonly byte[] Faction, Kind;
@@ -14,6 +15,7 @@ public sealed class UnitState
     public int Alive => Blue + Red;
     public UnitState(int capacity)
     {
+        SeekingSurvivors = new bool[capacity];
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
         Health = new float[capacity]; Cooldown = new float[capacity]; Flash = new float[capacity];
         Target = new int[capacity]; Faction = new byte[capacity]; Kind = new byte[capacity];

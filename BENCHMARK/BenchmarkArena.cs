@@ -174,7 +174,7 @@ public partial class BenchmarkArena : Node3D
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
             start = Stamp(); CombatSystem.Acquire(units, grid, Config, mode, tick); targetingMs += Elapsed(start);
         }
-        start = Stamp(); MovementSystem.Step(units, Config, mode, dt); movementMs += Elapsed(start);
+        start = Stamp(); MovementSystem.Step(units, Config, mode, dt, grid); movementMs += Elapsed(start);
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); CombatSystem.Step(units, projectiles, Config, mode, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);

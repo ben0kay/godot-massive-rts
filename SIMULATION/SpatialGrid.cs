@@ -14,6 +14,8 @@ public sealed class SpatialGrid
     private readonly float cellSize;
     private readonly Vector2[] factionMin = new Vector2[2];
     private readonly Vector2[] factionMax = new Vector2[2];
+    private readonly int[] livingRepresentative = new int[2];
+    public int LivingRepresentative(int faction) => livingRepresentative[faction];
     public int LimitedQueries { get; private set; }
     public SpatialGrid(int capacity, float size)
     {
@@ -49,6 +51,7 @@ public sealed class SpatialGrid
         LimitedQueries = 0;
         for (int faction = 0; faction < 2; faction++)
         {
+            livingRepresentative[faction] = -1;
             factionMin[faction] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
             factionMax[faction] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
         }
@@ -58,6 +61,7 @@ public sealed class SpatialGrid
             if (units.Health[i] <= 0) continue;
             Vector3 position = units.Position[i];
             int faction = units.Faction[i];
+            livingRepresentative[faction] = i;
             var point = new Vector2(position.X, position.Z);
             factionMin[faction] = factionMin[faction].Min(point);
             factionMax[faction] = factionMax[faction].Max(point);
