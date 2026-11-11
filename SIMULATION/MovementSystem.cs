@@ -67,7 +67,7 @@ public static class MovementSystem
             if (!movementMode && rampRate > 0f)
             {
                 float acceleration = type.Speed * rampRate;
-                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + acceleration * dt);
+                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + acceleration * dt * type.AccelerationRateMultiplier);
                 // Limit speed near the stopping point. Most soldiers can skip the square root.
                 float brakingSpeedSquared = 2f * acceleration * remaining;
                 speed = advanceSpeed * advanceSpeed > brakingSpeedSquared

@@ -17,6 +17,7 @@ public partial class UnitDefinition : Resource
     [Export] public float FootprintRadius { get; set; } = 0.57f;
     [Export] public float Health { get; set; } = 100f;
     [Export] public float Speed { get; set; } = 5f;
+    [Export(PropertyHint.Range, "0.25,4,0.05")] public float AccelerationTimeMultiplier { get; set; } = 1f;
     [Export] public float Damage { get; set; } = 20f;
     [Export] public float Interval { get; set; } = 0.9f;
     [Export] public float Reach { get; set; } = 1.6f;
