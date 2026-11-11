@@ -91,6 +91,8 @@ The goal is **careful implementation with minimal AI validation overhead**, foll
 - Use clear status labels: **Planned / In Progress / Source Implemented / Awaiting Owner Validation / Accepted**. A commit, build or headless run does not equal gameplay or FPS acceptance.
 - Update relevant feature README and small status notes after an authorized implementation. Don't turn localized work into a full documentation audit.
 - When reporting back, include **what changed, key settings/paths, commit SHA, lightweight checks performed, measured results only if actually measured, and specific owner-side tests**.
+- **Required development log:** After completing any source-code implementation or bug-fix task, **append one concise entry to the root `devlog.md`** immediately before committing. Include ISO date, milestone/feature ID (if known), a short factual summary of what changed, and status/important caveat if relevant. Include the devlog change in the **same implementation commit**; don't create a separate documentation commit. One entry per completed task, not per file or test run.
+- **Minimize token use:** Keep the log **oldest-first, append-only at the bottom**. When working locally, append the new line directly; do **not** read, summarize or rewrite the entire history just to add an entry. Check the latest few lines only if needed to avoid duplicates. Prefer one short Markdown bullet (roughly 1–3 sentences maximum), avoid verbose testing transcripts, and don't rewrite past entries unless correcting a material factual error. No new entry is required for documentation-only housekeeping.
 
 ## Reference projects
 
