@@ -23,7 +23,7 @@ These refer to the unit **silhouettes seen from above**. They must remain short 
 - Root `README.md`, `NOTES/CodePreferences.md`, any `AGENTS.md`
 - `BENCHMARK/BenchmarkArena.cs`, `BENCHMARK/CONFIG/BenchmarkConfig.cs`, `BENCHMARK/SCENARIOS/DeploymentFactory.cs`, `BENCHMARK/UI/BenchmarkPanel.cs`
 - `SIMULATION/UnitState.cs`, `SIMULATION/MovementSystem.cs`
-- `COMBAT/CombatSystem.cs`, `COMBAT/ProjectileSystem.cs`
+- `COMBAT/CombatSystem.cs`, `PROJECTILES/Shared/ProjectileSystem.cs`
 - `RENDERING/ArmyRenderer.cs`, `RENDERING/FacetedSoldierMeshes.cs`
 - `DEPLOYMENT/DeploymentLayout.cs`, `DEPLOYMENT/DeploymentPainter.cs`
 - Relevant feature READMEs and the latest code on `main`, because new BENCH0 features may have landed since the plan was written.
@@ -54,7 +54,8 @@ SIMULATION/
     MovementSystem.cs                     # Movement by type's cached stats
 COMBAT/
     CombatSystem.cs                       # Generic attack/range/armour rules
-    ProjectileSystem.cs                   # Generic ranged attacks
+PROJECTILES/
+    Shared/ProjectileSystem.cs            # Shared projectile flight and impact
 RENDERING/
     ArmyRenderer.cs                       # MultiMesh groups by faction + shape
     FacetedSoldierMeshes.cs               # Low-poly mesh generation / baked-face tints

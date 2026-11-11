@@ -6,7 +6,7 @@ namespace MassiveRts;
 
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
-    float DamageTaken, bool Ranged, float ProjectileSpeed)
+    float DamageTaken, bool Ranged, int ProjectileType)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -28,6 +28,7 @@ public sealed class RuntimeUnitCatalog
     private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
+    public ProjectileCatalog Projectiles { get; } = new();
     public int Count => stats.Length;
     public float MaxSpeed { get; }
     public float MaxFootprint { get; }
@@ -59,7 +60,7 @@ public sealed class RuntimeUnitCatalog
                 width, Positive(d.Height, 1.1f), footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f),
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), Positive(d.Reach, 1.6f),
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), d.Style == AttackStyle.Ranged,
-                Positive(d.ProjectileSpeed, 45f));
+                d.Style == AttackStyle.Ranged ? Projectiles.Register(d.Projectile) : -1);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

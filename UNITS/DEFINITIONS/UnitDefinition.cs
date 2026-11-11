@@ -22,5 +22,5 @@ public partial class UnitDefinition : Resource
     [Export] public float Reach { get; set; } = 1.6f;
     [Export] public float Armour { get; set; }
     [Export] public AttackStyle Style { get; set; }
-    [Export] public float ProjectileSpeed { get; set; } = 45f;
+    [Export] public ProjectileDefinition Projectile { get; set; }
 }

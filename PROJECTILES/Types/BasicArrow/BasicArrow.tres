@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Speed = 45.0
+ArcHeight = 0.65
+ArcHeightPerDistance = 0.08

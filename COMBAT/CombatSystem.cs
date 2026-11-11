@@ -74,7 +74,7 @@ public static class CombatSystem
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
             float radius = type.AttackReach(units.Catalog[units.Type[target]]);
             if (units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius) continue;
-            if (type.Ranged) projectiles.Fire(i, target, units, config);
+            if (type.Ranged) projectiles.Fire(i, target, units);
             else units.Damage(target, type.Damage, config.FlashSeconds);
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }

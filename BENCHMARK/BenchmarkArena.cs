@@ -87,7 +87,7 @@ public partial class BenchmarkArena : Node3D
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
         units = new UnitState(targetCount, catalog);
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
-        projectiles = new ProjectileSystem(Config.MaxProjectiles);
+        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
         camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
@@ -134,7 +134,7 @@ public partial class BenchmarkArena : Node3D
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
         units = new UnitState(targetCount, catalog);
         grid = new SpatialGrid(targetCount, Config.CellSize);
-        projectiles = new ProjectileSystem(Config.MaxProjectiles);
+        projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
         deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
         spawning = true;
     }
@@ -163,7 +163,7 @@ public partial class BenchmarkArena : Node3D
             if (units.Count == targetCount)
             {
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
-                projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles);
+                projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 frameSamples = 0; frameCursor = 0;
             }
