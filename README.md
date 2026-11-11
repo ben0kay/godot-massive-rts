@@ -115,6 +115,10 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the 
 
 Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATION/CONFIG/DefaultSimulationSettings.tres) and restart the arena. The default is **0.8×**. The arena compiles soldier, charge and projectile speeds from their authored values. Set it to **1.0×** for authored speed. Attack timing, damage and range use their own settings. A future battle time control can use a separate setting.
 
+## TERR1 — Painted and procedural elevation (planned)
+
+[TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md) designs a shared chunked heightfield with **two producers**: painted flat plateaus/smooth slopes for Army Painter and deterministic gentle procedural landscapes with protected flats for Open RTS. Both eventually share slope-aware movement, high-ground bonuses and terrain LOS. **Planning only; flat simulation remains unchanged.** Build in phases A (heightfield), B (painter), C (procedural) and D (combat/nav).
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.

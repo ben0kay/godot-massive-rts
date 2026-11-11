@@ -145,6 +145,10 @@ The main scaling challenge is likely not the selection rectangle itself; it is *
 
 These are architectural constraints and experiments, **not a request to implement a particular pathfinding algorithm now**.
 
+### Terrain source choices for the two modes
+
+Both modes share the same authoritative compiled heightfield, per [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Army Painter emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. Open RTS may instead generate gentle low-frequency terrain from a repeatable seed, with protected flat building/start zones and optional broad ridges or plateaus. A future hybrid can overlay painted height overrides on a procedural map. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of terrain source. This is future design, not currently implemented code.
+
 ## 7. One simulation, separate optional mode systems
 
 Both games should use the same core:
