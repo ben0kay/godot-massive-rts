@@ -1,6 +1,6 @@
 # SEP2 — Allied Melee Pass-Through / Archer Yielding
 
-**Repo:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** Planned (not implemented)
+**Repo:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** Source implemented / awaiting owner validation
 **Owner:** `SIMULATION/SEPARATION/` · **Depends on:** implemented SEP1 and UNIT0
 
 ## Goal
@@ -18,7 +18,7 @@ The owner explicitly accepts **50% overlap of nominal combined footprint clearan
 | Moving Diamond (melee cavalry) + stationary allied Triangle | Same |
 | Moving Pentagon (elite melee) + stationary allied Triangle | Same |
 | Moving melee + stationary **enemy** Triangle | **Unchanged SEP1**, full separation; no ghosting |
-| Any other friendly pair (including melee–melee, ranged–ranged, moving archer, stopped melee) | **Unchanged SEP1** |
+| Any other friendly pair (including melee–melee, ranged–ranged, moving archer, stopped melee) | **Full SEP1 clearance**, with a soft correction cap for mixed roles |
 | All opposite-faction pairs | **Unchanged SEP1**, without exceptions |
 
 Implement eligibility using **roles**, not just Triangle's hardcoded type index, so future ranged definitions can also yield. Require `units.Faction[idA] == units.Faction[idB]` **before** testing for the SEP2 exception. Make the eligibility condition simple, explicit, symmetric in pair visitation order and easily reviewable.
@@ -104,4 +104,6 @@ Keep SEP1's existing separation CPU milliseconds, candidate counts, overlap coun
 
 Read `README.md`, `NOTES/CodePreferences.md`, this plan, SEP1 plan, and the **latest** touched code first. Keep the existing optimized SEP1 counting-sort grid and low-allocation loops. Implement SEP2 only. Run a brief source/diff review and **at most one readily available `dotnet build`**; leave repeated, high-count Godot testing to the owner. Update the relevant documentation and append one brief implementation entry to `devlog.md`. Make **one focused commit to `main`** and push, then report SHA, touched files, actual checks and remaining limits.
 
-**Status after this documentation commit remains PLANNED, not source implemented.**
+## Implemented tuning
+
+The final defaults are 50% clearance, a 0.06-unit yield pair cap per tick, a 70/30 melee-to-archer split, and a 0.06-unit soft-exit pair cap per tick. Strong divides both pair caps across its passes. The soft exit applies to all ineligible allied melee–ranged overlaps while the toggle is enabled. The separate SEP2 accumulator avoids applying SEP1 contact damping to SEP2 pushes. Archer movement uses any meaningful voluntary step and melee advancement uses at least half the normal step. The live toggle defaults to enabled, and Off preserves SEP1 pair handling.

@@ -13,6 +13,8 @@ public partial class BenchmarkArena : Node3D
     private UnitState units;
     private SpatialGrid grid;
     private SeparationSystem separation;
+    private byte[] voluntaryMovement;
+    private AlliedYieldSettings alliedYieldSettings;
     private ProjectileSystem projectiles;
     private ArmyRenderer armyRenderer;
     private ProjectileRenderer projectileRenderer;
@@ -58,6 +60,11 @@ public partial class BenchmarkArena : Node3D
             if (!type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
         }
         Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
+        alliedYieldSettings = new AlliedYieldSettings(
+            ClampYieldSetting(Config.AlliedRangedClearanceFraction, 1f, 0.5f),
+            ClampYieldSetting(Config.AlliedRangedYieldPairCap, 0.25f, 0.06f),
+            ClampYieldSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
+            ClampYieldSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f));
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
         var ground = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
@@ -90,7 +97,7 @@ public partial class BenchmarkArena : Node3D
     {
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
-        units = null; projectiles = null; grid = null; separation = null; deployment = null; spawning = false;
+        units = null; projectiles = null; grid = null; separation = null; voluntaryMovement = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
     }
@@ -220,7 +227,9 @@ public partial class BenchmarkArena : Node3D
         SeparationMode separationMode = panel.Separation;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
         start = Stamp();
-        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f);
+        byte[] movementFlags = separate && panel.AlliedYield
+            ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
+        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags);
         movementMs += Elapsed(start);
         float separationPadding = 0f;
         if (separate)
@@ -229,7 +238,7 @@ public partial class BenchmarkArena : Node3D
             separation ??= new SeparationSystem(units.Position.Length);
             separationPadding = Config.SeparationMaxPushPerTick;
             separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
-                Config.SeparationNeighbourBudget, separationPadding, tick);
+                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings);
             separationMs += Elapsed(start);
         }
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
@@ -260,16 +269,23 @@ public partial class BenchmarkArena : Node3D
         string separationSamples = separating && separation != null
             ? $"{separation.MeanPenetration:F3} / {separation.MaxPenetration:F3} • {separation.CandidatesPerSoldier:F1} checks/unit/pass"
             : "N/A";
+        string yieldStats = separating && panel.AlliedYield && separation != null
+            ? $"Allied yield skip / push / exit: {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
+            : "";
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\nSampled penetration avg/max: {separationSamples}\n\n" +
+            yieldStats +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
             $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
     }
+    private static float ClampYieldSetting(float value, float max, float fallback) =>
+        float.IsFinite(value) ? Mathf.Clamp(value, 0, max) : fallback;
+
     private static string ViewportTime(double milliseconds)
     {
         return double.IsFinite(milliseconds) && milliseconds > 0 ? $"{milliseconds:F2} ms" : "N/A";

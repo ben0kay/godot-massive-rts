@@ -5,12 +5,13 @@ namespace MassiveRts;
 public static class MovementSystem
 {
     // =========================================================
-    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap = -1f)
+    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap = -1f, byte[] voluntaryMovement = null)
     {
         var catalog = units.Catalog;
         bool movementMode = mode == BenchmarkMode.Movement;
         for (int i = 0; i < units.Count; i++)
         {
+            if (voluntaryMovement != null) voluntaryMovement[i] = 0;
             if (units.Health[i] <= 0) continue;
             if (units.Flash[i] > 0) { units.Flash[i] = Mathf.Max(0, units.Flash[i] - dt); units.Dirty[i] = true; }
             int target = units.Target[i];
@@ -43,7 +44,10 @@ public static class MovementSystem
                 if (movementMode) units.Goal[i].X = -units.Goal[i].X;
                 continue;
             }
-            float travel = Mathf.Min(type.Speed * dt, distance - stop);
+            float fullStep = type.Speed * dt;
+            float travel = Mathf.Min(fullStep, distance - stop);
+            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= fullStep * 0.5f))
+                voluntaryMovement[i] = 1;
             if (marchingInLane)
                 units.Position[i].X += offset.X < 0f ? -travel : travel;
             else

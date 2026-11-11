@@ -9,6 +9,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
     public RuntimeUnitCatalog Catalog { private get; set; }
     private readonly OptionButton separationChoice = new();
+    private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
+    public bool AlliedYield => alliedYield.ButtonPressed;
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public readonly OptionButton BrushChoice = new();
     public readonly OptionButton FactionChoice = new();
@@ -41,6 +43,7 @@ public partial class BenchmarkPanel : CanvasLayer
         separationChoice.Select(1);
         separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
         Field(column, "Separation (live)", separationChoice);
+        column.AddChild(alliedYield);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintControls = new VBoxContainer { Visible = false };

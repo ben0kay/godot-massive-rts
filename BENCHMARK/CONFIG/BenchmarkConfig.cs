@@ -18,6 +18,11 @@ public partial class BenchmarkConfig : Resource
     [Export(PropertyHint.Range, "0,0.25,0.01")] public float SeparationGap { get; set; } = 0.05f;
     [Export(PropertyHint.Range, "1,128,1")] public int SeparationNeighbourBudget { get; set; } = 32;
     [Export(PropertyHint.Range, "0.01,1,0.01")] public float SeparationMaxPushPerTick { get; set; } = 0.35f;
+    [ExportGroup("Allied crowd yielding")]
+    [Export(PropertyHint.Range, "0,1,0.05")] public float AlliedRangedClearanceFraction { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "0,0.25,0.01")] public float AlliedRangedYieldPairCap { get; set; } = 0.06f;
+    [Export(PropertyHint.Range, "0,1,0.05")] public float AlliedRangedYieldMeleeShare { get; set; } = 0.7f;
+    [Export(PropertyHint.Range, "0,0.25,0.01")] public float AlliedRangedExitPairCap { get; set; } = 0.06f;
     [ExportGroup("Combat")]
     [Export] public float FlashSeconds { get; set; } = 0.12f;
     [ExportGroup("Projectiles")]

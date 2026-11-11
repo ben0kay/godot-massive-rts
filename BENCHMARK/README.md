@@ -55,6 +55,8 @@ Choose **Off**, **Normal** (default), or **Strong** in the live Separation contr
 
 Compare the instrumentation-only revision and the dense solver with VSync disabled, fixed seed/layout/zoom, and 20,000 soldiers. Test A, B Off/Normal, and C Off/Normal. Compare equivalent battle stages and living counts across three runs. Record FPS, worst simulation tick, separation per tick, render sync, skipped ticks and viewport GPU milliseconds when reported. Upload timings cover the army upload loop, and write counts count staged writes rather than unique instances. Tunables are in the benchmark resource under Separation.
 
+**Allied archer yielding** is a live comparison toggle, enabled by default. It applies only alongside Normal or Strong. SEP2's skip, push, and exit counts report relaxed overlaps accepted, yield corrections applied, and soft-exit corrections capped in the latest tick. Tunables are under **Allied crowd yielding** on the benchmark resource.
+
 ## Measurements
 
 Frame average and worst use up to the latest **120 rendered frames**, based on `_Process(delta)`. UI refreshes at approximately 0.3 sec. FPS is Godot's engine counter. These include engine/presentation scheduling, unlike scoped game CPU timers.

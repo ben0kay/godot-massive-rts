@@ -95,9 +95,9 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue 
 
 **Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
 
-## SEP2 — Allied crowd yielding (planned)
+## SEP2 — Allied crowd yielding
 
-SEP2 is a proposed **allied-only** pass-through exception to SEP1. Advancing melee soldiers, including basic Circle infantry, may overlap stationary friendly archers to **50% of the normal footprint clearance** while the archers yield slightly, so melee can reach the frontline more easily. **Enemy separation remains completely unchanged.** See [SEP2 Codex implementation plan](SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md). **Plan only; not implemented.**
+**Source implemented and awaiting owner validation.** With Allied archer yielding enabled, advancing melee can use half clearance against stationary friendly ranged units. Both factions follow the same rule. Opposing pairs keep SEP1 clearance. See the [SEP2 plan](SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md).
 
 ## FB0 — Soldier Hit Feedback (planned)
 

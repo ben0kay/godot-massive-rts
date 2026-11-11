@@ -11,3 +11,7 @@ The defaults are a 0.05-unit gap, 32 examined entries per soldier per pass, and 
 ## SEP2 — Allied crowd yielding (planned)
 
 [SEP2 plan](SEPARATION/SEP2_IMPLEMENTATION_PLAN.md) proposes a narrow **allies-only** exception to SEP1: advancing melee (including basic Circle infantry) can move through **stationary allied ranged** soldiers with 50% of the normal combined footprint clearance, while standing archers yield only a tiny amount. All enemy interactions and other soldier pairs retain SEP1 separation. SEP2 reuses SEP1's existing neighbour grid and remains **planned, not implemented**.
+
+## SEP2 — Allied archer yielding
+
+When enabled alongside Normal or Strong, advancing melee can approach stationary allied ranged soldiers to half the sum of their footprint radii. When closer, a small correction is split 70% to melee and 30% to ranged. Other allied melee–ranged pairs return to full clearance with a soft correction cap. Opposing pairs and same-role pairs use SEP1. Both corrections share SEP1's overall displacement cap. A dense allied wall can still slow or stall units.

@@ -6,6 +6,8 @@ namespace MassiveRts;
 
 public enum SeparationMode { Off, Normal, Strong }
 
+public readonly record struct AlliedYieldSettings(float ClearanceFraction, float PairCap, float MeleeShare, float ExitCap);
+
 public sealed class SeparationSystem
 {
     private const float Slop = 0.025f;
@@ -13,7 +15,13 @@ public sealed class SeparationSystem
     private const int MaxGridCells = 1 << 20;
 
     // Indexed by soldier id.
+    private const byte RangedRole = 1, RedFaction = 2, VoluntaryMove = 4;
     private readonly int[] cellOfId;
+    private byte[] slotFlags;
+    private bool[] rangedByType = Array.Empty<bool>();
+    private Vector2[] yieldPush;
+    private bool yieldEnabled;
+    private AlliedYieldSettings yieldSettings;
     // Indexed by slot, which is the soldier's position in cell order. Neighbours are adjacent in memory.
     private readonly int[] slotId, slotContacts;
     private readonly float[] slotX, slotZ, slotRadius, slotPushX, slotPushZ;
@@ -24,6 +32,9 @@ public sealed class SeparationSystem
     private long candidateTotal;
     private double penetrationSum;
 
+    public int YieldSkipped { get; private set; }
+    public int YieldPushed { get; private set; }
+    public int ExitCapped { get; private set; }
     public int OverlapPairs { get; private set; }
     public int BudgetHits { get; private set; }
     public float MaxPenetration { get; private set; }
@@ -45,15 +56,22 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default)
     {
-        OverlapPairs = BudgetHits = 0;
+        OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
+        yieldEnabled = voluntaryMovement != null;
         MaxPenetration = CandidatesPerSoldier = 0f;
         penetrationSum = 0;
         candidateTotal = 0;
         if (units.Count == 0 || passes <= 0) return;
 
         CacheFootprints(units);
+        if (yieldEnabled)
+        {
+            slotFlags ??= new byte[cellOfId.Length];
+            yieldPush ??= new Vector2[cellOfId.Length];
+            yieldSettings = settings with { PairCap = settings.PairCap / passes, ExitCap = settings.ExitCap / passes };
+        }
         float cellWidth = Mathf.Max(0.1f, units.Catalog.MaxFootprint * 2f + gap);
         float passCap = tickPushCap / passes;
         float gapLimit = gap - Slop;
@@ -61,12 +79,13 @@ public sealed class SeparationSystem
 
         for (int pass = 0; pass < passes; pass++)
         {
-            int alive = Build(units, cellWidth);
+            int alive = Build(units, cellWidth, voluntaryMovement);
             aliveTotal += alive;
             if (alive < 2) break;
             Array.Clear(slotPushX, 0, alive);
             Array.Clear(slotPushZ, 0, alive);
             Array.Clear(slotContacts, 0, alive);
+            if (yieldEnabled) Array.Clear(yieldPush, 0, alive);
             Scan(gapLimit, neighbourBudget, tick + pass);
             Apply(units, alive, passCap);
         }
@@ -78,12 +97,17 @@ public sealed class SeparationSystem
         int types = units.Catalog.Count;
         if (footprintByType.Length == types) return;
         footprintByType = new float[types];
-        for (int t = 0; t < types; t++) footprintByType[t] = units.Catalog[t].Footprint;
+        rangedByType = new bool[types];
+        for (int t = 0; t < types; t++)
+        {
+            footprintByType[t] = units.Catalog[t].Footprint;
+            rangedByType[t] = units.Catalog[t].Ranged;
+        }
     }
 
     // Counting sort of living soldiers into a dense, padded row-major grid.
     // The one-cell padding ring means the forward stencil never needs bounds checks.
-    private int Build(UnitState units, float cellWidth)
+    private int Build(UnitState units, float cellWidth, byte[] voluntaryMovement)
     {
         int count = units.Count;
         Vector3[] position = units.Position;
@@ -153,6 +177,12 @@ public sealed class SeparationSystem
             slotX[slot] = p.X;
             slotZ[slot] = p.Z;
             slotRadius[slot] = footprintByType[type[id]];
+            if (voluntaryMovement != null)
+            {
+                slotFlags[slot] = (byte)((units.Faction[id] == 0 ? 0 : RedFaction) |
+                    (rangedByType[type[id]] ? RangedRole : 0) |
+                    (voluntaryMovement[id] != 0 ? VoluntaryMove : 0));
+            }
         }
         gridWidth = width;
         gridCells = cells;
@@ -226,6 +256,18 @@ public sealed class SeparationSystem
 
     private void Resolve(int i, int j, float dx, float dz, float d2, float limit)
     {
+        if (yieldEnabled)
+        {
+            byte a = slotFlags[i], b = slotFlags[j];
+            int difference = a ^ b;
+            // Gate the exception on faction before considering the two roles.
+            if ((difference & RedFaction) == 0 && (difference & RangedRole) != 0)
+            {
+                ResolveAlliedPair(i, j, dx, dz, d2, limit, a, b);
+                return;
+            }
+        }
+
         float distance = MathF.Sqrt(d2);
         float nx, nz;
         if (distance > 0.00001f)
@@ -251,6 +293,33 @@ public sealed class SeparationSystem
         if (penetration > MaxPenetration) MaxPenetration = penetration;
     }
 
+    private void ResolveAlliedPair(int i, int j, float dx, float dz, float d2, float fullLimit, byte a, byte b)
+    {
+        bool firstIsMelee = (a & RangedRole) == 0;
+        byte melee = firstIsMelee ? a : b;
+        byte archer = firstIsMelee ? b : a;
+        bool yielding = (melee & VoluntaryMove) != 0 && (archer & VoluntaryMove) == 0;
+        float limit = yielding ? Mathf.Min(fullLimit, (slotRadius[i] + slotRadius[j]) * yieldSettings.ClearanceFraction) : fullLimit;
+        if (d2 >= limit * limit)
+        {
+            YieldSkipped++;
+            return;
+        }
+
+        float distance = MathF.Sqrt(d2);
+        Vector2 direction = distance > 0.00001f
+            ? new Vector2(dx / distance, dz / distance)
+            : CoincidentDirection(slotId[i], slotId[j]);
+        float penetration = limit - distance;
+        float pairCap = yielding ? yieldSettings.PairCap : yieldSettings.ExitCap;
+        float share = yielding ? (firstIsMelee ? yieldSettings.MeleeShare : 1f - yieldSettings.MeleeShare) : 0.5f;
+        Vector2 correction = direction * Mathf.Min(penetration, pairCap);
+        yieldPush[i] += correction * share;
+        yieldPush[j] -= correction * (1f - share);
+        if (yielding) YieldPushed++;
+        else if (penetration > pairCap) ExitCapped++;
+    }
+
     private static Vector2 CoincidentDirection(int id, int other)
     {
         uint low = (uint)Math.Min(id, other), high = (uint)Math.Max(id, other);
@@ -273,6 +342,11 @@ public sealed class SeparationSystem
                 float damp = 2f / contacts;
                 px *= damp;
                 pz *= damp;
+            }
+            if (yieldEnabled)
+            {
+                px += yieldPush[s].X;
+                pz += yieldPush[s].Y;
             }
             float lengthSquared = px * px + pz * pz;
             if (lengthSquared == 0f) continue;
