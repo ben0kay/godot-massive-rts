@@ -89,7 +89,7 @@ TESTS/                # Small automated checks, only when needed
 
 **UNIT0 is source implemented and awaiting owner validation.** Both factions can field Circle (basic melee), Square (stronger melee), Equilateral Triangle (ranged), Diamond (fast cavalry), and Pentagon (large slow elite infantry). Their faceted meshes use faction tints and share instanced batches.
 
-Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
+Edit the five resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the Inspector’s **Size Multiplier** into each type’s mesh dimensions, footprint and melee reach. Diamond Cavalry defaults to 1.25×. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
 ## SEP1 — Soldier Separation
 

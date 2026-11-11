@@ -1,7 +1,7 @@
 # UNIT1 — Uniform Soldier Size Scaling
 
 **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
-**Status:** PLANNED — Codex implementation brief, no game-code changes in this documentation commit.
+**Status:** Source implemented. Awaiting owner validation in Godot.
 
 ## Objective
 
@@ -167,5 +167,3 @@ Do not increase its actual trample run-up distance, charge distance, resistance,
 3. Update UNIT1 documentation, `UNITS/DEFINITIONS/STARTING_ROSTER.md`, and relevant COMBAT/RENDERING notes. Append **one** concise `UNIT1 source implemented; awaiting owner validation` entry to `devlog.md` in the implementation commit.
 4. Check modified diff and perform **at most one readily available `dotnet build`** per CodePreferences; no expensive benchmarks. Do not add unrelated gameplay systems or alter damage/health/speeds.
 5. Make **one focused commit to `main`**, push and report SHA, exactly what became size-responsive, explicit non-scaled attributes and remaining owner test steps.
-
-**Documentation commit means PLAN ONLY. Do not claim Cavalry already enlarged until Codex implements this.**

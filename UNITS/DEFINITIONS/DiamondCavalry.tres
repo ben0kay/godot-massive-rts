@@ -19,5 +19,6 @@ Interval = 0.8
 Reach = 1.9
 Armour = 0.0
 Style = 0
+SizeMultiplier = 1.25
 ChargeResistance = 0.35
 TrampleEnabled = true

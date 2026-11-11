@@ -1,6 +1,6 @@
 # UNIT0 — Starting Soldier Roster
 
-**Status:** Current tuning values authored in the five `UnitDefinition` resources. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view.
+**Status:** Current tuning values authored in the five `UnitDefinition` resources. Units should be independently editable in Godot's Inspector. Shape silhouette is from the orthographic/isometric top view. The table lists base dimensions and reach before Size Multiplier is applied.
 
 | Unit (stable ID) | Shape | Combat | HP | Damage/hit | Attack interval | Speed | Reach | Armour reduction | Height | Mesh scale vs square |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -15,6 +15,6 @@
 - Armour reduction is **multiplicative** after attack damage and applies consistently to melee and ranged. Example: square takes 85% of nominal incoming damage. No special damage types or resistance matrix in UNIT0.
 - **2× pentagon** means roughly twice the width, depth **and** height of the square, not merely twice the volume. Square is 0.4125 high and pentagon is 0.825 high. This implies ~4× ground footprint and must be reflected in placement clearance and reach.
 - VIS2 shared mesh shaping: circle uses 16 sides; square, equilateral triangle and pentagon retain their recognisable polygon outlines; cavalry is an elongated X-axis rhombus (~0.64 wide × ~1.21 long) rather than a rotated square. Every soldier has a small top-edge bevel with an intermediate pseudo-lit face tint; all use the existing unshaded shared material and MultiMesh batches.
-- Cavalry's authored `Width` is 0.64 for its narrow visual silhouette while `FootprintRadius` remains 0.63; its long point extends only ~0.605 from centre, inside the existing collision circle. Thus SEP1/SEP2, painted clearance, combat range and movement remain unchanged.
+- UNIT1 sets Cavalry to 1.25× and the other four types to 1.0×. Cavalry compiles to 0.80 width, about 1.51 length, 0.375 height, 0.7875 footprint radius and 2.375 melee reach before adding the defender’s radius.
 - `Attack interval` is seconds between attacks (smaller is faster); `Speed` is world units per second. Ranged triangle references the [Basic Arrow](../../PROJECTILES/Types/BasicArrow/BasicArrow.tres) definition for projectile speed, arc and visuals.
 - Faction colours remain blue and red; no separate stats for factions. Avoid persistent `byte Kind` interpretation when saving; new saves should use stable string IDs or explicitly versioned mappings.
