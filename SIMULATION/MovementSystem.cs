@@ -64,13 +64,13 @@ public static class MovementSystem
             float advanceSpeed = type.Speed;
             float speed = advanceSpeed;
             float rampRate = type.Ranged ? rangedRampRate : meleeRampRate;
-            if (!movementMode && rampRate > 0f)
+            float accelerationRate = type.AccelerationRateOverride > 0f ? type.AccelerationRateOverride : rampRate;
+            if (!movementMode && accelerationRate > 0f)
             {
-                float acceleration = type.Speed * rampRate;
-                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + acceleration * dt * type.AccelerationRateMultiplier);
+                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + type.Speed * accelerationRate * dt);
                 // Limit speed near the stopping point. Most soldiers can skip the square root.
-                float brakingSpeedSquared = 2f * acceleration * remaining;
-                speed = advanceSpeed * advanceSpeed > brakingSpeedSquared
+                float brakingSpeedSquared = 2f * type.Speed * rampRate * remaining;
+                speed = rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
             }
             float travel = Mathf.Min(speed * dt, remaining);

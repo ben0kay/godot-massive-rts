@@ -7,7 +7,7 @@ namespace MassiveRts;
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateMultiplier)
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateOverride)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -67,13 +67,14 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.TrampleDamageMultiplier, 0f, 4f, 1.35f),
                 ClampStat(d.ChargeResistance, 0.01f, 4f, 0.30f),
                 Mathf.Clamp(d.TrampleMaxHits, 1, 6));
+            float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 width, Positive(d.Height, 1.1f), footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f),
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), Positive(d.Reach, 1.6f),
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), d.Style == AttackStyle.Ranged,
                 d.Style == AttackStyle.Ranged ? Projectiles.Register(d.Projectile) : -1,
                 d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, trample,
-                1f / ClampStat(d.AccelerationTimeMultiplier, 0.25f, 4f, 1f));
+                accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

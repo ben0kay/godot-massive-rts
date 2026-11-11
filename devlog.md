@@ -58,3 +58,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Smooth soldier motion | Source implemented.** Slowed visual turns and added optional between-tick interpolation for soldier positions and headings. Owner visual and performance testing pending.
 
 - **2026-11-11 | Cavalry acceleration tuning | Source implemented.** Doubled the Diamond acceleration time while retaining its top speed and trample requirements.
+
+- **2026-11-11 | Cavalry acceleration | Source implemented.** Set Diamond acceleration to 2 seconds at the existing 9-unit-per-second top speed.
