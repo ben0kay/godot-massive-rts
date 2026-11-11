@@ -131,11 +131,12 @@ public sealed class TrampleSystem
     public float MoveCharges(UnitState units, SpatialGrid grid, float dt)
     {
         float padding = units.Catalog.MaxSpeed * dt;
+        Vector2 turnStep = SoldierFacing.TurnStep(dt);
         for (int slot = 0; slot < ids.Length; slot++)
         {
             int id = ids[slot];
             if (units.Health[id] <= 0f || !states[slot].Active) continue;
-            MoveCharge(units, grid, id, slot, dt, padding);
+            MoveCharge(units, grid, id, slot, dt, padding, turnStep);
         }
         bool appliedShove = false;
         for (int i = 0; i < shoveCount; i++)
@@ -154,7 +155,7 @@ public sealed class TrampleSystem
         return appliedShove ? MaxShovePerTick : 0f;
     }
 
-    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding)
+    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep)
     {
         ref Charge charge = ref states[slot];
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
@@ -194,7 +195,11 @@ public sealed class TrampleSystem
                 QueueShove(defender, charge.Heading * (MaxShovePerTick * momentumFraction / (1f + resistance)));
         }
 
-        if (travel > 0f) Place(units, id, origin + charge.Heading * travel);
+        if (travel > 0f)
+        {
+            SoldierFacing.Turn(units, id, charge.Heading, turnStep);
+            Place(units, id, origin + charge.Heading * travel);
+        }
         charge.Distance -= travel;
         if (blocked || charge.Distance <= 0.0001f ||
             (charge.Hits >= type.Trample.MaxHits && ClearedContacts(units, id, slot, charge.Hits)))

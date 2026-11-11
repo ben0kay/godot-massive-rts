@@ -16,6 +16,7 @@ public partial class ArmyRenderer : Node3D
     private int[] counts;
     private int typeCount;
     private float[] halfHeights;
+    private bool[] facesPositiveX;
     private UnitState units;
     public int DenseUploads { get; private set; }
     public int SparseUploads { get; private set; }
@@ -35,7 +36,12 @@ public partial class ArmyRenderer : Node3D
         batches = new MultiMesh[batchCount];
         counts = new int[batchCount];
         halfHeights = new float[typeCount];
-        for (int i = 0; i < typeCount; i++) halfHeights[i] = state.Catalog[i].Height * 0.5f;
+        facesPositiveX = new bool[typeCount];
+        for (int i = 0; i < typeCount; i++)
+        {
+            halfHeights[i] = state.Catalog[i].Height * 0.5f;
+            facesPositiveX[i] = state.Catalog[i].Shape == UnitShape.Diamond;
+        }
         var capacities = new int[batchCount];
         for (int i = 0; i < state.Count; i++) capacities[Batch(i)]++;
         for (int b = 0; b < batchCount; b++)
@@ -82,7 +88,18 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
         var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
-        buffer[offset] = buffer[offset + 5] = buffer[offset + 10] = scale;
+        Vector2 facing = units.Facing[id];
+        float cosine = 1f, sine = 0f;
+        if (facing != Vector2.Zero)
+        {
+            bool positiveX = facesPositiveX[units.Type[id]];
+            cosine = positiveX ? facing.X : -facing.Y;
+            sine = positiveX ? -facing.Y : -facing.X;
+        }
+        buffer[offset] = buffer[offset + 10] = cosine * scale;
+        buffer[offset + 2] = sine * scale;
+        buffer[offset + 8] = -buffer[offset + 2];
+        buffer[offset + 5] = scale;
         buffer[offset + 3] = position.X;
         buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
@@ -117,8 +134,11 @@ public partial class ArmyRenderer : Node3D
                 if (slot >= visible) continue;
                 int offset = slot * InstanceStride;
                 var position = new Vector3(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
-                float scale = buffer[offset];
-                Basis basis = scale == 1f ? Basis.Identity : Basis.Identity.Scaled(Vector3.One * scale);
+                // Packed transforms are affine rows, while Basis takes columns.
+                Basis basis = new(
+                    new Vector3(buffer[offset], 0f, buffer[offset + 8]),
+                    new Vector3(0f, buffer[offset + 5], 0f),
+                    new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]));
                 mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
                 mesh.SetInstanceColor(slot, new Color(buffer[offset + 12], buffer[offset + 13], buffer[offset + 14], buffer[offset + 15]));
             }

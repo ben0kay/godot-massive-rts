@@ -52,3 +52,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | VIS2 refined soldier silhouettes | Source implemented; awaiting owner visual/FPS validation.** Changed cavalry from a square-like diamond to a ~1.9:1 long rhombus within its original footprint, increased Circle to 16 sides, and added top-edge bevels/intermediate baked shading to all shared soldier meshes. Preserved MultiMesh batches and game balance.
 
 - **2026-11-11 | Cavalry trample | Source implemented.** Added a shared, configurable melee charge with real run-up, swept contacts, momentum resistance, bounded shove, and normal melee recovery. Owner testing pending.
+
+- **2026-11-11 | Soldier movement facing | Source implemented.** Soldiers turn toward intentional travel and cavalry charges. Both MultiMesh upload paths preserve grounded hit pulses. Owner visual testing pending.

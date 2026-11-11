@@ -10,6 +10,7 @@ public static class MovementSystem
         byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null)
     {
         var catalog = units.Catalog;
+        Vector2 turnStep = SoldierFacing.TurnStep(dt);
         bool movementMode = mode == BenchmarkMode.Movement;
         float meleeRampRate = meleeRampSeconds > 0f ? 1f / meleeRampSeconds : 0f;
         float rangedRampRate = rangedRampSeconds > 0f ? 1f / rangedRampSeconds : 0f;
@@ -76,10 +77,12 @@ public static class MovementSystem
             if (!movementMode) units.MoveSpeed[i] = travel >= remaining ? 0f : speed;
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
                 voluntaryMovement[i] = 1;
-            if (marchingInLane)
-                units.Position[i].X += offset.X < 0f ? -travel : travel;
-            else
-                units.Position[i] += offset / distance * travel;
+            Vector3 direction = marchingInLane
+                ? (offset.X < 0f ? Vector3.Left : Vector3.Right)
+                : offset / distance;
+            if (travel > 0.00001f)
+                SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnStep);
+            units.Position[i] += direction * travel;
             units.Position[i].Y = BattlefieldHeight.At(units.Position[i].X, units.Position[i].Z);
             units.Dirty[i] = true;
         }
