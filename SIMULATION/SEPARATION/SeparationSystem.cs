@@ -1,7 +1,5 @@
-// Resolves local XZ footprint overlaps with bounded queries and simultaneous corrections.
+// Resolves local XZ overlap using a bounded, cell-ordered counting-sort grid.
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Godot;
 
 namespace MassiveRts;
@@ -11,138 +9,246 @@ public enum SeparationMode { Off, Normal, Strong }
 public sealed class SeparationSystem
 {
     private const float Slop = 0.025f;
-    private const int ForwardNeighbours = 4;
-    private static readonly Vector2I[] ForwardCells =
-    {
-        new(1, 0), new(-1, 1), new(0, 1), new(1, 1)
-    };
-    private readonly Dictionary<Vector2I, int> buckets;
-    private readonly Vector2I[] bucketCells;
-    private readonly int[] bucketHeads, neighbourHeads, soldierBuckets, next;
-    private readonly int[] contacts;
-    private readonly Vector2[] corrections;
+    // Bound the grid scan even when a few soldiers are far apart.
+    private const int MaxGridCells = 1 << 20;
+
+    // Indexed by soldier id.
+    private readonly int[] cellOfId;
+    // Indexed by slot, which is the soldier's position in cell order. Neighbours are adjacent in memory.
+    private readonly int[] slotId, slotContacts;
+    private readonly float[] slotX, slotZ, slotRadius, slotPushX, slotPushZ;
+
+    private int[] cellStart = Array.Empty<int>();
+    private float[] footprintByType = Array.Empty<float>();
+    private int gridWidth, gridCells;
+    private long candidateTotal;
+    private double penetrationSum;
 
     public int OverlapPairs { get; private set; }
     public int BudgetHits { get; private set; }
+    public float MaxPenetration { get; private set; }
+    // Average overlap depth (world units) of pairs found this tick, measured before correction.
+    public float MeanPenetration => OverlapPairs > 0 ? (float)(penetrationSum / OverlapPairs) : 0f;
+    // Average pair tests per soldier per pass. Compare with the neighbour budget to see headroom.
+    public float CandidatesPerSoldier { get; private set; }
 
     public SeparationSystem(int capacity)
     {
-        buckets = new Dictionary<Vector2I, int>(capacity);
-        bucketCells = new Vector2I[capacity];
-        bucketHeads = new int[capacity];
-        neighbourHeads = new int[capacity * ForwardNeighbours];
-        soldierBuckets = new int[capacity];
-        next = new int[capacity];
-        contacts = new int[capacity];
-        corrections = new Vector2[capacity];
+        cellOfId = new int[capacity];
+        slotId = new int[capacity];
+        slotContacts = new int[capacity];
+        slotX = new float[capacity];
+        slotZ = new float[capacity];
+        slotRadius = new float[capacity];
+        slotPushX = new float[capacity];
+        slotPushZ = new float[capacity];
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
     public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick)
     {
         OverlapPairs = BudgetHits = 0;
+        MaxPenetration = CandidatesPerSoldier = 0f;
+        penetrationSum = 0;
+        candidateTotal = 0;
+        if (units.Count == 0 || passes <= 0) return;
+
+        CacheFootprints(units);
         float cellWidth = Mathf.Max(0.1f, units.Catalog.MaxFootprint * 2f + gap);
-        float inverseCellWidth = 1f / cellWidth;
         float passCap = tickPushCap / passes;
+        float gapLimit = gap - Slop;
+        int aliveTotal = 0;
+
         for (int pass = 0; pass < passes; pass++)
         {
-            int first = (int)(((long)tick * 97 + pass * 53) % units.Count);
-            Build(units, inverseCellWidth, first, (tick + pass) & 3);
-            Array.Clear(corrections, 0, units.Count);
-            Array.Clear(contacts, 0, units.Count);
-            for (int rank = 0; rank < units.Count; rank++)
+            int alive = Build(units, cellWidth);
+            aliveTotal += alive;
+            if (alive < 2) break;
+            Array.Clear(slotPushX, 0, alive);
+            Array.Clear(slotPushZ, 0, alive);
+            Array.Clear(slotContacts, 0, alive);
+            Scan(gapLimit, neighbourBudget, tick + pass);
+            Apply(units, alive, passCap);
+        }
+        if (aliveTotal > 0) CandidatesPerSoldier = (float)candidateTotal / aliveTotal;
+    }
+
+    private void CacheFootprints(UnitState units)
+    {
+        int types = units.Catalog.Count;
+        if (footprintByType.Length == types) return;
+        footprintByType = new float[types];
+        for (int t = 0; t < types; t++) footprintByType[t] = units.Catalog[t].Footprint;
+    }
+
+    // Counting sort of living soldiers into a dense, padded row-major grid.
+    // The one-cell padding ring means the forward stencil never needs bounds checks.
+    private int Build(UnitState units, float cellWidth)
+    {
+        int count = units.Count;
+        Vector3[] position = units.Position;
+        float[] health = units.Health;
+        byte[] type = units.Type;
+
+        float minX = float.MaxValue, minZ = float.MaxValue, maxX = float.MinValue, maxZ = float.MinValue;
+        int alive = 0;
+        for (int id = 0; id < count; id++)
+        {
+            if (health[id] <= 0) continue;
+            Vector3 p = position[id];
+            if (p.X < minX) minX = p.X;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Z < minZ) minZ = p.Z;
+            if (p.Z > maxZ) maxZ = p.Z;
+            alive++;
+        }
+        if (alive < 2) return alive;
+
+        double inverse, originX, originZ;
+        int width, height;
+        int gridBudget = Math.Min(MaxGridCells, Math.Max(4096, alive * 8));
+        while (true)
+        {
+            inverse = 1.0 / cellWidth;
+            // Rebase the array without sliding the cell boundaries as armies move.
+            originX = Math.Floor(minX * inverse);
+            originZ = Math.Floor(minZ * inverse);
+            double requiredWidth = Math.Floor(maxX * inverse) - originX + 3;
+            double requiredHeight = Math.Floor(maxZ * inverse) - originZ + 3;
+            if (requiredWidth * requiredHeight <= gridBudget)
             {
-                int id = IdAtRank(rank, first, units.Count);
-                if (units.Health[id] > 0)
-                    Collect(units, id, gap, neighbourBudget, tick + pass);
+                width = (int)requiredWidth;
+                height = (int)requiredHeight;
+                break;
             }
-            Apply(units, passCap);
+            cellWidth *= 1.5f;
         }
-    }
+        int cells = width * height;
+        if (cellStart.Length < cells + 1) cellStart = new int[Math.Min(MaxGridCells + 1, cells + 1 + (cells >> 2))];
+        else Array.Clear(cellStart, 0, cells + 1);
 
-    private static int IdAtRank(int rank, int first, int count)
-    {
-        int id = rank + first;
-        return id < count ? id : id - count;
-    }
-
-    private static Vector2I Cell(Vector3 position, float inverseWidth) =>
-        new(Mathf.FloorToInt(position.X * inverseWidth), Mathf.FloorToInt(position.Z * inverseWidth));
-
-    private void Build(UnitState units, float inverseWidth, int first, int rotation)
-    {
-        buckets.Clear();
-        int bucketCount = 0;
-        for (int rank = units.Count - 1; rank >= 0; rank--)
+        for (int id = 0; id < count; id++)
         {
-            int id = IdAtRank(rank, first, units.Count);
-            if (units.Health[id] <= 0) continue;
-            Vector2I cell = Cell(units.Position[id], inverseWidth);
-            ref int bucket = ref CollectionsMarshal.GetValueRefOrAddDefault(buckets, cell, out bool occupied);
-            if (!occupied)
-            {
-                bucket = bucketCount++;
-                bucketCells[bucket] = cell;
-                bucketHeads[bucket] = -1;
-            }
-            soldierBuckets[id] = bucket;
-            next[id] = bucketHeads[bucket];
-            bucketHeads[bucket] = id;
+            if (health[id] <= 0) continue;
+            Vector3 p = position[id];
+            int cx = (int)(Math.Floor(p.X * inverse) - originX) + 1;
+            int cz = (int)(Math.Floor(p.Z * inverse) - originZ) + 1;
+            int cell = cz * width + cx;
+            cellOfId[id] = cell;
+            cellStart[cell]++;
         }
 
-        // Cache four neighbouring heads per occupied bucket. A half stencil visits
-        // each cross-cell pair once, with its direction rotated to share priority.
-        for (int bucket = 0; bucket < bucketCount; bucket++)
-        for (int i = 0; i < ForwardNeighbours; i++)
+        // Inclusive prefix sum gives each cell's END. Scattering in reverse with a pre-decrement
+        // leaves cellStart[c] as the cell's START, and cellStart[c + 1] as its end.
+        int run = 0;
+        for (int c = 0; c < cells; c++) { run += cellStart[c]; cellStart[c] = run; }
+        cellStart[cells] = run;
+
+        for (int id = count - 1; id >= 0; id--)
         {
-            Vector2I offset = ForwardCells[i];
-            offset = rotation switch
-            {
-                1 => new Vector2I(-offset.Y, offset.X),
-                2 => -offset,
-                3 => new Vector2I(offset.Y, -offset.X),
-                _ => offset
-            };
-            neighbourHeads[bucket * ForwardNeighbours + i] =
-                buckets.TryGetValue(bucketCells[bucket] + offset, out int neighbour) ? bucketHeads[neighbour] : -1;
+            if (health[id] <= 0) continue;
+            int slot = --cellStart[cellOfId[id]];
+            Vector3 p = position[id];
+            slotId[slot] = id;
+            slotX[slot] = p.X;
+            slotZ[slot] = p.Z;
+            slotRadius[slot] = footprintByType[type[id]];
         }
+        gridWidth = width;
+        gridCells = cells;
+        return alive;
     }
 
-    private void Collect(UnitState units, int id, float gap, int budget, int phase)
+    // Forward half-stencil: rest of own cell, cell (+1,0), and the three cells above ((-1,+1),(0,+1),(+1,+1)).
+    // In row-major order the first two are contiguous in slot order, and so are the three above,
+    // so each soldier scans exactly two linear ranges and every cross-cell pair is seen once.
+    private void Scan(float gapLimit, int budget, int salt)
     {
-        Vector3 position = units.Position[id];
-        float ownRadius = units.Catalog[units.Type[id]].Footprint;
-        int visited = 0;
-        int firstBucket = (id + phase) % (ForwardNeighbours + 1);
-        int neighbourStart = soldierBuckets[id] * ForwardNeighbours;
-        for (int offset = 0; offset <= ForwardNeighbours; offset++)
+        int w = gridWidth;
+        int[] start = cellStart;
+        float[] sx = slotX, sz = slotZ, sr = slotRadius;
+
+        for (int c = 0; c < gridCells; c++)
         {
-            int bucket = (firstBucket + offset) % (ForwardNeighbours + 1);
-            int other = bucket == ForwardNeighbours ? next[id] : neighbourHeads[neighbourStart + bucket];
-            for (; other >= 0; other = next[other])
+            int cellBegin = start[c], cellEnd = start[c + 1];
+            if (cellBegin == cellEnd) continue;
+            int endA = start[c + 2];
+            int startB = start[c + w - 1], endB = start[c + w + 2];
+            int lenB = endB - startB;
+
+            for (int i = cellBegin; i < cellEnd; i++)
             {
-                if (visited == budget)
+                float xi = sx[i], zi = sz[i], reach = sr[i] + gapLimit;
+                int firstA = i + 1;
+                int lenA = endA - firstA;
+                int total = lenA + lenB;
+
+                if (total <= budget)
                 {
-                    BudgetHits++;
-                    return;
+                    candidateTotal += total;
+                    for (int j = firstA; j < endA; j++)
+                    {
+                        float dx = xi - sx[j], dz = zi - sz[j];
+                        float limit = reach + sr[j];
+                        float d2 = dx * dx + dz * dz;
+                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
+                    }
+                    for (int j = startB; j < endB; j++)
+                    {
+                        float dx = xi - sx[j], dz = zi - sz[j];
+                        float limit = reach + sr[j];
+                        float d2 = dx * dx + dz * dz;
+                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
+                    }
                 }
-                visited++;
-                Vector3 otherPosition = units.Position[other];
-                var away = new Vector2(position.X - otherPosition.X, position.Z - otherPosition.Z);
-                float limit = ownRadius + units.Catalog[units.Type[other]].Footprint + gap - Slop;
-                float distanceSquared = away.LengthSquared();
-                if (limit <= 0f || distanceSquared >= limit * limit) continue;
-
-                float distance = Mathf.Sqrt(distanceSquared);
-                Vector2 direction = distance > 0.00001f ? away / distance : CoincidentDirection(id, other);
-                Vector2 push = direction * ((limit - distance) * 0.5f);
-                corrections[id] += push;
-                corrections[other] -= push;
-                contacts[id]++;
-                contacts[other]++;
-                OverlapPairs++;
+                else
+                {
+                    // Over budget: test a cyclic window of `budget` candidates from a pseudo-random
+                    // start (deterministic per soldier and tick). The starting slot rotates within the
+                    // candidates owned by this soldier.
+                    BudgetHits++;
+                    candidateTotal += budget;
+                    uint hash = unchecked((uint)slotId[i] * 2654435761u + (uint)salt * 40503u);
+                    int index = (int)(hash % (uint)total);
+                    for (int k = 0; k < budget; k++)
+                    {
+                        int j = index < lenA ? firstA + index : startB + (index - lenA);
+                        float dx = xi - sx[j], dz = zi - sz[j];
+                        float limit = reach + sr[j];
+                        float d2 = dx * dx + dz * dz;
+                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
+                        if (++index == total) index = 0;
+                    }
+                }
             }
         }
+    }
+
+    private void Resolve(int i, int j, float dx, float dz, float d2, float limit)
+    {
+        float distance = MathF.Sqrt(d2);
+        float nx, nz;
+        if (distance > 0.00001f)
+        {
+            float inverse = 1f / distance;
+            nx = dx * inverse;
+            nz = dz * inverse;
+        }
+        else
+        {
+            Vector2 d = CoincidentDirection(slotId[i], slotId[j]);
+            nx = d.X;
+            nz = d.Y;
+        }
+        float penetration = limit - distance;
+        float half = penetration * 0.5f;
+        float px = nx * half, pz = nz * half;
+        slotPushX[i] += px; slotPushZ[i] += pz; slotContacts[i]++;
+        slotPushX[j] -= px; slotPushZ[j] -= pz; slotContacts[j]++;
+
+        OverlapPairs++;
+        penetrationSum += penetration;
+        if (penetration > MaxPenetration) MaxPenetration = penetration;
     }
 
     private static Vector2 CoincidentDirection(int id, int other)
@@ -154,21 +260,32 @@ public sealed class SeparationSystem
         return id < other ? direction : -direction;
     }
 
-    private void Apply(UnitState units, float cap)
+    private void Apply(UnitState units, int alive, float cap)
     {
         float capSquared = cap * cap;
-        for (int id = 0; id < units.Count; id++)
+        for (int s = 0; s < alive; s++)
         {
-            Vector2 push = corrections[id];
-            // Several overlapping neighbours can add large opposing corrections.
-            // Dampen packed contacts while keeping the full response for isolated pairs.
-            if (contacts[id] > 2) push *= 2f / contacts[id];
-            float lengthSquared = push.LengthSquared();
+            float px = slotPushX[s], pz = slotPushZ[s];
+            int contacts = slotContacts[s];
+            // Same contact damping as before: full response for isolated pairs, averaged when packed.
+            if (contacts > 2)
+            {
+                float damp = 2f / contacts;
+                px *= damp;
+                pz *= damp;
+            }
+            float lengthSquared = px * px + pz * pz;
             if (lengthSquared == 0f) continue;
-            if (lengthSquared > capSquared) push *= cap / Mathf.Sqrt(lengthSquared);
+            if (lengthSquared > capSquared)
+            {
+                float scale = cap / MathF.Sqrt(lengthSquared);
+                px *= scale;
+                pz *= scale;
+            }
+            int id = slotId[s];
             Vector3 position = units.Position[id];
-            position.X += push.X;
-            position.Z += push.Y;
+            position.X += px;
+            position.Z += pz;
             position.Y = BattlefieldHeight.At(position.X, position.Z);
             units.Position[id] = position;
             units.Dirty[id] = true;
