@@ -35,6 +35,8 @@ public partial class BenchmarkArena : Node3D
     private int measuredFrames, measuredTicks, maxTicksInFrame;
     private int measuredSyncs, denseUploads, sparseUploads, changedWrites;
     private double worstTickMs, armyUploadMs;
+    private double timeSinceArmySync;
+    private bool smoothingWasEnabled;
     private static long Stamp() => Stopwatch.GetTimestamp();
     private static double Elapsed(long start) => (Stamp() - start) * 1000.0 / Stopwatch.Frequency;
     // =========================================================
@@ -92,7 +94,7 @@ public partial class BenchmarkArena : Node3D
             painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
             UpdateDeploymentStatus();
         };
-        panel.PauseRequested += () => { paused = !paused; accumulator = 0; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
+        panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         Spawn();
     }
     // =========================================================
@@ -102,6 +104,7 @@ public partial class BenchmarkArena : Node3D
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
+        timeSinceArmySync = 0; smoothingWasEnabled = false;
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
     }
     private void Spawn()
@@ -204,18 +207,36 @@ public partial class BenchmarkArena : Node3D
         }
         else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0))
         {
-            accumulator += delta; int steps = 0;
+            bool smooth = panel.SmoothMotion;
+            if (!smooth && smoothingWasEnabled) armyRenderer.ClearPoseHistory();
+            accumulator += delta;
+            timeSinceArmySync += delta;
+            int steps = 0;
             while (accumulator >= Config.TickSeconds && steps < Config.MaxStepsPerFrame)
-            { Step(Config.TickSeconds); accumulator -= Config.TickSeconds; steps++; }
+            {
+                if (smooth)
+                {
+                    long snapshotStart = Stamp();
+                    armyRenderer.CapturePose();
+                    renderMs += Elapsed(snapshotStart);
+                }
+                Step(Config.TickSeconds);
+                accumulator -= Config.TickSeconds;
+                steps++;
+            }
             if (accumulator >= Config.TickSeconds)
             { long skipped = (long)(accumulator / Config.TickSeconds); skippedSteps += skipped; accumulator -= skipped * Config.TickSeconds; }
             measuredTicks += steps;
             maxTicksInFrame = Math.Max(maxTicksInFrame, steps);
-            if (steps > 0)
+            // Avoid interpolated uploads at uncapped render rates when no tick ran.
+            bool intermediate = smooth && armyRenderer.HasInterpolatedMotion && timeSinceArmySync >= 1.0 / 60.0 - 0.000001;
+            if (steps > 0 || intermediate || (!smooth && smoothingWasEnabled))
             {
                 long start = Stamp();
-                armyRenderer.Sync();
-                projectileRenderer.Sync(projectiles);
+                float blend = smooth ? (float)Math.Clamp(accumulator / Config.TickSeconds, 0.0, 1.0) : 1f;
+                armyRenderer.Sync(blend);
+                if (steps > 0) projectileRenderer.Sync(projectiles);
+                timeSinceArmySync = 0;
                 renderMs += Elapsed(start);
                 measuredSyncs++;
                 armyUploadMs += armyRenderer.UploadMilliseconds;
@@ -223,6 +244,7 @@ public partial class BenchmarkArena : Node3D
                 sparseUploads += armyRenderer.SparseUploads;
                 changedWrites += armyRenderer.ChangedWrites;
             }
+            smoothingWasEnabled = smooth;
         }
         measuredFrames++; hudClock += delta;
         if (hudClock >= 0.3) { UpdateOverlay(); hudClock = 0; ResetTimings(); }

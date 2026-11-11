@@ -5,7 +5,7 @@ namespace MassiveRts;
 
 public static class SoldierFacing
 {
-    private const float TurnRadiansPerSecond = 4f * Mathf.Pi;
+    private const float TurnRadiansPerSecond = 300f * (Mathf.Pi / 180f);
 
     public static Vector2 TurnStep(float dt)
     {

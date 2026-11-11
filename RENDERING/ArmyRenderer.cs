@@ -18,6 +18,12 @@ public partial class ArmyRenderer : Node3D
     private float[] halfHeights;
     private bool[] facesPositiveX;
     private UnitState units;
+    private Vector3[] previousPositions;
+    private Vector2[] previousFacing;
+    private bool[] unsettled;
+    private bool hasPreviousPose;
+    private float poseBlend = 1f;
+    public bool HasInterpolatedMotion { get; private set; }
     public int DenseUploads { get; private set; }
     public int SparseUploads { get; private set; }
     public int ChangedWrites { get; private set; }
@@ -64,6 +70,18 @@ public partial class ArmyRenderer : Node3D
         }
         Sync();
     }
+    public void CapturePose()
+    {
+        previousPositions ??= new Vector3[units.Count];
+        previousFacing ??= new Vector2[units.Count];
+        unsettled ??= new bool[units.Count];
+        System.Array.Copy(units.Position, previousPositions, units.Count);
+        System.Array.Copy(units.Facing, previousFacing, units.Count);
+        hasPreviousPose = true;
+    }
+
+    public void ClearPoseHistory() => hasPreviousPose = false;
+
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
     private static readonly Color[] FactionColors =
     {
@@ -89,6 +107,17 @@ public partial class ArmyRenderer : Node3D
         float[] buffer = buffers[batch];
         var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
         Vector2 facing = units.Facing[id];
+        if (hasPreviousPose && poseBlend < 1f)
+        {
+            position = previousPositions[id].Lerp(position, poseBlend);
+            Vector2 before = previousFacing[id];
+            if (before != facing)
+            {
+                if (before == Vector2.Zero)
+                    before = facesPositiveX[units.Type[id]] ? Vector2.Right : Vector2.Up;
+                facing = before.Lerp(facing, poseBlend).Normalized();
+            }
+        }
         float cosine = 1f, sine = 0f;
         if (facing != Vector2.Zero)
         {
@@ -148,11 +177,18 @@ public partial class ArmyRenderer : Node3D
     }
 
     // =========================================================
-    public void Sync()
+    public void Sync(float blend = 1f)
     {
+        poseBlend = blend;
+        HasInterpolatedMotion = false;
         for (int id = 0; id < units.Count; id++)
         {
-            if (!units.Dirty[id]) continue;
+            bool moving = hasPreviousPose && units.Health[id] > 0f &&
+                (previousPositions[id] != units.Position[id] || previousFacing[id] != units.Facing[id]);
+            bool wasUnsettled = unsettled != null && unsettled[id];
+            if (unsettled != null) unsettled[id] = moving && blend < 1f;
+            HasInterpolatedMotion |= moving && blend < 1f;
+            if (!units.Dirty[id] && !moving && !wasUnsettled) continue;
             units.Dirty[id] = false;
             int batch = Batch(id), slot = slots[id];
             if (units.Health[id] <= 0)
