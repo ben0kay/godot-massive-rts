@@ -74,3 +74,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Footprint separation and obstacle pursuit | Source implemented.** Weighted ordinary contact by effective footprint radius and reduced detour pauses by allowing a safe approach while routes queue and carrying speed through waypoints. Awaiting owner validation.
 
 - **2026-11-11 | Hexagon Siege Infantry | Source implemented.** Added a double-size melee unit with cleave and a reusable radial stomp/ring. Removed the preset troop-count cap from painting and saved deployments. Awaiting Godot validation.
+
+- **2026-11-11 | Hexagon stomp balance | Source updated; awaiting owner validation.** Changed the Hexagon's shockwave to trigger every fifth eligible melee attack (previously tenth), with damage falling from 25 at the centre to 10 at the edge (was 50 to 25). Radius and ordinary melee attacks are unchanged.
