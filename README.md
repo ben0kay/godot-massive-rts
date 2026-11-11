@@ -51,11 +51,39 @@ Do not copy another game's protected artwork, interface, audio or code. Build an
 - Keep simulation, rendering, formations, combat, UI and terrain modular, without overengineering a reusable engine before there is a need.
 - Future elevation must account for more than visuals: movement cost, melee reach, projectile trajectories and line-of-sight can be added in later milestones.
 
-### Potential feature ownership (create only when needed)
+### Folder structure — capitalized major systems
 
-`BENCHMARK/` (stress scenes/config), `SIMULATION/` (unit state and scheduler), `UNITS/` (archetypes/data), `COMBAT/` (damage/targeting/projectiles), `RENDERING/` (batched visuals), `FORMATIONS/` (placement/orders), `TERRAIN/` (ground/elevation), `UI/` (HUD), `DEBUG/` (profiling), `TESTS/` (small checks), and `NOTES/` (plans/preferences).
+**Required convention:** Keep major game systems in **UPPERCASE top-level folders**, matching the owner's other Godot projects. Organize related subsystems, scenes, scripts, resources and assets **inside the owning major folder**, not as dozens of unrelated root files or global `Scripts/`, `Scenes/` and `Resources/` dumps.
 
-These are **suggested owners, not folders that must be created now**.
+Example **planned** ownership (create only folders needed by the authorized task):
+
+```text
+BENCHMARK/
+    SCENES/           # BenchmarkArena.tscn and other benchmark scenes
+    SCENARIOS/        # Line, cluster and distributed test setups
+    UI/               # Benchmark controls and overlay
+    CONFIG/           # Benchmark settings and presets
+SIMULATION/
+    UNITS/            # Runtime unit arrays/state
+    MOVEMENT/         # Batched motion
+    SPATIAL/          # Local queries / spatial index
+RENDERING/
+    UNITS/            # Instanced soldier geometry
+    PROJECTILES/      # Batched projectile visuals
+COMBAT/
+    MELEE/
+    RANGED/
+UNITS/                # Unit archetypes, definitions and authored assets
+FORMATIONS/           # Deployment and orders
+TERRAIN/              # Terrain, height queries and future elevation
+CAMERA/               # Isometric camera controls
+UI/                   # Shared gameplay menus/HUD (not benchmark-specific UI)
+DEBUG/                # Shared instrumentation/debug tools
+NOTES/                # Plans and CodePreferences.md
+TESTS/                # Small automated checks, only when needed
+```
+
+**BENCH0 specifically:** Place its arena, scenarios, controls and benchmark-only settings under `BENCHMARK/`. Reusable simulation, renderer and camera components belong under their own major system folders. Subfolders group related concerns; create them only when actual files exist. Avoid unnecessary nesting, empty folders and cross-system duplicates.
 
 ## Development order (proposed, not completed)
 

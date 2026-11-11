@@ -40,6 +40,11 @@ The goal is **careful implementation with minimal AI validation overhead**, foll
 
 ## Folder ownership, scenes and configuration
 
+**MANDATORY root-folder rule:** Major systems use **ALL-CAPS top-level folder names** (e.g. `BENCHMARK/`, `SIMULATION/`, `RENDERING/`, `COMBAT/`, `CAMERA/`, `UNITS/`, `FORMATIONS/`, `TERRAIN/`, `UI/`, `DEBUG/`, `NOTES/`, `TESTS/`). Keep each system's **subsystems within its parent folder**, with their own relevant scenes, C# scripts, resources and assets. Do not scatter feature files across the root or create generic top-level `Scripts/`, `Scenes/`, `Resources/` or `Managers/` dumping grounds. See the root README's folder example. The goal is fast human navigation and clear ownership, not deep architecture. Follow this structure for BENCH0 and later features.
+
+- **BENCH0 example:** `BENCHMARK/SCENES/`, `BENCHMARK/SCENARIOS/`, `BENCHMARK/UI/` and `BENCHMARK/CONFIG/`; shared batching/render logic under `RENDERING/`, shared soldier state and spatial logic under `SIMULATION/`, camera controls under `CAMERA/`. Organize by ownership; avoid duplicating the same system in multiple places.
+- Only create subfolders that contain actual files. Small one-file subsystems can live directly inside their major folder. Avoid excessive nesting or boilerplate.
+
 - Document major implemented feature folders with a brief `README.md`: ownership, important files, data flow, configs and known limitations. Read existing docs first; update when behavior changes.
 - Prefer **feature-level master config** for commonly tuned settings using typed C# `Resource` classes / `.tres` where appropriate. Avoid competing configuration systems.
 - Keep systems modular and their lifecycles explicit. Plain `Node` containers are fine for scene organization, but container-only nodes don't need processing scripts. Avoid unnecessary autoloads and monolithic managers.
