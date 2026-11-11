@@ -8,6 +8,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public event Action SpawnRequested, ClearRequested, PauseRequested;
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
     public RuntimeUnitCatalog Catalog { private get; set; }
+    private readonly OptionButton separationChoice = new();
+    public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public readonly OptionButton BrushChoice = new();
     public readonly OptionButton FactionChoice = new();
     private VBoxContainer paintControls;
@@ -19,7 +21,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly Label Status = new(), Metrics = new();
     public readonly Button PauseButton = new() { Text = "Pause" };
     private PanelContainer overlay;
-    public static readonly int[] Counts = { 1000, 5000, 10000, 25000, 50000, 100000 };
+    public static readonly int[] Counts = { 1000, 5000, 10000, 20000, 25000, 50000, 100000 };
     public int RequestedCount => Counts[CountChoice.Selected];
     // =========================================================
     public override void _Ready()
@@ -33,6 +35,12 @@ public partial class BenchmarkPanel : CanvasLayer
         Field(column, "Total soldiers", CountChoice); Field(column, "Mode (applies on spawn)", ModeChoice);
         Field(column, "Layout (applies on spawn)", LayoutChoice); Field(column, "Seed (applies on spawn)", Seed);
         Field(column, "Ranged fire-rate multiplier (live)", FireRate); Field(column, "Ranged % (applies on spawn)", RangedPercent);
+        separationChoice.AddItem("Off", (int)SeparationMode.Off);
+        separationChoice.AddItem("Normal", (int)SeparationMode.Normal);
+        separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
+        separationChoice.Select(1);
+        separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
+        Field(column, "Separation (live)", separationChoice);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintControls = new VBoxContainer { Visible = false };

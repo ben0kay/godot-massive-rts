@@ -5,7 +5,7 @@ namespace MassiveRts;
 public static class MovementSystem
 {
     // =========================================================
-    public static void Step(UnitState units, BenchmarkMode mode, float dt)
+    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap = -1f)
     {
         var catalog = units.Catalog;
         bool movementMode = mode == BenchmarkMode.Movement;
@@ -28,6 +28,12 @@ public static class MovementSystem
                 float reach = type.AttackReach(defender);
                 stop = type.Ranged ? reach * 0.85f :
                     Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
+                if (!type.Ranged && separationGap >= 0f)
+                {
+                    // Stop at contact so engaged melee do not walk into the solver's gap each tick.
+                    float contact = type.Footprint + defender.Footprint + separationGap;
+                    stop = Mathf.Max(stop, Mathf.Min(contact, reach - 0.001f));
+                }
             }
             bool marchingInLane = movementMode && offset.Z == 0f;
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();

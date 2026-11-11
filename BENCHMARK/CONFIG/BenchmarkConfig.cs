@@ -14,6 +14,10 @@ public partial class BenchmarkConfig : Resource
     [Export] public float CellSize { get; set; } = 6f;
     [Export] public int QueryCandidateLimit { get; set; } = 96;
     [Export] public int TargetRefreshTicks { get; set; } = 6;
+    [ExportGroup("Separation")]
+    [Export(PropertyHint.Range, "0,0.25,0.01")] public float SeparationGap { get; set; } = 0.05f;
+    [Export(PropertyHint.Range, "1,128,1")] public int SeparationNeighbourBudget { get; set; } = 32;
+    [Export(PropertyHint.Range, "0.01,1,0.01")] public float SeparationMaxPushPerTick { get; set; } = 0.35f;
     [ExportGroup("Combat")]
     [Export] public float FlashSeconds { get; set; } = 0.12f;
     [ExportGroup("Projectiles")]

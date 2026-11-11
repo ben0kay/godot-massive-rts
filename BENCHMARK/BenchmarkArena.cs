@@ -12,6 +12,7 @@ public partial class BenchmarkArena : Node3D
     private Mesh[] soldierMeshes;
     private UnitState units;
     private SpatialGrid grid;
+    private SeparationSystem separation;
     private ProjectileSystem projectiles;
     private ArmyRenderer armyRenderer;
     private ProjectileRenderer projectileRenderer;
@@ -27,7 +28,7 @@ public partial class BenchmarkArena : Node3D
     private long skippedSteps;
     private readonly double[] frames = new double[120];
     private int frameCursor, frameSamples;
-    private double movementMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
+    private double movementMs, separationMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
     private int measuredFrames, measuredTicks, maxTicksInFrame;
     private static long Stamp() => Stopwatch.GetTimestamp();
     private static double Elapsed(long start) => (Stamp() - start) * 1000.0 / Stopwatch.Frequency;
@@ -43,6 +44,17 @@ public partial class BenchmarkArena : Node3D
         Config.TargetRefreshTicks = Mathf.Clamp(Config.TargetRefreshTicks, 1, 60);
         Config.QueryCandidateLimit = Mathf.Clamp(Config.QueryCandidateLimit, 8, 1024);
         Config.CellSize = Mathf.Clamp(Config.CellSize, 2, 20);
+        Config.SeparationNeighbourBudget = Mathf.Clamp(Config.SeparationNeighbourBudget, 1, 128);
+        Config.SeparationMaxPushPerTick = float.IsFinite(Config.SeparationMaxPushPerTick)
+            ? Mathf.Clamp(Config.SeparationMaxPushPerTick, 0.01f, 1f) : 0.35f;
+        // Leave a small margin inside melee reach at the requested body spacing.
+        float maximumGap = 0.25f;
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            ref readonly UnitStats type = ref catalog[i];
+            if (!type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
+        }
+        Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
         var ground = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
@@ -75,7 +87,7 @@ public partial class BenchmarkArena : Node3D
     {
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
-        units = null; projectiles = null; grid = null; deployment = null; spawning = false;
+        units = null; projectiles = null; grid = null; separation = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
     }
@@ -194,11 +206,25 @@ public partial class BenchmarkArena : Node3D
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
             start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick); targetingMs += Elapsed(start);
         }
-        start = Stamp(); MovementSystem.Step(units, mode, dt); movementMs += Elapsed(start);
+        SeparationMode separationMode = panel.Separation;
+        bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
+        start = Stamp();
+        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f);
+        movementMs += Elapsed(start);
+        float separationPadding = 0f;
+        if (separate)
+        {
+            start = Stamp();
+            separation ??= new SeparationSystem(units.Position.Length);
+            separationPadding = Config.SeparationMaxPushPerTick;
+            separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
+                Config.SeparationNeighbourBudget, separationPadding, tick);
+            separationMs += Elapsed(start);
+        }
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); CombatSystem.Step(units, projectiles, Config, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt); projectileMs += Elapsed(start); }
+            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, separationPadding); projectileMs += Elapsed(start); }
         }
         tick++; simulationMs += Elapsed(total);
     }
@@ -209,12 +235,15 @@ public partial class BenchmarkArena : Node3D
         for (int i = 0; i < frameSamples; i++) { sum += frames[i]; worst = Math.Max(worst, frames[i]); }
         double avg = frameSamples > 0 ? sum / frameSamples : 0, divisor = Math.Max(1, measuredFrames);
         string costPerTick = measuredTicks > 0 ? $"{simulationMs / measuredTicks:F3} ms" : "N/A";
+        bool separating = panel.Separation != SeparationMode.Off && units?.Alive > 1 && !spawning && mode != BenchmarkMode.RenderingOnly;
+        int overlapPairs = separating ? separation?.OverlapPairs ?? 0 : 0;
+        int separationCaps = separating ? separation?.BudgetHits ?? 0 : 0;
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
-            $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
+            $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
-            $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\n\n" +
+            $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\n\n" +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
             $"GPU frame time: N/A\nGPU utilization: N/A";
@@ -225,5 +254,5 @@ public partial class BenchmarkArena : Node3D
         return bytes > 0 ? $"{bytes / 1048576.0:F1} MiB" : "N/A";
     }
     private void ResetTimings()
-    { movementMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0; measuredFrames = measuredTicks = maxTicksInFrame = 0; }
+    { movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0; measuredFrames = measuredTicks = maxTicksInFrame = 0; }
 }

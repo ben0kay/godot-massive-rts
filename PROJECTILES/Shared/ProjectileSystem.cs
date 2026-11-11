@@ -46,11 +46,11 @@ public sealed class ProjectileSystem
         Dirty = true;
     }
 
-    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt)
+    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding)
     {
         if (Count == 0) return;
         Dirty = true;
-        float movementPadding = units.Catalog.MaxSpeed * dt;
+        float movementPadding = units.Catalog.MaxSpeed * dt + separationPadding;
         for (int i = Count - 1; i >= 0; i--)
         {
             float endTime = Mathf.Min(duration[i], config.ProjectileLifetime);

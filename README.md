@@ -91,9 +91,9 @@ TESTS/                # Small automated checks, only when needed
 
 Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
-## Next proposed simulation milestone — SEP1 (planned)
+## SEP1 — Soldier Separation
 
-**SEP1: Soldier Separation** aims to prevent the current army shapes from stacking tightly together. The planned implementation uses a bounded local spatial grid, per-unit footprint radii, and batched XZ correction without Godot physics bodies, with **Off / Normal / Strong** comparison controls. The priority is playable battles up to roughly **10,000 vs 10,000 soldiers**; larger benchmark counts remain available without guaranteed FPS. Read the [SEP1 Codex implementation plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md). **Not implemented yet.**
+**Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
 
 ## Development order (proposed, not completed)
 

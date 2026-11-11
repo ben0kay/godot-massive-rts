@@ -1,6 +1,6 @@
 # SEP1 — High-Count Soldier Separation
 
-**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** **Planned / Not Implemented**
+**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Status:** **Source Implemented / Awaiting Owner Validation**
 **Target workload:** Up to roughly **10,000 vs 10,000 (20,000 live units total)** on owner hardware; keep larger BENCH0 sizes available for comparative stress tests, without promising FPS.
 
 ## Goal
@@ -17,7 +17,7 @@ Soldiers currently use the fast shared movement pass, but friendly and opposing 
 - `SIMULATION/SpatialGrid.cs`: faction-specific targeting/projection grid (~6-unit cells), pursuit tree, pre-movement projectile broadphase. **Do not assume it is appropriate for close-range neighbour separation**.
 - `UNITS/CATALOG/UnitCatalog.cs`: `UnitStats.Footprint` is a radius; circles/squares/triangles/diamonds/pentagons have different radii.
 - `BENCHMARK/BenchmarkArena.cs`, `BENCHMARK/CONFIG/BenchmarkConfig.cs`, `BENCHMARK/UI/BenchmarkPanel.cs`: fixed-step orchestration, tuning, overlay.
-- `COMBAT/CombatSystem.cs`, current `COMBAT/ProjectileSystem.cs`: ensure revised positions do not invalidate hit/target assumptions.
+- `COMBAT/CombatSystem.cs`, current `PROJECTILES/Shared/ProjectileSystem.cs`: ensure revised positions do not invalidate hit/target assumptions.
 - `DEPLOYMENT/DeploymentLayout.cs`, `DEPLOYMENT/DeploymentPainter.cs`: editor-side placement already has footprint clearance; don't break painted saves or placement.
 
 The repository has been changing rapidly. **Read the live branch**, not just this plan's description, and preserve all post-UNIT0 projectile/targeting work.

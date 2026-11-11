@@ -47,6 +47,12 @@ Click **Edit painted deployment** to clear the live battle and open the placemen
 
 The deployment cells are 2.1 world units wide and independent of the combat grid. The combat index uses direct cell lookups within its central array, a dictionary outside it, and clears only occupied array entries each tick. Both paths retain the same soldier order within each cell.
 
+## Soldier separation
+
+Choose **Off**, **Normal** (default), or **Strong** in the live Separation control. Normal runs one correction pass and Strong runs two, with a fresh separation grid between passes. The solver runs in Movement, Melee and Ranged. Compare identical respawns at 1k and 20k soldiers and inspect contact fronts for stacking or jitter.
+
+**Separation** is CPU milliseconds per rendered frame in the current reporting window. **Separation pairs / caps** sums overlap pairs that produced a correction and neighbour queries cut short in the latest simulation tick, including both Strong passes. A pair can be counted again on the second pass. Tunables are in the benchmark resource under Separation.
+
 ## Measurements
 
 Frame average and worst use up to the latest **120 rendered frames**, based on `_Process(delta)`. UI refreshes at approximately 0.3 sec. FPS is Godot's engine counter. These include engine/presentation scheduling, unlike scoped game CPU timers.
