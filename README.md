@@ -99,6 +99,10 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue 
 
 SEP2 is a proposed **allied-only** pass-through exception to SEP1. Advancing melee soldiers, including basic Circle infantry, may overlap stationary friendly archers to **50% of the normal footprint clearance** while the archers yield slightly, so melee can reach the frontline more easily. **Enemy separation remains completely unchanged.** See [SEP2 Codex implementation plan](SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md). **Plan only; not implemented.**
 
+## FB0 — Soldier Hit Feedback (planned)
+
+A dedicated [FEEDBACK](FEEDBACK/README.md) major folder will own presentation effects. [FB0](FEEDBACK/UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md) plans to centralize the existing white damage flash and add a **6% / 0.18-second visual scale pulse** for hit soldiers using existing MultiMesh instance transforms. Future `UNIT_DEATHS/`, `CAMERA_SHAKE/`, and `IMPACTS/` modules will be added only when implemented. **Plan only; FB0 is not implemented yet.**
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.

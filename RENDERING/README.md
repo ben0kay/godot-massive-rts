@@ -1,3 +1,7 @@
 # RENDERING
 
 `ArmyRenderer.cs` creates up to ten MultiMesh batches (two factions × five unit types), allocates exact deployment capacities and packs live slots on death. Dirty entries update reusable CPU buffers. Dense changes upload one buffer per affected batch. Sparse changes update individual slots. Projectile drawing lives in [PROJECTILES](../PROJECTILES/README.md). Soldier meshes are shared between factions and authored by `FacetedSoldierMeshes.cs` with brighter top faces and directionally darker sides (baked per-vertex grayscale tints). The existing MultiMesh blue/red instance colours multiply those tints; white damage flashes remain visible with darker side facets. Materials remain unshaded, requiring no lights or dynamic shadows; geometry and shading are shared per unit type. Shadows are disabled. Render sync runs on the main thread and is measured separately from simulation. Whole-batch culling, no interpolation/LOD; no per-soldier nodes. BENCHMARK owns renderer creation/disposal.
+
+## FB0 — Future hit-feedback ownership
+
+The existing white-flash timer/colour decision remains in simulation/rendering until [FB0](../FEEDBACK/UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md) is implemented. FB0 will centralize flash and pulse logic in `FEEDBACK/UNIT_HITS/`, preserving this renderer's batched `MultiMesh` model. The planned pulse must update both dense packed transform-buffer uploads and sparse `SetInstanceTransform` uploads, with Y translation adjusted so scaling stays ground-anchored. **Not implemented yet.**
