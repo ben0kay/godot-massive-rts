@@ -1,4 +1,4 @@
-// Visual-only heading from deliberate XZ motion.
+// Shared heading for deliberate XZ movement and facing melee swings.
 using Godot;
 
 namespace MassiveRts;

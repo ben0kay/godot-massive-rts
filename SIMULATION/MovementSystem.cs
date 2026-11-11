@@ -39,23 +39,16 @@ public static class MovementSystem
             if (hasTarget)
             {
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
-                float reach = type.AttackReach(defender);
+                float reach = type.Ranged ? type.Reach :
+                    CombatSystem.MeleeContact(type.Footprint, defender.Footprint, separationGap);
                 bool inRange = (rangedCombat || obstacles != null) && offset.LengthSquared() <= reach * reach;
                 bool blockedInRange = inRange && obstacles != null &&
                     (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                     obstacles.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
                 if (rangedCombat && units.MoveSpeed[i] == 0f && hasClearShot) continue;
-                // Once advancing, settle slightly inside range so small target changes
-                // can be absorbed without another step. Combat still uses exact reach.
-                stop = rangedCombat ? reach - Mathf.Min(RangedStandOffBuffer, reach * 0.15f) :
-                    Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
-                if (!type.Ranged && separationGap >= 0f)
-                {
-                    // Hold once in reach so front-line soldiers do not continually
-                    // advance into packed bodies just to reach an inner stop distance.
-                    stop = Mathf.Max(stop, reach - 0.02f);
-                }
+                // A small inward margin maintains contact through separation corrections.
+                stop = rangedCombat ? reach - Mathf.Min(RangedStandOffBuffer, reach * 0.15f) : reach - 0.02f;
             }
             bool detouring = false, routeCorner = false;
             if (navigation != null)

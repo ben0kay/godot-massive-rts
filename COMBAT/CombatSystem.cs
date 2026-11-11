@@ -5,6 +5,11 @@ namespace MassiveRts;
 public static class CombatSystem
 {
     private const int ExtraPursuitQueriesPerTick = 128;
+    private const float MeleeContactTolerance = 0.08f;
+    private const float SingleHitFacingCosineSquared = 0.413176f; // Half-angle of 50 degrees.
+
+    public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
+        attackerRadius + defenderRadius + Mathf.Max(0f, separationGap);
 
     public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
     {
@@ -74,9 +79,10 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null, ObstacleField obstacles = null,
+    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
         ShockwaveRenderer shockwaves = null)
     {
+        Vector2 turnStep = SoldierFacing.TurnStep(dt);
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
@@ -85,11 +91,34 @@ public static class CombatSystem
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
-            float radius = type.AttackReach(units.Catalog[units.Type[target]]);
-            if (units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius) continue;
+            Vector3 offset = units.Position[target] - units.Position[i];
+            float radius = type.Ranged ? type.Reach :
+                MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
+            if (offset.LengthSquared() > radius * radius) continue;
             if (obstacles != null &&
                 (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                 obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
+            Vector2 facing = units.Facing[i];
+            if (!type.Ranged)
+            {
+                Vector2 aim = new(offset.X, offset.Z);
+                float aimSquared = aim.LengthSquared();
+                if (aimSquared <= 0.000001f)
+                    facing = Vector2.Zero;
+                else if (type.Shape == UnitShape.Circle)
+                    facing = aim.Normalized();
+                else
+                {
+                    float forward = facing.Dot(aim);
+                    float cone = type.CleaveEnabled ? type.CleaveCosineSquared : SingleHitFacingCosineSquared;
+                    if (facing == Vector2.Zero || forward < 0f || forward * forward < aimSquared * cone)
+                    {
+                        SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared), turnStep);
+                        units.Dirty[i] = true;
+                        continue;
+                    }
+                }
+            }
             if (type.Ranged) projectiles.Fire(i, target, units);
             else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
             {
@@ -100,7 +129,7 @@ public static class CombatSystem
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
-                AreaDamage.Cleave(units, grid, i, target, type, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
+                AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
             else units.Damage(target, type.Damage);
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }

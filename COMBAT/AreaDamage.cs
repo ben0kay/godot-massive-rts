@@ -6,16 +6,14 @@ namespace MassiveRts;
 public static class AreaDamage
 {
     public static void Cleave(UnitState units, SpatialGrid grid, int attacker, int primary,
-        in UnitStats type, float movementPadding, ObstacleField obstacles = null)
+        in UnitStats type, Vector2 direction, float separationGap, float tolerance, float movementPadding, ObstacleField obstacles = null)
     {
         Vector3 origin = units.Position[attacker];
-        Vector3 aim = units.Position[primary] - origin;
-        Vector2 direction = new Vector2(aim.X, aim.Z).Normalized();
         units.Damage(primary, type.Damage);
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f) return;
 
         int sourceFaction = units.Faction[attacker];
-        float queryRadius = type.Reach + units.MaxFootprint + movementPadding;
+        float queryRadius = CombatSystem.MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + tolerance + movementPadding;
         int first = -1, second = -1;
         float firstDistance = float.PositiveInfinity, secondDistance = float.PositiveInfinity;
 
@@ -26,7 +24,7 @@ public static class AreaDamage
             if (id == primary || units.Health[id] <= 0f) continue;
             Vector3 offset = units.Position[id] - origin;
             float distance = offset.LengthSquared();
-            float reach = type.AttackReach(units.Catalog[units.Type[id]]);
+            float reach = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[id]].Footprint, separationGap) + tolerance;
             if (distance > reach * reach) continue;
             float planarDistance = offset.X * offset.X + offset.Z * offset.Z;
             float forward = direction.X * offset.X + direction.Y * offset.Z;
