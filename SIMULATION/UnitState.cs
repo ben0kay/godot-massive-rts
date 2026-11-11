@@ -6,7 +6,7 @@ public sealed class UnitState
 {
     public readonly Vector3[] Position;
     public readonly Vector3[] Goal;
-    public readonly float[] Health, Cooldown;
+    public readonly float[] Health, Cooldown, MoveSpeed;
     public readonly int[] Target;
     public readonly byte[] Faction, Type;
     public readonly bool[] Dirty;
@@ -19,7 +19,7 @@ public sealed class UnitState
         Catalog = catalog;
         HitFeedback = hitFeedback;
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
-        Health = new float[capacity]; Cooldown = new float[capacity];
+        Health = new float[capacity]; Cooldown = new float[capacity]; MoveSpeed = new float[capacity];
         Target = new int[capacity]; Faction = new byte[capacity]; Type = new byte[capacity];
         Dirty = new bool[capacity];
     }

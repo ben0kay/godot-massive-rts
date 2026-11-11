@@ -48,6 +48,8 @@ public partial class BenchmarkArena : Node3D
         Config.MaxStepsPerFrame = Mathf.Clamp(Config.MaxStepsPerFrame, 1, 5);
         Config.TargetRefreshTicks = Mathf.Clamp(Config.TargetRefreshTicks, 1, 60);
         Config.QueryCandidateLimit = Mathf.Clamp(Config.QueryCandidateLimit, 8, 1024);
+        Config.MeleeAccelerationSeconds = ClampFiniteSetting(Config.MeleeAccelerationSeconds, 0.6f, 0.15f);
+        Config.RangedAccelerationSeconds = ClampFiniteSetting(Config.RangedAccelerationSeconds, 0.6f, 0.22f);
         Config.CellSize = Mathf.Clamp(Config.CellSize, 2, 20);
         Config.SeparationNeighbourBudget = Mathf.Clamp(Config.SeparationNeighbourBudget, 1, 128);
         Config.SeparationMaxPushPerTick = float.IsFinite(Config.SeparationMaxPushPerTick)
@@ -61,10 +63,10 @@ public partial class BenchmarkArena : Node3D
         }
         Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
         alliedYieldSettings = new AlliedYieldSettings(
-            ClampYieldSetting(Config.AlliedRangedClearanceFraction, 1f, 0.5f),
-            ClampYieldSetting(Config.AlliedRangedYieldPairCap, 0.25f, 0.06f),
-            ClampYieldSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
-            ClampYieldSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f));
+            ClampFiniteSetting(Config.AlliedRangedClearanceFraction, 1f, 0.5f),
+            ClampFiniteSetting(Config.AlliedRangedYieldPairCap, 0.25f, 0.06f),
+            ClampFiniteSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
+            ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f));
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
         var ground = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
@@ -237,7 +239,8 @@ public partial class BenchmarkArena : Node3D
         start = Stamp();
         byte[] movementFlags = separate && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
-        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags);
+        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds);
         movementMs += Elapsed(start);
         float separationPadding = 0f;
         if (separate)
@@ -293,7 +296,7 @@ public partial class BenchmarkArena : Node3D
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
             $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
     }
-    private static float ClampYieldSetting(float value, float max, float fallback) =>
+    private static float ClampFiniteSetting(float value, float max, float fallback) =>
         float.IsFinite(value) ? Mathf.Clamp(value, 0, max) : fallback;
 
     private static string ViewportTime(double milliseconds)

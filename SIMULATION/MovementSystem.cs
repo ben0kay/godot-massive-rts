@@ -5,10 +5,13 @@ namespace MassiveRts;
 public static class MovementSystem
 {
     // =========================================================
-    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap = -1f, byte[] voluntaryMovement = null)
+    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
+        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds)
     {
         var catalog = units.Catalog;
         bool movementMode = mode == BenchmarkMode.Movement;
+        float meleeRampRate = meleeRampSeconds > 0f ? 1f / meleeRampSeconds : 0f;
+        float rangedRampRate = rangedRampSeconds > 0f ? 1f / rangedRampSeconds : 0f;
         for (int i = 0; i < units.Count; i++)
         {
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
@@ -17,7 +20,11 @@ public static class MovementSystem
             bool hasTarget = target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
                 (units.Faction[i] == 0 ? units.Red : units.Blue) > 0;
-            if (!hasTarget && !movementMode && !followingLastPosition) continue;
+            if (!hasTarget && !movementMode && !followingLastPosition)
+            {
+                units.MoveSpeed[i] = 0f;
+                continue;
+            }
             Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
             Vector3 offset = destination - units.Position[i]; offset.Y = 0;
             ref readonly UnitStats type = ref catalog[units.Type[i]];
@@ -41,11 +48,25 @@ public static class MovementSystem
             {
                 // Movement-only mode continuously marches back and forth along separate lanes.
                 if (movementMode) units.Goal[i].X = -units.Goal[i].X;
+                else units.MoveSpeed[i] = 0f;
                 continue;
             }
-            float fullStep = type.Speed * dt;
-            float travel = Mathf.Min(fullStep, distance - stop);
-            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= fullStep * 0.5f))
+            float remaining = distance - stop;
+            float advanceSpeed = type.Speed;
+            float speed = advanceSpeed;
+            float rampRate = type.Ranged ? rangedRampRate : meleeRampRate;
+            if (!movementMode && rampRate > 0f)
+            {
+                float acceleration = type.Speed * rampRate;
+                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + acceleration * dt);
+                // Limit speed near the stopping point. Most soldiers can skip the square root.
+                float brakingSpeedSquared = 2f * acceleration * remaining;
+                speed = advanceSpeed * advanceSpeed > brakingSpeedSquared
+                    ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
+                units.MoveSpeed[i] = speed * dt >= remaining ? 0f : speed;
+            }
+            float travel = Mathf.Min(speed * dt, remaining);
+            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
                 voluntaryMovement[i] = 1;
             if (marchingInLane)
                 units.Position[i].X += offset.X < 0f ? -travel : travel;
