@@ -17,7 +17,7 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 | A — Rendering only | Stationary primitive MultiMeshes. No movement, grid, combat, projectile or recurring instance-sync pass. |
 | B — Movement | Fixed-step marching between mirrored endpoints in separate lanes, continuously reversing at endpoints. No targeting or combat. |
 | C — Melee | Grid rebuilding, staggered local acquisition, marching, health, attack cooldowns, damage flashes and deaths. |
-| D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept intended-target hit checks and lifetime expiry. |
+| D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept first-enemy hit checks and lifetime expiry. |
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. All remain reproducible with the same count, mode, composition, resource settings and seed. Heavy hexagonal soldiers are visual-only and behave like melee soldiers. Ranged soldiers are cubes; melee are triangular prisms.
 
@@ -35,11 +35,13 @@ Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; 
 
 Flow: prepare unit arrays → allocate six mesh/faction batches → fixed-step spatial/targeting/movement/combat/projectile passes → dirty render sync → throttled overlay. No soldier or projectile has its own Node, processing callback, scene, timer or physics body. Flat ground uses a shared height-query seam; elevation-aware combat is future work.
 
+Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells.
+
 ## Measurements
 
 Frame average and worst use up to the latest **120 rendered frames**, based on `_Process(delta)`. UI refreshes at approximately 0.3 sec. FPS is Godot's engine counter. These include engine/presentation scheduling, unlike scoped game CPU timers.
 
-`Stopwatch` scopes measure simulation total, movement, grid + targeting, combat, projectile updates and renderer sync separately. Displayed CPU values are **accumulated milliseconds divided by rendered frames in that UI reporting window**, including zero-step frames. Simulation total includes its child scopes; do not add them together. Renderer sync measures C# update/submission cost, not completed GPU execution. Spawn preparation and initial GPU upload are outside those steady-state scopes. Simulation per tick and average/peak ticks per frame use the same reporting window. Samples reset on clear/spawn.
+`Stopwatch` scopes measure simulation total, movement, grid rebuild, targeting, combat, projectile updates and renderer sync separately. Displayed CPU values are **accumulated milliseconds divided by rendered frames in that UI reporting window**, including zero-step frames. Simulation total includes its child scopes; do not add them together. Renderer sync measures C# update/submission cost, not completed GPU execution. Spawn preparation and initial GPU upload are outside those steady-state scopes. Simulation per tick and average/peak ticks per frame use the same reporting window. Samples reset on clear/spawn.
 
 Draw calls and rendered objects are whole-viewport Godot counters, including the interface and ground; they are not soldier counts. Soldier instances count live, visible batch entries. Memory reports Godot static allocations and the managed heap separately; neither is total process or GPU memory. Godot static allocation tracking may be unavailable in some builds (shown as N/A). GPU frame time and GPU utilization are N/A; there is no fabricated utilization estimate.
 
@@ -49,7 +51,7 @@ Skipped ticks, capped local queries (latest completed combat tick) and dropped s
 
 - Candidate-bounded queries search cells center-out and may miss better targets in dense cells. The grid indexes factions separately so friendly crowds cannot exhaust enemy-query budgets. This is approximate targeting, not guaranteed global nearest selection.
 - Movement follows lanes until local targets are found. No collision avoidance, navigation, separation solver or formation orders; combat can bunch at the front. Units march to fixed mirrored endpoints when no enemy is acquired. The benchmark does real movement and combat, but is not a complete battle AI.
-- Projectiles fly straight at the target's launch-time position. Swept tests use the current intended target position; they can miss moving targets and do not hit intervening soldiers. No ballistics, splash or physics. Projectile visuals have fixed orientation. Heavy units have no unique combat stats.
+- Projectiles fly straight at the target's launch-time position. Swept tests use current soldier positions and remove the shot on its first enemy hit, including intervening enemies. Friendly soldiers are ignored. No ballistics, splash or physics. Projectile visuals have fixed orientation. Heavy units have no unique combat stats.
 - Fixed steps have no visual interpolation. At low FPS they may visibly step. MultiMesh batches have broad aggregate bounds, without spatial chunk culling or per-instance LOD. The dirty pass scans IDs and stages changed slots in reusable buffers. Batches with more than 64 staged writes upload their buffer once, while smaller changes use individual setters. Deaths pack active slots using swap removal. Render-only skips the pass entirely.
 - Array allocation, deployment finalization, clear and GPU allocation can hitch. Spawning is bounded but not a background loading pipeline. UI allocations are throttled; dictionary storage is reused after capacity grows. No multithreading.
 - State determinism assumes identical settings and simulation tick counts, not identical wall-clock results across different FPS or live rate edits. Melee applies damage in stable ID order; it is a workload, not a fairness/balance model.

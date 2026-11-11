@@ -22,7 +22,7 @@ public partial class BenchmarkArena : Node3D
     private long skippedSteps;
     private readonly double[] frames = new double[120];
     private int frameCursor, frameSamples;
-    private double movementMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
+    private double movementMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
     private int measuredFrames, measuredTicks, maxTicksInFrame;
     private static long Stamp() => Stopwatch.GetTimestamp();
     private static double Elapsed(long start) => (Stamp() - start) * 1000.0 / Stopwatch.Frequency;
@@ -104,13 +104,14 @@ public partial class BenchmarkArena : Node3D
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
-            start = Stamp(); grid.Rebuild(units); CombatSystem.Acquire(units, grid, Config, mode, tick); targetingMs += Elapsed(start);
+            start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
+            start = Stamp(); CombatSystem.Acquire(units, grid, Config, mode, tick); targetingMs += Elapsed(start);
         }
         start = Stamp(); MovementSystem.Step(units, Config, mode, dt); movementMs += Elapsed(start);
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); CombatSystem.Step(units, projectiles, Config, mode, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, Config, dt); projectileMs += Elapsed(start); }
+            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt); projectileMs += Elapsed(start); }
         }
         tick++; simulationMs += Elapsed(total);
     }
@@ -124,7 +125,7 @@ public partial class BenchmarkArena : Node3D
         panel.Metrics.Text = $"BENCH0 — {(paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
-            $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nGrid + targeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
+            $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\n\n" +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
@@ -137,5 +138,5 @@ public partial class BenchmarkArena : Node3D
         return bytes > 0 ? $"{bytes / 1048576.0:F1} MiB" : "N/A";
     }
     private void ResetTimings()
-    { movementMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0; measuredFrames = measuredTicks = maxTicksInFrame = 0; }
+    { movementMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0; measuredFrames = measuredTicks = maxTicksInFrame = 0; }
 }
