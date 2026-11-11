@@ -60,3 +60,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Cavalry acceleration tuning | Source implemented.** Doubled the Diamond acceleration time while retaining its top speed and trample requirements.
 
 - **2026-11-11 | Cavalry acceleration | Source implemented.** Set Diamond acceleration to 2 seconds at the existing 9-unit-per-second top speed.
+
+- **2026-11-11 | Circle Infantry facing bypass | Source implemented; awaiting owner visual/performance validation.** Skipped voluntary-turn calculations and render-facing interpolation/rotation for circles, preserving position smoothing, MultiMesh transforms and hit-feedback scaling. Other soldier types still turn normally.

@@ -13,3 +13,5 @@
 Soldiers turn toward deliberate movement, including charges, and keep their last heading while stationary. The packed transform contains yaw and hit-pulse scale, shared by the sparse and dense upload paths. Separation and shove corrections do not change facing.
 
 Smooth soldier motion is on by default. It blends the latest two simulation poses and adds roughly one tick of visual latency. Extra uploads between ticks are limited to about 60 Hz. Projectile poses and hit feedback still update on simulation ticks. Disable smoothing for tick-only soldier uploads.
+
+Circle Infantry bypasses visual yaw interpolation and rotation calculations because its shared mesh is rotationally symmetric. The renderer still interpolates Circle position and applies hit-pulse scaling, flash colour and MultiMesh uploads as before. Other unit shapes retain smooth turning.

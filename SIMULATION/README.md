@@ -21,3 +21,7 @@ Combat movement ramps to the authored top speed over 0.15 seconds for melee and 
 Stationary ranged soldiers hold their position while a living target is in exact attack range and wait for a replacement target after a kill. An advancing ranged soldier settles up to 0.25 world units inside range to absorb small shifts in target distance. Firing still uses the authored range.
 
 Blue, Red and Green treat every other team as hostile. Local targeting picks the nearest examined enemy within its existing candidate budget. Long-range pursuit compares the nearest live candidates across opposing team trees. Area attacks and projectile sweeps use the same faction filter, and SEP2 compares the full team ID for ally yielding.
+
+### Circle Infantry facing optimization
+
+Round Circle Infantry does not calculate or update a movement heading. Other soldier types still turn toward deliberate movement; Circle position, movement, combat, separation and hit feedback are unchanged.

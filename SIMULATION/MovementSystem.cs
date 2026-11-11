@@ -80,7 +80,8 @@ public static class MovementSystem
             Vector3 direction = marchingInLane
                 ? (offset.X < 0f ? Vector3.Left : Vector3.Right)
                 : offset / distance;
-            if (travel > 0.00001f)
+            // Circle infantry is rotationally symmetric; skip heading work entirely.
+            if (travel > 0.00001f && type.Shape != UnitShape.Circle)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnStep);
             units.Position[i] += direction * travel;
             units.Position[i].Y = BattlefieldHeight.At(units.Position[i].X, units.Position[i].Z);

@@ -106,24 +106,31 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
         var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
-        Vector2 facing = units.Facing[id];
+        byte type = units.Type[id];
         if (hasPreviousPose && poseBlend < 1f)
-        {
             position = previousPositions[id].Lerp(position, poseBlend);
-            Vector2 before = previousFacing[id];
-            if (before != facing)
-            {
-                if (before == Vector2.Zero)
-                    before = facesPositiveX[units.Type[id]] ? Vector2.Right : Vector2.Up;
-                facing = before.Lerp(facing, poseBlend).Normalized();
-            }
-        }
+        // A circle looks identical from every direction: keep its transform unrotated,
+        // but still interpolate position and apply the normal hit-feedback scale.
         float cosine = 1f, sine = 0f;
-        if (facing != Vector2.Zero)
+        if (type != RuntimeUnitCatalog.Circle)
         {
-            bool positiveX = facesPositiveX[units.Type[id]];
-            cosine = positiveX ? facing.X : -facing.Y;
-            sine = positiveX ? -facing.Y : -facing.X;
+            Vector2 facing = units.Facing[id];
+            if (hasPreviousPose && poseBlend < 1f)
+            {
+                Vector2 before = previousFacing[id];
+                if (before != facing)
+                {
+                    if (before == Vector2.Zero)
+                        before = facesPositiveX[type] ? Vector2.Right : Vector2.Up;
+                    facing = before.Lerp(facing, poseBlend).Normalized();
+                }
+            }
+            if (facing != Vector2.Zero)
+            {
+                bool positiveX = facesPositiveX[type];
+                cosine = positiveX ? facing.X : -facing.Y;
+                sine = positiveX ? -facing.Y : -facing.X;
+            }
         }
         buffer[offset] = buffer[offset + 10] = cosine * scale;
         buffer[offset + 2] = sine * scale;
@@ -184,7 +191,8 @@ public partial class ArmyRenderer : Node3D
         for (int id = 0; id < units.Count; id++)
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
-                (previousPositions[id] != units.Position[id] || previousFacing[id] != units.Facing[id]);
+                (previousPositions[id] != units.Position[id] ||
+                 (units.Type[id] != RuntimeUnitCatalog.Circle && previousFacing[id] != units.Facing[id]));
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;
             HasInterpolatedMotion |= moving && blend < 1f;
