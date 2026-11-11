@@ -107,6 +107,10 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the 
 
 [UNIT1](UNITS/UNIT1_SIZE_SCALING_PLAN.md) proposes a per-type `SizeMultiplier` in existing soldier `.tres` definitions, compiling uniform visual size, gameplay footprint, melee/cleave reach and trample contact size once. The target is **1.25× Cavalry** with unchanged damage, movement speed and 2-second acceleration. **Plan only; not yet implemented.**
 
+## OBST1 — Static obstacle navigation and line of sight (planned)
+
+[OBST1 implementation plan](OBSTACLES/OBST1_IMPLEMENTATION_PLAN.md) covers paintable dark-gray rectangular blockers, obstacle-safe movement/separation and cavalry charges, shared cached/staggered navigation for many soldiers, direct ranged line of sight and pooled projectile collision. Weapons will have a future-facing direct vs indirect-fire policy so artillery can shoot over cover later. **Plan only; not implemented.**
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.

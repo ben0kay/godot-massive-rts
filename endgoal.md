@@ -8,7 +8,7 @@
 
 The project is currently a high-unit-count Godot 4 C# 3D isometric army simulation and benchmark. Continue improving and measuring the existing shared simulation before building either complete game mode.
 
-**Next intended experiment:** introduce a large, simple rectangular/block obstacle on the battlefield and observe movement, crowding, navigation behavior, and FPS/CPU costs with large armies. Keep it a focused benchmark experiment; do not assume this document authorizes implementing obstacle navigation or the game modes.
+**Next intended experiment:** [OBST1](OBSTACLES/OBST1_IMPLEMENTATION_PLAN.md) now provides a scoped implementation plan for paintable large, simple dark-gray rectangular obstacles, shared navigation around them and direct-fire line of sight. Use it to observe movement, crowding, routing and FPS/CPU costs with large armies. **Plan only; not yet implemented**. This does not authorize the other future game modes.
 
 Preserve the existing benchmark room, compact unit arrays, batched MultiMesh rendering, shared spatial queries, separation, melee/ranged combat, cavalry, and profiling tools. The owner has reported good performance around 20,000–25,000 units in some workloads, but that does not establish performance for dense combat, obstacle routing, or RTS control.
 
