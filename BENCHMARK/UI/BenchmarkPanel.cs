@@ -6,6 +6,10 @@ namespace MassiveRts;
 public partial class BenchmarkPanel : CanvasLayer
 {
     public event Action SpawnRequested, ClearRequested, PauseRequested;
+    public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
+    public readonly OptionButton BrushChoice = new();
+    private VBoxContainer paintControls;
+    public bool EditingDeployment { set => paintControls.Visible = value; }
     public readonly OptionButton CountChoice = new(), ModeChoice = new(), LayoutChoice = new();
     public readonly SpinBox Seed = new() { MinValue = 0, MaxValue = 2147483647, Value = 12345, Step = 1 };
     public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 2 };
@@ -28,6 +32,15 @@ public partial class BenchmarkPanel : CanvasLayer
         Field(column, "Layout (applies on spawn)", LayoutChoice); Field(column, "Seed (applies on spawn)", Seed);
         Field(column, "Shots/sec per ranged unit (live)", FireRate); Field(column, "Ranged % (applies on spawn)", RangedPercent);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
+        AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
+        paintControls = new VBoxContainer { Visible = false };
+        column.AddChild(paintControls);
+        foreach (string brush in new[] { "Blue melee (left side)", "Blue ranged (left side)",
+            "Red melee (right side)", "Red ranged (right side)" }) BrushChoice.AddItem(brush);
+        Field(paintControls, "Drag left to paint • right to erase", BrushChoice);
+        AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
+        AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
+        AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
         var clear = new Button { Text = "Clear all" }; clear.Pressed += () => ClearRequested?.Invoke(); column.AddChild(clear);
         PauseButton.Pressed += () => PauseRequested?.Invoke(); column.AddChild(PauseButton);
         var toggle = new CheckButton { Text = "Performance overlay (F4)", ButtonPressed = true };
@@ -36,6 +49,12 @@ public partial class BenchmarkPanel : CanvasLayer
         column.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F4: overlay" });
         overlay = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, OffsetLeft = -415, OffsetRight = -12, OffsetTop = 12 };
         AddChild(overlay); overlay.AddChild(Metrics); Metrics.AddThemeFontSizeOverride("font_size", 15);
+    }
+    private static void AddButton(VBoxContainer column, string title, Action action)
+    {
+        var button = new Button { Text = title };
+        button.Pressed += action;
+        column.AddChild(button);
     }
     private static void Field(VBoxContainer column, string title, Control input)
     { column.AddChild(new Label { Text = title }); column.AddChild(input); }

@@ -6,18 +6,47 @@ namespace MassiveRts;
 
 public sealed class SpatialGrid
 {
-    private readonly Dictionary<Vector3I, int> heads = new(32768);
+    private readonly Dictionary<Vector3I, int> overflowHeads = new();
+    private readonly int[] heads, occupied;
+    private readonly int halfWidth, width;
+    private int occupiedCount;
     private readonly int[] next;
     private readonly float cellSize;
     private readonly Vector2[] factionMin = new Vector2[2];
     private readonly Vector2[] factionMax = new Vector2[2];
     public int LimitedQueries { get; private set; }
-    public SpatialGrid(int capacity, float size) { next = new int[capacity]; cellSize = size; }
+    public SpatialGrid(int capacity, float size)
+    {
+        next = new int[capacity];
+        occupied = new int[capacity];
+        cellSize = size;
+        halfWidth = Mathf.CeilToInt(640f / size);
+        width = halfWidth * 2;
+        heads = new int[width * width * 2];
+    }
+
+    // Zero denotes an empty cell. Stored IDs are offset by one.
+    private int DenseIndex(int x, int z, int faction)
+    {
+        x += halfWidth;
+        z += halfWidth;
+        return (uint)x < (uint)width && (uint)z < (uint)width ? (z * width + x) * 2 + faction : -1;
+    }
+
+    private int Head(int x, int z, int faction)
+    {
+        int index = DenseIndex(x, z, faction);
+        if (index >= 0) return heads[index] - 1;
+        return overflowHeads.TryGetValue(new Vector3I(x, z, faction), out int id) ? id : -1;
+    }
     private Vector2I Cell(Vector3 p) => new(Mathf.FloorToInt(p.X / cellSize), Mathf.FloorToInt(p.Z / cellSize));
     // =========================================================
     public void Rebuild(UnitState units)
     {
-        heads.Clear(); LimitedQueries = 0;
+        for (int i = 0; i < occupiedCount; i++) heads[occupied[i]] = 0;
+        occupiedCount = 0;
+        overflowHeads.Clear();
+        LimitedQueries = 0;
         for (int faction = 0; faction < 2; faction++)
         {
             factionMin[faction] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
@@ -33,8 +62,20 @@ public sealed class SpatialGrid
             factionMin[faction] = factionMin[faction].Min(point);
             factionMax[faction] = factionMax[faction].Max(point);
             var cell = Cell(position);
-            var key = new Vector3I(cell.X, cell.Y, faction);
-            next[i] = heads.TryGetValue(key, out int first) ? first : -1; heads[key] = i;
+            int index = DenseIndex(cell.X, cell.Y, faction);
+            if (index >= 0)
+            {
+                int previous = heads[index];
+                if (previous == 0) occupied[occupiedCount++] = index;
+                next[i] = previous - 1;
+                heads[index] = i + 1;
+            }
+            else
+            {
+                var key = new Vector3I(cell.X, cell.Y, faction);
+                next[i] = overflowHeads.TryGetValue(key, out int first) ? first : -1;
+                overflowHeads[key] = i;
+            }
         }
     }
     // =========================================================
@@ -63,7 +104,7 @@ public sealed class SpatialGrid
                 else if (edge < width + width - 1) { dx = ring; dz = edge - width - ring + 1; }
                 else if (edge < width * 3 - 2) { dx = ring - 1 - (edge - (width * 2 - 1)); dz = ring; }
                 else { dx = -ring; dz = ring - 1 - (edge - (width * 3 - 2)); }
-                if (!heads.TryGetValue(new Vector3I(center.X + dx, center.Y + dz, enemy), out int other)) continue;
+                int other = Head(center.X + dx, center.Y + dz, enemy);
                 while (other >= 0)
                 {
                     if (++examined > budget) { LimitedQueries++; return best; }
@@ -93,8 +134,7 @@ public sealed class SpatialGrid
         for (int z = min.Y; z <= max.Y; z++)
         for (int x = min.X; x <= max.X; x++)
         {
-            if (!heads.TryGetValue(new Vector3I(x, z, enemy), out int id)) continue;
-            for (; id >= 0; id = next[id])
+            for (int id = Head(x, z, enemy); id >= 0; id = next[id])
             {
                 if (units.Health[id] <= 0) continue;
                 Vector3 relative = units.Position[id] + Vector3.Up * 0.7f - from;

@@ -37,6 +37,14 @@ Flow: prepare unit arrays → allocate six mesh/faction batches → fixed-step s
 
 Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells.
 
+## Painted deployments
+
+Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a blue or red melee or ranged brush. Left drag paints a 3×3 area and right drag erases. Blue places on negative X and red on positive X. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
+
+**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. **Start painted battle** requires both armies and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected benchmark layout.
+
+The deployment cells are 2.1 world units wide and independent of the combat grid. The combat index uses direct cell lookups within its central array, a dictionary outside it, and clears only occupied array entries each tick. Both paths retain the same soldier order within each cell.
+
 ## Measurements
 
 Frame average and worst use up to the latest **120 rendered frames**, based on `_Process(delta)`. UI refreshes at approximately 0.3 sec. FPS is Godot's engine counter. These include engine/presentation scheduling, unlike scoped game CPU timers.

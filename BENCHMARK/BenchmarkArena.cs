@@ -15,6 +15,7 @@ public partial class BenchmarkArena : Node3D
     private IsometricCamera camera;
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
+    private DeploymentPainter painter;
     private BenchmarkMode mode;
     private int requested, targetCount, tick;
     private bool spawning, paused;
@@ -42,7 +43,22 @@ public partial class BenchmarkArena : Node3D
         AddChild(ground);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         panel = new BenchmarkPanel(); AddChild(panel);
-        panel.SpawnRequested += Spawn; panel.ClearRequested += Clear;
+        painter = new DeploymentPainter { Camera = camera, Capacity = Config.MaxSoldiers, Visible = false };
+        AddChild(painter);
+        painter.Changed += UpdateDeploymentStatus;
+        panel.SpawnRequested += Spawn;
+        panel.ClearRequested += () => { if (painter.Visible) painter.Clear(); else Clear(); };
+        panel.PaintRequested += EnterDeployment;
+        panel.BattleRequested += StartPaintedBattle;
+        panel.SaveRequested += () => panel.Status.Text = painter.Save();
+        panel.LoadRequested += () => panel.Status.Text = painter.Load() + "\n" + DeploymentCount();
+        panel.BrushChoice.ItemSelected += index => painter.Brush = (int)index;
+        panel.CountChoice.ItemSelected += _ =>
+        {
+            if (!painter.Visible) return;
+            painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
+            UpdateDeploymentStatus();
+        };
         panel.PauseRequested += () => { paused = !paused; accumulator = 0; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         Spawn();
     }
@@ -57,14 +73,65 @@ public partial class BenchmarkArena : Node3D
     }
     private void Spawn()
     {
-        Clear(); requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
+        Clear();
+        SetDeploymentEditing(false);
+        requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
-        units = new UnitState(targetCount); grid = new SpatialGrid(targetCount, Config.CellSize);
+        units = new UnitState(targetCount);
+        if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
         camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
     }
+    private void SetDeploymentEditing(bool editing)
+    {
+        painter.Visible = editing;
+        panel.EditingDeployment = editing;
+    }
+
+    private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} / {painter.Limit:N0}";
+    private void UpdateDeploymentStatus() => panel.Status.Text = DeploymentCount();
+
+    private void EnterDeployment()
+    {
+        if (painter.Visible) return;
+        Clear();
+        painter.Limit = Math.Min(Config.MaxSoldiers, panel.RequestedCount);
+        painter.InitializePreview();
+        SetDeploymentEditing(true);
+        camera.Frame(100);
+        UpdateDeploymentStatus();
+    }
+
+    private void StartPaintedBattle()
+    {
+        var placements = painter.Layout.Placements;
+        bool blue = false, red = false, ranged = false;
+        foreach (SoldierPlacement placement in placements)
+        {
+            blue |= placement.Faction == 0;
+            red |= placement.Faction == 1;
+            ranged |= placement.Kind == 1;
+        }
+        if (!blue || !red || placements.Count > painter.Limit)
+        {
+            panel.Status.Text = "Place both armies within the troop limit.\n" + DeploymentCount();
+            return;
+        }
+        var snapshot = new SoldierPlacement[placements.Count];
+        for (int i = 0; i < snapshot.Length; i++) snapshot[i] = placements[i];
+        Clear();
+        SetDeploymentEditing(false);
+        requested = targetCount = snapshot.Length;
+        mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
+        units = new UnitState(targetCount);
+        grid = new SpatialGrid(targetCount, Config.CellSize);
+        projectiles = new ProjectileSystem(Config.MaxProjectiles);
+        deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
+        spawning = true;
+    }
+
     // =========================================================
     public override void _Process(double delta)
     {
@@ -122,7 +189,7 @@ public partial class BenchmarkArena : Node3D
         for (int i = 0; i < frameSamples; i++) { sum += frames[i]; worst = Math.Max(worst, frames[i]); }
         double avg = frameSamples > 0 ? sum / frameSamples : 0, divisor = Math.Max(1, measuredFrames);
         string costPerTick = measuredTicks > 0 ? $"{simulationMs / measuredTicks:F3} ms" : "N/A";
-        panel.Metrics.Text = $"BENCH0 — {(paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
+        panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.Blue ?? 0:N0} • Red {units?.Red ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +

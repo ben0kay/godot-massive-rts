@@ -9,17 +9,57 @@ public sealed class DeploymentFactory
     private readonly Deployment layout;
     private readonly float ranged;
     private readonly BenchmarkMode mode;
+    private readonly SoldierPlacement[] painted;
+    private readonly float[] goalX = new float[2];
+    private readonly float[] minZ = new float[2];
+    private readonly float[] maxZ = new float[2];
     public DeploymentFactory(int count, ulong seed, Deployment scenario, BenchmarkMode benchmarkMode, float rangedFraction)
     {
         total = count; sideCount = (count + 1) / 2; columns = Mathf.CeilToInt(Mathf.Sqrt(sideCount));
         layout = scenario; mode = benchmarkMode; ranged = rangedFraction; random.Seed = seed;
     }
+    public DeploymentFactory(SoldierPlacement[] placements, ulong seed)
+    {
+        painted = placements;
+        total = placements.Length;
+        random.Seed = seed;
+        int[] counts = new int[2];
+        for (int side = 0; side < 2; side++)
+        {
+            minZ[side] = float.PositiveInfinity;
+            maxZ[side] = float.NegativeInfinity;
+        }
+        foreach (SoldierPlacement placement in placements)
+        {
+            int side = placement.Faction;
+            Vector3 position = placement.Position();
+            counts[side]++;
+            goalX[side] += position.X;
+            minZ[side] = Mathf.Min(minZ[side], position.Z);
+            maxZ[side] = Mathf.Max(maxZ[side], position.Z);
+        }
+        for (int side = 0; side < 2; side++) goalX[side] /= counts[side];
+    }
+
     // =========================================================
     public void Append(UnitState units, BenchmarkConfig config, int budget)
     {
         int end = Mathf.Min(total, units.Count + budget);
         for (int i = units.Count; i < end; i++)
         {
+            if (painted != null)
+            {
+                SoldierPlacement placement = painted[i];
+                Vector3 position = placement.Position();
+                position.Y = BattlefieldHeight.At(position.X, position.Z);
+                int enemy = 1 - placement.Faction;
+                units.Position[i] = position;
+                units.Goal[i] = new Vector3(goalX[enemy], 0, Mathf.Clamp(position.Z, minZ[enemy], maxZ[enemy]));
+                units.Faction[i] = placement.Faction;
+                units.Kind[i] = placement.Kind;
+                InitializeSoldier(units, config, i);
+                continue;
+            }
             byte faction = (byte)(i < sideCount ? 0 : 1);
             int local = faction == 0 ? i : i - sideCount;
             float sign = faction == 0 ? -1 : 1;
@@ -32,11 +72,18 @@ public sealed class DeploymentFactory
             units.Goal[i] = new Vector3(-sign * x, 0, z);
             units.Faction[i] = faction;
             units.Kind[i] = mode == BenchmarkMode.Ranged && random.Randf() < ranged ? (byte)1 : (byte)(local % 20 == 0 ? 2 : 0);
-            units.Health[i] = config.Health; units.Target[i] = -1;
-            units.Cooldown[i] = random.RandfRange(0, config.MeleeInterval);
-            units.Dirty[i] = true;
-            if (faction == 0) units.Blue++; else units.Red++;
+            InitializeSoldier(units, config, i);
         }
         units.Count = end;
+    }
+
+    private void InitializeSoldier(UnitState units, BenchmarkConfig config, int i)
+    {
+        units.Health[i] = config.Health;
+        units.Target[i] = -1;
+        units.Cooldown[i] = random.RandfRange(0, config.MeleeInterval);
+        units.Dirty[i] = true;
+        if (units.Faction[i] == 0) units.Blue++;
+        else units.Red++;
     }
 }
