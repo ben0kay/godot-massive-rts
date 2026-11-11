@@ -10,9 +10,16 @@ public enum SeparationMode { Off, Normal, Strong }
 
 public sealed class SeparationSystem
 {
-    private const float Slop = 0.015f;
-    private readonly Dictionary<Vector2I, int> heads;
-    private readonly int[] next;
+    private const float Slop = 0.025f;
+    private const int ForwardNeighbours = 4;
+    private static readonly Vector2I[] ForwardCells =
+    {
+        new(1, 0), new(-1, 1), new(0, 1), new(1, 1)
+    };
+    private readonly Dictionary<Vector2I, int> buckets;
+    private readonly Vector2I[] bucketCells;
+    private readonly int[] bucketHeads, neighbourHeads, soldierBuckets, next;
+    private readonly int[] contacts;
     private readonly Vector2[] corrections;
 
     public int OverlapPairs { get; private set; }
@@ -20,8 +27,13 @@ public sealed class SeparationSystem
 
     public SeparationSystem(int capacity)
     {
-        heads = new Dictionary<Vector2I, int>(capacity);
+        buckets = new Dictionary<Vector2I, int>(capacity);
+        bucketCells = new Vector2I[capacity];
+        bucketHeads = new int[capacity];
+        neighbourHeads = new int[capacity * ForwardNeighbours];
+        soldierBuckets = new int[capacity];
         next = new int[capacity];
+        contacts = new int[capacity];
         corrections = new Vector2[capacity];
     }
 
@@ -35,13 +47,14 @@ public sealed class SeparationSystem
         for (int pass = 0; pass < passes; pass++)
         {
             int first = (int)(((long)tick * 97 + pass * 53) % units.Count);
-            Build(units, inverseCellWidth, first);
+            Build(units, inverseCellWidth, first, (tick + pass) & 3);
             Array.Clear(corrections, 0, units.Count);
+            Array.Clear(contacts, 0, units.Count);
             for (int rank = 0; rank < units.Count; rank++)
             {
                 int id = IdAtRank(rank, first, units.Count);
                 if (units.Health[id] > 0)
-                    Collect(units, id, rank, first, inverseCellWidth, gap, neighbourBudget, tick + pass);
+                    Collect(units, id, gap, neighbourBudget, tick + pass);
             }
             Apply(units, passCap);
         }
@@ -56,45 +69,64 @@ public sealed class SeparationSystem
     private static Vector2I Cell(Vector3 position, float inverseWidth) =>
         new(Mathf.FloorToInt(position.X * inverseWidth), Mathf.FloorToInt(position.Z * inverseWidth));
 
-    private void Build(UnitState units, float inverseWidth, int first)
+    private void Build(UnitState units, float inverseWidth, int first, int rotation)
     {
-        heads.Clear();
-        // Link entries in rotating order so dense buckets do not always favor low IDs.
+        buckets.Clear();
+        int bucketCount = 0;
         for (int rank = units.Count - 1; rank >= 0; rank--)
         {
             int id = IdAtRank(rank, first, units.Count);
             if (units.Health[id] <= 0) continue;
-            ref int head = ref CollectionsMarshal.GetValueRefOrAddDefault(heads, Cell(units.Position[id], inverseWidth), out bool occupied);
-            next[id] = occupied ? head : -1;
-            head = id;
+            Vector2I cell = Cell(units.Position[id], inverseWidth);
+            ref int bucket = ref CollectionsMarshal.GetValueRefOrAddDefault(buckets, cell, out bool occupied);
+            if (!occupied)
+            {
+                bucket = bucketCount++;
+                bucketCells[bucket] = cell;
+                bucketHeads[bucket] = -1;
+            }
+            soldierBuckets[id] = bucket;
+            next[id] = bucketHeads[bucket];
+            bucketHeads[bucket] = id;
+        }
+
+        // Cache four neighbouring heads per occupied bucket. A half stencil visits
+        // each cross-cell pair once, with its direction rotated to share priority.
+        for (int bucket = 0; bucket < bucketCount; bucket++)
+        for (int i = 0; i < ForwardNeighbours; i++)
+        {
+            Vector2I offset = ForwardCells[i];
+            offset = rotation switch
+            {
+                1 => new Vector2I(-offset.Y, offset.X),
+                2 => -offset,
+                3 => new Vector2I(offset.Y, -offset.X),
+                _ => offset
+            };
+            neighbourHeads[bucket * ForwardNeighbours + i] =
+                buckets.TryGetValue(bucketCells[bucket] + offset, out int neighbour) ? bucketHeads[neighbour] : -1;
         }
     }
 
-    private void Collect(UnitState units, int id, int rank, int first, float inverseWidth, float gap, int budget, int phase)
+    private void Collect(UnitState units, int id, float gap, int budget, int phase)
     {
         Vector3 position = units.Position[id];
-        Vector2I center = Cell(position, inverseWidth);
         float ownRadius = units.Catalog[units.Type[id]].Footprint;
         int visited = 0;
-        int firstCell = (id + phase) % 9;
-        // Cell width covers the widest possible pair, so adjacent cells suffice.
-        for (int offset = 0; offset < 9; offset++)
+        int firstBucket = (id + phase) % (ForwardNeighbours + 1);
+        int neighbourStart = soldierBuckets[id] * ForwardNeighbours;
+        for (int offset = 0; offset <= ForwardNeighbours; offset++)
         {
-            int cell = (firstCell + offset) % 9;
-            var key = center + new Vector2I(cell % 3 - 1, cell / 3 - 1);
-            if (!heads.TryGetValue(key, out int other)) continue;
+            int bucket = (firstBucket + offset) % (ForwardNeighbours + 1);
+            int other = bucket == ForwardNeighbours ? next[id] : neighbourHeads[neighbourStart + bucket];
             for (; other >= 0; other = next[other])
             {
-                // Count every bucket entry before the pair-ownership filter.
                 if (visited == budget)
                 {
                     BudgetHits++;
                     return;
                 }
                 visited++;
-
-                int otherRank = other >= first ? other - first : other + units.Count - first;
-                if (otherRank <= rank) continue;
                 Vector3 otherPosition = units.Position[other];
                 var away = new Vector2(position.X - otherPosition.X, position.Z - otherPosition.Z);
                 float limit = ownRadius + units.Catalog[units.Type[other]].Footprint + gap - Slop;
@@ -106,6 +138,8 @@ public sealed class SeparationSystem
                 Vector2 push = direction * ((limit - distance) * 0.5f);
                 corrections[id] += push;
                 corrections[other] -= push;
+                contacts[id]++;
+                contacts[other]++;
                 OverlapPairs++;
             }
         }
@@ -126,6 +160,9 @@ public sealed class SeparationSystem
         for (int id = 0; id < units.Count; id++)
         {
             Vector2 push = corrections[id];
+            // Several overlapping neighbours can add large opposing corrections.
+            // Dampen packed contacts while keeping the full response for isolated pairs.
+            if (contacts[id] > 2) push *= 2f / contacts[id];
             float lengthSquared = push.LengthSquared();
             if (lengthSquared == 0f) continue;
             if (lengthSquared > capSquared) push *= cap / Mathf.Sqrt(lengthSquared);

@@ -30,9 +30,9 @@ public static class MovementSystem
                     Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
                 if (!type.Ranged && separationGap >= 0f)
                 {
-                    // Stop at contact so engaged melee do not walk into the solver's gap each tick.
-                    float contact = type.Footprint + defender.Footprint + separationGap;
-                    stop = Mathf.Max(stop, Mathf.Min(contact, reach - 0.001f));
+                    // Hold once in reach so front-line soldiers do not continually
+                    // advance into packed bodies just to reach an inner stop distance.
+                    stop = Mathf.Max(stop, reach - 0.02f);
                 }
             }
             bool marchingInLane = movementMode && offset.Z == 0f;

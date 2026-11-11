@@ -51,7 +51,7 @@ The deployment cells are 2.1 world units wide and independent of the combat grid
 
 Choose **Off**, **Normal** (default), or **Strong** in the live Separation control. Normal runs one correction pass and Strong runs two, with a fresh separation grid between passes. The solver runs in Movement, Melee and Ranged. Compare identical respawns at 1k and 20k soldiers and inspect contact fronts for stacking or jitter.
 
-**Separation** is CPU milliseconds per rendered frame in the current reporting window. **Separation pairs / caps** sums overlap pairs that produced a correction and neighbour queries cut short in the latest simulation tick, including both Strong passes. A pair can be counted again on the second pass. Tunables are in the benchmark resource under Separation.
+**Separation** is CPU milliseconds per rendered frame in the current reporting window. Compare **Separation per tick** across runs with different numbers of ticks per frame. **Separation pairs / caps** sums overlap pairs that produced a correction and neighbour queries cut short in the latest simulation tick, including both Strong passes. A pair can be counted again on the second pass. Tunables are in the benchmark resource under Separation.
 
 ## Measurements
 
