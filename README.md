@@ -1,6 +1,6 @@
 # Godot Massive RTS
 
-> **Status:** New project / design intent. The repository currently contains a minimal Godot project; the systems described below are planned, not yet implemented.
+> **Status:** BENCH0 — **Source Implemented / Awaiting Owner Validation**. The default scene is the standalone benchmark arena. Gameplay beyond BENCH0 remains planned. See [BENCHMARK/README.md](BENCHMARK/README.md) for launch instructions, controls, architecture and measurement limitations. No hardware performance targets have been validated.
 
 ## Vision
 
@@ -27,7 +27,7 @@ Do not copy another game's protected artwork, interface, audio or code. Build an
 
 **BENCH0 comes before gameplay production.** Codex's first implementation task should be an independently launchable benchmark/test scene, not the whole game. It should be useful even while the battle rules are incomplete.
 
-### Benchmark arena requirements (planned)
+### Benchmark arena requirements (source implemented; awaiting owner validation)
 
 1. A simple, large, flat 3D battlefield and fixed-angle orthographic isometric camera with pan/zoom.
 2. Basic blue/red primitive soldiers rendered in batches, ideally **MultiMeshInstance3D**, with no per-soldier scene-tree nodes or physics bodies.
