@@ -10,10 +10,11 @@ public sealed class ObstacleNavigation
 {
     private const float CornerClearance = 0.008f;
     private const float ArrivalDistance = 0.004f;
+    private const float WaitingClearance = 0.15f;
     private const int RetryFrames = 30;
     private readonly record struct RouteKey(Vector2I From, Vector2I To, byte Type, bool Fine);
-    private readonly record struct Request(RouteKey Key, Vector2 Start, Vector2 Goal, int Frame);
-    private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, int Frame);
+    private readonly record struct Request(RouteKey Key, Vector2 Start, Vector2 Goal, float Stop, int Frame);
+    private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, float Stop, int Frame);
     private struct Follower
     {
         public Route Route;
@@ -65,32 +66,35 @@ public sealed class ObstacleNavigation
         for (int i = 0; i < budget && requests.TryDequeue(out Request request); i++)
         {
             pending.Remove(request.Key);
-            Vector2[] points = graphs[request.Key.Type].FindRoute(field, request.Start, request.Goal);
+            Vector2[] points = graphs[request.Key.Type].FindRoute(field, request.Start, request.Goal, request.Stop);
             if (!routes.ContainsKey(request.Key))
             {
                 if (routes.Count == capacity) routes.Remove(cacheOrder.Dequeue());
                 cacheOrder.Enqueue(request.Key);
             }
-            routes[request.Key] = new Route(points, request.Start, request.Goal, frame);
+            routes[request.Key] = new Route(points, request.Start, request.Goal, request.Stop, frame);
             RoutesBuilt++;
             MaxWaitFrames = Math.Max(MaxWaitFrames, frame - request.Frame);
         }
     }
 
-    // A direct corridor wins. While a route is pending, hold at the current legal position.
-    public Vector2 Steer(int id, byte type, Vector2 start, Vector2 goal, out bool detouring)
+    // Approach cover while waiting for a shared route, and carry speed through route corners.
+    public Vector2 Steer(int id, byte type, Vector2 start, Vector2 goal, float stop,
+        out bool detouring, out bool routeCorner)
     {
         long stamp = Stopwatch.GetTimestamp();
-        Vector2 result = ChooseWaypoint(id, type, start, goal, out detouring);
+        Vector2 result = ChooseWaypoint(id, type, start, goal, stop, out detouring, out routeCorner);
         SteeringTicks += Stopwatch.GetTimestamp() - stamp;
         return result;
     }
 
-    private Vector2 ChooseWaypoint(int id, byte type, Vector2 start, Vector2 goal, out bool detouring)
+    private Vector2 ChooseWaypoint(int id, byte type, Vector2 start, Vector2 goal, float stop,
+        out bool detouring, out bool routeCorner)
     {
         float radius = graphs[type].Radius;
         ref Follower follower = ref followers[id];
-        if (!field.BlocksCorridor(start, goal, radius))
+        routeCorner = false;
+        if (CanApproach(field, start, goal, radius, stop))
         {
             follower = default;
             detouring = false;
@@ -100,15 +104,20 @@ public sealed class ObstacleNavigation
         detouring = true;
         Vector2I goalSector = Sector(goal, sectorSize);
         if (follower.Route != null && (follower.GoalSector == goalSector ||
-            !field.BlocksCorridor(follower.Route.Points[^1], goal, radius)))
+            CanApproach(field, follower.Route.Points[^1], goal, radius, stop)))
         {
             follower.GoalSector = goalSector;
             Vector2[] points = follower.Route.Points;
             while (follower.Next < points.Length &&
                 start.DistanceSquaredTo(points[follower.Next]) <= ArrivalDistance * ArrivalDistance)
                 follower.Next++;
-            if (follower.Next < points.Length && !field.BlocksCorridor(start, points[follower.Next], radius))
-                return points[follower.Next];
+            for (int next = follower.Next; next < points.Length; next++)
+            {
+                if (field.BlocksCorridor(start, points[next], radius)) continue;
+                follower.Next = next;
+                routeCorner = true;
+                return points[next];
+            }
         }
         follower = default;
 
@@ -120,33 +129,59 @@ public sealed class ObstacleNavigation
             if (routes.TryGetValue(key, out Route route))
             {
                 Vector2[] points = route.Points;
-                if (points != null && points.Length != 0 &&
-                    !field.BlocksCorridor(start, points[0], radius) &&
-                    !field.BlocksCorridor(points[^1], goal, radius))
+                if (points != null && points.Length != 0 && CanApproach(field, points[^1], goal, radius, stop))
                 {
-                    CacheHits++;
-                    follower = new Follower { Route = route, GoalSector = goalSector };
-                    return points[0];
+                    int next = 0;
+                    while (next < points.Length &&
+                        start.DistanceSquaredTo(points[next]) <= ArrivalDistance * ArrivalDistance)
+                        next++;
+                    if (next < points.Length && !field.BlocksCorridor(start, points[next], radius))
+                    {
+                        CacheHits++;
+                        follower = new Follower { Route = route, Next = next, GoalSector = goalSector };
+                        routeCorner = true;
+                        return points[next];
+                    }
                 }
                 if (!fine) continue;
                 if (frame - route.Frame < RetryFrames ||
-                    (start.DistanceSquaredTo(route.Start) < 0.0064f && goal.DistanceSquaredTo(route.Goal) < 0.0064f)) break;
+                    (start.DistanceSquaredTo(route.Start) < 0.0064f && goal.DistanceSquaredTo(route.Goal) < 0.0064f &&
+                    Mathf.Abs(stop - route.Stop) < 0.08f))
+                {
+                    CacheMisses++;
+                    return start;
+                }
 
                 // Keep the existing key in the FIFO. Its representative endpoints can be refreshed.
-                QueueRoute(key, start, goal);
+                QueueRoute(key, start, goal, stop);
                 break;
             }
-            QueueRoute(key, start, goal);
+            QueueRoute(key, start, goal, stop);
             break;
         }
         CacheMisses++;
-        return start;
+        Vector2 offset = goal - start;
+        float distance = offset.Length();
+        if (distance == 0f || !field.FirstHit(start, goal, radius, out float hit)) return start;
+        float advance = Mathf.Max(0f, distance * hit - WaitingClearance);
+        return start + offset * (advance / distance);
     }
 
-    private void QueueRoute(RouteKey key, Vector2 start, Vector2 goal)
+    // An enemy can stand closer to a wall than a larger attacker can. Test the firing
+    // position before the enemy center, and require the remaining line to be unobstructed.
+    private static bool CanApproach(ObstacleField field, Vector2 from, Vector2 goal, float radius, float stop)
+    {
+        if (!field.BlocksCorridor(from, goal, radius)) return true;
+        if (stop <= 0f) return false;
+        float distance = from.DistanceTo(goal);
+        Vector2 end = distance > stop ? goal.Lerp(from, stop / distance) : from;
+        return !field.BlocksCorridor(from, end, radius) && !field.BlocksCorridor(end, goal, 0f);
+    }
+
+    private void QueueRoute(RouteKey key, Vector2 start, Vector2 goal, float stop)
     {
         if (requests.Count >= capacity || !pending.Add(key)) return;
-        requests.Enqueue(new Request(key, start, goal, frame));
+        requests.Enqueue(new Request(key, start, goal, stop, frame));
     }
 
     private static Vector2I Sector(Vector2 point, float size) =>
@@ -198,7 +233,7 @@ public sealed class ObstacleNavigation
         }
 
         // Solve once for a shared request. Distances are seeded by all corners reachable from the start.
-        public Vector2[] FindRoute(ObstacleField field, Vector2 start, Vector2 goal)
+        public Vector2[] FindRoute(ObstacleField field, Vector2 start, Vector2 goal, float stop)
         {
             Array.Clear(visited);
             Array.Fill(previous, -1);
@@ -220,8 +255,8 @@ public sealed class ObstacleNavigation
                 }
                 if (current < 0) break;
                 visited[current] = true;
-                float total = distance + points[current].DistanceTo(goal);
-                if (total < bestDistance && !field.BlocksCorridor(points[current], goal, Radius))
+                float total = distance + Mathf.Max(0f, points[current].DistanceTo(goal) - stop);
+                if (total < bestDistance && CanApproach(field, points[current], goal, Radius, stop))
                 {
                     bestDistance = total;
                     end = current;

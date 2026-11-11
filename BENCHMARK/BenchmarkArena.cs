@@ -335,7 +335,7 @@ public partial class BenchmarkArena : Node3D
         SeparationMode separationMode = panel.Separation;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
         start = Stamp();
-        trample?.BeginTick(units, dt);
+        trample?.BeginTick(units, dt, obstacles);
         byte[] movementFlags = separate && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,

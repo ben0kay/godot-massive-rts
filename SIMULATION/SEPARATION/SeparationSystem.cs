@@ -286,10 +286,12 @@ public sealed class SeparationSystem
             nz = d.Y;
         }
         float penetration = limit - distance;
-        float half = penetration * 0.5f;
-        float px = nx * half, pz = nz * half;
-        slotPushX[i] += px; slotPushZ[i] += pz; slotContacts[i]++;
-        slotPushX[j] -= px; slotPushZ[j] -= pz; slotContacts[j]++;
+        float radiusA = slotRadius[i], radiusB = slotRadius[j];
+        // The larger body takes a smaller share of the same overlap correction.
+        float pushA = penetration * (radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
+        float pushB = penetration - pushA;
+        slotPushX[i] += nx * pushA; slotPushZ[i] += nz * pushA; slotContacts[i]++;
+        slotPushX[j] -= nx * pushB; slotPushZ[j] -= nz * pushB; slotContacts[j]++;
 
         OverlapPairs++;
         penetrationSum += penetration;

@@ -70,3 +70,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | OBST1 | Source implemented. Awaiting owner validation.** Added beveled rectangle painting and version 2 saves, shared footprint-aware routes, solid wall collision, direct-fire cover and benchmark counters.
 
 - **2026-11-11 | Movement baseline | Source implemented.** Added a shared 0.8× movement speed multiplier for soldiers, cavalry charges and projectiles. Attack settings retain their authored values.
+
+- **2026-11-11 | Footprint separation and obstacle pursuit | Source implemented.** Weighted ordinary contact by effective footprint radius and reduced detour pauses by allowing a safe approach while routes queue and carrying speed through waypoints. Awaiting owner validation.

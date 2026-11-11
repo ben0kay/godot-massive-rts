@@ -93,7 +93,7 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the 
 
 ## SEP1 — Soldier Separation
 
-**Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
+**Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. Standard contacts split corrections by effective footprint radius. In a Circle–Pentagon pair, the Circle takes two thirds of the correction. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
 
 ## SEP2 — Allied crowd yielding
 

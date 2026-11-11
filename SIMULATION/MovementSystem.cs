@@ -56,9 +56,8 @@ public static class MovementSystem
                     // advance into packed bodies just to reach an inner stop distance.
                     stop = Mathf.Max(stop, reach - 0.02f);
                 }
-                if (blockedInRange) stop = 0f;
             }
-            bool detouring = false;
+            bool detouring = false, routeCorner = false;
             if (navigation != null)
             {
                 if (hasClearShot && offset.X * offset.X + offset.Z * offset.Z <= stop * stop)
@@ -67,7 +66,7 @@ public static class MovementSystem
                     continue;
                 }
                 Vector2 waypoint = navigation.Steer(i, units.Type[i], ObstacleField.Xz(units.Position[i]),
-                    ObstacleField.Xz(destination), out detouring);
+                    ObstacleField.Xz(destination), hasTarget ? stop : 0f, out detouring, out routeCorner);
                 if (detouring)
                 {
                     if (hasClearShot)
@@ -99,7 +98,7 @@ public static class MovementSystem
                 advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + type.Speed * accelerationRate * dt);
                 // Limit speed near the stopping point. Most soldiers can skip the square root.
                 float brakingSpeedSquared = 2f * type.Speed * rampRate * remaining;
-                speed = rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
+                speed = !routeCorner && rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
             }
             float travel = Mathf.Min(speed * dt, remaining);
@@ -120,7 +119,7 @@ public static class MovementSystem
                     next.Z = safe.Y;
                 }
             }
-            if (!movementMode) units.MoveSpeed[i] = !detouring && travel >= remaining ? 0f : speed;
+            if (!movementMode) units.MoveSpeed[i] = !routeCorner && travel >= remaining ? 0f : speed;
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
                 voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.

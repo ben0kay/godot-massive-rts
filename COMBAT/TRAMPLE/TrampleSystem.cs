@@ -83,7 +83,7 @@ public sealed class TrampleSystem
         return false;
     }
 
-    public void BeginTick(UnitState units, float dt)
+    public void BeginTick(UnitState units, float dt, ObstacleField obstacles = null)
     {
         for (int slot = 0; slot < ids.Length; slot++)
         {
@@ -116,7 +116,8 @@ public sealed class TrampleSystem
             if (charge.Heading.Dot(heading) < 0.85f) charge.RunUp = 0f;
             charge.Heading = heading;
             if (distance <= launchRange && charge.RunUp >= type.Trample.RunUp &&
-                units.MoveSpeed[id] >= type.Speed * EntrySpeedFraction)
+                units.MoveSpeed[id] >= type.Speed * EntrySpeedFraction &&
+                obstacles?.BlocksCorridor(charge.Start, Xz(units.Position[target]), 0f) != true)
             {
                 charge.Active = true;
                 charge.Distance = type.Trample.Distance;
