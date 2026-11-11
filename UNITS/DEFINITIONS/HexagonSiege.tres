@@ -10,7 +10,6 @@ Role = "Heavy melee infantry with a ground stomp"
 Shape = 5
 Width = 1.6
 Height = 0.825
-FootprintRadius = 1.14
 SizeMultiplier = 2.0
 Health = 600.0
 Speed = 2.2

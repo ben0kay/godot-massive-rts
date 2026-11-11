@@ -10,7 +10,6 @@ Role = "Large slow armoured infantry"
 Shape = 4
 Width = 1.6
 Height = 0.825
-FootprintRadius = 1.14
 Health = 300.0
 Speed = 2.7
 Damage = 34.0

@@ -6,7 +6,29 @@ namespace MassiveRts;
 
 public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, float Damage, float EdgeDamageFraction, bool RespectsCover);
 
-public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, float Width, float Height,
+// Ground outline shared by the renderer and the circular simulation footprint.
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation)
+{
+    public static UnitOutline FromDefinition(UnitShape shape, float width, float diamondLongRadius)
+    {
+        float halfWidth = width * 0.5f;
+        float squareRadius = width / Mathf.Sqrt(2f);
+        float triangleRadius = width / Mathf.Sqrt(3f);
+        float pentagonRadius = width / (1f + Mathf.Cos(Mathf.Pi / 5f));
+        return shape switch
+        {
+            UnitShape.Circle => new(16, halfWidth, halfWidth, 0f),
+            UnitShape.Square => new(4, squareRadius, squareRadius, Mathf.Pi * 0.25f),
+            UnitShape.Triangle => new(3, triangleRadius, triangleRadius, -Mathf.Pi * 0.5f),
+            UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
+            UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
+            UnitShape.Hexagon => new(6, halfWidth, halfWidth, -Mathf.Pi * 0.5f),
+            _ => throw new ArgumentOutOfRangeException(nameof(shape))
+        };
+    }
+}
+
+public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, UnitOutline Outline, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
     bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave)
@@ -66,7 +88,12 @@ public sealed class RuntimeUnitCatalog
             if (!Enum.IsDefined(d.Shape) || !Enum.IsDefined(d.Style)) throw new ArgumentException($"Invalid shape or attack style for {id}.");
             float size = Mathf.Clamp(Positive(d.SizeMultiplier, 1f), 0.5f, 3f);
             float baseWidth = Positive(d.Width, 0.8f);
-            float footprint = Mathf.Max(baseWidth * 0.707107f, Positive(d.FootprintRadius, 0.57f)) * size;
+            // Preserve the diamond's authored silhouette, previously derived from its legacy radius.
+            float diamondLongRadius = d.Shape == UnitShape.Diamond
+                ? Mathf.Max(baseWidth * 0.707107f, Positive(d.FootprintRadius, 0.57f)) * size * 0.96f
+                : 0f;
+            UnitOutline outline = UnitOutline.FromDefinition(d.Shape, baseWidth * size, diamondLongRadius);
+            float footprint = Mathf.Max(outline.RadiusX, outline.RadiusZ);
             bool ranged = d.Style == AttackStyle.Ranged;
             float reach = Positive(d.Reach, 1.6f);
             if (!ranged) reach *= size;
@@ -87,7 +114,7 @@ public sealed class RuntimeUnitCatalog
                 Positive(d.ShockwaveDamage, 50f),
                 ClampStat(d.ShockwaveEdgeDamageFraction, 0f, 1f, 0.5f), d.ShockwaveRespectsCover);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
-                baseWidth * size, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
+                outline, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,

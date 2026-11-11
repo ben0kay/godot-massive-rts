@@ -10,7 +10,6 @@ Role = "General-purpose melee"
 Shape = 0
 Width = 0.8
 Height = 0.4125
-FootprintRadius = 0.57
 Health = 100.0
 Speed = 5.0
 Damage = 3.0

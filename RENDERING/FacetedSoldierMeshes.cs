@@ -5,9 +5,7 @@ namespace MassiveRts;
 
 public static class FacetedSoldierMeshes
 {
-    private const int CircleSides = 16;
     private const float TopInsetFraction = 0.11f;
-    private const float DiamondLengthFootprintFraction = 0.96f;
     private static readonly Color TopTint = Colors.White;
     private static readonly Color BottomTint = new(0.48f, 0.48f, 0.48f);
 
@@ -25,26 +23,9 @@ public static class FacetedSoldierMeshes
         for (int i = 0; i < meshes.Length; i++)
         {
             ref readonly UnitStats type = ref catalog[i];
-            float radius = type.Width * 0.5f;
-            meshes[i] = type.Shape switch
-            {
-                UnitShape.Circle => CreateBeveledPrism(CircleSides, radius, radius, type.Height, 0f, material),
-                // A four-vertex square rotated 45 degrees in polar coordinates gives axis-aligned edges.
-                UnitShape.Square => CreateBeveledPrism(4, type.Width / Mathf.Sqrt(2f),
-                    type.Width / Mathf.Sqrt(2f), type.Height, Mathf.Pi * 0.25f, material),
-                UnitShape.Triangle => CreateBeveledPrism(3, type.Width / Mathf.Sqrt(3f),
-                    type.Width / Mathf.Sqrt(3f), type.Height, -Mathf.Pi * 0.5f, material),
-                // A genuinely long, narrow rhombus, rather than the old equal-axis rotated square.
-                // Longest point follows the default X-axis march, staying inside the existing collision footprint.
-                UnitShape.Diamond => CreateBeveledPrism(4,
-                    Mathf.Max(radius, type.Footprint * DiamondLengthFootprintFraction), radius, type.Height, 0f, material),
-                UnitShape.Pentagon => CreateBeveledPrism(5,
-                    type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
-                    type.Width / (1f + Mathf.Cos(Mathf.Pi / 5f)),
-                    type.Height, -Mathf.Pi * 0.5f, material),
-                UnitShape.Hexagon => CreateBeveledPrism(6, radius, radius, type.Height, -Mathf.Pi * 0.5f, material),
-                _ => throw new System.ArgumentOutOfRangeException()
-            };
+            UnitOutline outline = type.Outline;
+            meshes[i] = CreateBeveledPrism(outline.Sides, outline.RadiusX, outline.RadiusZ,
+                type.Height, outline.Rotation, material);
         }
         return meshes;
     }

@@ -10,7 +10,6 @@ Role = "Hard-hitting armoured melee"
 Shape = 1
 Width = 0.8
 Height = 0.4125
-FootprintRadius = 0.57
 Health = 45.0
 Speed = 4.0
 Damage = 26.0

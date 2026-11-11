@@ -8,7 +8,7 @@
 
 ## VIS2 — Refined soldier silhouettes
 
-`FacetedSoldierMeshes.cs` now generates a narrow sloped top-edge bevel with an intermediate baked lightness for each shape. Circle infantry has 16 radial sides instead of 12. The diamond cavalry is about 1.9:1 in XZ silhouette, elongated along the default X-axis marching direction (about 1.51 long × 0.80 wide at the UNIT1 default of 1.25×) inside its 0.7875 gameplay footprint radius. Geometry is created once per unit type using one unshaded material, with the existing faction/type MultiMesh batches, packed transforms and feedback effects unchanged. Slightly more triangles per soldier can increase GPU geometry throughput, so compare FPS at 10k–20k units.
+`FacetedSoldierMeshes.cs` now generates a narrow sloped top-edge bevel with an intermediate baked lightness for each shape. Circle infantry has 16 radial sides instead of 12. The diamond cavalry is about 1.9:1 in XZ silhouette, elongated along the default X-axis marching direction (about 1.51 long × 0.80 wide at the UNIT1 default of 1.25×) with its long tips at the 0.756 gameplay footprint radius. Geometry is created once per unit type using one unshaded material, with the existing faction/type MultiMesh batches, packed transforms and feedback effects unchanged. Slightly more triangles per soldier can increase GPU geometry throughput, so compare FPS at 10k–20k units.
 
 Soldiers turn toward deliberate movement, including charges, and keep their last heading while stationary. The packed transform contains yaw and hit-pulse scale, shared by the sparse and dense upload paths. Separation and shove corrections do not change facing.
 
