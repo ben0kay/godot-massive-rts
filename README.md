@@ -99,9 +99,9 @@ Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue 
 
 **Source implemented and awaiting owner validation.** With Allied archer yielding enabled, advancing melee can use half clearance against stationary friendly ranged units. Both factions follow the same rule. Opposing pairs keep SEP1 clearance. See the [SEP2 plan](SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md).
 
-## FB0 — Soldier Hit Feedback (planned)
+## FB0 — Soldier Hit Feedback
 
-A dedicated [FEEDBACK](FEEDBACK/README.md) major folder will own presentation effects. [FB0](FEEDBACK/UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md) plans to centralize the existing white damage flash and add a **6% / 0.18-second visual scale pulse** for hit soldiers using existing MultiMesh instance transforms. Future `UNIT_DEATHS/`, `CAMERA_SHAKE/`, and `IMPACTS/` modules will be added only when implemented. **Plan only; FB0 is not implemented yet.**
+**Source implemented and awaiting owner visual validation.** The [FEEDBACK](FEEDBACK/README.md) system owns the 0.12-second white damage flash and the grounded 6% visual pulse, which returns to normal over 0.18 seconds. Both effects use the existing MultiMesh instances.
 
 ## Development order (proposed, not completed)
 

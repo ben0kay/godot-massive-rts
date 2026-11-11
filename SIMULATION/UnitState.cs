@@ -6,27 +6,39 @@ public sealed class UnitState
 {
     public readonly Vector3[] Position;
     public readonly Vector3[] Goal;
-    public readonly float[] Health, Cooldown, Flash;
+    public readonly float[] Health, Cooldown;
     public readonly int[] Target;
     public readonly byte[] Faction, Type;
     public readonly bool[] Dirty;
     public int Count, Blue, Red;
     public int Alive => Blue + Red;
     public RuntimeUnitCatalog Catalog { get; }
-    public UnitState(int capacity, RuntimeUnitCatalog catalog)
+    public HitFeedbackSystem HitFeedback { get; }
+    public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null)
     {
         Catalog = catalog;
+        HitFeedback = hitFeedback;
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
-        Health = new float[capacity]; Cooldown = new float[capacity]; Flash = new float[capacity];
+        Health = new float[capacity]; Cooldown = new float[capacity];
         Target = new int[capacity]; Faction = new byte[capacity]; Type = new byte[capacity];
         Dirty = new bool[capacity];
     }
     // =========================================================
-    public void Damage(int id, float damage, float flashSeconds)
+    public void Damage(int id, float damage)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
-        Health[id] = Mathf.Max(0, Health[id] - Mathf.Max(0, damage * Catalog[Type[id]].DamageTaken)); Flash[id] = flashSeconds; Dirty[id] = true;
-        if (Health[id] == 0) { if (Faction[id] == 0) Blue--; else Red--; }
+        float previous = Health[id];
+        Health[id] = Mathf.Max(0, previous - Mathf.Max(0, damage * Catalog[Type[id]].DamageTaken));
+        if (Health[id] == 0)
+        {
+            if (Faction[id] == 0) Blue--; else Red--;
+            Dirty[id] = true;
+        }
+        else if (Health[id] < previous && HitFeedback != null)
+        {
+            HitFeedback.OnHit(id);
+            Dirty[id] = true;
+        }
     }
 }
 // Single flat-ground seam for later elevation; simulation owns world-space positions.

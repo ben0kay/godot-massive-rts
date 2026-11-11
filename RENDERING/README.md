@@ -4,4 +4,4 @@
 
 ## FB0 — Future hit-feedback ownership
 
-The existing white-flash timer/colour decision remains in simulation/rendering until [FB0](../FEEDBACK/UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md) is implemented. FB0 will centralize flash and pulse logic in `FEEDBACK/UNIT_HITS/`, preserving this renderer's batched `MultiMesh` model. The planned pulse must update both dense packed transform-buffer uploads and sparse `SetInstanceTransform` uploads, with Y translation adjusted so scaling stays ground-anchored. **Not implemented yet.**
+[Hit feedback](../FEEDBACK/README.md) supplies flash and scale to the shared packed transforms. Both upload paths use the same scale and ground-anchored centre offset.

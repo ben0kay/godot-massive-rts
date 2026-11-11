@@ -59,7 +59,7 @@ public sealed class ProjectileSystem
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
             int victim = grid.FirstProjectileHit(units, enemyFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding);
-            if (victim >= 0) units.Damage(victim, damage[i], config.FlashSeconds);
+            if (victim >= 0) units.Damage(victim, damage[i]);
             else if (elapsed[i] < endTime)
             {
                 Position[i] = next;

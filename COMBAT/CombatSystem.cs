@@ -63,7 +63,7 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, ProjectileSystem projectiles, BenchmarkConfig config, float fireRateMultiplier, float dt)
+    public static void Step(UnitState units, ProjectileSystem projectiles, float fireRateMultiplier, float dt)
     {
         for (int i = 0; i < units.Count; i++)
         {
@@ -75,7 +75,7 @@ public static class CombatSystem
             float radius = type.AttackReach(units.Catalog[units.Type[target]]);
             if (units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius) continue;
             if (type.Ranged) projectiles.Fire(i, target, units);
-            else units.Damage(target, type.Damage, config.FlashSeconds);
+            else units.Damage(target, type.Damage);
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }
     }

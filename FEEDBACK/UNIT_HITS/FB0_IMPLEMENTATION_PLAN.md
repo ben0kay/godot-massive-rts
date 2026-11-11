@@ -1,7 +1,7 @@
 # FB0 — Centralized Soldier Hit Feedback (White Flash + Size Pulse)
 
 **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
-**Status:** PLANNED — this file is an implementation brief, not live code.
+**Status:** Source implemented / awaiting owner visual validation.
 **Owner:** `FEEDBACK/UNIT_HITS/`
 
 ## Objective
@@ -134,4 +134,4 @@ No scaling is to be applied to authoritative `units.Position`. Renderer transfor
 
 Read the root README, `NOTES/CodePreferences.md`, current source listed above and this plan before editing. Implement **FB0 only** with minimal edits to damage trigger, lifetime update and renderer visual transform. Document `FEEDBACK/` ownership and effects, link from relevant renderer/benchmark READMEs, and append a concise **FB0 source implemented / awaiting owner visual validation** note to the root `devlog.md` in the implementation commit. Perform light source review and at most one readily available `dotnet build`; owner will test in Godot. Commit once and push to `main` without rewriting unrelated work. Report SHA and owner-side checks.
 
-**Do not mark FB0 complete until code exists.**
+**Implementation note:** Feedback state is battle-local and only allocated in combat modes. A packed list advances active hits. Nonlethal melee and projectile damage use the same registration path, and the renderer reads scale from the same staged transform for sparse and dense uploads.

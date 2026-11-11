@@ -76,10 +76,12 @@ public partial class ArmyRenderer : Node3D
         Vector3 position = units.Position[id];
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
+        var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
+        buffer[offset] = buffer[offset + 5] = buffer[offset + 10] = scale;
         buffer[offset + 3] = position.X;
-        buffer[offset + 7] = position.Y + halfHeights[units.Type[id]];
+        buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
-        Color color = units.Flash[id] > 0 ? Colors.White : batch < typeCount ? Blue : Red;
+        Color color = white ? Colors.White : batch < typeCount ? Blue : Red;
         if (buffer[offset + 12] != color.R || buffer[offset + 13] != color.G ||
             buffer[offset + 14] != color.B || buffer[offset + 15] != color.A)
             StoreColor(buffer, offset, color);
@@ -110,7 +112,9 @@ public partial class ArmyRenderer : Node3D
                 if (slot >= visible) continue;
                 int offset = slot * InstanceStride;
                 var position = new Vector3(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
-                mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
+                float scale = buffer[offset];
+                Basis basis = scale == 1f ? Basis.Identity : Basis.Identity.Scaled(Vector3.One * scale);
+                mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
                 mesh.SetInstanceColor(slot, new Color(buffer[offset + 12], buffer[offset + 13], buffer[offset + 14], buffer[offset + 15]));
             }
         }

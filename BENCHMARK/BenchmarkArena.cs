@@ -107,13 +107,21 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
-        units = new UnitState(targetCount, catalog);
+        units = CreateUnitState();
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
         camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
     }
+    private UnitState CreateUnitState()
+    {
+        var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
+            ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
+            : null;
+        return new UnitState(targetCount, catalog, feedback);
+    }
+
     private void SetDeploymentEditing(bool editing)
     {
         painter.Visible = editing;
@@ -154,7 +162,7 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
-        units = new UnitState(targetCount, catalog);
+        units = CreateUnitState();
         grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
         deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
@@ -243,7 +251,9 @@ public partial class BenchmarkArena : Node3D
         }
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
-            start = Stamp(); CombatSystem.Step(units, projectiles, Config, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
+            start = Stamp();
+            units.HitFeedback?.Advance(units, dt);
+            CombatSystem.Step(units, projectiles, (float)panel.FireRate.Value, dt); combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, separationPadding); projectileMs += Elapsed(start); }
         }
         tick++;

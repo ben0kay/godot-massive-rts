@@ -13,7 +13,6 @@ public static class MovementSystem
         {
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
             if (units.Health[i] <= 0) continue;
-            if (units.Flash[i] > 0) { units.Flash[i] = Mathf.Max(0, units.Flash[i] - dt); units.Dirty[i] = true; }
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&

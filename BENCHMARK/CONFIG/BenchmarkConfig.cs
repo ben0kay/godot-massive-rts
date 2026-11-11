@@ -23,8 +23,8 @@ public partial class BenchmarkConfig : Resource
     [Export(PropertyHint.Range, "0,0.25,0.01")] public float AlliedRangedYieldPairCap { get; set; } = 0.06f;
     [Export(PropertyHint.Range, "0,1,0.05")] public float AlliedRangedYieldMeleeShare { get; set; } = 0.7f;
     [Export(PropertyHint.Range, "0,0.25,0.01")] public float AlliedRangedExitPairCap { get; set; } = 0.06f;
-    [ExportGroup("Combat")]
-    [Export] public float FlashSeconds { get; set; } = 0.12f;
+    [ExportGroup("Feedback")]
+    [Export] public HitFeedbackSettings HitFeedback { get; set; } = new();
     [ExportGroup("Projectiles")]
     [Export] public int MaxProjectiles { get; set; } = 30000;
     [Export] public float ProjectileLifetime { get; set; } = 4f;

@@ -28,7 +28,7 @@ Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters**
 - 30 Hz simulation, at most 3 steps per rendered frame. Excess elapsed ticks are discarded and counted, avoiding unlimited catch-up spirals.
 - Maximum 100,000 soldiers; prepare 4,000 array entries per frame before initializing visuals. Combat modes prepare initial targets in groups of 512 per rendered frame before the battle starts. GPU buffers and initial renderer upload are still a single finalization pass, which may briefly hitch at large counts.
 - Spatial cell 6; targets refreshed every 6 ticks, staggered by ID; maximum 96 enemy candidates/query.
-- Unit speed, health, damage, reach and interval come from the [roster](../UNITS/DEFINITIONS/STARTING_ROSTER.md). Damage flash lasts 0.12 sec.
+- Unit speed, health, damage, reach and interval come from the [roster](../UNITS/DEFINITIONS/STARTING_ROSTER.md). The shared [hit feedback settings](../FEEDBACK/README.md) control the 0.12-second flash and 0.18-second scale pulse. Disable Pulse Enabled and respawn for a white-only comparison.
 - Projectile cap 30,000, lifetime 4 sec, minimum hit radius 0.8. Full pools drop new shots and count drops. The live ranged fire-rate multiplier defaults to 1× and scales the authored attack rate.
 
 Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; `UI/` owns controls and overlay. `BenchmarkArena.cs` handles lifecycle and orchestration. `SIMULATION/` owns compact arrays, movement and spatial indexing. `COMBAT/` owns benchmark damage/attacks and projectiles. `RENDERING/` owns instance slots and geometry. `CAMERA/` owns independent pan/zoom.
