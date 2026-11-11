@@ -64,3 +64,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Circle Infantry facing bypass | Source implemented; awaiting owner visual/performance validation.** Skipped voluntary-turn calculations and render-facing interpolation/rotation for circles, preserving position smoothing, MultiMesh transforms and hit-feedback scaling. Other soldier types still turn normally.
 
 - **2026-11-11 | UNIT1 | Source implemented. Awaiting owner validation.** Compiled shared mesh dimensions, footprint and melee reach from the per-type Size Multiplier. Diamond Cavalry defaults to 1.25×.
+
+- **2026-11-11 | Cavalry balance pass | Source values updated; awaiting owner in-game validation.** Reduced Diamond HP 95→65 and standard melee damage 25→14, set an explicit trample damage multiplier of 1.0× (was implicit 1.35×), and increased acceleration to full unchanged 9.0 speed from 2.0 to 3.0 seconds. Preserved 1.25× size, charge/trample mechanics, reach and other unit definitions.
