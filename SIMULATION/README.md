@@ -16,4 +16,6 @@ The defaults are a 0.05-unit gap, 32 examined entries per soldier per pass, and 
 
 When enabled alongside Normal or Strong, advancing melee can approach stationary allied ranged soldiers to half the sum of their footprint radii. When closer, a small correction is split 70% to melee and 30% to ranged. Other allied melee–ranged pairs return to full clearance with a soft correction cap. Opposing pairs and same-role pairs use SEP1. Both corrections share SEP1's overall displacement cap. A dense allied wall can still slow or stall units.
 
-Combat movement ramps to the authored top speed over 0.15 seconds for melee and 0.22 seconds for ranged, with braking near the existing stop distance. The benchmark resource exposes both ramp durations. A zero duration gives immediate movement for that role. Movement-only keeps its constant-speed lanes.
+Combat movement ramps to the authored top speed over 0.15 seconds for melee and 0.32 seconds for ranged, with braking near the existing stop distance. The benchmark resource exposes both ramp durations. A zero duration gives immediate movement for that role. Movement-only keeps its constant-speed lanes.
+
+Stationary ranged soldiers hold their position while a living target is in exact attack range and wait for a replacement target after a kill. An advancing ranged soldier settles up to 0.25 world units inside range to absorb small shifts in target distance. Firing still uses the authored range.

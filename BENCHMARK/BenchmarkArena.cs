@@ -49,7 +49,7 @@ public partial class BenchmarkArena : Node3D
         Config.TargetRefreshTicks = Mathf.Clamp(Config.TargetRefreshTicks, 1, 60);
         Config.QueryCandidateLimit = Mathf.Clamp(Config.QueryCandidateLimit, 8, 1024);
         Config.MeleeAccelerationSeconds = ClampFiniteSetting(Config.MeleeAccelerationSeconds, 0.6f, 0.15f);
-        Config.RangedAccelerationSeconds = ClampFiniteSetting(Config.RangedAccelerationSeconds, 0.6f, 0.22f);
+        Config.RangedAccelerationSeconds = ClampFiniteSetting(Config.RangedAccelerationSeconds, 0.6f, 0.32f);
         Config.CellSize = Mathf.Clamp(Config.CellSize, 2, 20);
         Config.SeparationNeighbourBudget = Mathf.Clamp(Config.SeparationNeighbourBudget, 1, 128);
         Config.SeparationMaxPushPerTick = float.IsFinite(Config.SeparationMaxPushPerTick)

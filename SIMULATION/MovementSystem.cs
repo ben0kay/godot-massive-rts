@@ -4,6 +4,7 @@ namespace MassiveRts;
 
 public static class MovementSystem
 {
+    private const float RangedStandOffBuffer = 0.25f;
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds)
@@ -25,15 +26,21 @@ public static class MovementSystem
                 units.MoveSpeed[i] = 0f;
                 continue;
             }
-            Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
-            Vector3 offset = destination - units.Position[i]; offset.Y = 0;
             ref readonly UnitStats type = ref catalog[units.Type[i]];
+            bool rangedCombat = !movementMode && type.Ranged;
+            // Hold the firing line until there is a living target worth moving toward.
+            if (rangedCombat && !hasTarget && units.MoveSpeed[i] == 0f) continue;
+            Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
+            Vector3 offset = destination - units.Position[i];
             float stop = 0.2f;
             if (hasTarget)
             {
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
                 float reach = type.AttackReach(defender);
-                stop = type.Ranged ? reach * 0.85f :
+                if (rangedCombat && units.MoveSpeed[i] == 0f && offset.LengthSquared() <= reach * reach) continue;
+                // Once advancing, settle slightly inside range so small target changes
+                // can be absorbed without another step. Combat still uses exact reach.
+                stop = rangedCombat ? reach - Mathf.Min(RangedStandOffBuffer, reach * 0.15f) :
                     Mathf.Min(reach * 0.99f, Mathf.Max(reach * 0.85f, type.Footprint + defender.Footprint));
                 if (!type.Ranged && separationGap >= 0f)
                 {
@@ -42,6 +49,7 @@ public static class MovementSystem
                     stop = Mathf.Max(stop, reach - 0.02f);
                 }
             }
+            offset.Y = 0f;
             bool marchingInLane = movementMode && offset.Z == 0f;
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
             if (distance <= stop)
@@ -63,9 +71,9 @@ public static class MovementSystem
                 float brakingSpeedSquared = 2f * acceleration * remaining;
                 speed = advanceSpeed * advanceSpeed > brakingSpeedSquared
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
-                units.MoveSpeed[i] = speed * dt >= remaining ? 0f : speed;
             }
             float travel = Mathf.Min(speed * dt, remaining);
+            if (!movementMode) units.MoveSpeed[i] = travel >= remaining ? 0f : speed;
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
                 voluntaryMovement[i] = 1;
             if (marchingInLane)
