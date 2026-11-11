@@ -20,6 +20,15 @@ public partial class ArmyRenderer : Node3D
     {
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
         members = new int[6][];
+        // Three low-poly meshes are built once; all blue/red soldiers share them.
+        // Per-face vertex tints fake a fixed light direction without dynamic lighting.
+        var material = new StandardMaterial3D
+        {
+            AlbedoColor = Colors.White,
+            VertexColorUseAsAlbedo = true,
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+        };
+        Mesh[] shapes = FacetedSoldierMeshes.Create(material);
         for (int b = 0; b < 6; b++)
         {
             // Capacity is counted from the completed deployment before allocating GPU buffers.
@@ -34,13 +43,7 @@ public partial class ArmyRenderer : Node3D
                 buffers[b][offset] = buffers[b][offset + 5] = buffers[b][offset + 10] = 1f;
                 StoreColor(buffers[b], offset, faction);
             }
-            var material = new StandardMaterial3D { VertexColorUseAsAlbedo = true, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
-            Mesh mesh = (b % 3) switch
-            {
-                1 => new BoxMesh { Size = new Vector3(0.8f, 1.1f, 0.8f), Material = material },
-                2 => new CylinderMesh { TopRadius = 0.65f, BottomRadius = 0.65f, Height = 1.3f, RadialSegments = 6, Material = material },
-                _ => new CylinderMesh { TopRadius = 0.5f, BottomRadius = 0.5f, Height = 0.9f, RadialSegments = 3, Material = material }
-            };
+            Mesh mesh = shapes[b % 3];
             var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh };
             mm.InstanceCount = capacity; mm.VisibleInstanceCount = 0; batches[b] = mm;
             AddChild(new MultiMeshInstance3D { Multimesh = mm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
