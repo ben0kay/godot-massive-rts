@@ -91,6 +91,10 @@ TESTS/                # Small automated checks, only when needed
 
 Edit the five resources under `UNITS/DEFINITIONS/` in Godot. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
+## Next proposed simulation milestone — SEP1 (planned)
+
+**SEP1: Soldier Separation** aims to prevent the current army shapes from stacking tightly together. The planned implementation uses a bounded local spatial grid, per-unit footprint radii, and batched XZ correction without Godot physics bodies, with **Off / Normal / Strong** comparison controls. The priority is playable battles up to roughly **10,000 vs 10,000 soldiers**; larger benchmark counts remain available without guaranteed FPS. Read the [SEP1 Codex implementation plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md). **Not implemented yet.**
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.
