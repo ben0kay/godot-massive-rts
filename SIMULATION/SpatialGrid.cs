@@ -14,14 +14,15 @@ public sealed class SpatialGrid
     private readonly float cellSize;
     private readonly Vector2[] factionMin = new Vector2[2];
     private readonly Vector2[] factionMax = new Vector2[2];
-    private readonly int[] livingRepresentative = new int[2];
-    public int LivingRepresentative(int faction) => livingRepresentative[faction];
+    private readonly OccupiedCellTree[] pursuitTrees;
+    private bool pursuitTreesReady;
     public int LimitedQueries { get; private set; }
     public SpatialGrid(int capacity, float size)
     {
         next = new int[capacity];
         occupied = new int[capacity];
         cellSize = size;
+        pursuitTrees = new[] { new OccupiedCellTree(size), new OccupiedCellTree(size) };
         halfWidth = Mathf.CeilToInt(640f / size);
         width = halfWidth * 2;
         heads = new int[width * width * 2];
@@ -49,9 +50,9 @@ public sealed class SpatialGrid
         occupiedCount = 0;
         overflowHeads.Clear();
         LimitedQueries = 0;
+        pursuitTreesReady = false;
         for (int faction = 0; faction < 2; faction++)
         {
-            livingRepresentative[faction] = -1;
             factionMin[faction] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
             factionMax[faction] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
         }
@@ -61,7 +62,6 @@ public sealed class SpatialGrid
             if (units.Health[i] <= 0) continue;
             Vector3 position = units.Position[i];
             int faction = units.Faction[i];
-            livingRepresentative[faction] = i;
             var point = new Vector2(position.X, position.Z);
             factionMin[faction] = factionMin[faction].Min(point);
             factionMax[faction] = factionMax[faction].Max(point);
@@ -122,6 +122,28 @@ public sealed class SpatialGrid
             }
         }
         return best;
+    }
+
+    // Long-range queries share a tree built once per tick, only when needed.
+    public int FindPursuitEnemy(UnitState units, int id, int previous)
+    {
+        int enemy = 1 - units.Faction[id];
+        if (factionMin[enemy].X == float.PositiveInfinity) return -1;
+        if (!pursuitTreesReady)
+        {
+            foreach (OccupiedCellTree tree in pursuitTrees) tree.Clear();
+            for (int i = 0; i < occupiedCount; i++)
+            {
+                int index = occupied[i];
+                int cell = index / 2;
+                pursuitTrees[index % 2].Add(cell % width - halfWidth, cell / width - halfWidth, heads[index] - 1);
+            }
+            foreach (var entry in overflowHeads)
+                pursuitTrees[entry.Key.Z].Add(entry.Key.X, entry.Key.Y, entry.Value);
+            foreach (OccupiedCellTree tree in pursuitTrees) tree.Build();
+            pursuitTreesReady = true;
+        }
+        return pursuitTrees[enemy].FindNearest(units, next, id, previous);
     }
 
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.

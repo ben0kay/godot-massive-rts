@@ -1,11 +1,11 @@
-// Shared marching pass; stable lanes avoid a single converging destination.
+// Shared movement pass for live combat targets and movement-only march lanes.
 using Godot;
 namespace MassiveRts;
 
 public static class MovementSystem
 {
     // =========================================================
-    public static void Step(UnitState units, BenchmarkConfig config, BenchmarkMode mode, float dt, SpatialGrid grid)
+    public static void Step(UnitState units, BenchmarkConfig config, BenchmarkMode mode, float dt)
     {
         float stepDistance = config.Speed * dt;
         float meleeStop = config.MeleeReach * 0.85f;
@@ -18,13 +18,8 @@ public static class MovementSystem
             if (units.Flash[i] > 0) { units.Flash[i] = Mathf.Max(0, units.Flash[i] - dt); units.Dirty[i] = true; }
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
+            if (!hasTarget && !movementMode) continue;
             Vector3 destination = hasTarget ? units.Position[target] : units.Goal[i];
-            if (!hasTarget && units.SeekingSurvivors[i])
-            {
-                int enemy = grid.LivingRepresentative(1 - units.Faction[i]);
-                if (enemy < 0) continue;
-                destination = units.Position[enemy];
-            }
             Vector3 offset = destination - units.Position[i]; offset.Y = 0;
             float stop = hasTarget ? (rangedMode && units.Kind[i] == 1 ? rangedStop : meleeStop) : 0.2f;
             bool marchingInLane = !hasTarget && offset.Z == 0f;
@@ -33,8 +28,6 @@ public static class MovementSystem
             {
                 // Movement-only mode continuously marches back and forth along separate lanes.
                 if (movementMode) units.Goal[i].X = -units.Goal[i].X;
-                // Once the march ends, follow a live enemy even beyond local acquisition range.
-                else if (!hasTarget && grid != null) units.SeekingSurvivors[i] = true;
                 continue;
             }
             float travel = Mathf.Min(stepDistance, distance - stop);

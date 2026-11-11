@@ -16,7 +16,7 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 | --- | --- |
 | A — Rendering only | Stationary primitive MultiMeshes. No movement, grid, combat, projectile or recurring instance-sync pass. |
 | B — Movement | Fixed-step marching between mirrored endpoints in separate lanes, continuously reversing at endpoints. No targeting or combat. |
-| C — Melee | Grid rebuilding, staggered local acquisition, marching, health, attack cooldowns, damage flashes and deaths. |
+| C — Melee | Grid rebuilding, staggered local acquisition, nearest-enemy pursuit, health, attack cooldowns, damage flashes and deaths. |
 | D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept first-enemy hit checks and lifetime expiry. |
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. All remain reproducible with the same count, mode, composition, resource settings and seed. Heavy hexagonal soldiers are visual-only and behave like melee soldiers. Ranged soldiers are cubes; melee are triangular prisms.
@@ -58,7 +58,7 @@ Skipped ticks, capped local queries (latest completed combat tick) and dropped s
 ## Simplifications and fair comparison
 
 - Candidate-bounded queries search cells center-out and may miss better targets in dense cells. The grid indexes factions separately so friendly crowds cannot exhaust enemy-query budgets. This is approximate targeting, not guaranteed global nearest selection.
-- Movement follows lanes until local targets are found. No collision avoidance, navigation, separation solver or formation orders; combat can bunch at the front. Units march to fixed mirrored endpoints when no enemy is acquired. The benchmark does real movement and combat, but is not a complete battle AI.
+- Combat soldiers pursue living targets directly. Local searches use the existing candidate cap. Soldiers without a target in local range stagger longer-range nearest-enemy searches roughly every 0.8 simulation seconds, using a shared tree over occupied cells. Movement-only mode keeps mirrored march lanes. Combat can bunch at the front and will need obstacle navigation for maps with impassable terrain.
 - Projectiles fly straight at the target's launch-time position. Swept tests use current soldier positions and remove the shot on its first enemy hit, including intervening enemies. Friendly soldiers are ignored. No ballistics, splash or physics. Projectile visuals have fixed orientation. Heavy units have no unique combat stats.
 - Fixed steps have no visual interpolation. At low FPS they may visibly step. MultiMesh batches have broad aggregate bounds, without spatial chunk culling or per-instance LOD. The dirty pass scans IDs and stages changed slots in reusable buffers. Batches with more than 64 staged writes upload their buffer once, while smaller changes use individual setters. Deaths pack active slots using swap removal. Render-only skips the pass entirely.
 - Array allocation, deployment finalization, clear and GPU allocation can hitch. Spawning is bounded but not a background loading pipeline. UI allocations are throttled; dictionary storage is reused after capacity grows. No multithreading.

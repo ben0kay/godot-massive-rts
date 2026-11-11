@@ -1,5 +1,6 @@
 // Staggered local acquisition and simple benchmark attacks; no per-unit nodes.
 using Godot;
+using Godot;
 namespace MassiveRts;
 
 public static class CombatSystem
@@ -7,24 +8,39 @@ public static class CombatSystem
     // =========================================================
     public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, BenchmarkMode mode, int tick)
     {
+        int localInterval = config.TargetRefreshTicks;
+        int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
+        int localPhase = tick % localInterval;
+        int pursuitPhase = tick % pursuitInterval;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
             int target = units.Target[i];
-            float radius = mode == BenchmarkMode.Ranged && units.Kind[i] == 1 ? config.RangedReach : config.CellSize * 2;
-            if (target >= 0 && (units.Health[target] <= 0 || units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius)) units.Target[i] = -1;
-            if (i % config.TargetRefreshTicks == tick % config.TargetRefreshTicks)
+            if (target >= 0 && units.Health[target] <= 0) target = -1;
+
+            bool refreshLocal = i % localInterval == localPhase;
+            bool refreshPursuit = i % pursuitInterval == pursuitPhase;
+            if (refreshLocal || refreshPursuit)
             {
-                int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
-                if (found < 0 && units.SeekingSurvivors[i])
+                float radius = mode == BenchmarkMode.Ranged && units.Kind[i] == 1 ? config.RangedReach : config.CellSize * 2;
+                float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
+                if (refreshLocal)
                 {
-                    // A capped local query can miss the enemy the soldier is already pursuing.
-                    int enemy = grid.LivingRepresentative(1 - units.Faction[i]);
-                    if (enemy >= 0 && units.Position[i].DistanceSquaredTo(units.Position[enemy]) < radius * radius)
-                        found = enemy;
+                    int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
+                    if (found >= 0)
+                    {
+                        float foundDistance = units.Position[i].DistanceSquaredTo(units.Position[found]);
+                        if (foundDistance < distance)
+                        {
+                            target = found;
+                            distance = foundDistance;
+                        }
+                    }
                 }
-                units.Target[i] = found;
+                if (refreshPursuit && distance >= radius * radius)
+                    target = grid.FindPursuitEnemy(units, i, target);
             }
+            units.Target[i] = target;
         }
     }
     // =========================================================
