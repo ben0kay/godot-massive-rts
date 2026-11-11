@@ -46,7 +46,7 @@ public sealed class ProjectileSystem
         Dirty = true;
     }
 
-    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding)
+    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding, ObstacleField obstacles = null)
     {
         if (Count == 0) return;
         Dirty = true;
@@ -58,9 +58,14 @@ public sealed class ProjectileSystem
             float t = elapsed[i] / duration[i];
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
-            int victim = grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding);
+            float wallHit = float.PositiveInfinity;
+            bool blocked = obstacles != null && catalog.Flight(Type[i]).BlocksOnObstacles &&
+                obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
+            int victim = wallHit > 0f
+                ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, wallHit)
+                : -1;
             if (victim >= 0) units.Damage(victim, damage[i]);
-            else if (elapsed[i] < endTime)
+            else if (!blocked && elapsed[i] < endTime)
             {
                 Position[i] = next;
                 Direction[i] = displacement[i] + Vector3.Up * (4f * arc[i] * (1f - 2f * t));

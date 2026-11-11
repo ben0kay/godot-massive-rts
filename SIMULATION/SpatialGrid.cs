@@ -88,7 +88,7 @@ public sealed class SpatialGrid
         }
     }
     // =========================================================
-    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick)
+    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
@@ -127,7 +127,8 @@ public sealed class SpatialGrid
                         if (++examined > budget) { LimitedQueries++; return best; }
                         if (units.Health[other] <= 0f) continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
-                        if (distance < bestDistance) { bestDistance = distance; best = other; }
+                        if (distance < bestDistance && clearSight?.BlocksSight(position, units.Position[other]) != true)
+                        { bestDistance = distance; best = other; }
                     }
                 }
             }
@@ -216,14 +217,14 @@ public sealed class SpatialGrid
     }
 
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
-    public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding)
+    public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding, float before = float.PositiveInfinity)
     {
         float padding = Mathf.Max(radius, units.Catalog.MaxFootprint) + movementPadding;
         Vector3 end = from + segment;
         var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
         var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));
         float lengthSquared = segment.LengthSquared();
-        float earliest = float.PositiveInfinity;
+        float earliest = before;
         int hit = -1;
         var candidates = new CandidateCursor(this, min, max, EnemiesOf(sourceFaction));
         while (candidates.MoveNext())

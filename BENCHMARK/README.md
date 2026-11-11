@@ -41,9 +41,9 @@ Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon i
 
 ## Painted deployments
 
-Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. The selected soldier count is the total troop limit. **Clear all** clears the draft while editing.
+Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the five unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. The selected soldier count is the total troop limit. **Clear all** clears soldiers and walls from the draft while editing.
 
-**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. New saves store stable unit IDs. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires at least two different teams and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected Blue vs Red benchmark layout. Existing saves keep Blue and Red IDs, and Green uses ID 2.
+**Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. Version 2 saves include the wall rectangles and stable unit IDs. Version 1 and legacy layouts load with no walls. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires at least two different teams and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected Blue vs Red benchmark layout. Existing saves keep Blue and Red IDs, and Green uses ID 2.
 
 The deployment cells are 2.1 world units wide and independent of the combat grid. The combat index uses direct cell lookups within its central array, a dictionary outside it, and clears only occupied array entries each tick. Both paths retain the same soldier order within each cell.
 
@@ -81,3 +81,9 @@ For a fair owner test, keep hardware, renderer, window size, camera zoom, seed, 
 ## Validation
 
 Implementation validation is limited to source/diff review. No .NET executable is available in the implementation environment, so no C# build ran. The available Godot binary is 4.6.3, below this project's 4.7 target; no editor or headless simulation was run. Owner build, visuals and measurements remain required.
+
+## OBST1 — Obstacle benchmark
+
+In **Edit painted deployment**, choose **Paint tool → Obstacles**. Drag left to draw a rectangle and drag right to erase a rectangular area. Release to commit the preview. Switch back to **Soldiers** to paint the teams and click **Start painted battle**. Painted walls persist through Save and Load. See [DEPLOYMENT](../DEPLOYMENT/README.md) for clearance and edit limits.
+
+For a reproducible obstacle comparison, leave the layout, seed, and soldier count fixed and toggle **Test wall in preset** before spawning. The preset wall crosses the middle lanes. Movement and combat modes use it for routing and collision. Rendering Only shows the mesh with no route or LOS work. The overlay shows wall count, LOS checks and blocks, clipped movements, steering time per tick, route build time per rendered frame, cache activity, queue depth and max route wait in frames for the current sample.

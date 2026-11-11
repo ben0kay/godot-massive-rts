@@ -6,7 +6,7 @@ namespace MassiveRts;
 public static class AreaDamage
 {
     public static void Cleave(UnitState units, SpatialGrid grid, int attacker, int primary,
-        in UnitStats type, float movementPadding)
+        in UnitStats type, float movementPadding, ObstacleField obstacles = null)
     {
         Vector3 origin = units.Position[attacker];
         Vector3 aim = units.Position[primary] - origin;
@@ -31,6 +31,8 @@ public static class AreaDamage
             float planarDistance = offset.X * offset.X + offset.Z * offset.Z;
             float forward = direction.X * offset.X + direction.Y * offset.Z;
             if (forward < 0f || forward * forward < planarDistance * type.CleaveCosineSquared) continue;
+
+            if (distance > secondDistance || obstacles?.BlocksSight(origin, units.Position[id]) == true) continue;
 
             if (distance < firstDistance || (distance == firstDistance && id < first))
             {

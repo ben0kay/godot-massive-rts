@@ -7,7 +7,8 @@ public static class MovementSystem
     private const float RangedStandOffBuffer = 0.25f;
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
-        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null)
+        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null)
     {
         var catalog = units.Catalog;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
@@ -34,11 +35,17 @@ public static class MovementSystem
             Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
             Vector3 offset = destination - units.Position[i];
             float stop = 0.2f;
+            bool hasClearShot = false;
             if (hasTarget)
             {
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
                 float reach = type.AttackReach(defender);
-                if (rangedCombat && units.MoveSpeed[i] == 0f && offset.LengthSquared() <= reach * reach) continue;
+                bool inRange = (rangedCombat || obstacles != null) && offset.LengthSquared() <= reach * reach;
+                bool blockedInRange = inRange && obstacles != null &&
+                    (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
+                    obstacles.BlocksSight(units.Position[i], destination);
+                hasClearShot = inRange && !blockedInRange;
+                if (rangedCombat && units.MoveSpeed[i] == 0f && hasClearShot) continue;
                 // Once advancing, settle slightly inside range so small target changes
                 // can be absorbed without another step. Combat still uses exact reach.
                 stop = rangedCombat ? reach - Mathf.Min(RangedStandOffBuffer, reach * 0.15f) :
@@ -49,6 +56,28 @@ public static class MovementSystem
                     // advance into packed bodies just to reach an inner stop distance.
                     stop = Mathf.Max(stop, reach - 0.02f);
                 }
+                if (blockedInRange) stop = 0f;
+            }
+            bool detouring = false;
+            if (navigation != null)
+            {
+                if (hasClearShot && offset.X * offset.X + offset.Z * offset.Z <= stop * stop)
+                {
+                    units.MoveSpeed[i] = 0f;
+                    continue;
+                }
+                Vector2 waypoint = navigation.Steer(i, units.Type[i], ObstacleField.Xz(units.Position[i]),
+                    ObstacleField.Xz(destination), out detouring);
+                if (detouring)
+                {
+                    if (hasClearShot)
+                    {
+                        units.MoveSpeed[i] = 0f;
+                        continue;
+                    }
+                    offset = new Vector3(waypoint.X - units.Position[i].X, 0f, waypoint.Y - units.Position[i].Z);
+                    stop = 0f;
+                }
             }
             offset.Y = 0f;
             bool marchingInLane = movementMode && offset.Z == 0f;
@@ -56,7 +85,7 @@ public static class MovementSystem
             if (distance <= stop)
             {
                 // Movement-only mode continuously marches back and forth along separate lanes.
-                if (movementMode) units.Goal[i].X = -units.Goal[i].X;
+                if (movementMode && !detouring) units.Goal[i].X = -units.Goal[i].X;
                 else units.MoveSpeed[i] = 0f;
                 continue;
             }
@@ -74,16 +103,30 @@ public static class MovementSystem
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
             }
             float travel = Mathf.Min(speed * dt, remaining);
-            if (!movementMode) units.MoveSpeed[i] = travel >= remaining ? 0f : speed;
-            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
-                voluntaryMovement[i] = 1;
             Vector3 direction = marchingInLane
                 ? (offset.X < 0f ? Vector3.Left : Vector3.Right)
                 : offset / distance;
+            Vector3 next = units.Position[i] + direction * travel;
+            if (obstacles != null)
+            {
+                Vector2 from = ObstacleField.Xz(units.Position[i]);
+                Vector2 desired = ObstacleField.Xz(next);
+                Vector2 safe = obstacles.ClipMove(from, desired, type.Footprint);
+                if (safe != desired)
+                {
+                    travel = from.DistanceTo(safe);
+                    speed = travel / dt;
+                    next.X = safe.X;
+                    next.Z = safe.Y;
+                }
+            }
+            if (!movementMode) units.MoveSpeed[i] = !detouring && travel >= remaining ? 0f : speed;
+            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
+                voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.
             if (travel > 0.00001f && type.Shape != UnitShape.Circle)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnStep);
-            units.Position[i] += direction * travel;
+            units.Position[i] = next;
             units.Position[i].Y = BattlefieldHeight.At(units.Position[i].X, units.Position[i].Z);
             units.Dirty[i] = true;
         }

@@ -23,6 +23,10 @@ public partial class BenchmarkArena : Node3D
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
     private DeploymentPainter painter;
+    private ObstacleField obstacles;
+    private ObstacleNavigation navigation;
+    private MeshInstance3D battleWalls;
+    private double routeBuildMs;
     private BenchmarkMode mode;
     private const int InitialTargetsPerFrame = 512;
     private int requested, targetCount, tick, preparedTargets;
@@ -76,10 +80,19 @@ public partial class BenchmarkArena : Node3D
         AddChild(ground);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         panel = new BenchmarkPanel { Catalog = catalog }; AddChild(panel);
-        painter = new DeploymentPainter { Camera = camera, Visible = false };
+        Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
+        Config.RouteSectorSize = float.IsFinite(Config.RouteSectorSize) ? Mathf.Clamp(Config.RouteSectorSize, 4f, 32f) : 12f;
+        painter = new DeploymentPainter
+        {
+            Camera = camera, Visible = false, ObstacleHeight = Config.ObstacleHeight, ObstacleTint = Config.ObstacleTint
+        };
         AddChild(painter);
         painter.Initialize(catalog, soldierMeshes);
         painter.Changed += UpdateDeploymentStatus;
+        painter.EditRejected += message => panel.Status.Text = message + "\n" + DeploymentCount();
+        panel.PaintToolChoice.ItemSelected += tool => painter.SetObstacleTool(tool == 1);
+        battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(battleWalls);
         panel.SpawnRequested += Spawn;
         panel.ClearRequested += () => { if (painter.Visible) painter.Clear(); else Clear(); };
         panel.PaintRequested += EnterDeployment;
@@ -102,6 +115,7 @@ public partial class BenchmarkArena : Node3D
     {
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
+        obstacles = null; navigation = null; battleWalls.Mesh = null;
         units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
@@ -113,6 +127,11 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
+        if (panel.TestWall.ButtonPressed)
+        {
+            var wall = new ObstacleField(new[] { new ObstacleRectangle(-2, -12, 4, 24) });
+            SetBattleObstacles(wall, ObstacleRenderer.Build(wall, Config.ObstacleHeight, Config.ObstacleTint));
+        }
         units = CreateUnitState();
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
@@ -130,11 +149,20 @@ public partial class BenchmarkArena : Node3D
 
     private void SetDeploymentEditing(bool editing)
     {
+        painter.CancelDrag();
         painter.Visible = editing;
         panel.EditingDeployment = editing;
     }
 
-    private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} / {painter.Limit:N0}";
+    private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} / {painter.Limit:N0} • " +
+        $"{painter.Layout.Obstacles.Field?.RectangleCount ?? 0} wall rectangles";
+
+    private void SetBattleObstacles(ObstacleField field, Mesh mesh)
+    {
+        obstacles = field;
+        obstacles?.ResetCounters();
+        battleWalls.Mesh = mesh;
+    }
     private void UpdateDeploymentStatus() => panel.Status.Text = DeploymentCount();
 
     private void EnterDeployment()
@@ -168,6 +196,7 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
+        SetBattleObstacles(painter.Layout.Obstacles.Field, painter.ObstacleMesh);
         units = CreateUnitState();
         grid = new SpatialGrid(targetCount, Config.CellSize);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles);
@@ -183,7 +212,14 @@ public partial class BenchmarkArena : Node3D
         {
             if (units.Count < targetCount)
             {
+                int first = units.Count;
                 deployment.Append(units, Config.SpawnPerFrame);
+                if (obstacles != null && !ValidateSpawn(first))
+                {
+                    Clear();
+                    panel.Status.Text = "Spawn or march endpoint overlaps a wall or the battlefield edge.";
+                    return;
+                }
                 panel.Status.Text = $"Preparing {units.Count:N0} / {requested:N0} soldiers";
                 if (units.Count < targetCount) return;
                 grid?.Rebuild(units);
@@ -199,6 +235,9 @@ public partial class BenchmarkArena : Node3D
             if (units.Count == targetCount)
             {
                 if (grid != null) trample = TrampleSystem.Create(units);
+                if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
+                    navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
+                        Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
@@ -207,6 +246,16 @@ public partial class BenchmarkArena : Node3D
         }
         else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0))
         {
+            if (navigation != null)
+            {
+                if (navigation.QueueDepth == 0) navigation.AdvanceFrame();
+                else
+                {
+                    long routeStart = Stamp();
+                    navigation.BuildQueuedRoutes();
+                    routeBuildMs += Elapsed(routeStart);
+                }
+            }
             bool smooth = panel.SmoothMotion;
             if (!smooth && smoothingWasEnabled) armyRenderer.ClearPoseHistory();
             accumulator += delta;
@@ -250,13 +299,32 @@ public partial class BenchmarkArena : Node3D
         if (hudClock >= 0.3) { UpdateOverlay(); hudClock = 0; ResetTimings(); }
     }
     // =========================================================
+    private bool ValidateSpawn(int first)
+    {
+        for (int i = first; i < units.Count; i++)
+        {
+            float radius = catalog[units.Type[i]].Footprint;
+            if (!ValidGroundPoint(units.Position[i], radius) ||
+                (mode == BenchmarkMode.Movement && !ValidGroundPoint(units.Goal[i], radius)))
+                return false;
+        }
+        return true;
+    }
+
+    private bool ValidGroundPoint(Vector3 position, float radius)
+    {
+        float edge = DeploymentLayout.HalfWidth * DeploymentLayout.CellSize;
+        return Mathf.Abs(position.X) + radius <= edge && Mathf.Abs(position.Z) + radius <= edge &&
+            !obstacles.IntersectsCircle(ObstacleField.Xz(position), radius);
+    }
+
     private void Step(float dt)
     {
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
-            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick); targetingMs += Elapsed(start);
+            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick, obstacles); targetingMs += Elapsed(start);
             start = Stamp(); units.HitFeedback?.Advance(units, dt); combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
@@ -266,8 +334,8 @@ public partial class BenchmarkArena : Node3D
         byte[] movementFlags = separate && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample);
-        float tramplePadding = trample?.MoveCharges(units, grid, dt) ?? 0f;
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation);
+        float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         movementMs += Elapsed(start);
         float separationPadding = 0f;
         if (separate)
@@ -276,7 +344,7 @@ public partial class BenchmarkArena : Node3D
             separation ??= new SeparationSystem(units.Position.Length);
             separationPadding = Config.SeparationMaxPushPerTick;
             separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
-                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample);
+                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles);
             separationMs += Elapsed(start);
         }
         if (trample != null)
@@ -287,8 +355,8 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, trample); combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding); projectileMs += Elapsed(start); }
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, trample, obstacles); combatMs += Elapsed(start);
+            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, obstacles); projectileMs += Elapsed(start); }
         }
         tick++;
         double tickMs = Elapsed(total);
@@ -316,13 +384,21 @@ public partial class BenchmarkArena : Node3D
         string yieldStats = separating && panel.AlliedYield && separation != null
             ? $"Allied yield skip / push / exit: {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
             : "";
+        string obstacleStats = obstacles == null ? "" :
+            $"Walls {obstacles.RectangleCount} • LOS checks/blocks {obstacles.LosQueries:N0}/{obstacles.LosBlocks:N0} • clips {obstacles.ClippedMoves:N0}\n";
+        if (navigation != null)
+        {
+            double steerMs = navigation.SteeringTicks * 1000.0 / Stopwatch.Frequency / Math.Max(1, measuredTicks);
+            obstacleStats += $"Nav steer {steerMs:F3} ms/tick • route build {routeBuildMs / divisor:F3} ms/frame\n" +
+                $"Route hits/misses {navigation.CacheHits:N0}/{navigation.CacheMisses:N0} • built/queued {navigation.RoutesBuilt:N0}/{navigation.QueueDepth:N0} • wait {navigation.MaxWaitFrames}f\n";
+        }
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.FactionAlive[Factions.Blue] ?? 0:N0} • Red {units?.FactionAlive[Factions.Red] ?? 0:N0} • Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\nSampled penetration avg/max: {separationSamples}\n\n" +
-            yieldStats +
+            yieldStats + obstacleStats +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
             $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
@@ -342,7 +418,9 @@ public partial class BenchmarkArena : Node3D
     private void ResetTimings()
     {
         movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0;
-        worstTickMs = armyUploadMs = 0;
+        worstTickMs = armyUploadMs = routeBuildMs = 0;
+        obstacles?.ResetCounters();
+        navigation?.ResetCounters();
         measuredFrames = measuredTicks = maxTicksInFrame = measuredSyncs = denseUploads = sparseUploads = changedWrites = 0;
     }
 }

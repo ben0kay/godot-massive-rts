@@ -1,7 +1,7 @@
 # OBST1 — Painted Static Rectangles, Shared Navigation and Selective Line of Sight
 
 **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
-**Status:** PLANNED — documentation only; no obstacle code implemented by this commit.
+**Status:** Source implemented. Awaiting owner validation in Godot.
 **Primary scale:** about 10,000 vs 10,000 soldiers in actual battles. Higher BENCH0 presets remain for comparative stress testing.
 
 ## Objective and boundaries
@@ -248,5 +248,3 @@ Do **not** promise a specific FPS. A fully engaged obstacle scenario may cost mo
 - Keep arrays/queries reusable and branch away when no obstacles exist. One basic `dotnet build` if practical; don't run extensive benchmarks. User performs full in-game and FPS acceptance.
 - After code changes, update the relevant READMEs and append one short implementation entry to `devlog.md`.
 - Commit and push to `main` once, then report SHA, how routing and LOS are handled, measured results only if actually measured, and owner test steps.
-
-**This documentation plan is not the feature implementation.**

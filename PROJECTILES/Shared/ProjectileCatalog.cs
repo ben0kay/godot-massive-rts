@@ -32,7 +32,8 @@ public sealed class ProjectileCatalog
         flights.Add(new ProjectileFlight(
             float.IsFinite(definition.Speed) && definition.Speed > 0 ? definition.Speed : 45f,
             float.IsFinite(definition.ArcHeight) ? Mathf.Max(0, definition.ArcHeight) : 0f,
-            float.IsFinite(definition.ArcHeightPerDistance) ? Mathf.Clamp(definition.ArcHeightPerDistance, 0, 1) : 0f));
+            float.IsFinite(definition.ArcHeightPerDistance) ? Mathf.Clamp(definition.ArcHeightPerDistance, 0, 1) : 0f,
+            definition.ObstacleFire, definition.BlocksOnObstacles));
         meshes.Add(mesh);
         return index;
     }

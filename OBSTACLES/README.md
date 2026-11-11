@@ -1,11 +1,9 @@
 # OBSTACLES — Static World Blockers
 
-**Status: OBST1 planned, not source implemented.**
+**Status:** OBST1 source implemented. Awaiting owner validation in Godot.
 
-[OBST1 implementation plan](OBST1_IMPLEMENTATION_PLAN.md) describes the first obstacle system: paintable/savable dark-gray rectangular walls, compiled static XZ box queries for movement and visibility, and pooled-projectile collision. It integrates with a separate shared `NAVIGATION/` subsystem instead of a per-soldier pathfinder.
+[DEPLOYMENT](../DEPLOYMENT/README.md) authors wall cells. ObstacleLayout merges them into deterministic rectangles while preserving holes and gaps. ObstacleField indexes the rectangles in a static bounding volume tree. Ground movement uses exact circle overlap and swept rounded-rectangle contact. Ordinary motion, charge travel, trample shoves and each separation pass all clip against this field. Rendering combines the rectangles into one dark-gray mesh with the same beveled face shading as the soldiers.
 
-On implementation, OBSTACLES should own obstacle authoring data, merged AABB compilation, static query index, visibility rules and shared rendering. NAVIGATION should own cached, radius-aware routes; the deployment editor remains under DEPLOYMENT; combat/projectile systems decide which attack types obey LOS.
+Melee, cleave and direct-fire weapons check cover at attack time. Direct projectiles compare the earliest wall and unit contact along each flight segment. Walls win ties. The initial cover test is 2D across XZ, including for shallow arrow arcs. **Obstacle Fire** and **Blocks On Obstacles** on the projectile definition separately control aim permission and projectile contact. Indirect fire bypasses the aiming gate. Height-aware projectile collisions are a future feature.
 
-Initial obstacles block all ground movement and direct arrows; future artillery can use explicitly selected indirect fire. No damageable obstacles, elevations, navmesh agents, destructibility or artillery have been implemented yet.
-
-Only this README and the plan exist until Codex implements OBST1; create proposed script files and `NAVIGATION/` as the feature is coded.
+See [NAVIGATION](../NAVIGATION/README.md) for routing and the [OBST1 plan](OBST1_IMPLEMENTATION_PLAN.md) for the owner checks.

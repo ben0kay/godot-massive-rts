@@ -13,7 +13,7 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null)
     {
         int localInterval = config.TargetRefreshTicks;
         int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
@@ -45,6 +45,17 @@ public static class CombatSystem
                             distance = foundDistance;
                         }
                     }
+                    if (obstacles != null && type.Ranged && target >= 0 && distance <= type.Reach * type.Reach &&
+                        units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight &&
+                        obstacles.BlocksSight(units.Position[i], units.Position[target]))
+                    {
+                        int visible = grid.FindEnemy(units, i, type.Reach, config.QueryCandidateLimit, tick, obstacles);
+                        if (visible >= 0)
+                        {
+                            target = visible;
+                            distance = units.Position[i].DistanceSquaredTo(units.Position[target]);
+                        }
+                    }
                 }
                 if (refreshPursuit && distance >= radius * radius)
                     target = grid.FindPursuitEnemy(units, i, target);
@@ -63,7 +74,7 @@ public static class CombatSystem
         }
     }
     // =========================================================
-    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null)
+    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, TrampleSystem trample = null, ObstacleField obstacles = null)
     {
         for (int i = 0; i < units.Count; i++)
         {
@@ -75,9 +86,12 @@ public static class CombatSystem
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
             float radius = type.AttackReach(units.Catalog[units.Type[target]]);
             if (units.Position[i].DistanceSquaredTo(units.Position[target]) > radius * radius) continue;
+            if (obstacles != null &&
+                (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
+                obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
             if (type.Ranged) projectiles.Fire(i, target, units);
             else if (type.CleaveEnabled)
-                AreaDamage.Cleave(units, grid, i, target, type, units.Catalog.MaxSpeed * dt + separationPadding);
+                AreaDamage.Cleave(units, grid, i, target, type, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
             else units.Damage(target, type.Damage);
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }

@@ -16,6 +16,12 @@ public partial class BenchmarkConfig : Resource
     [Export] public int TargetRefreshTicks { get; set; } = 6;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float MeleeAccelerationSeconds { get; set; } = 0.15f;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float RangedAccelerationSeconds { get; set; } = 0.32f;
+    [ExportGroup("Obstacles")]
+    [Export(PropertyHint.Range, "0.2,8,0.1")] public float ObstacleHeight { get; set; } = 1f;
+    [Export] public Color ObstacleTint { get; set; } = new(0.31f, 0.33f, 0.36f);
+    [Export(PropertyHint.Range, "4,32,1")] public float RouteSectorSize { get; set; } = 12f;
+    [Export(PropertyHint.Range, "64,8192,1")] public int RouteCacheCapacity { get; set; } = 2048;
+    [Export(PropertyHint.Range, "1,64,1")] public int RoutesPerFrame { get; set; } = 8;
     [ExportGroup("Separation")]
     [Export(PropertyHint.Range, "0,0.25,0.01")] public float SeparationGap { get; set; } = 0.05f;
     [Export(PropertyHint.Range, "1,128,1")] public int SeparationNeighbourBudget { get; set; } = 32;

@@ -57,7 +57,7 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null)
     {
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
         yieldEnabled = voluntaryMovement != null;
@@ -89,7 +89,7 @@ public sealed class SeparationSystem
             Array.Clear(slotContacts, 0, alive);
             if (yieldEnabled) Array.Clear(yieldPush, 0, alive);
             Scan(gapLimit, neighbourBudget, tick + pass);
-            Apply(units, alive, passCap);
+            Apply(units, alive, passCap, obstacles);
         }
         if (aliveTotal > 0) CandidatesPerSoldier = (float)candidateTotal / aliveTotal;
     }
@@ -332,7 +332,7 @@ public sealed class SeparationSystem
         return id < other ? direction : -direction;
     }
 
-    private void Apply(UnitState units, int alive, float cap)
+    private void Apply(UnitState units, int alive, float cap, ObstacleField obstacles)
     {
         float capSquared = cap * cap;
         for (int s = 0; s < alive; s++)
@@ -363,6 +363,13 @@ public sealed class SeparationSystem
             Vector3 position = units.Position[id];
             position.X += px;
             position.Z += pz;
+            if (obstacles != null)
+            {
+                Vector2 safe = obstacles.ClipMove(ObstacleField.Xz(units.Position[id]), ObstacleField.Xz(position),
+                    footprintByType[units.Type[id]]);
+                position.X = safe.X;
+                position.Z = safe.Y;
+            }
             position.Y = BattlefieldHeight.At(position.X, position.Z);
             units.Position[id] = position;
             units.Dirty[id] = true;

@@ -3,13 +3,18 @@ using Godot;
 
 namespace MassiveRts;
 
+public enum ObstacleFireMode { RequiresDirectLineOfSight, IndirectFire }
+
 [GlobalClass]
 public partial class ProjectileDefinition : Resource
 {
+    [Export] public ObstacleFireMode ObstacleFire { get; set; }
+    [Export] public bool BlocksOnObstacles { get; set; } = true;
     [Export] public Mesh VisualMesh { get; set; }
     [Export(PropertyHint.Range, "1,200,0.1,or_greater")] public float Speed { get; set; } = 45f;
     [Export(PropertyHint.Range, "0,5,0.05,or_greater")] public float ArcHeight { get; set; } = 0.65f;
     [Export(PropertyHint.Range, "0,1,0.01")] public float ArcHeightPerDistance { get; set; } = 0.08f;
 }
 
-public readonly record struct ProjectileFlight(float Speed, float ArcHeight, float ArcHeightPerDistance);
+public readonly record struct ProjectileFlight(float Speed, float ArcHeight, float ArcHeightPerDistance,
+    ObstacleFireMode ObstacleFire, bool BlocksOnObstacles);

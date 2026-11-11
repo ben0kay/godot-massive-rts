@@ -16,6 +16,7 @@ public sealed class DeploymentLayout
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
     private readonly RuntimeUnitCatalog catalog;
+    public ObstacleLayout Obstacles { get; private set; } = new();
 
     public DeploymentLayout(RuntimeUnitCatalog catalog) => this.catalog = catalog;
 
@@ -44,6 +45,8 @@ public sealed class DeploymentLayout
         Vector3 position = placement.Position();
         float edge = HalfWidth * CellSize;
         if (Mathf.Abs(position.X) + radius > edge || Mathf.Abs(position.Z) + radius > edge) return false;
+
+        if (Obstacles.Field?.IntersectsCircle(ObstacleField.Xz(position), radius) == true) return false;
 
         int extent = Mathf.Min(HalfWidth * 2 - 1, Mathf.CeilToInt((radius + catalog.MaxFootprint) / CellSize));
         for (int z = System.Math.Max(-HalfWidth, cell.Y - extent); z <= System.Math.Min(HalfWidth - 1, cell.Y + extent); z++)
@@ -83,8 +86,33 @@ public sealed class DeploymentLayout
         return true;
     }
 
+    public bool TryEditObstacles(ObstacleRectangle area, bool erase, out string message)
+    {
+        if (!Obstacles.TryEdit(area, erase, out ObstacleLayout draft))
+        {
+            message = $"Obstacle edit exceeds battlefield bounds or the {ObstacleLayout.MaxCells:N0}-cell / {ObstacleLayout.MaxRectangles}-rectangle limit.";
+            return false;
+        }
+        message = null;
+        if (ReferenceEquals(draft, Obstacles)) return false;
+        if (!erase && draft.Field != null)
+        {
+            foreach (SoldierPlacement placement in placements)
+            {
+                if (!draft.Field.IntersectsCircle(ObstacleField.Xz(placement.Position()), catalog[placement.Type].Footprint)) continue;
+                message = "Obstacle overlaps a soldier’s footprint.";
+                return false;
+            }
+        }
+        Obstacles = draft;
+        return true;
+    }
+
+    public void SetLoadedObstacles(ObstacleLayout obstacles) => Obstacles = obstacles;
+
     public void Clear()
     {
+        Obstacles = new ObstacleLayout();
         placements.Clear();
         slots.Clear();
     }

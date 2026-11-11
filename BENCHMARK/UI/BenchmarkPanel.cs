@@ -14,6 +14,8 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
     public bool AlliedYield => alliedYield.ButtonPressed;
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
+    public readonly OptionButton PaintToolChoice = new();
+    public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
     public readonly OptionButton FactionChoice = new();
     private VBoxContainer paintControls;
@@ -47,6 +49,7 @@ public partial class BenchmarkPanel : CanvasLayer
         Field(column, "Separation (live)", separationChoice);
         column.AddChild(alliedYield);
         column.AddChild(smoothMotion);
+        column.AddChild(TestWall);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintControls = new VBoxContainer { Visible = false };
@@ -54,10 +57,22 @@ public partial class BenchmarkPanel : CanvasLayer
         FactionChoice.AddItem("Blue", Factions.Blue);
         FactionChoice.AddItem("Red", Factions.Red);
         FactionChoice.AddItem("Green", Factions.Green);
-        Field(paintControls, "Paint faction", FactionChoice);
+        PaintToolChoice.AddItem("Soldiers");
+        PaintToolChoice.AddItem("Obstacles");
+        Field(paintControls, "Paint tool", PaintToolChoice);
+        var soldierControls = new VBoxContainer();
+        paintControls.AddChild(soldierControls);
+        Field(soldierControls, "Paint faction", FactionChoice);
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
-        Field(paintControls, "Drag left to paint • right to erase", BrushChoice);
+        Field(soldierControls, "Drag left to paint • right to erase", BrushChoice);
+        var wallHelp = new Label { Text = "Drag left to draw rectangle\nDrag right to erase area", Visible = false };
+        paintControls.AddChild(wallHelp);
+        PaintToolChoice.ItemSelected += tool =>
+        {
+            soldierControls.Visible = tool == 0;
+            wallHelp.Visible = tool == 1;
+        };
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());

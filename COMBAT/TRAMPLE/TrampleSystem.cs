@@ -128,7 +128,7 @@ public sealed class TrampleSystem
         }
     }
 
-    public float MoveCharges(UnitState units, SpatialGrid grid, float dt)
+    public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null)
     {
         float padding = units.Catalog.MaxSpeed * dt;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
@@ -136,7 +136,7 @@ public sealed class TrampleSystem
         {
             int id = ids[slot];
             if (units.Health[id] <= 0f || !states[slot].Active) continue;
-            MoveCharge(units, grid, id, slot, dt, padding, turnStep);
+            MoveCharge(units, grid, id, slot, dt, padding, turnStep, obstacles);
         }
         bool appliedShove = false;
         for (int i = 0; i < shoveCount; i++)
@@ -145,7 +145,9 @@ public sealed class TrampleSystem
             Vector2 shove = shoves[id].LimitLength(MaxShovePerTick);
             if (units.Health[id] > 0f && shove != Vector2.Zero)
             {
-                Place(units, id, Xz(units.Position[id]) + shove);
+                Vector2 from = Xz(units.Position[id]);
+                Vector2 to = from + shove;
+                Place(units, id, obstacles?.ClipMove(from, to, units.Catalog[units.Type[id]].Footprint) ?? to);
                 appliedShove = true;
             }
             shoves[id] = Vector2.Zero;
@@ -155,7 +157,7 @@ public sealed class TrampleSystem
         return appliedShove ? MaxShovePerTick : 0f;
     }
 
-    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep)
+    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles)
     {
         ref Charge charge = ref states[slot];
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
@@ -165,11 +167,21 @@ public sealed class TrampleSystem
         float travel = Mathf.Min(charge.Distance, speed * dt);
         Vector2 origin = Xz(units.Position[id]);
         bool blocked = false;
+        if (obstacles != null)
+        {
+            Vector2 end = origin + charge.Heading * travel;
+            Vector2 safe = obstacles.ClipMove(origin, end, type.Footprint);
+            blocked = safe != end;
+            if (blocked)
+            {
+                travel = Mathf.Clamp((safe - origin).Dot(charge.Heading), 0f, travel);
+            }
+        }
 
         // Each iteration either records a new contact or ends the charge.
         while (true)
         {
-            int defender = FindContact(units, grid, id, slot, origin, charge.Heading, travel, padding, out float contact);
+            int defender = FindContact(units, grid, id, slot, origin, charge.Heading, travel, padding, obstacles, out float contact);
             if (defender < 0) break;
             if (charge.Hits == type.Trample.MaxHits)
             {
@@ -221,7 +233,7 @@ public sealed class TrampleSystem
     }
 
     private int FindContact(UnitState units, SpatialGrid grid, int id, int slot, Vector2 from,
-        Vector2 heading, float length, float padding, out float earliest)
+        Vector2 heading, float length, float padding, ObstacleField obstacles, out float earliest)
     {
         float radius = units.Catalog[units.Type[id]].Footprint;
         Vector2 middle = from + heading * (length * 0.5f);
@@ -246,6 +258,7 @@ public sealed class TrampleSystem
             }
             else if (projection < 0f) continue; // An existing contact behind a departing charge.
             if (entry > earliest || (entry == earliest && result >= 0 && other > result)) continue;
+            if (obstacles?.BlocksCorridor(from + heading * entry, Xz(units.Position[other]), 0f) == true) continue;
             earliest = entry;
             result = other;
         }

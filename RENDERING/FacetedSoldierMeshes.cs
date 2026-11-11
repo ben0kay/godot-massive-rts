@@ -58,9 +58,30 @@ public static class FacetedSoldierMeshes
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
 
+        AppendPrism(surface, sides, radiusX, radiusZ, height, rotation, Vector3.Zero, Colors.White);
+        return surface.Commit();
+    }
+
+    public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint)
+    {
+        const float inverseSqrtTwo = 0.70710678f;
+        AppendPrism(surface, 4, size.X * inverseSqrtTwo, size.Z * inverseSqrtTwo,
+            size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f);
+    }
+
+    private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
+        float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f)
+    {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
         float insetDistance = Mathf.Min(radiusX, radiusZ) * TopInsetFraction;
+        float insetX = TopInsetFraction, insetZ = TopInsetFraction;
+        if (rectangleInset > 0f)
+        {
+            insetDistance = rectangleInset;
+            insetX = Mathf.Min(TopInsetFraction, rectangleInset / (radiusX * 0.70710678f));
+            insetZ = Mathf.Min(TopInsetFraction, rectangleInset / (radiusZ * 0.70710678f));
+        }
         var top = new Vector3[sides];
         var shoulder = new Vector3[sides];
         var bottom = new Vector3[sides];
@@ -69,9 +90,9 @@ public static class FacetedSoldierMeshes
         {
             float angle = rotation + i * Mathf.Tau / sides;
             float x = Mathf.Cos(angle) * radiusX, z = Mathf.Sin(angle) * radiusZ;
-            top[i] = new Vector3(x * (1f - TopInsetFraction), half, z * (1f - TopInsetFraction));
-            shoulder[i] = new Vector3(x, half - bevelRise, z);
-            bottom[i] = new Vector3(x, -half, z);
+            top[i] = center + new Vector3(x * (1f - insetX), half, z * (1f - insetZ));
+            shoulder[i] = center + new Vector3(x, half - bevelRise, z);
+            bottom[i] = center + new Vector3(x, -half, z);
         }
 
         for (int i = 0; i < sides; i++)
@@ -80,16 +101,15 @@ public static class FacetedSoldierMeshes
             Vector3 edge = shoulder[next] - shoulder[i];
             Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
 
-            AddTriangle(surface, new Vector3(0, half, 0), top[next], top[i], Vector3.Up, TopTint);
-            AddTriangle(surface, new Vector3(0, -half, 0), bottom[i], bottom[next], Vector3.Down, BottomTint);
+            AddTriangle(surface, center + new Vector3(0, half, 0), top[next], top[i], Vector3.Up, TopTint * tint);
+            AddTriangle(surface, center + new Vector3(0, -half, 0), bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
-                outward, SideTint(outward));
+                outward, SideTint(outward) * tint);
             Vector3 bevelNormal = (outward * bevelRise + Vector3.Up * insetDistance).Normalized();
             AddQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
-                bevelNormal, BevelTint(outward));
+                bevelNormal, BevelTint(outward) * tint);
         }
-        return surface.Commit();
     }
 
     // =========================================================
