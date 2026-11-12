@@ -16,8 +16,8 @@ public static class AreaDamage
 
         int sourceFaction = units.Faction[attacker];
         float queryRadius = CombatSystem.MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + tolerance + movementPadding;
-        Span<int> victims = stackalloc int[UnitDefinition.MaxCleaveAdditionalTargets];
-        Span<float> distances = stackalloc float[UnitDefinition.MaxCleaveAdditionalTargets];
+        Span<int> victims = stackalloc int[limit];
+        Span<float> distances = stackalloc float[limit];
         int count = 0;
 
         var candidates = grid.GetCandidates(origin, queryRadius, sourceFaction);
