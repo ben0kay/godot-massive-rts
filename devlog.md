@@ -102,3 +102,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-12 | Obstacle corridor reuse | Source implemented.** Added conservative direct-approach memoization and a live benchmark comparison toggle. Awaiting Godot profiling.
 
 - **2026-11-12 | Wall sliding | Source implemented.** Clipped movement and separation now preserve a safe wall-parallel remainder. Awaiting funnel gameplay validation.
+
+- **2026-11-12 | Wall corner routing | Source implemented.** Reverted wall sliding and applied wider corner clearance, bounded look-ahead, and previous-corner recovery. Awaiting funnel testing.

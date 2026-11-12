@@ -24,7 +24,7 @@ A painted battle with 3,330 soldiers and six compiled wall rectangles showed abo
 | Footprints fitted to meshes | `1e1108a`. A large deployed unit can still increase the separation grid’s cell width. |
 | Query counters and timing | `11526bf`. **Obstacles and terrain → Sample obstacle queries** counts corridor, clip, sweep, sight, and overlap calls. Timing samples one in 64 calls per category. The old per-soldier steering stopwatch was removed. |
 | Direct-approach corridor reuse | `bfb1efa`. **Reuse corridor checks** caches exact endpoint matches and results with a verified half-unit margin. This covers the direct-approach decision. Waypoint legs and physical clips still run their own checks. |
-| Wall sliding | `f1ea1a3`. Clipped ordinary movement and separation try a safe axis-aligned remainder. The owner still reproduced groups stuck at wall ends and at the opening afterward. Route recovery and crowd congestion are still under investigation. |
+| Wall sliding | `f1ea1a3`. Clipped ordinary movement and separation try a safe axis-aligned remainder. Reverted after the owner still reproduced clumps at wall ends. The follow-up uses Claude’s bounded waypoint look-ahead, one-corner recovery, and 0.35-unit corner clearance. Gameplay validation is pending. |
 | Tick-budgeted route builds | Pending. The queue and retry ages still use rendered frames. |
 | Golden trace and fixed benchmark fixtures | Pending. |
 

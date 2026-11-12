@@ -5,3 +5,5 @@ ObstacleNavigation prepares a corner visibility graph per compiled unit footprin
 Route builds are limited per rendered frame. The Inspector exposes sector size, cache capacity, and builds per frame under **Obstacles** in BenchmarkConfig. The overlay reports queue depth and latency. The rectangle cap bounds graph preparation and storage. Dense congestion at a corner and very tight or complex openings still need owner testing. Pending-route timing can vary with rendering frame rate.
 
 The wall field independently clips each ground displacement, including cavalry and crowd separation. Maps without walls allocate no navigation graph or route state.
+
+Route followers check up to three waypoints ahead and take the furthest visible one in that window. If the next leg becomes blocked, a follower can return to the previous corner. Waypoints are placed 0.35 units beyond the footprint clearance. Tight gaps can lose a waypoint that fit with the previous smaller margin.

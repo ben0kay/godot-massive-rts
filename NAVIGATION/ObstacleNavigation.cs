@@ -7,7 +7,7 @@ namespace MassiveRts;
 
 public sealed class ObstacleNavigation
 {
-    private const float CornerClearance = 0.008f;
+    private const float CornerClearance = 0.35f;
     private const float ArrivalDistance = 0.004f;
     private const float WaitingClearance = 0.15f;
     private const int RetryFrames = 30;
@@ -112,12 +112,21 @@ public sealed class ObstacleNavigation
             while (follower.Next < points.Length &&
                 start.DistanceSquaredTo(points[follower.Next]) <= ArrivalDistance * ArrivalDistance)
                 follower.Next++;
-            for (int next = follower.Next; next < points.Length; next++)
+            int last = Math.Min(points.Length - 1, follower.Next + 3);
+            for (int next = last; next >= follower.Next; next--)
             {
                 if (field.BlocksCorridor(start, points[next], radius)) continue;
                 follower.Next = next;
                 routeCorner = true;
                 return points[next];
+            }
+            // Separation may leave a soldier with only the previous corner reachable.
+            if (follower.Next > 0 && follower.Next < points.Length &&
+                !field.BlocksCorridor(start, points[follower.Next - 1], radius))
+            {
+                follower.Next--;
+                routeCorner = true;
+                return points[follower.Next];
             }
         }
         follower = default;

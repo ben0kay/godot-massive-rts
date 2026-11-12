@@ -131,7 +131,7 @@ public static class MovementSystem
             {
                 Vector2 from = ObstacleField.Xz(units.Position[i]);
                 Vector2 desired = ObstacleField.Xz(next);
-                Vector2 safe = obstacles.ClipMove(from, desired, type.Footprint, slide: true);
+                Vector2 safe = obstacles.ClipMove(from, desired, type.Footprint);
                 if (safe != desired)
                 {
                     travel = from.DistanceTo(safe);
