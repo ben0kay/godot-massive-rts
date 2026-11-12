@@ -22,6 +22,6 @@ CleaveEnabled = true
 ShockwaveEveryAttacks = 5
 ShockwaveBaseRadius = 4.0
 ShockwaveDamage = 25.0
-ShockwaveEdgeDamageFraction = 0.4
+ShockwaveEdgeDamageFraction = 0.6
 ShockwaveRespectsCover = true
 ChargeResistance = 2.4

@@ -80,3 +80,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Contact melee | Source implemented.** Normal melee closes to footprint contact, turns to face the target, and applies cleave only to forward contacts. Hexagon stomp keeps radial damage. Awaiting Godot validation.
 
 - **2026-11-11 | Mesh footprints | Source implemented.** Compiled circular collision radii from the same outlines used to render soldiers, removing oversized default clearance. Awaiting Godot validation.
+
+- **2026-11-11 | Hexagon stomp edge damage | Source tuned; awaiting owner validation.** Increased outer shockwave damage from 10 to 15 via edge multiplier 0.4→0.6; preserved 25 centre damage, every-fifth attack cadence, radius and regular melee cleave.
