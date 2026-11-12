@@ -86,3 +86,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | UNIT2 and UNIT3 | Source implemented.** Added per-unit melee tuning and a full-screen Unit Editor for existing resources, with isolated drafts, previews and guarded saves. Default combat tuning is preserved. Awaiting editor validation.
 
 - **2026-11-11 | Live melee experiments | Source implemented.** Added live controls for stalled-melee sidesteps, contact hold and equal-versus-footprint separation. Awaiting mirrored-deployment testing in Godot.
+
+- **2026-11-11 | Unit Editor ability panel visibility | Source implemented; awaiting owner editor validation.** Collapsed inactive Cleave, Shockwave and Trample sections to their enable checkboxes; enabled abilities expand immediately and preserve other authored settings. Hid the Ranged panel for melee units. No runtime combat changes.

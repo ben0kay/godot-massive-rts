@@ -11,6 +11,8 @@ public partial class UnitEditorPanel
 {
     private readonly HashSet<string> represented = new(StringComparer.Ordinal);
     private VBoxContainer card;
+    // The shockwave's existing zero cadence is its disabled state. Retain the active value in the draft UI.
+    private int lastShockwaveCadence = 5;
     private bool IsMelee => Unit.Style == AttackStyle.Melee;
     private bool HasCleave => IsMelee && Unit.CleaveEnabled;
     private bool HasShockwave => IsMelee && Unit.ShockwaveEveryAttacks > 0;
@@ -26,6 +28,7 @@ public partial class UnitEditorPanel
         checks.Clear();
         refreshFields.Clear();
         represented.Clear();
+        lastShockwaveCadence = Unit.ShockwaveEveryAttacks > 0 ? Unit.ShockwaveEveryAttacks : 5;
 
         Section("Identity");
         represented.Add(nameof(Unit.Id));
@@ -62,17 +65,22 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.MeleeFacingAngleDegrees), "Melee facing angle", () => Unit.MeleeFacingAngleDegrees, v => Unit.MeleeFacingAngleDegrees = v,
             1, 180, 1, "°", () => IsMelee && !HasCleave && Unit.Shape != UnitShape.Circle);
 
-        Section("Melee cleave");
-        Flag(nameof(Unit.CleaveEnabled), "Enabled", Unit.CleaveEnabled, v => Unit.CleaveEnabled = v, () => IsMelee);
+        AbilitySection("Melee cleave", nameof(Unit.CleaveEnabled), Unit.CleaveEnabled,
+            v => Unit.CleaveEnabled = v, () => IsMelee, () => HasCleave);
         Number(nameof(Unit.CleaveAngleDegrees), "Cleave angle", () => Unit.CleaveAngleDegrees, v => Unit.CleaveAngleDegrees = v, 1, 180, 1, "°", () => HasCleave);
         Number(nameof(Unit.CleaveMaxAdditionalTargets), "Extra targets", () => Unit.CleaveMaxAdditionalTargets,
             v => Unit.CleaveMaxAdditionalTargets = (int)v, 0, UnitDefinition.MaxCleaveAdditionalTargets, 1, "", () => HasCleave);
         Number(nameof(Unit.CleaveSecondaryFraction), "Extra damage", () => Unit.CleaveSecondaryFraction * 100f,
             v => Unit.CleaveSecondaryFraction = v / 100f, 0, 100, 0.1, "%", () => HasCleave);
 
-        Section("Shockwave");
-        Number(nameof(Unit.ShockwaveEveryAttacks), "Every N attacks", () => Unit.ShockwaveEveryAttacks,
-            v => Unit.ShockwaveEveryAttacks = (int)v, 0, 255, 1, "", () => IsMelee, "Zero disables the shockwave.");
+        // Shockwave is toggled through the existing cadence: 0 means off.
+        AbilitySection("Shockwave", nameof(Unit.ShockwaveEveryAttacks), HasShockwave,
+            enabled => Unit.ShockwaveEveryAttacks = enabled ? lastShockwaveCadence : 0,
+            () => IsMelee, () => HasShockwave);
+        var cadence = Number(nameof(Unit.ShockwaveEveryAttacks), "Every N attacks", () => Unit.ShockwaveEveryAttacks,
+            v => { Unit.ShockwaveEveryAttacks = (int)v; if (v > 0) lastShockwaveCadence = (int)v; },
+            0, 255, 1, "", tooltip: "Use Enabled to toggle the shockwave; 0 disables it.");
+        refreshFields.Add(() => cadence.SetValueNoSignal(Unit.ShockwaveEveryAttacks));
         Number(nameof(Unit.ShockwaveBaseRadius), "Base radius", () => Unit.ShockwaveBaseRadius,
             v => Unit.ShockwaveBaseRadius = v, 0.1, 64, 0.1, " u", () => HasShockwave);
         Number(nameof(Unit.ShockwaveDamage), "Centre damage", () => Unit.ShockwaveDamage,
@@ -92,15 +100,16 @@ public partial class UnitEditorPanel
         });
         Flag(nameof(Unit.ShockwaveRespectsCover), "Blocked by cover", Unit.ShockwaveRespectsCover, v => Unit.ShockwaveRespectsCover = v, () => HasShockwave);
 
-        Section("Trample");
-        Flag(nameof(Unit.TrampleEnabled), "Enabled", Unit.TrampleEnabled, v => Unit.TrampleEnabled = v, () => IsMelee);
+        AbilitySection("Trample", nameof(Unit.TrampleEnabled), Unit.TrampleEnabled,
+            v => Unit.TrampleEnabled = v, () => IsMelee, () => HasTrample);
         Number(nameof(Unit.TrampleRunUp), "Run-up", () => Unit.TrampleRunUp, v => Unit.TrampleRunUp = v, 0.5, 10, 0.1, " u", () => HasTrample);
         Number(nameof(Unit.TrampleDistance), "Charge distance", () => Unit.TrampleDistance, v => Unit.TrampleDistance = v, 0.5, 12, 0.1, " u", () => HasTrample);
         Number(nameof(Unit.TrampleEfficiency), "Starting momentum", () => Unit.TrampleEfficiency, v => Unit.TrampleEfficiency = v, 0.1, 4, 0.05, "", () => HasTrample);
         Number(nameof(Unit.TrampleDamageMultiplier), "Damage multiplier", () => Unit.TrampleDamageMultiplier, v => Unit.TrampleDamageMultiplier = v, 0, 4, 0.05, "×", () => HasTrample);
         Number(nameof(Unit.TrampleMaxHits), "Maximum hits", () => Unit.TrampleMaxHits, v => Unit.TrampleMaxHits = (int)v, 1, 6, 1, "", () => HasTrample);
 
-        Section("Ranged");
+        var rangedSection = Section("Ranged");
+        refreshFields.Add(() => rangedSection.Visible = !IsMelee);
         represented.Add(nameof(Unit.Projectile));
         var picker = new EditorResourcePicker { BaseType = nameof(ProjectileDefinition), EditedResource = Unit.Projectile };
         picker.ResourceChanged += value =>
@@ -134,7 +143,7 @@ public partial class UnitEditorPanel
         });
     }
 
-    private void Section(string title)
+    private PanelContainer Section(string title)
     {
         var panel = new PanelContainer { CustomMinimumSize = new Vector2(280, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
         fields.AddChild(panel);
@@ -142,6 +151,28 @@ public partial class UnitEditorPanel
         panel.AddChild(card);
         card.AddChild(Heading(title));
         card.AddChild(new HSeparator());
+        return panel;
+    }
+
+    // Optional abilities use one consistent compact header; the detail controls exist only in this editor.
+    private void AbilitySection(string title, string key, bool initial, Action<bool> set,
+        Func<bool> available, Func<bool> active)
+    {
+        Section(title);
+        VBoxContainer section = card;
+        var toggle = new CheckBox { Text = "Enabled", ButtonPressed = initial };
+        section.AddChild(toggle);
+        var details = new VBoxContainer();
+        section.AddChild(details);
+        card = details;
+        represented.Add(key);
+        toggle.Toggled += enabled => { set(enabled); MarkEdited(); };
+        refreshFields.Add(() =>
+        {
+            toggle.Disabled = !available();
+            toggle.SetPressedNoSignal(active());
+            details.Visible = active();
+        });
     }
 
     private void Row(string name, Control editor, string tooltip = "")
@@ -172,15 +203,6 @@ public partial class UnitEditorPanel
         input.Select(Array.IndexOf(values, value));
         input.ItemSelected += index => { set(values[(int)index]); MarkEdited(); };
         checks.Add(() => input.Selected >= 0 ? null : $"Choose a valid {label.ToLowerInvariant()}.");
-        Row(label, input);
-    }
-
-    private void Flag(string key, string label, bool value, Action<bool> set, Func<bool> enabled)
-    {
-        represented.Add(key);
-        var input = new CheckBox { ButtonPressed = value };
-        input.Toggled += pressed => { set(pressed); MarkEdited(); };
-        refreshFields.Add(() => input.Disabled = !enabled());
         Row(label, input);
     }
 
