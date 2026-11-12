@@ -4,7 +4,7 @@ namespace MassiveRts;
 
 public static class CombatSystem
 {
-    private const int ExtraPursuitQueriesPerTick = 128;
+    private const int ExtraPursuitQueriesPerAcquisitionStep = 128;
     private const float MeleeContactTolerance = 0.08f;
 
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
@@ -17,15 +17,15 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false)
     {
-        int localInterval = config.TargetRefreshTicks;
-        int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
+        int localInterval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
+        int pursuitInterval = Mathf.Max(localInterval, Mathf.RoundToInt(0.8f / acquisitionSeconds));
         int localPhase = tick % localInterval;
         int pursuitPhase = tick % pursuitInterval;
         int retainedPursuitInterval = pursuitInterval * 2;
         int retainedPursuitPhase = tick % retainedPursuitInterval;
-        int extraPursuitQueries = ExtraPursuitQueriesPerTick;
+        int extraPursuitQueries = ExtraPursuitQueriesPerAcquisitionStep;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;

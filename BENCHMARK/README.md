@@ -26,7 +26,7 @@ Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters**
 
 `CONFIG/DefaultBenchmark.tres`, assigned to the arena's exported `Config`, controls benchmark workloads. Defaults and fields live in `CONFIG/BenchmarkConfig.cs`:
 
-- 30 Hz simulation, at most 3 steps per rendered frame. Excess elapsed ticks are discarded and counted, avoiding unlimited catch-up spirals.
+- 60 Hz core simulation, at most five steps per rendered frame. Excess elapsed ticks are discarded and counted. The CPU overlay shows the achieved and configured tick rates.
 - Maximum 100,000 soldiers; prepare 4,000 array entries per frame before initializing visuals. Combat modes prepare initial targets in groups of 512 per rendered frame before the battle starts. GPU buffers and initial renderer upload are still a single finalization pass, which may briefly hitch at large counts.
 - Spatial cell 6; targets refreshed every 6 ticks, staggered by ID; maximum 96 enemy candidates/query.
 - Unit speed, health, damage, reach and interval come from the [roster](../UNITS/DEFINITIONS/STARTING_ROSTER.md). The shared [hit feedback settings](../FEEDBACK/README.md) control the 0.12-second flash and 0.18-second scale pulse. Disable Pulse Enabled and respawn for a white-only comparison.
@@ -122,3 +122,9 @@ The right overlay keeps the battle summary visible and folds CPU, obstacle, and 
 ## DEF1 — Static laser defense
 
 Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tower 001. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../BUILDINGS/README.md) for configuration and limits.
+
+## SIM60 — Core and acquisition clocks
+
+Movement, separation, terrain grounding, charge contacts, cooldowns, and projectile sweeps use the 60 Hz fixed step. The combat spatial grid is rebuilt every core tick for current positions. Expensive acquisition uses a separate 30 Hz schedule. With default settings, local soldier searches and tower reacquisition stagger over 0.2 seconds. Scheduled pursuit keeps its 0.8-second cadence, and slower live pursuit remains at 1.6 seconds. The extra replacement cap is 128 per acquisition step. Pursuit trees are built on demand on those steps.
+
+Navigation retains its existing rendered-frame route budget and retry clock. **Display and controls → Smooth soldier motion** remains enabled by default. Projectile meshes use the latest simulated position when a frame advances the simulation.

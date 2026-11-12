@@ -84,7 +84,7 @@ Claude described a Python replica using synthetic opposing blocks with 4,550 sol
 
 - Count target changes per query reason, distinguishing live refreshes that keep their incumbent from those that switch. Track within-local-range and slow-refresh gate skips separately, units with no living target at the start of acquisition, deaths per tick, and ticks that consume all 128 extra replacements.
 - Record maximum and p95 soldiers examined per query, split by reason. Use cell and soldier counts to distinguish avoidable scans from genuinely dense cells. The suggested 40% wasted-soldier share is a heuristic. The proposed 15–30 µs per query is an estimate, with no measured per-reason timings yet.
-- For a diagnostic run, temporarily reduce `ExtraPursuitQueriesPerTick` from 128 to 0 and compare pursuit ms and query counts. This changes replacement timing and can change the battle, so keep it separate from the cell-pruning comparison.
+- For a diagnostic run, temporarily reduce `ExtraPursuitQueriesPerAcquisitionStep` from 128 to 0 and compare pursuit ms and query counts. This changes replacement timing and can change the battle, so keep it separate from the cell-pruning comparison.
 
 ### Implemented cell-pruning comparison
 

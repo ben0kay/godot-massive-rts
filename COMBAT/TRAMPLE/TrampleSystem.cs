@@ -9,7 +9,8 @@ public readonly record struct TrampleStats(bool Enabled, float RunUp, float Dist
 
 public sealed class TrampleSystem
 {
-    public const float MaxShovePerTick = 0.16f;
+    // Instantaneous contact displacement, not a continuous correction rate.
+    private const float MaxCombinedContactShove = 0.16f;
     private const float RecoverySeconds = 0.30f;
     private const float EntrySpeedFraction = 0.90f;
     private const int HitSlots = 6;
@@ -143,7 +144,7 @@ public sealed class TrampleSystem
         for (int i = 0; i < shoveCount; i++)
         {
             int id = shovedIds[i];
-            Vector2 shove = shoves[id].LimitLength(MaxShovePerTick);
+            Vector2 shove = shoves[id].LimitLength(MaxCombinedContactShove);
             if (units.Health[id] > 0f && shove != Vector2.Zero)
             {
                 Vector2 from = Xz(units.Position[id]);
@@ -155,7 +156,7 @@ public sealed class TrampleSystem
             queued[id] = false;
         }
         shoveCount = 0;
-        return appliedShove ? MaxShovePerTick : 0f;
+        return appliedShove ? MaxCombinedContactShove : 0f;
     }
 
     private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles)
@@ -205,7 +206,7 @@ public sealed class TrampleSystem
             hits[slot * HitSlots + charge.Hits++] = defender;
             charge.Momentum -= resistance;
             if (units.Health[defender] > 0f)
-                QueueShove(defender, charge.Heading * (MaxShovePerTick * momentumFraction / (1f + resistance)));
+                QueueShove(defender, charge.Heading * (MaxCombinedContactShove * momentumFraction / (1f + resistance)));
         }
 
         if (travel > 0f)

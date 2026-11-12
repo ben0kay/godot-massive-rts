@@ -35,8 +35,9 @@ internal sealed class DefenseSystem
 
     // =========================================================
     // Run before soldiers move so range queries use the positions indexed this tick.
-    public void Step(UnitState units, SpatialGrid grid, ObstacleField obstacles, float dt, int tick)
+    public void Step(UnitState units, SpatialGrid grid, ObstacleField obstacles, float dt, int acquisitionStep, float acquisitionSeconds)
     {
+        int refreshInterval = Mathf.Max(1, Mathf.RoundToInt(0.2f / acquisitionSeconds));
         for (int i = 0; i < towers.Length; i++)
         {
             ref Tower tower = ref towers[i];
@@ -47,7 +48,7 @@ internal sealed class DefenseSystem
             {
                 tower.Target = -1;
                 tower.Cooldown = Mathf.Max(0f, tower.Cooldown);
-                if (i % 6 != tick % 6) continue;
+                if (acquisitionStep < 0 || i % refreshInterval != acquisitionStep % refreshInterval) continue;
                 float nearest = float.PositiveInfinity;
                 var candidates = grid.GetCandidates(tower.Pivot, tower.Stats.MaximumRange, tower.Faction);
                 while (candidates.MoveNext())

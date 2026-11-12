@@ -5,14 +5,17 @@ namespace MassiveRts;
 [GlobalClass]
 public partial class BenchmarkConfig : Resource
 {
+    public const float TargetingStepSeconds = 1f / 30f;
+
     [ExportGroup("Scheduling")]
     [Export] public int MaxSoldiers { get; set; } = 100000;
     [Export] public int SpawnPerFrame { get; set; } = 4000;
-    [Export] public float TickSeconds { get; set; } = 1f / 30f;
-    [Export] public int MaxStepsPerFrame { get; set; } = 3;
+    [Export] public float TickSeconds { get; set; } = 1f / 60f;
+    [Export] public int MaxStepsPerFrame { get; set; } = 5;
     [ExportGroup("Movement and targeting")]
     [Export] public float CellSize { get; set; } = 6f;
     [Export] public int QueryCandidateLimit { get; set; } = 96;
+    // Counted on the 30 Hz acquisition clock.
     [Export] public int TargetRefreshTicks { get; set; } = 6;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float MeleeAccelerationSeconds { get; set; } = 0.15f;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float RangedAccelerationSeconds { get; set; } = 0.32f;
@@ -28,6 +31,7 @@ public partial class BenchmarkConfig : Resource
     [ExportGroup("Separation")]
     [Export(PropertyHint.Range, "0,0.25,0.01")] public float SeparationGap { get; set; } = 0.05f;
     [Export(PropertyHint.Range, "1,128,1")] public int SeparationNeighbourBudget { get; set; } = 32;
+    // Authored displacement per 1/30 second, scaled to the core step at runtime.
     [Export(PropertyHint.Range, "0.01,1,0.01")] public float SeparationMaxPushPerTick { get; set; } = 0.35f;
     [ExportGroup("Allied crowd yielding")]
     [Export(PropertyHint.Range, "0,1,0.05")] public float AlliedRangedClearanceFraction { get; set; } = 0.5f;

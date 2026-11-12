@@ -42,7 +42,9 @@ public partial class BenchmarkArena : Node3D
     private const int InitialTargetsPerFrame = 512;
     private int requested, targetCount, tick, preparedTargets;
     private bool spawning, paused;
-    private double accumulator, hudClock;
+    private double accumulator, hudClock, targetingAccumulator;
+    private float targetingStepSeconds, separationPushPerStep;
+    private int targetingStep;
     private long skippedSteps;
     private readonly double[] frames = new double[120];
     private int frameCursor, frameSamples;
@@ -66,7 +68,10 @@ public partial class BenchmarkArena : Node3D
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
         Config.SpawnPerFrame = Mathf.Clamp(Config.SpawnPerFrame, 100, 10000);
-        Config.TickSeconds = Mathf.Clamp(Config.TickSeconds, 1f / 120, 0.1f);
+        Config.TickSeconds = float.IsFinite(Config.TickSeconds)
+            ? Mathf.Clamp(Config.TickSeconds, 1f / 120f, 0.1f) : 1f / 60f;
+        targetingStepSeconds = Mathf.Max(Config.TickSeconds, BenchmarkConfig.TargetingStepSeconds);
+        float correctionScale = Config.TickSeconds / BenchmarkConfig.TargetingStepSeconds;
         Config.MaxStepsPerFrame = Mathf.Clamp(Config.MaxStepsPerFrame, 1, 5);
         Config.TargetRefreshTicks = Mathf.Clamp(Config.TargetRefreshTicks, 1, 60);
         Config.QueryCandidateLimit = Mathf.Clamp(Config.QueryCandidateLimit, 8, 1024);
@@ -76,6 +81,7 @@ public partial class BenchmarkArena : Node3D
         Config.SeparationNeighbourBudget = Mathf.Clamp(Config.SeparationNeighbourBudget, 1, 128);
         Config.SeparationMaxPushPerTick = float.IsFinite(Config.SeparationMaxPushPerTick)
             ? Mathf.Clamp(Config.SeparationMaxPushPerTick, 0.01f, 1f) : 0.35f;
+        separationPushPerStep = Config.SeparationMaxPushPerTick * correctionScale;
         // Leave a small margin inside melee reach at the requested body spacing.
         float maximumGap = 0.25f;
         for (int i = 0; i < catalog.Count; i++)
@@ -86,9 +92,9 @@ public partial class BenchmarkArena : Node3D
         Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
         alliedYieldSettings = new AlliedYieldSettings(
             ClampFiniteSetting(Config.AlliedRangedClearanceFraction, 1f, 0.5f),
-            ClampFiniteSetting(Config.AlliedRangedYieldPairCap, 0.25f, 0.06f),
+            ClampFiniteSetting(Config.AlliedRangedYieldPairCap, 0.25f, 0.06f) * correctionScale,
             ClampFiniteSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
-            ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f));
+            ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f) * correctionScale);
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
         flatGround = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
@@ -148,6 +154,7 @@ public partial class BenchmarkArena : Node3D
         obstacles = null; navigation = null; battleWalls.Mesh = null;
         meleeSteering = null;
         units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
+        targetingAccumulator = 0; targetingStep = 0;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
         frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
@@ -395,14 +402,24 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
-            start = Stamp();
-            grid.PrunePursuitCells = panel.PrunePursuitCells;
-            CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh);
-            targetingMs += Elapsed(start);
+            // Keep expensive searches together so pursuit still builds at most one index per acquisition step.
+            // Movement and attack execution check target health on every core tick.
+            targetingAccumulator += dt;
+            int acquisitionStep = -1;
+            if (targetingAccumulator >= targetingStepSeconds)
+            {
+                targetingAccumulator -= targetingStepSeconds;
+                acquisitionStep = targetingStep++;
+                start = Stamp();
+                grid.PrunePursuitCells = panel.PrunePursuitCells;
+                CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles,
+                    panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh);
+                targetingMs += Elapsed(start);
+            }
             start = Stamp();
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
-            defenseSystem?.Step(units, grid, obstacles, dt, tick);
+            defenseSystem?.Step(units, grid, obstacles, dt, acquisitionStep, targetingStepSeconds);
             combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
@@ -425,7 +442,7 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp();
             separation ??= new SeparationSystem(units.Position.Length);
-            separationPadding = Config.SeparationMaxPushPerTick;
+            separationPadding = separationPushPerStep;
             separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
                 Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles, panel.WeightedSeparation);
             separationMs += Elapsed(start);
@@ -480,9 +497,10 @@ public partial class BenchmarkArena : Node3D
             $"Blue {units?.FactionAlive[Factions.Blue] ?? 0:N0} · Red {units?.FactionAlive[Factions.Red] ?? 0:N0} · Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\n" +
             $"Projectiles  {projectiles?.Count ?? 0:N0}";
 
+        double achievedRate = hudClock > 0 ? measuredTicks / hudClock : 0;
         double targetingTickToMsPerFrame = 1000.0 / Stopwatch.Frequency / divisor;
         panel.CpuMetrics.Text =
-            $"Simulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
+            $"Simulation rate  {achievedRate:F1} / {1f / Config.TickSeconds:F0} Hz\nSimulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
             $"CPU time / rendered frame (ms)\nSimulation  {simulationMs / divisor:F3}\nMovement  {movementMs / divisor:F3}\n" +
             $"Separation  {separationMs / divisor:F3}\nGrid rebuild  {gridMs / divisor:F3}\nTargeting  {targetingMs / divisor:F3}\n" +

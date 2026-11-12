@@ -23,7 +23,7 @@ Combat and simulation keep authoritative health, damage, world position and unit
 
 Positive nonlethal damage registers a hit with the battle's feedback system. A packed list tracks active IDs so each tick advances only soldiers with active feedback. A new hit refreshes white and starts its pulse from the current visual size. Death removes the instance through the normal renderer path. Pause freezes the effect in simulation time, and respawn creates fresh state.
 
-The shared `UNIT_HITS/HitFeedbackSettings.tres` is assigned in the default benchmark resource. Defaults are a 0.12-second white flash and a 1.06× pulse over 0.18 seconds, with a fast rise over the first 20%. Disable Pulse Enabled for a white-only comparison. Settings are read when the next battle starts. The grounded scale is applied to the packed renderer transform only. At 30 Hz, visual changes are sampled on simulation ticks.
+The shared `UNIT_HITS/HitFeedbackSettings.tres` is assigned in the default benchmark resource. Defaults are a 0.12-second white flash and a 1.06× pulse over 0.18 seconds, with a fast rise over the first 20%. Disable Pulse Enabled for a white-only comparison. Settings are read when the next battle starts. The grounded scale is applied to the packed renderer transform only. Visual changes are sampled on the 60 Hz core simulation ticks.
 
 ## Ranged recoil (visual-only)
 
