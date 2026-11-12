@@ -10,4 +10,4 @@ Normal melee approaches to body contact. A swing requires both footprints plus t
 
 [Trample](TRAMPLE/README.md) is an opt-in charge ability. It runs after ordinary movement and before separation. Only successfully penetrated enemy pairs bypass separation for the charge tick. The later area and projectile queries pad for the maximum trample shove as well as normal separation.
 
-UNIT2 exposes the ordinary melee facing angle, cleave secondary target cap (0–4), and direct shockwave outer damage in the unit definition. Older resources using a shockwave edge fraction still load.
+UNIT2 exposes the ordinary melee facing angle, cleave secondary target cap (0–8), and direct shockwave outer damage in the unit definition. Older resources using a shockwave edge fraction still load.

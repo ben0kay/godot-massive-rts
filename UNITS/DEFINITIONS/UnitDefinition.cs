@@ -42,8 +42,8 @@ public partial class UnitDefinition : Resource
     [Export] public bool CleaveEnabled { get; set; }
     [Export(PropertyHint.Range, "1,180,1")] public float CleaveAngleDegrees { get; set; } = 100f;
     [Export(PropertyHint.Range, "0,1,0.05")] public float CleaveSecondaryFraction { get; set; } = 0.65f;
-    public const int MaxCleaveAdditionalTargets = 4;
-    [Export(PropertyHint.Range, "0,4,1")] public int CleaveMaxAdditionalTargets { get; set; } = 2;
+    public const int MaxCleaveAdditionalTargets = 8;
+    [Export(PropertyHint.Range, "0,8,1")] public int CleaveMaxAdditionalTargets { get; set; } = 2;
 
     [ExportGroup("Shockwave")]
     [Export(PropertyHint.Range, "0,255,1")] public int ShockwaveEveryAttacks { get; set; }
