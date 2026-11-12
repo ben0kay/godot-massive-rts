@@ -17,7 +17,7 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0)
     {
         int localInterval = config.TargetRefreshTicks;
         int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
@@ -39,25 +39,41 @@ public static class CombatSystem
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
-                    int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
-                    if (found >= 0)
+                    int rank = rangedVariety && type.Ranged ? RangedRank(i, battleSeed) : 1;
+                    if (rank > 1)
                     {
-                        float foundDistance = units.Position[i].DistanceSquaredTo(units.Position[found]);
-                        if (foundDistance < distance)
+                        ObstacleField cover = obstacles != null &&
+                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
+                            ? obstacles : null;
+                        int varied = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, cover, rank, target);
+                        if (varied >= 0)
                         {
-                            target = found;
-                            distance = foundDistance;
+                            target = varied;
+                            distance = units.Position[i].DistanceSquaredTo(units.Position[target]);
                         }
                     }
-                    if (obstacles != null && type.Ranged && target >= 0 && distance <= type.Reach * type.Reach &&
-                        units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight &&
-                        obstacles.BlocksSight(units.Position[i], units.Position[target]))
+                    else
                     {
-                        int visible = grid.FindEnemy(units, i, type.Reach, config.QueryCandidateLimit, tick, obstacles);
-                        if (visible >= 0)
+                        int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick);
+                        if (found >= 0)
                         {
-                            target = visible;
-                            distance = units.Position[i].DistanceSquaredTo(units.Position[target]);
+                            float foundDistance = units.Position[i].DistanceSquaredTo(units.Position[found]);
+                            if (foundDistance < distance)
+                            {
+                                target = found;
+                                distance = foundDistance;
+                            }
+                        }
+                        if (obstacles != null && type.Ranged && target >= 0 && distance <= type.Reach * type.Reach &&
+                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight &&
+                            obstacles.BlocksSight(units.Position[i], units.Position[target]))
+                        {
+                            int visible = grid.FindEnemy(units, i, type.Reach, config.QueryCandidateLimit, tick, obstacles);
+                            if (visible >= 0)
+                            {
+                                target = visible;
+                                distance = units.Position[i].DistanceSquaredTo(units.Position[target]);
+                            }
                         }
                     }
                 }
@@ -77,6 +93,16 @@ public static class CombatSystem
             units.Target[i] = target >= 0 ? target : previous;
         }
     }
+    // Fixed per soldier and battle seed. No random calls or per-shot retargets.
+    private static int RangedRank(int id, uint seed)
+    {
+        uint hash = unchecked((uint)id * 0x9E3779B9u + seed);
+        hash = unchecked((hash ^ (hash >> 16)) * 0x7FEB352Du);
+        hash = unchecked((hash ^ (hash >> 15)) * 0x846CA68Bu);
+        uint roll = (hash ^ (hash >> 16)) % 100u;
+        return roll < 80u ? 1 : roll < 95u ? 2 : 3;
+    }
+
     // =========================================================
     public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
         ShockwaveRenderer shockwaves = null)

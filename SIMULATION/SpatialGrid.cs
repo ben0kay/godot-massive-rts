@@ -88,7 +88,7 @@ public sealed class SpatialGrid
         }
     }
     // =========================================================
-    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null)
+    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
@@ -105,6 +105,18 @@ public sealed class SpatialGrid
         Vector2I center = Cell(position);
         int cells = Mathf.CeilToInt(radius / cellSize), examined = 0, best = -1;
         float bestDistance = radius * radius;
+        bool varied = rank > 1;
+        Span<(int Id, float Distance)> ranked = varied ? stackalloc (int, float)[3] : Span<(int, float)>.Empty;
+        int rankedCount = 0;
+        if (varied && incumbent >= 0)
+        {
+            float distance = position.DistanceSquaredTo(units.Position[incumbent]);
+            if (distance <= bestDistance && clearSight?.BlocksSight(position, units.Position[incumbent]) != true)
+            {
+                ranked[0] = (incumbent, distance);
+                rankedCount = 1;
+            }
+        }
         // Search center outwards so dense distant cells cannot consume the entire query first.
         for (int ring = 0; ring <= cells; ring++)
         {
@@ -124,16 +136,37 @@ public sealed class SpatialGrid
                     int faction = BitOperations.TrailingZeroCount(mask);
                     for (int other = Head(center.X + dx, center.Y + dz, faction); other >= 0; other = next[other])
                     {
-                        if (++examined > budget) { LimitedQueries++; return best; }
-                        if (units.Health[other] <= 0f) continue;
+                        if (++examined > budget) { LimitedQueries++; return varied ? ChooseRank(ranked, rankedCount, rank) : best; }
+                        if (units.Health[other] <= 0f || (varied && other == incumbent)) continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
-                        if (distance < bestDistance && clearSight?.BlocksSight(position, units.Position[other]) != true)
-                        { bestDistance = distance; best = other; }
+                        if (!varied)
+                        {
+                            if (distance < bestDistance && clearSight?.BlocksSight(position, units.Position[other]) != true)
+                            { bestDistance = distance; best = other; }
+                            continue;
+                        }
+                        if (distance > bestDistance) continue;
+                        int insert = rankedCount;
+                        while (insert > 0 && (distance < ranked[insert - 1].Distance ||
+                            (distance == ranked[insert - 1].Distance && other < ranked[insert - 1].Id)))
+                            insert--;
+                        if (insert == rank || clearSight?.BlocksSight(position, units.Position[other]) == true) continue;
+                        rankedCount = Mathf.Min(rankedCount + 1, rank);
+                        for (int index = rankedCount - 1; index > insert; index--) ranked[index] = ranked[index - 1];
+                        ranked[insert] = (other, distance);
                     }
                 }
             }
         }
-        return best;
+        return varied ? ChooseRank(ranked, rankedCount, rank) : best;
+    }
+
+    private static int ChooseRank(ReadOnlySpan<(int Id, float Distance)> ranked, int count, int rank)
+    {
+        if (count == 0) return -1;
+        if (count < rank) return ranked[0].Id;
+        float nearLimit = Mathf.Sqrt(ranked[0].Distance) * 1.10f + 0.5f;
+        return ranked[rank - 1].Distance <= nearLimit * nearLimit ? ranked[rank - 1].Id : ranked[0].Id;
     }
 
     // Long-range queries share a tree built once per tick, only when needed.

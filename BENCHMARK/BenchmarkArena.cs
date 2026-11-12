@@ -35,6 +35,7 @@ public partial class BenchmarkArena : Node3D
     private double terrainCompileMs, terrainMeshMs, groundingMs;
     private double routeBuildMs;
     private BenchmarkMode mode;
+    private uint battleSeed;
     private const int InitialTargetsPerFrame = 512;
     private int requested, targetCount, tick, preparedTargets;
     private bool spawning, paused;
@@ -176,6 +177,7 @@ public partial class BenchmarkArena : Node3D
 
     private UnitState CreateUnitState()
     {
+        battleSeed = (uint)panel.Seed.Value;
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
@@ -360,7 +362,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
-            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick, obstacles); targetingMs += Elapsed(start);
+            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed); targetingMs += Elapsed(start);
             start = Stamp(); units.HitFeedback?.Advance(units, dt); combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;

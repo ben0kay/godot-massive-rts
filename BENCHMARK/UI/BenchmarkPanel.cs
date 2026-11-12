@@ -15,6 +15,8 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly CheckButton meleeSidestep = new() { Text = "Melee sidestep", ButtonPressed = true };
     private readonly CheckButton meleeHold = new() { Text = "Hold melee contact", ButtonPressed = true };
     private readonly CheckButton weightedSeparation = new() { Text = "Footprint-weighted separation", ButtonPressed = true };
+    private readonly CheckButton rangedTargetVariety = new() { Text = "Ranged target variety", ButtonPressed = true };
+    public bool RangedTargetVariety => rangedTargetVariety.ButtonPressed;
     public bool MeleeSidestep => meleeSidestep.ButtonPressed;
     public bool MeleeHold => meleeHold.ButtonPressed;
     public bool WeightedSeparation => weightedSeparation.ButtonPressed;
@@ -25,8 +27,16 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
     public readonly OptionButton FactionChoice = new();
-    private VBoxContainer paintControls;
-    public bool EditingDeployment { set => paintControls.Visible = value; }
+    private VBoxContainer paintControls, paintSection;
+    private Button paintHeader;
+    public bool EditingDeployment
+    {
+        set
+        {
+            paintSection.Visible = value;
+            if (value) paintHeader.ButtonPressed = true;
+        }
+    }
     public readonly OptionButton CountChoice = new(), ModeChoice = new(), LayoutChoice = new();
     public readonly SpinBox Seed = new() { MinValue = 0, MaxValue = 2147483647, Value = 12345, Step = 1 };
     public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 1 };
@@ -39,34 +49,56 @@ public partial class BenchmarkPanel : CanvasLayer
     // =========================================================
     public override void _Ready()
     {
-        var left = new PanelContainer { Position = new Vector2(12, 12), CustomMinimumSize = new Vector2(245, 0) };
-        AddChild(left); var column = new VBoxContainer(); left.AddChild(column);
-        column.AddChild(new Label { Text = "BENCH0 • MASSIVE RTS" });
+        var left = new PanelContainer
+        {
+            AnchorBottom = 1, OffsetLeft = 12, OffsetRight = 322, OffsetTop = 12, OffsetBottom = -12
+        };
+        AddChild(left);
+        var shell = new VBoxContainer();
+        left.AddChild(shell);
+        shell.AddChild(new Label { Text = "BENCH0 • MASSIVE RTS" });
+        var scroll = new ScrollContainer
+        {
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            FollowFocus = true
+        };
+        shell.AddChild(scroll);
+        var column = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(column);
+
+        var preset = Section(column, "Preset battle", true, out _);
         foreach (int count in Counts) CountChoice.AddItem(count.ToString("N0"));
         foreach (string mode in new[] { "A — Rendering only", "B — Movement", "C — Melee", "D — Ranged" }) ModeChoice.AddItem(mode);
         foreach (string layout in new[] { "Opposing lines", "Dense clusters", "Distributed battlefield" }) LayoutChoice.AddItem(layout);
-        Field(column, "Total soldiers", CountChoice); Field(column, "Mode (applies on spawn)", ModeChoice);
-        Field(column, "Layout (applies on spawn)", LayoutChoice); Field(column, "Seed (applies on spawn)", Seed);
-        Field(column, "Ranged fire-rate multiplier (live)", FireRate); Field(column, "Ranged % (applies on spawn)", RangedPercent);
+        Field(preset, "Total soldiers", CountChoice); Field(preset, "Mode", ModeChoice);
+        Field(preset, "Layout", LayoutChoice); Field(preset, "Seed", Seed);
+        Field(preset, "Ranged %", RangedPercent);
+        TerrainChoice.AddItem("Flat ground");
+        TerrainChoice.AddItem("Test plateau");
+        Field(preset, "Preset terrain", TerrainChoice);
+        preset.AddChild(TestWall);
+        AddButton(preset, "Spawn / Reset selected", () => SpawnRequested?.Invoke());
+
+        var combat = Section(column, "Live combat", false, out _);
+        Field(combat, "Ranged fire-rate multiplier", FireRate);
+        combat.AddChild(rangedTargetVariety);
+        var separation = Section(column, "Live separation", false, out _);
         separationChoice.AddItem("Off", (int)SeparationMode.Off);
         separationChoice.AddItem("Normal", (int)SeparationMode.Normal);
         separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
         separationChoice.Select(1);
         separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
-        Field(column, "Separation (live)", separationChoice);
-        column.AddChild(alliedYield);
-        column.AddChild(meleeSidestep);
-        column.AddChild(meleeHold);
-        column.AddChild(weightedSeparation);
-        column.AddChild(smoothMotion);
-        TerrainChoice.AddItem("Flat ground");
-        TerrainChoice.AddItem("Test plateau");
-        Field(column, "Preset terrain", TerrainChoice);
-        column.AddChild(TestWall);
-        var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
+        Field(separation, "Separation mode", separationChoice);
+        separation.AddChild(alliedYield);
+        separation.AddChild(meleeSidestep);
+        separation.AddChild(meleeHold);
+        separation.AddChild(weightedSeparation);
+
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
-        paintControls = new VBoxContainer { Visible = false };
-        column.AddChild(paintControls);
+        paintSection = new VBoxContainer { Visible = false };
+        column.AddChild(paintSection);
+        paintControls = Section(paintSection, "Paint tools", true, out paintHeader);
         FactionChoice.AddItem("Blue", Factions.Blue);
         FactionChoice.AddItem("Red", Factions.Red);
         FactionChoice.AddItem("Green", Factions.Green);
@@ -89,15 +121,42 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
-        var clear = new Button { Text = "Clear all" }; clear.Pressed += () => ClearRequested?.Invoke(); column.AddChild(clear);
-        PauseButton.Pressed += () => PauseRequested?.Invoke(); column.AddChild(PauseButton);
+        var display = Section(column, "Display and controls", false, out _);
+        display.AddChild(smoothMotion);
         var toggle = new CheckButton { Text = "Performance overlay (F4)", ButtonPressed = true };
-        toggle.Toggled += shown => overlay.Visible = shown; column.AddChild(toggle);
-        Status.AutowrapMode = TextServer.AutowrapMode.WordSmart; column.AddChild(Status);
-        column.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F4: overlay" });
+        toggle.Toggled += shown => overlay.Visible = shown;
+        display.AddChild(toggle);
+        display.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F4: overlay" });
+
+        var actions = new HBoxContainer();
+        shell.AddChild(actions);
+        var clear = new Button { Text = "Clear all", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        clear.Pressed += () => ClearRequested?.Invoke();
+        actions.AddChild(clear);
+        PauseButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        PauseButton.Pressed += () => PauseRequested?.Invoke();
+        actions.AddChild(PauseButton);
+        Status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        shell.AddChild(Status);
         overlay = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, OffsetLeft = -415, OffsetRight = -12, OffsetTop = 12 };
         AddChild(overlay); overlay.AddChild(Metrics); Metrics.AddThemeFontSizeOverride("font_size", 15);
     }
+    private static VBoxContainer Section(VBoxContainer parent, string title, bool open, out Button header)
+    {
+        var button = new Button { ToggleMode = true, ButtonPressed = open, Alignment = HorizontalAlignment.Left };
+        button.Text = (open ? "▾ " : "▸ ") + title;
+        parent.AddChild(button);
+        var body = new VBoxContainer { Visible = open };
+        parent.AddChild(body);
+        button.Toggled += expanded =>
+        {
+            body.Visible = expanded;
+            button.Text = (expanded ? "▾ " : "▸ ") + title;
+        };
+        header = button;
+        return body;
+    }
+
     private static void AddButton(VBoxContainer column, string title, Action action)
     {
         var button = new Button { Text = title };
