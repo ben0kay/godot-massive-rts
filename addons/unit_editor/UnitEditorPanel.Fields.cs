@@ -206,6 +206,15 @@ public partial class UnitEditorPanel
         Row(label, input);
     }
 
+    private void Flag(string key, string label, bool value, Action<bool> set, Func<bool> enabled)
+    {
+        represented.Add(key);
+        var input = new CheckBox { ButtonPressed = value };
+        input.Toggled += pressed => { set(pressed); MarkEdited(); };
+        refreshFields.Add(() => input.Disabled = !enabled());
+        Row(label, input);
+    }
+
     private SpinBox Number(string key, string label, Func<float> get, Action<float> set, double min, double max,
         double step, string suffix, Func<bool> enabled = null, string tooltip = "", bool unbounded = false)
     {
