@@ -114,3 +114,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-12 | Benchmark camera yaw control | Source implemented; awaiting owner visual validation.** Added a live 0–360° rotation slider and 45° reset in the left Camera section. 0° aligns the view with battlefield axes, 45° matches the previous diagonal, and WASD/arrow pan axes follow the chosen angle without changing pitch/zoom or simulating new work.
 
 - **2026-11-12 | BENCH tactical formations | Source implemented; awaiting owner testing.** Added five seeded layouts (layered ranks, cavalry pincer, wedge vs shield wall, encirclement, and Blue/Red/Green clash), using all six unit types including Hexagon for mixed modes. Ranged archers occupy rear ranks and Melee stays melee-only. Unit footprints set safe spacing; kept original three presets for historical benchmarks and adjusted camera framing for larger formations.
+
+- 2026-11-12 — FRONT0: Added the local profile picker, campaign progress, display options, and blank Level001. The benchmark remains available directly via F6. Source implemented, awaiting owner validation.

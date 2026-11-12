@@ -2,7 +2,9 @@
 
 **Repository:** ben0kay/godot-massive-rts
 **Branch:** main
-**Status:** PLANNED — documentation only. There is no implemented front end/profile/campaign system from this planning commit.
+**Status:** Source implemented. Awaiting owner validation.
+
+**Implementation update:** The owner requested a blank `LEVELS/Level001/Level001.tscn` as the campaign destination. References below to the benchmark as the temporary Level 1 scene describe the original proposal. Campaign-only controls attach to the campaign-launched blank scene. The benchmark runs independently via F6. See [UI](README.md) and [LEVELS](../LEVELS/README.md) for the implemented layout.
 **Scope:** A thin and usable game shell in front of the existing Godot 4 C# 3D benchmark. ONE complete minimum vertical slice; do not implement the eventual full RTS game.
 
 ## 1. Owner intent and observed repo
@@ -284,5 +286,3 @@ Prefer one focused implementation commit/push, minimal source review and one rea
 ## 11. Non-goals
 
 No live-battle save/load, troop capture/recovery, gameplay XP, research, unlock economy, research points, levels 2+ content, procedural campaign generator, full victory/defeat rules, rewards, custom graphics, multiplayer, cloud accounts, automatic sign-in, delete/rename profiles, achievements or extensive music/audio. All of these can be introduced later without changing the FRONT0 profile GUID and catalog ID formats.
-
-**This document is a Codex handoff plan only. Do not claim source implementation until Codex completes it.**

@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="godot-massive-rts"
-run/main_scene="res://BENCHMARK/BenchmarkArena.tscn"
+run/main_scene="res://UI/Menus/BootScreen.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 

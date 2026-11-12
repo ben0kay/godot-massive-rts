@@ -5,7 +5,7 @@ Standalone 3D army workload arena. No performance target is claimed. No campaign
 ## Launch and controls
 
 1. Import root `project.godot` in **Godot 4.7 .NET** with its required .NET SDK installed. The standard non-.NET Godot editor cannot compile C#.
-2. Build the C# project, then press **F6** with `BENCHMARK/BenchmarkArena.tscn` open, or **F5** (it is the temporary main scene).
+2. Build the C# project, then press **F6** with `BENCHMARK/BenchmarkArena.tscn` open. This direct launch needs no profile. **F5** opens the project’s profile picker.
 3. Initial deployment is 1,000 render-only soldiers. Select total count, mode, layout and seed, then click **Spawn / Reset selected**. The button always rebuilds from the current controls, resetting deaths, projectiles, timings and simulation ticks.
 4. **WASD / arrows** pan; **wheel** zooms; **Space** or the button pauses simulation; **F4** or the checkbox toggles the upper-right overlay. Camera remains active while paused.
    - Open the left-side **Camera** section: **Rotation** is a live 0–360° slider (1° steps). **0°** aligns the view with the battlefield axes; **45°** restores the original diagonal. **Reset camera rotation (45°)** restores the default. WASD/arrow panning stays relative to the current view; zoom and pitch are unchanged. Click the battlefield to release keyboard focus from text/spin controls if necessary.

@@ -1,6 +1,6 @@
 # Godot Massive RTS
 
-> **Status:** BENCH0 — **Source Implemented / Awaiting Owner Validation**. The default scene is the standalone benchmark arena. Gameplay beyond BENCH0 remains planned. See [BENCHMARK/README.md](BENCHMARK/README.md) for launch instructions, controls, architecture and measurement limitations. No hardware performance targets have been validated.
+> **Status:** BENCH0 — **Source Implemented / Awaiting Owner Validation**. F5 opens the FRONT0 profile picker. F6 runs the standalone benchmark with its arena scene open. See [BENCHMARK/README.md](BENCHMARK/README.md) for launch instructions, controls, architecture and measurement limitations. No hardware performance targets have been validated.
 
 ## Vision
 
@@ -119,9 +119,9 @@ Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATIO
 
 [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md) designs a shared chunked heightfield with **two producers**: painted flat plateaus/smooth slopes for Army Painter and deterministic gentle procedural landscapes with protected flats for Open RTS. Both eventually share slope-aware movement, high-ground bonuses and terrain LOS. **Planning only; flat simulation remains unchanged.** Build in phases A (heightfield), B (painter), C (procedural) and D (combat/nav).
 
-## FRONT0 — Profiles, main menu and campaign levels (planned)
+## FRONT0 — Profiles, main menu and campaign levels
 
-[FRONT0 implementation plan](UI/FRONT0_IMPLEMENTATION_PLAN.md) introduces a minimal profile picker at boot, GUID-based local progress, shared consistent menu buttons/styles, main menu, campaign level buttons, options and a Level 1 link to the existing BENCHMARK/BenchmarkArena.tscn. Benchmark F6 direct launch remains available. The design selectively adapts patterns from godot-tower-defense without copying its full battle checkpoint/XP systems. **Planning document only; runtime menus and saves are not yet implemented.**
+**Source implemented. Awaiting owner validation.** Run Project (F5) opens the local profile picker, main menu, campaign selector, and display options. The campaign opens the blank [Level001](LEVELS/README.md) scene. Open `BENCHMARK/BenchmarkArena.tscn` and use Run Current Scene (F6) to test the benchmark directly. See the [UI guide](UI/README.md) for menu settings and save ownership.
 
 ## Development order (proposed, not completed)
 

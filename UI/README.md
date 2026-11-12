@@ -1,9 +1,9 @@
-# UI — Shared Front End and Master Styles
+# UI — Front End
 
-**Status:** FRONT0 planned, not implemented.
+**FRONT0 source implemented. Awaiting owner validation.**
 
-The [FRONT0 plan](FRONT0_IMPLEMENTATION_PLAN.md) describes a lightweight profile picker, main menu, campaign level picker and functional options screen for this 3D mass-RTS. All menu buttons use one UIButtonFactory and Inspector-editable DefaultUIConfig.tres; MenuLayout creates a consistent panel and MenuNavigation routes between scenes.
+F5 opens the profile picker. Choose or create a commander to reach the main menu, then open Campaign or Options. Escape returns from Campaign and Options to Main, or from Main to the profile picker. Display mode and VSync are global and saved when changed.
 
-The frontend stays separate from BENCHMARK. Existing BENCHMARK/BenchmarkArena.tscn remains a directly launchable Godot test scene and becomes the temporary Level 1 destination in the first campaign. SYSTEMS owns persisted profile GUIDs and campaign completion; LEVELS owns campaign catalog resources and the level-launch context.
+`Menus/FrontMenu.cs` owns screen actions, `Menus/MenuNavigation.cs` owns scene changes, and `Shared/` owns button styling and layout. Edit `DefaultUIConfig.tres` in the Inspector to tune the palette, spacing, and typography.
 
-Use the reference patterns in ben0kay/godot-tower-defense (branch dev) without copying its complex tower-defense HUD, wave checkpoints, XP, research or audio systems.
+See [LEVELS](../LEVELS/README.md) for campaign authoring and [SYSTEMS](../SYSTEMS/README.md) for local saves. Open `BENCHMARK/BenchmarkArena.tscn` and use F6 for the standalone benchmark.
