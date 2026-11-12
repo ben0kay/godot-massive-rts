@@ -112,6 +112,7 @@ public partial class UnitEditorPanel
         refreshFields.Add(() => rangedSection.Visible = !IsMelee);
         represented.Add(nameof(Unit.Projectile));
         var picker = new EditorResourcePicker { BaseType = nameof(ProjectileDefinition), EditedResource = Unit.Projectile };
+        Row("Projectile", picker, "Clear this field to use the default arrow. Open the reference to edit its own resource.");
         picker.ResourceChanged += value =>
         {
             if (value != null && (value is not ProjectileDefinition || string.IsNullOrEmpty(value.ResourcePath) ||
@@ -121,6 +122,7 @@ public partial class UnitEditorPanel
                 status.Text = "Pick an existing projectile resource from disk.";
                 return;
             }
+            if (Unit.Projectile == value) return;
             Unit.Projectile = (ProjectileDefinition)value;
             MarkEdited();
         };
@@ -129,7 +131,6 @@ public partial class UnitEditorPanel
             if (value != null) EditorInterface.Singleton.EditResource(value);
         };
         refreshFields.Add(() => picker.Editable = !IsMelee);
-        Row("Projectile", picker, "Clear this field to use the default arrow. Open the reference to edit its own resource.");
 
         var recoilSection = AbilitySection("Ranged recoil", nameof(Unit.RangedRecoilEnabled), Unit.RangedRecoilEnabled,
             v => Unit.RangedRecoilEnabled = v, () => !IsMelee, () => !IsMelee && Unit.RangedRecoilEnabled);
@@ -232,7 +233,13 @@ public partial class UnitEditorPanel
         represented.Add(key);
         var input = new SpinBox { MinValue = min, MaxValue = max, Step = step, Suffix = suffix, AllowGreater = unbounded };
         input.SetValueNoSignal(float.IsFinite(get()) ? get() : min);
-        input.ValueChanged += value => { set((float)value); MarkEdited(); };
+        Row(label, input, tooltip);
+        input.ValueChanged += value =>
+        {
+            if (!input.IsInsideTree() || (float)value == get()) return;
+            set((float)value);
+            MarkEdited();
+        };
         if (enabled != null) refreshFields.Add(() => input.Editable = enabled());
         checks.Add(() =>
         {
@@ -240,7 +247,6 @@ public partial class UnitEditorPanel
             return float.IsFinite(value) && value >= (float)min && (unbounded || value <= (float)input.MaxValue)
                 ? null : $"Correct {label.ToLowerInvariant()} before saving.";
         });
-        Row(label, input, tooltip);
         return input;
     }
 }

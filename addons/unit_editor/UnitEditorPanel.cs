@@ -27,7 +27,14 @@ public partial class UnitEditorPanel : VBoxContainer
     private readonly List<Func<string>> checks = new();
     private readonly List<Action> refreshFields = new();
     private readonly ConfirmationDialog confirmReload = new() { Title = "Discard unit changes?", DialogText = "Reload this unit from disk and discard the current draft?" };
+    private readonly ConfirmationDialog confirmSwitch = new()
+    {
+        Title = "Switch units?",
+        Exclusive = true,
+        DialogHideOnOk = false
+    };
     private Draft draft;
+    private string switchTarget;
     private bool dirty;
     private float speedScale = 0.8f;
     internal Draft PendingDraft => dirty ? draft : null;
@@ -70,17 +77,22 @@ public partial class UnitEditorPanel : VBoxContainer
         previewColumn.AddChild(summary);
         AddChild(status);
         AddChild(confirmReload);
+        AddChild(confirmSwitch);
+        confirmSwitch.GetOkButton().Text = "Save and Switch";
+        confirmSwitch.AddButton("Discard and Switch", true, "discard");
+        confirmSwitch.Confirmed += () => FinishUnitSwitch(saveDraft: true);
+        confirmSwitch.CustomAction += action =>
+        {
+            if (action == "discard") FinishUnitSwitch(saveDraft: false);
+        };
+        confirmSwitch.Canceled += () => switchTarget = null;
 
         list.ItemSelected += index =>
         {
             if (index < 0 || index >= visibleEntries.Count) return;
-            if (dirty)
-            {
-                SelectActive();
-                status.Text = "Save or reload the current draft before switching units.";
-                return;
-            }
-            LoadUnit(visibleEntries[(int)index].Path);
+            string path = visibleEntries[(int)index].Path;
+            // Allow any focused numeric field to commit before checking whether the draft is dirty.
+            Callable.From(() => RequestUnitSwitch(path)).CallDeferred();
         };
         search.TextChanged += _ => PopulateList();
         refresh.Pressed += RefreshCatalogue;
@@ -167,6 +179,42 @@ public partial class UnitEditorPanel : VBoxContainer
         if (index >= 0) list.Select(index);
     }
 
+    // =========================================================
+    // Keep the roster and form on the same unit until a pending edit is resolved.
+    private void RequestUnitSwitch(string path)
+    {
+        if (!IsInsideTree() || path == draft?.Path || confirmSwitch.Visible) return;
+        if (!dirty)
+        {
+            LoadUnit(path);
+            return;
+        }
+
+        SelectActive();
+        switchTarget = path;
+        confirmSwitch.DialogText = $"Save your changes to {Unit.DisplayName} before switching units?";
+        confirmSwitch.PopupCentered();
+    }
+
+    private void FinishUnitSwitch(bool saveDraft)
+    {
+        if (switchTarget == null) return;
+        if (saveDraft)
+        {
+            Save();
+            if (dirty)
+            {
+                confirmSwitch.DialogText = status.Text;
+                return;
+            }
+        }
+
+        string path = switchTarget;
+        switchTarget = null;
+        confirmSwitch.Hide();
+        LoadUnit(path);
+    }
+
     private void LoadUnit(string path)
     {
         string hash = FileAccess.GetSha256(path);
@@ -181,8 +229,14 @@ public partial class UnitEditorPanel : VBoxContainer
         dirty = false;
         status.Text = "";
         int index = entries.FindIndex(entry => entry.Path == path);
-        if (index >= 0) entries[index] = new Entry(path, unit.Id, unit.DisplayName, unit.Shape);
-        PopulateList();
+        string displayName = string.IsNullOrWhiteSpace(unit.DisplayName) ? unit.Id : unit.DisplayName;
+        var updated = new Entry(path, unit.Id, displayName, unit.Shape);
+        if (index >= 0 && entries[index] != updated)
+        {
+            entries[index] = updated;
+            PopulateList();
+        }
+        else SelectActive();
         BuildForm();
         UpdateView();
     }
