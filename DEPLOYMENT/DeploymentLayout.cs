@@ -18,7 +18,76 @@ public sealed class DeploymentLayout
     private readonly RuntimeUnitCatalog catalog;
     public ObstacleLayout Obstacles { get; private set; } = new();
 
-    public DeploymentLayout(RuntimeUnitCatalog catalog) => this.catalog = catalog;
+    public const int MaxBuildings = 64;
+    private readonly RuntimeBuildingCatalog buildings;
+    private readonly List<BuildingPlacement> defenses = new();
+    public IReadOnlyList<BuildingPlacement> Defenses => defenses;
+    public ObstacleField CollisionField { get; private set; }
+
+    public DeploymentLayout(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings)
+    {
+        this.catalog = catalog;
+        this.buildings = buildings;
+    }
+
+    // =========================================================
+    // Walls and buildings keep separate authoring records and share the compiled navigation index.
+    public void RebuildCollision()
+    {
+        if (defenses.Count == 0) { CollisionField = Obstacles.Field; return; }
+        var walls = Obstacles.Field;
+        int count = walls?.RectangleCount ?? 0;
+        var rectangles = new ObstacleRectangle[count + defenses.Count];
+        if (walls != null) walls.Rectangles.CopyTo(rectangles);
+        for (int i = 0; i < defenses.Count; i++) rectangles[count + i] = defenses[i].Footprint(buildings);
+        CollisionField = new ObstacleField(rectangles);
+    }
+
+    public bool CanPlaceDefense(BuildingPlacement placement)
+    {
+        if (placement.Faction >= Factions.Count || (uint)placement.Type >= (uint)buildings.Count ||
+            defenses.Count >= MaxBuildings) return false;
+        ObstacleRectangle area = placement.Footprint(buildings);
+        if (!area.IsValid) return false;
+        if (Obstacles.Field != null)
+            foreach (var wall in Obstacles.Field.Rectangles)
+                if (Overlaps(area, wall)) return false;
+        foreach (var defense in defenses)
+            if (Overlaps(area, defense.Footprint(buildings))) return false;
+
+        int padding = Mathf.CeilToInt(catalog.MaxFootprint / CellSize);
+        for (int z = area.Z - padding; z < area.Z + area.Depth + padding; z++)
+        for (int x = area.X - padding; x < area.X + area.Width + padding; x++)
+        {
+            if (!TryGet(new Vector2I(x, z), out var soldier)) continue;
+            Vector2 point = ObstacleField.Xz(soldier.Position());
+            Vector2 closest = point.Max(area.Min).Min(area.Max);
+            float radius = catalog[soldier.Type].Footprint;
+            if (point.DistanceSquaredTo(closest) <= radius * radius) return false;
+        }
+        return true;
+    }
+
+    public bool TryPlaceDefense(BuildingPlacement placement)
+    {
+        if (!CanPlaceDefense(placement)) return false;
+        defenses.Add(placement);
+        RebuildCollision();
+        return true;
+    }
+
+    public bool TryEraseDefense(Vector2I cell)
+    {
+        int index = defenses.FindIndex(defense => Overlaps(defense.Footprint(buildings),
+            new ObstacleRectangle(cell.X, cell.Y, 1, 1)));
+        if (index < 0) return false;
+        defenses.RemoveAt(index);
+        RebuildCollision();
+        return true;
+    }
+
+    private static bool Overlaps(ObstacleRectangle a, ObstacleRectangle b) =>
+        a.X < b.X + b.Width && b.X < a.X + a.Width && a.Z < b.Z + b.Depth && b.Z < a.Z + a.Depth;
 
     public bool TryGet(Vector2I cell, out SoldierPlacement placement)
     {
@@ -46,7 +115,7 @@ public sealed class DeploymentLayout
         float edge = HalfWidth * CellSize;
         if (Mathf.Abs(position.X) + radius > edge || Mathf.Abs(position.Z) + radius > edge) return false;
 
-        if (Obstacles.Field?.IntersectsCircle(ObstacleField.Xz(position), radius) == true) return false;
+        if (CollisionField?.IntersectsCircle(ObstacleField.Xz(position), radius) == true) return false;
 
         int extent = Mathf.Min(HalfWidth * 2 - 1, Mathf.CeilToInt((radius + catalog.MaxFootprint) / CellSize));
         for (int z = System.Math.Max(-HalfWidth, cell.Y - extent); z <= System.Math.Min(HalfWidth - 1, cell.Y + extent); z++)
@@ -96,6 +165,12 @@ public sealed class DeploymentLayout
         if (ReferenceEquals(draft, Obstacles)) return false;
         if (!erase && draft.Field != null)
         {
+            foreach (var defense in defenses)
+            {
+                if (!Overlaps(area, defense.Footprint(buildings))) continue;
+                message = "Obstacle overlaps a defense footprint.";
+                return false;
+            }
             foreach (SoldierPlacement placement in placements)
             {
                 if (!draft.Field.IntersectsCircle(ObstacleField.Xz(placement.Position()), catalog[placement.Type].Footprint)) continue;
@@ -104,14 +179,21 @@ public sealed class DeploymentLayout
             }
         }
         Obstacles = draft;
+        RebuildCollision();
         return true;
     }
 
-    public void SetLoadedObstacles(ObstacleLayout obstacles) => Obstacles = obstacles;
+    public void SetLoadedObstacles(ObstacleLayout obstacles)
+    {
+        Obstacles = obstacles;
+        RebuildCollision();
+    }
 
     public void Clear()
     {
         Obstacles = new ObstacleLayout();
+        CollisionField = null;
+        defenses.Clear();
         placements.Clear();
         slots.Clear();
     }

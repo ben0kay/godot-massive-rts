@@ -110,6 +110,26 @@ public sealed class ObstacleField
         return blocked;
     }
 
+    // =========================================================
+    // A static weapon's own obstacle is ignored; every other rectangle still blocks sight.
+    public bool BlocksSightExcept(Vector3 from, Vector3 to, ObstacleRectangle own)
+    {
+        LosQueries++;
+        long start = BeginSample(Query.Sight);
+        bool blocked = BlocksSightExcept(0, Xz(from), Xz(to - from), new Box(own.Min, own.Max));
+        EndSample(Query.Sight, start);
+        if (blocked) LosBlocks++;
+        return blocked;
+    }
+
+    private bool BlocksSightExcept(int index, Vector2 from, Vector2 delta, Box own)
+    {
+        ref readonly Node node = ref nodes[index];
+        if (!EnterBox(from, delta, node.Bounds.Min, node.Bounds.Max, out _)) return false;
+        if (node.Left < 0) return node.Bounds != own;
+        return BlocksSightExcept(node.Left, from, delta, own) || BlocksSightExcept(node.Right, from, delta, own);
+    }
+
     public Vector2 ClipMove(Vector2 from, Vector2 to, float radius)
     {
         long start = BeginSample(Query.Clip);

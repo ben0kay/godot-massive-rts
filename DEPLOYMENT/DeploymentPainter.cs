@@ -8,6 +8,9 @@ public partial class DeploymentPainter : Node3D
 {
     public DeploymentLayout Layout { get; private set; }
     private RuntimeUnitCatalog catalog;
+    private RuntimeBuildingCatalog buildings;
+    private DefenseRenderer defensePreview;
+    public int DefenseType { get; set; }
     private DeploymentPreview[] previews;
     public Camera3D Camera { get; set; }
     public byte BrushFaction { get; set; }
@@ -15,16 +18,17 @@ public partial class DeploymentPainter : Node3D
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
     private MeshInstance3D walls, rectanglePreview;
-    private bool obstacleTool, dragging;
+    private bool dragging;
+    private long paintTool;
     private MouseButton dragButton;
     private Vector2I dragStart;
     public float ObstacleHeight { get; set; }
     public Color ObstacleTint { get; set; }
     public Mesh ObstacleMesh => walls.Mesh;
 
-    public void SetObstacleTool(bool enabled)
+    public void SetPaintTool(long tool)
     {
-        obstacleTool = enabled;
+        paintTool = tool;
         CancelDrag();
     }
 
@@ -34,10 +38,13 @@ public partial class DeploymentPainter : Node3D
         rectanglePreview.Hide();
     }
 
-    public void Initialize(RuntimeUnitCatalog unitCatalog, Mesh[] shapes)
+    public void Initialize(RuntimeUnitCatalog unitCatalog, Mesh[] shapes, RuntimeBuildingCatalog buildingCatalog)
     {
         catalog = unitCatalog;
-        Layout = new DeploymentLayout(catalog);
+        buildings = buildingCatalog;
+        Layout = new DeploymentLayout(catalog, buildings);
+        defensePreview = new DefenseRenderer();
+        AddChild(defensePreview);
         previews = new DeploymentPreview[catalog.Count];
         for (int i = 0; i < previews.Length; i++)
             previews[i] = new DeploymentPreview(this, shapes[i], catalog[i].Height);
@@ -59,7 +66,12 @@ public partial class DeploymentPainter : Node3D
     public override void _UnhandledInput(InputEvent input)
     {
         if (!Visible) return;
-        if (obstacleTool)
+        if (paintTool == 2)
+        {
+            HandleDefenseInput(input);
+            return;
+        }
+        if (paintTool == 1)
         {
             HandleObstacleInput(input);
             return;
@@ -96,6 +108,36 @@ public partial class DeploymentPainter : Node3D
         }
         if (changed) Changed?.Invoke();
     }
+
+    private void HandleDefenseInput(InputEvent input)
+    {
+        if ((uint)DefenseType >= (uint)buildings.Count) return;
+        if (input is InputEventMouseMotion motion && TryCell(motion.Position, out var hover))
+        {
+            var draft = new BuildingPlacement(hover.X, hover.Y, BrushFaction, DefenseType);
+            if (Layout.CanPlaceDefense(draft)) ShowRectangle(draft.Footprint(buildings));
+            else rectanglePreview.Hide();
+            return;
+        }
+
+        if (input is not InputEventMouseButton button || !button.Pressed ||
+            !TryCell(button.Position, out var cell)) return;
+        bool changed;
+        if (button.ButtonIndex == MouseButton.Left)
+        {
+            changed = Layout.TryPlaceDefense(new BuildingPlacement(cell.X, cell.Y, BrushFaction, DefenseType));
+            if (!changed) EditRejected?.Invoke("Defense overlaps a footprint, is outside the field, or the defense limit was reached.");
+        }
+        else if (button.ButtonIndex == MouseButton.Right) changed = Layout.TryEraseDefense(cell);
+        else return;
+
+        if (!changed) return;
+        rectanglePreview.Hide();
+        RefreshDefenses();
+        Changed?.Invoke();
+    }
+
+    private void RefreshDefenses() => defensePreview.Initialize(Layout.Defenses, buildings, ObstacleHeight, battle: false);
 
     private bool TryCell(Vector2 screen, out Vector2I cell)
     {
@@ -169,6 +211,7 @@ public partial class DeploymentPainter : Node3D
         CancelDrag();
         Layout.Clear();
         RebuildWalls();
+        RefreshDefenses();
         foreach (DeploymentPreview preview in previews) preview.Clear();
         Changed?.Invoke();
     }
@@ -176,7 +219,8 @@ public partial class DeploymentPainter : Node3D
     private const string SavePath = "user://deployment.json";
 
     private sealed record SavedPlacement(int X, int Z, byte Faction, string UnitId);
-    private sealed record SavedDeployment(int Version, SavedPlacement[] Placements, ObstacleRectangle[] Obstacles);
+    private sealed record SavedDefense(int X, int Z, byte Faction, string BuildingId);
+    private sealed record SavedDeployment(int Version, SavedPlacement[] Placements, ObstacleRectangle[] Obstacles, SavedDefense[] Defenses);
     private readonly record struct LegacyPlacement(int X, int Z, byte Faction, byte Kind);
 
     public string Save()
@@ -189,8 +233,14 @@ public partial class DeploymentPainter : Node3D
         }
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
         if (file == null) return $"Save failed ({FileAccess.GetOpenError()}).";
-        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(2, saved, Layout.Obstacles.Field == null
-            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray())));
+        var defenses = new SavedDefense[Layout.Defenses.Count];
+        for (int i = 0; i < defenses.Length; i++)
+        {
+            var building = Layout.Defenses[i];
+            defenses[i] = new SavedDefense(building.X, building.Z, building.Faction, buildings[building.Type].Id);
+        }
+        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(3, saved, Layout.Obstacles.Field == null
+            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses)));
         return file.GetError() == Error.Ok ? "Deployment saved." : "Could not write deployment.";
     }
 
@@ -199,7 +249,7 @@ public partial class DeploymentPainter : Node3D
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
         if (file == null) return "No readable saved deployment.";
 
-        var validated = new DeploymentLayout(catalog);
+        var validated = new DeploymentLayout(catalog, buildings);
         try
         {
             using var document = JsonDocument.Parse(file.GetAsText());
@@ -221,12 +271,21 @@ public partial class DeploymentPainter : Node3D
             else
             {
                 var saved = document.RootElement.Deserialize<SavedDeployment>();
-                if (saved == null || saved.Version is not (1 or 2) || saved.Placements == null) return "Unsupported deployment format.";
-                if (saved.Version == 2)
+                if (saved == null || saved.Version is not (1 or 2 or 3) || saved.Placements == null) return "Unsupported deployment format.";
+                if (saved.Version >= 2)
                 {
                     if (!ObstacleLayout.TryLoad(saved.Obstacles, out ObstacleLayout obstacles))
                         return "Saved deployment contains invalid obstacle rectangles.";
                     validated.SetLoadedObstacles(obstacles);
+                }
+                if (saved.Version == 3)
+                {
+                    if (saved.Defenses == null || saved.Defenses.Length > DeploymentLayout.MaxBuildings)
+                        return "Saved deployment contains invalid defenses.";
+                    foreach (var defense in saved.Defenses)
+                        if (defense == null || !buildings.TryResolve(defense.BuildingId, out int type) ||
+                            !validated.TryPlaceDefense(new BuildingPlacement(defense.X, defense.Z, defense.Faction, type)))
+                            return "Saved deployment contains invalid defenses.";
                 }
                 foreach (SavedPlacement placement in saved.Placements)
                 {
@@ -244,6 +303,7 @@ public partial class DeploymentPainter : Node3D
         CancelDrag();
         Layout = validated;
         RebuildWalls();
+        RefreshDefenses();
         foreach (DeploymentPreview preview in previews) preview.Clear();
         foreach (SoldierPlacement placement in Layout.Placements) previews[placement.Type].Add(placement);
         Changed?.Invoke();

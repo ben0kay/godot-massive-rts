@@ -26,6 +26,9 @@ public partial class BenchmarkArena : Node3D
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
     private DeploymentPainter painter;
+    private RuntimeBuildingCatalog buildings;
+    private DefenseSystem defenseSystem;
+    private DefenseRenderer defenseRenderer;
     private ObstacleField obstacles;
     private ObstacleNavigation navigation;
     private MeshInstance3D battleWalls, flatGround;
@@ -91,7 +94,8 @@ public partial class BenchmarkArena : Node3D
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        panel = new BenchmarkPanel { Catalog = catalog }; AddChild(panel);
+        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"));
+        panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
         Config.RouteSectorSize = float.IsFinite(Config.RouteSectorSize) ? Mathf.Clamp(Config.RouteSectorSize, 4f, 32f) : 12f;
@@ -100,10 +104,11 @@ public partial class BenchmarkArena : Node3D
             Camera = camera, Visible = false, ObstacleHeight = Config.ObstacleHeight, ObstacleTint = Config.ObstacleTint
         };
         AddChild(painter);
-        painter.Initialize(catalog, soldierMeshes);
+        painter.Initialize(catalog, soldierMeshes, buildings);
         painter.Changed += UpdateDeploymentStatus;
         painter.EditRejected += message => panel.Status.Text = message + "\n" + DeploymentCount();
-        panel.PaintToolChoice.ItemSelected += tool => painter.SetObstacleTool(tool == 1);
+        panel.PaintToolChoice.ItemSelected += painter.SetPaintTool;
+        panel.DefenseChoice.ItemSelected += index => painter.DefenseType = panel.DefenseChoice.GetItemId((int)index);
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleWalls);
         panel.SpawnRequested += Spawn;
@@ -123,6 +128,13 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         shockwaves.Clear();
+        defenseSystem = null;
+        if (defenseRenderer != null)
+        {
+            RemoveChild(defenseRenderer);
+            defenseRenderer.QueueFree();
+            defenseRenderer = null;
+        }
         if (terrainMeshes != null)
         {
             RemoveChild(terrainMeshes);
@@ -198,7 +210,7 @@ public partial class BenchmarkArena : Node3D
     }
 
     private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} • " +
-        $"{painter.Layout.Obstacles.Field?.RectangleCount ?? 0} wall rectangles";
+        $"{painter.Layout.Obstacles.Field?.RectangleCount ?? 0} wall rectangles • {painter.Layout.Defenses.Count} defenses";
 
     private void SetBattleObstacles(ObstacleField field, Mesh mesh)
     {
@@ -227,9 +239,10 @@ public partial class BenchmarkArena : Node3D
             factionMask |= 1 << placement.Faction;
             ranged |= catalog[placement.Type].Ranged;
         }
-        if (System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
+        foreach (var defense in painter.Layout.Defenses) factionMask |= 1 << defense.Faction;
+        if (placements.Count == 0 || System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
         {
-            panel.Status.Text = "Place at least two teams.\n" + DeploymentCount();
+            panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
         var snapshot = new SoldierPlacement[placements.Count];
@@ -238,7 +251,14 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
-        SetBattleObstacles(painter.Layout.Obstacles.Field, painter.ObstacleMesh);
+        SetBattleObstacles(painter.Layout.CollisionField, painter.ObstacleMesh);
+        if (painter.Layout.Defenses.Count > 0)
+        {
+            defenseRenderer = new DefenseRenderer();
+            AddChild(defenseRenderer);
+            defenseRenderer.Initialize(painter.Layout.Defenses, buildings, Config.ObstacleHeight, battle: true);
+            defenseSystem = new DefenseSystem(painter.Layout.Defenses, buildings, Config.ObstacleHeight, defenseRenderer);
+        }
         units = CreateUnitState();
         grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
@@ -252,7 +272,11 @@ public partial class BenchmarkArena : Node3D
         if (obstacles != null) obstacles.ProfileQueries = panel.ProfileObstacles;
         if (navigation != null) navigation.ReuseCorridors = panel.ReuseCorridors;
         frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
-        if (!paused) shockwaves.Advance((float)delta);
+        if (!paused)
+        {
+            shockwaves.Advance((float)delta);
+            defenseRenderer?.Advance((float)delta);
+        }
         if (spawning)
         {
             if (units.Count < targetCount)
@@ -378,6 +402,7 @@ public partial class BenchmarkArena : Node3D
             start = Stamp();
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
+            defenseSystem?.Step(units, grid, obstacles, dt, tick);
             combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;

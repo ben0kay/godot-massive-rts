@@ -130,3 +130,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — FRONT1: Fixed the C# array conversion for the campaign level return shortcut.
 
 - 2026-11-12 — Pursuit: Added conservative occupied-cell pruning and a live benchmark comparison toggle. Documented follow-up diagnostics and conditional shared replacements.
+
+- 2026-11-12 — DEF1: Added catalogued static laser defenses to the Benchmark Army Painter, including saved placements, shared obstacle indexing, hitscan targeting and batched visuals. Awaiting owner validation.

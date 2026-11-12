@@ -118,3 +118,7 @@ The left panel scrolls independently of the battlefield. Click a section header 
 The right overlay keeps the battle summary visible and folds CPU, obstacle, and rendering details into independently scrollable sections. Enable **Obstacles and terrain → Sample obstacle queries** during a wall scenario to see calls per HUD interval and approximate microseconds per call. Timing samples one in 64 calls per category. Clip and LOS calls are counted separately from standalone sweeps and corridors. Route building still reports milliseconds per rendered frame.
 
 **Reuse corridor checks** (on by default) reuses direct-approach results while the endpoints match or stay within a verified half-unit margin. Inset wall crossings prove a blocked approach and enlarged clear corridors prove an open approach. Wall clipping, route work budgets and corner selection still use the existing checks. Compare with the toggle off in the same wall layout and watch **Corridor results reused**, corridor calls, and simulation time per tick.
+
+## DEF1 — Static laser defense
+
+Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tower 001. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../BUILDINGS/README.md) for configuration and limits.
