@@ -81,9 +81,20 @@ public partial class BenchmarkPanel : CanvasLayer
         var preset = Section(column, "Preset battle", true, out _);
         foreach (int count in Counts) CountChoice.AddItem(count.ToString("N0"));
         foreach (string mode in new[] { "A — Rendering only", "B — Movement", "C — Melee", "D — Ranged" }) ModeChoice.AddItem(mode);
-        foreach (string layout in new[] { "Opposing lines", "Dense clusters", "Distributed battlefield" }) LayoutChoice.AddItem(layout);
+        foreach (string layout in new[]
+        {
+            "Opposing lines", "Dense clusters", "Distributed battlefield",
+            "Layered ranks — full roster", "Cavalry pincer — flanking wings",
+            "Wedge assault vs shield wall", "Encirclement — defenders vs ring",
+            "Three-way clash — Blue / Red / Green"
+        }) LayoutChoice.AddItem(layout);
         Field(preset, "Total soldiers", CountChoice); Field(preset, "Mode", ModeChoice);
         Field(preset, "Layout", LayoutChoice); Field(preset, "Seed", Seed);
+        preset.AddChild(new Label
+        {
+            Text = "New formations use all six shapes in mixed modes; Melee excludes archers.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart
+        });
         Field(preset, "Ranged %", RangedPercent);
         TerrainChoice.AddItem("Flat ground");
         TerrainChoice.AddItem("Test plateau");

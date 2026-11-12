@@ -159,7 +159,10 @@ public partial class BenchmarkArena : Node3D
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
-        camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
+        Deployment chosenLayout = (Deployment)panel.LayoutChoice.Selected;
+        camera.Frame(chosenLayout >= Deployment.LayeredRanks
+            ? Mathf.Sqrt(targetCount) * 7f + 180f
+            : Mathf.Sqrt(targetCount / 2f) * 4f + (chosenLayout == Deployment.DistributedBattlefield ? 350f : 80f));
     }
     private void PreparePlateau()
     {

@@ -20,7 +20,7 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 | C — Melee | Grid rebuilding, staggered local acquisition, nearest-enemy pursuit, health, attack cooldowns, damage flashes and deaths. |
 | D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept first-enemy hit checks and lifetime expiry. |
 
-Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
+Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
 ## Configuration and ownership
 
@@ -38,7 +38,19 @@ Flow: prepare unit arrays → allocate up to ten mesh/faction batches → fixed-
 
 Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells. Under **CPU and separation**, **Targeting** shows the full acquisition pass. **Local enemy search**, **Long-range pursuit**, and **Pursuit tree build** show its query and lazy index build costs in milliseconds per rendered frame over the same HUD interval. The total also includes acquisition bookkeeping such as target validation and refresh scheduling. The breakdown excludes initial deployment target preparation.
 
-Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon in approximate proportions 60/25/10/5. Render-only and Movement use about 20% ranged. Ranged mode uses the selected ranged percentage, with the remaining soldiers drawn from the melee mix. The added shapes, spacing and stats change the workload from earlier benchmarks.
+Preset types are seeded. The **original three layouts remain unchanged for performance baselines**: Melee-only picks Circle, Square, Diamond and Pentagon in approximate proportions 60/25/10/5; Render-only and Movement use about 20% ranged; Ranged uses the selected ranged percentage.
+
+**Five new tactical formation layouts** use the **entire six-unit roster**, including Hexagon Siege Infantry, in mixed Rendering Only, Movement and Ranged modes. Melee mode intentionally omits Triangle Archers, keeping it melee-only. Ranged % of each force is allocated in rear ranks (default 20% for Movement and Rendering Only). The five new layouts are deterministic, generated incrementally on spawn, and reserve clearance using the largest type footprint including the scaled Hexagon. They do not introduce live formation AI or per-soldier scene nodes.
+
+| Layout | Formation and stress-test purpose |
+| --- | --- |
+| **Layered ranks — full roster** | Square infantry front, Circle infantry mid-ranks, scattered Pentagon/Hexagon anchors, Triangle Archers behind, Diamond Cavalry on the sides |
+| **Cavalry pincer — flanking wings** | Separate forward Diamond wings flanking heavier mixed infantry centres and archers |
+| **Wedge assault vs shield wall** | Blue forms a pointed wedge with heavy central support; Red forms a flat shield-heavy defence |
+| **Encirclement — defenders vs ring** | Blue holds the centre square while Red deploys in spaced concentric rings around it |
+| **Three-way clash — Blue / Red / Green** | Three full-roster armies spawn 120° apart and converge toward the centre |
+
+The original three layouts retain their historical composition and spacing so before/after FPS comparisons remain valid. On new formations the initial camera framing is expanded; zoom and rotation remain live. Terrain and wall preset toggles work as before. Owner visual and performance testing is still required.
 
 ## Painted deployments
 

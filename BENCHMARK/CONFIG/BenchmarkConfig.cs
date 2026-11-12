@@ -42,4 +42,4 @@ public partial class BenchmarkConfig : Resource
     [Export] public float ProjectileHitRadius { get; set; } = 0.8f;
 }
 public enum BenchmarkMode { RenderingOnly, Movement, Melee, Ranged }
-public enum Deployment { OpposingLines, DenseClusters, DistributedBattlefield }
+public enum Deployment { OpposingLines, DenseClusters, DistributedBattlefield, LayeredRanks, CavalryPincer, WedgeVsShield, Encirclement, ThreeWayClash }
