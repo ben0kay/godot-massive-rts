@@ -5,8 +5,8 @@ namespace MassiveRts;
 
 public static class TerrainRenderer
 {
-    private static readonly Color Plain = new(0.075f, 0.085f, 0.10f);
-    private static readonly Color High = new(0.16f, 0.20f, 0.23f);
+    private static readonly Color Plain = new(0.29f, 0.30f, 0.32f);
+    private static readonly Color High = new(0.41f, 0.43f, 0.45f);
 
     public static Node3D Build(TerrainHeightField field, float rise, float mapHalfWidth)
     {
