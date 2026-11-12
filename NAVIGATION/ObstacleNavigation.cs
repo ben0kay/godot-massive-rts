@@ -11,6 +11,15 @@ public sealed class ObstacleNavigation
     private const float ArrivalDistance = 0.004f;
     private const float WaitingClearance = 0.15f;
     private const int RetryFrames = 30;
+    private const float CorridorMargin = 0.5f;
+    private const float ProofInset = CorridorMargin + 0.005f;
+
+    private struct ApproachMemo
+    {
+        public Vector2 Start, Goal;
+        public float Stop;
+        public bool Valid, Clear, HasMargin;
+    }
     private readonly record struct RouteKey(Vector2I From, Vector2I To, byte Type, bool Fine);
     private readonly record struct Request(RouteKey Key, Vector2 Start, Vector2 Goal, float Stop, int Frame);
     private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, float Stop, int Frame);
@@ -24,6 +33,9 @@ public sealed class ObstacleNavigation
     private readonly ObstacleField field;
     private readonly Graph[] graphs;
     private readonly Follower[] followers;
+    private readonly ApproachMemo[] approachMemos;
+    public bool ReuseCorridors { get; set; } = true;
+    public int CorridorReuses { get; private set; }
     private readonly Dictionary<RouteKey, Route> routes = new();
     private readonly Queue<RouteKey> cacheOrder = new();
     private readonly Queue<Request> requests = new();
@@ -48,11 +60,12 @@ public sealed class ObstacleNavigation
         for (int i = 0; i < graphs.Length; i++)
             graphs[i] = new Graph(field, catalog[i].Footprint);
         followers = new Follower[soldiers];
+        approachMemos = new ApproachMemo[soldiers];
     }
 
     public void ResetCounters()
     {
-        CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = 0;
+        CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = CorridorReuses = 0;
     }
 
     public void AdvanceFrame() => frame++;
@@ -82,7 +95,7 @@ public sealed class ObstacleNavigation
         float radius = graphs[type].Radius;
         ref Follower follower = ref followers[id];
         routeCorner = false;
-        if (CanApproach(field, start, goal, radius, stop))
+        if (CanApproachSoldier(id, start, goal, radius, stop))
         {
             follower = default;
             detouring = false;
@@ -153,6 +166,28 @@ public sealed class ObstacleNavigation
         if (distance == 0f || !field.FirstHit(start, goal, radius, out float hit)) return start;
         float advance = Mathf.Max(0f, distance * hit - WaitingClearance);
         return start + offset * (advance / distance);
+    }
+
+    private bool CanApproachSoldier(int id, Vector2 start, Vector2 goal, float radius, float stop)
+    {
+        if (!ReuseCorridors) return CanApproach(field, start, goal, radius, stop);
+        ref ApproachMemo memo = ref approachMemos[id];
+        if (memo.Valid &&
+            ((memo.Start == start && memo.Goal == goal && memo.Stop == stop) ||
+                (memo.HasMargin && memo.Start.DistanceSquaredTo(start) <= CorridorMargin * CorridorMargin &&
+                    memo.Goal.DistanceSquaredTo(goal) <= CorridorMargin * CorridorMargin)))
+        {
+            CorridorReuses++;
+            return memo.Clear;
+        }
+
+        bool clear = CanApproach(field, start, goal, radius, stop);
+        // Enlarged clearance proves the whole segment is clear. An inset wall hit
+        // proves that even the shorter approach plus its sightline cannot pass.
+        bool hasMargin = clear ? !field.BlocksCorridor(start, goal, radius + ProofInset)
+            : field.CrossesWallInterior(start, goal, ProofInset);
+        memo = new ApproachMemo { Start = start, Goal = goal, Stop = stop, Valid = true, Clear = clear, HasMargin = hasMargin };
+        return clear;
     }
 
     // An enemy can stand closer to a wall than a larger attacker can. Test the firing

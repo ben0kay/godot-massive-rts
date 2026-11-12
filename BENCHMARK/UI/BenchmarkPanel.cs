@@ -44,6 +44,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly Label Status = new();
     public readonly Label Metrics = DebugLabel(), CpuMetrics = DebugLabel(), ObstacleMetrics = DebugLabel(), EngineMetrics = DebugLabel();
     private readonly CheckButton profileObstacles = new() { Text = "Sample obstacle queries" };
+    private readonly CheckButton reuseCorridors = new() { Text = "Reuse corridor checks", ButtonPressed = true };
+    public bool ReuseCorridors => reuseCorridors.ButtonPressed;
     public bool ProfileObstacles => profileObstacles.ButtonPressed;
     public readonly Button PauseButton = new() { Text = "Pause" };
     private PanelContainer overlay;
@@ -155,6 +157,7 @@ public partial class BenchmarkPanel : CanvasLayer
         Section(debug, "CPU and separation", false, out _, true).AddChild(CpuMetrics);
         var obstacleDebug = Section(debug, "Obstacles and terrain", false, out _, true);
         obstacleDebug.AddChild(profileObstacles);
+        obstacleDebug.AddChild(reuseCorridors);
         obstacleDebug.AddChild(ObstacleMetrics);
         Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
     }

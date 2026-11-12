@@ -156,6 +156,25 @@ public sealed class ObstacleField
         return hit;
     }
 
+    // A hit against an inset wall proves that small endpoint shifts still cross that wall.
+    public bool CrossesWallInterior(Vector2 from, Vector2 to, float inset)
+    {
+        long start = BeginSample(Query.Corridor);
+        var margin = new Vector2(inset, inset);
+        bool blocked = CrossesWallInterior(0, from, to - from, margin);
+        EndSample(Query.Corridor, start);
+        return blocked;
+    }
+
+    private bool CrossesWallInterior(int index, Vector2 from, Vector2 delta, Vector2 margin)
+    {
+        ref readonly Node node = ref nodes[index];
+        Vector2 min = node.Bounds.Min + margin, max = node.Bounds.Max - margin;
+        if (min.X > max.X || min.Y > max.Y || !EnterBox(from, delta, min, max, out _)) return false;
+        return node.Left < 0 || CrossesWallInterior(node.Left, from, delta, margin) ||
+            CrossesWallInterior(node.Right, from, delta, margin);
+    }
+
     private bool Trace(Vector2 from, Vector2 to, float radius, bool anyHit, out float fraction)
     {
         fraction = float.PositiveInfinity;

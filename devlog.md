@@ -98,3 +98,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Ranged targeting and benchmark panel | Source implemented.** Added optional seeded ranged target variety and scrollable, collapsible benchmark controls. Awaiting Godot validation.
 
 - **2026-11-11 | Obstacle profiling and debug overlay | Source implemented.** Narrowed and right-aligned the scrollable overlay, added optional obstacle query sampling, and removed per-soldier navigation timers. Awaiting Godot validation.
+
+- **2026-11-12 | Obstacle corridor reuse | Source implemented.** Added conservative direct-approach memoization and a live benchmark comparison toggle. Awaiting Godot profiling.
