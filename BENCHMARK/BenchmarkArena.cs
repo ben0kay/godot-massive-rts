@@ -154,7 +154,7 @@ public partial class BenchmarkArena : Node3D
             SetBattleObstacles(wall, ObstacleRenderer.Build(wall, Config.ObstacleHeight, Config.ObstacleTint));
         }
         units = CreateUnitState();
-        if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize);
+        if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
         spawning = true;
@@ -236,7 +236,7 @@ public partial class BenchmarkArena : Node3D
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
         SetBattleObstacles(painter.Layout.Obstacles.Field, painter.ObstacleMesh);
         units = CreateUnitState();
-        grid = new SpatialGrid(targetCount, Config.CellSize);
+        grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
         spawning = true;
@@ -447,11 +447,15 @@ public partial class BenchmarkArena : Node3D
             $"Blue {units?.FactionAlive[Factions.Blue] ?? 0:N0} · Red {units?.FactionAlive[Factions.Red] ?? 0:N0} · Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\n" +
             $"Projectiles  {projectiles?.Count ?? 0:N0}";
 
+        double targetingTickToMsPerFrame = 1000.0 / Stopwatch.Frequency / divisor;
         panel.CpuMetrics.Text =
             $"Simulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
             $"CPU time / rendered frame (ms)\nSimulation  {simulationMs / divisor:F3}\nMovement  {movementMs / divisor:F3}\n" +
             $"Separation  {separationMs / divisor:F3}\nGrid rebuild  {gridMs / divisor:F3}\nTargeting  {targetingMs / divisor:F3}\n" +
+            $"  Local enemy search  {(grid?.LocalSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
+            $"  Long-range pursuit  {(grid?.PursuitSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
+            $"  Pursuit tree build  {(grid?.PursuitBuildTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
             $"Combat  {combatMs / divisor:F3}\nProjectiles  {projectileMs / divisor:F3}\n\n" +
             $"Query caps  {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops  {projectiles?.Dropped ?? 0:N0}\n" +
             $"Separation pairs / caps  {overlapPairs:N0} / {separationCaps:N0}\n" +
@@ -519,6 +523,7 @@ public partial class BenchmarkArena : Node3D
         groundingMs = 0;
         movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0;
         worstTickMs = armyUploadMs = routeBuildMs = 0;
+        grid?.ResetTargetingTimings();
         obstacles?.ResetCounters();
         navigation?.ResetCounters();
         measuredFrames = measuredTicks = maxTicksInFrame = measuredSyncs = denseUploads = sparseUploads = changedWrites = 0;

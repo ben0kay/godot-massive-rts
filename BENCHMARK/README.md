@@ -35,7 +35,7 @@ Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; 
 
 Flow: prepare unit arrays → allocate up to ten mesh/faction batches → fixed-step spatial/targeting/movement/combat/projectile passes → dirty render sync → throttled overlay. No soldier or projectile has its own Node, processing callback, scene, timer or physics body. Flat ground uses a shared height-query seam; elevation-aware combat is future work.
 
-Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells.
+Target acquisition rejects queries outside the opposing faction’s bounds before scanning cells. Under **CPU and separation**, **Targeting** shows the full acquisition pass. **Local enemy search**, **Long-range pursuit**, and **Pursuit tree build** show its query and lazy index build costs in milliseconds per rendered frame over the same HUD interval. The total also includes acquisition bookkeeping such as target validation and refresh scheduling. The breakdown excludes initial deployment target preparation.
 
 Preset types are seeded. Melee-only picks Circle, Square, Diamond and Pentagon in approximate proportions 60/25/10/5. Render-only and Movement use about 20% ranged. Ranged mode uses the selected ranged percentage, with the remaining soldiers drawn from the melee mix. The added shapes, spacing and stats change the workload from earlier benchmarks.
 

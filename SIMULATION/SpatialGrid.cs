@@ -1,6 +1,7 @@
 // Reused linked-cell index with candidate-bounded local enemy queries.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using BitOperations = System.Numerics.BitOperations;
 using Godot;
 namespace MassiveRts;
@@ -19,8 +20,16 @@ public sealed class SpatialGrid
     private bool pursuitTreesReady;
     private int occupiedFactions;
     public int LimitedQueries { get; private set; }
-    public SpatialGrid(int capacity, float size)
+    private readonly bool profileTargeting;
+    public long LocalSearchTicks { get; private set; }
+    public long PursuitSearchTicks { get; private set; }
+    public long PursuitBuildTicks { get; private set; }
+
+    public void ResetTargetingTimings() => LocalSearchTicks = PursuitSearchTicks = PursuitBuildTicks = 0;
+
+    public SpatialGrid(int capacity, float size, bool profileTargeting = false)
     {
+        this.profileTargeting = profileTargeting;
         next = new int[capacity];
         occupied = new int[capacity];
         cellSize = size;
@@ -89,6 +98,15 @@ public sealed class SpatialGrid
     }
     // =========================================================
     public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1)
+    {
+        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent);
+        long start = Stopwatch.GetTimestamp();
+        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent);
+        LocalSearchTicks += Stopwatch.GetTimestamp() - start;
+        return found;
+    }
+
+    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
@@ -170,10 +188,12 @@ public sealed class SpatialGrid
     }
 
     // Long-range queries share a tree built once per tick, only when needed.
-    public int FindPursuitEnemy(UnitState units, int id, int previous)
+    public int FindPursuitEnemy(UnitState units, int id, int previous, bool duringBattle = true)
     {
         int enemies = EnemiesOf(units.Faction[id]);
         if (enemies == 0) return -1;
+        bool measure = profileTargeting && duringBattle;
+        long start = measure ? Stopwatch.GetTimestamp() : 0;
         if (!pursuitTreesReady)
         {
             foreach (OccupiedCellTree tree in pursuitTrees) tree.Clear();
@@ -187,6 +207,12 @@ public sealed class SpatialGrid
                 pursuitTrees[entry.Key.Z].Add(entry.Key.X, entry.Key.Y, entry.Value);
             foreach (OccupiedCellTree tree in pursuitTrees) tree.Build();
             pursuitTreesReady = true;
+            if (measure)
+            {
+                long built = Stopwatch.GetTimestamp();
+                PursuitBuildTicks += built - start;
+                start = built;
+            }
         }
         int best = previous;
         for (int mask = enemies; mask != 0; mask &= mask - 1)
@@ -195,6 +221,7 @@ public sealed class SpatialGrid
             int found = pursuitTrees[faction].FindNearest(units, next, id, best);
             if (found >= 0) best = found;
         }
+        if (measure) PursuitSearchTicks += Stopwatch.GetTimestamp() - start;
         return best;
     }
 

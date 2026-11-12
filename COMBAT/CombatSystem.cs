@@ -13,7 +13,7 @@ public static class CombatSystem
     public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
     {
         for (int i = start; i < end; i++)
-            units.Target[i] = grid.FindPursuitEnemy(units, i, -1);
+            units.Target[i] = grid.FindPursuitEnemy(units, i, -1, duringBattle: false);
     }
 
     // =========================================================
