@@ -7,8 +7,12 @@ public partial class BenchmarkPanel : CanvasLayer
 {
     public event Action SpawnRequested, ClearRequested, PauseRequested;
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
+    public event Action<float> CameraRotationChanged;
     public RuntimeUnitCatalog Catalog { private get; set; }
     private readonly CheckButton smoothMotion = new() { Text = "Smooth soldier motion", ButtonPressed = true };
+    private readonly HSlider cameraRotation = new() { MinValue = 0, MaxValue = 360, Step = 1, Value = 45,
+        SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+    private readonly Label cameraRotationValue = new() { Text = "45° (original diagonal)" };
     public bool SmoothMotion => smoothMotion.ButtonPressed;
     private readonly OptionButton separationChoice = new();
     private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
@@ -86,6 +90,16 @@ public partial class BenchmarkPanel : CanvasLayer
         Field(preset, "Preset terrain", TerrainChoice);
         preset.AddChild(TestWall);
         AddButton(preset, "Spawn / Reset selected", () => SpawnRequested?.Invoke());
+
+        var cameraControls = Section(column, "Camera", true, out _);
+        Field(cameraControls, "Rotation (0° = straight, 45° = diagonal)", cameraRotation);
+        cameraControls.AddChild(cameraRotationValue);
+        cameraRotation.ValueChanged += degrees =>
+        {
+            cameraRotationValue.Text = $"{degrees:0}°" + (degrees == 45 ? " (original diagonal)" : "");
+            CameraRotationChanged?.Invoke((float)degrees);
+        };
+        AddButton(cameraControls, "Reset camera rotation (45°)", () => cameraRotation.Value = 45);
 
         var combat = Section(column, "Live combat", false, out _);
         Field(combat, "Ranged fire-rate multiplier", FireRate);

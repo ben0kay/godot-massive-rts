@@ -110,3 +110,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — BENCH0: Added live targeting timings for local enemy searches, long-range pursuit queries and lazy pursuit tree builds. Awaiting owner profiling in Godot.
 
 - 2026-11-12 — BENCH0: Added a live toggle to halve scheduled long-range refresh frequency for living targets while preserving local search and lost-target replacement cadence. Awaiting owner profiling.
+
+- **2026-11-12 | Benchmark camera yaw control | Source implemented; awaiting owner visual validation.** Added a live 0–360° rotation slider and 45° reset in the left Camera section. 0° aligns the view with battlefield axes, 45° matches the previous diagonal, and WASD/arrow pan axes follow the chosen angle without changing pitch/zoom or simulating new work.

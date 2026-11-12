@@ -92,6 +92,7 @@ public partial class BenchmarkArena : Node3D
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         panel = new BenchmarkPanel { Catalog = catalog }; AddChild(panel);
+        panel.CameraRotationChanged += camera.SetYawDegrees;
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
         Config.RouteSectorSize = float.IsFinite(Config.RouteSectorSize) ? Mathf.Clamp(Config.RouteSectorSize, 4f, 32f) : 12f;
         painter = new DeploymentPainter

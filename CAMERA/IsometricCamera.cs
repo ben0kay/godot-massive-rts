@@ -1,4 +1,4 @@
-// Smooth ground-plane pan and wheel zoom for the benchmark's orthographic camera.
+// Orthographic camera with adjustable battlefield yaw, screen-relative pan and wheel zoom.
 using Godot;
 namespace MassiveRts;
 
@@ -7,9 +7,29 @@ public partial class IsometricCamera : Camera3D
     private Vector3 focus = Vector3.Zero;
     private Vector3 velocity;
     private float targetSize = 180;
+    private float yawDegrees = 45f;
+    private Vector3 screenRight, screenBack, orbitOffset;
+
     public override void _Ready()
     {
-        Projection = ProjectionType.Orthogonal; Size = targetSize; Far = 6000; Reposition();
+        Projection = ProjectionType.Orthogonal; Size = targetSize; Far = 6000;
+        SetYawDegrees(yawDegrees);
+    }
+
+    // =========================================================
+    // 0° looks along the world Z axis, while 45° reproduces the original diagonal.
+    // Recalculate pan axes only when the user changes camera rotation.
+    public void SetYawDegrees(float degrees)
+    {
+        if (!float.IsFinite(degrees)) return;
+        yawDegrees = Mathf.PosMod(degrees, 360f);
+        float radians = Mathf.DegToRad(yawDegrees);
+        float sine = Mathf.Sin(radians), cosine = Mathf.Cos(radians);
+        screenRight = new Vector3(cosine, 0f, -sine);
+        screenBack = new Vector3(sine, 0f, cosine);
+        // Original offset was (700, 850, 700); preserve radius and viewing pitch.
+        orbitOffset = screenBack * 989.9495f + Vector3.Up * 850f;
+        Reposition();
     }
     // =========================================================
     public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, 1800); }
@@ -27,10 +47,9 @@ public partial class IsometricCamera : Camera3D
         float dt = (float)delta;
         Vector2 input = new((Input.IsPhysicalKeyPressed(Key.D) || Input.IsPhysicalKeyPressed(Key.Right) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) || Input.IsPhysicalKeyPressed(Key.Left) ? 1 : 0),
             (Input.IsPhysicalKeyPressed(Key.S) || Input.IsPhysicalKeyPressed(Key.Down) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) || Input.IsPhysicalKeyPressed(Key.Up) ? 1 : 0));
-        Vector3 right = new Vector3(1, 0, -1).Normalized(), back = new Vector3(1, 0, 1).Normalized();
-        Vector3 desired = (right * input.X + back * input.Y).LimitLength() * Size;
+        Vector3 desired = (screenRight * input.X + screenBack * input.Y).LimitLength() * Size;
         velocity = velocity.Lerp(desired, 1 - Mathf.Exp(-10 * dt)); focus += velocity * dt;
         Size = Mathf.Lerp(Size, targetSize, 1 - Mathf.Exp(-10 * dt)); Reposition();
     }
-    private void Reposition() { Position = focus + new Vector3(700, 850, 700); LookAt(focus, Vector3.Up); }
+    private void Reposition() { Position = focus + orbitOffset; LookAt(focus, Vector3.Up); }
 }
