@@ -1,12 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://b3w6comq3c5cg"]
 
-[ext_resource type="Script" path="res://BENCHMARK/BenchmarkArena.cs" id="1"]
-
+[ext_resource type="Script" uid="uid://bl8xldjabp3sd" path="res://BENCHMARK/BenchmarkArena.cs" id="1"]
 [ext_resource type="Resource" path="res://BENCHMARK/CONFIG/DefaultBenchmark.tres" id="2"]
 
-[ext_resource type="Resource" path="res://UNITS/CATALOG/DefaultUnitCatalog.tres" id="3"]
-
-[node name="BenchmarkArena" type="Node3D"]
+[node name="BenchmarkArena" type="Node3D" unique_id=1163532606]
 script = ExtResource("1")
 Config = ExtResource("2")
-SoldierCatalog = ExtResource("3")

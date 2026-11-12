@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://yhmhb64eambp"]
 
-[ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -11,20 +11,16 @@ Shape = 5
 Width = 1.6
 Height = 0.825
 SizeMultiplier = 2.0
-Health = 600.0
 Speed = 2.2
+Health = 600.0
+Armour = 0.2
+ChargeResistance = 2.4
 Damage = 34.0
 Interval = 1.65
 Reach = 2.3
-Armour = 0.2
-Style = 0
 CleaveEnabled = true
-CleaveAngleDegrees = 100.0
-CleaveSecondaryFraction = 0.65
-CleaveMaxAdditionalTargets = 2
+CleaveSecondaryFraction = 0.8
+CleaveMaxAdditionalTargets = 4
 ShockwaveEveryAttacks = 5
-ShockwaveBaseRadius = 4.0
 ShockwaveDamage = 25.0
 ShockwaveOuterDamage = 15.0
-ShockwaveRespectsCover = true
-ChargeResistance = 2.4

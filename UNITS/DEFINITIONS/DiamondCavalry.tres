@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://b5gkj5c5mcwjk"]
 
-[ext_resource type="Script" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -17,9 +17,7 @@ AccelerationSecondsOverride = 3.0
 Damage = 14.0
 Interval = 0.8
 Reach = 1.9
-Armour = 0.0
-Style = 0
-SizeMultiplier = 1.25
-ChargeResistance = 0.35
+SizeMultiplier = 1.35
 TrampleEnabled = true
 TrampleDamageMultiplier = 1.0
+ChargeResistance = 0.35

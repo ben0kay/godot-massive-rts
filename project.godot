@@ -28,6 +28,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="godot-massive-rts"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/unit_editor/plugin.cfg")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
