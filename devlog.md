@@ -126,3 +126,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-12 | Open RTS theme / FRONT1 campaign hierarchy | Design documented only.** Updated `endgoal.md` to a futuristic geometric machine-swarm theme with Carbon as the proposed first resource, and reserved a hand-authored Open RTS Level 001 separate from Preset Battles Level 001. Added `UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md` with a Codex-ready menu/catalogue implementation plan. No gameplay/menu code or scenes changed.
 
 - 2026-11-12 — FRONT1: Added catalogue-driven Open RTS and Preset Battles campaign menus and a blank Open RTS Level 001. Preset Battles retains its existing scene and progress IDs.
+
+- 2026-11-12 — FRONT1: Fixed the C# array conversion for the campaign level return shortcut.

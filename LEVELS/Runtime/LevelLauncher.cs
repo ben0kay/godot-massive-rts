@@ -61,7 +61,7 @@ internal static class LevelLauncher
 
         buttons.AddChild(MenuLayout.Label(level.DisplayName));
         var back = UIButtonFactory.Create("Return to Campaign", () => Return(false));
-        back.Shortcut = new Shortcut { Events = InputMap.ActionGetEvents("ui_cancel") };
+        back.Shortcut = new Shortcut { Events = (Godot.Collections.Array)InputMap.ActionGetEvents("ui_cancel") };
         buttons.AddChild(back);
         if (allowTestCompletion)
             buttons.AddChild(UIButtonFactory.Create("Mark Test Level Complete (Dev)", () => Return(true)));
