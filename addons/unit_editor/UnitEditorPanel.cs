@@ -9,16 +9,20 @@ namespace MassiveRts;
 [Tool]
 public partial class UnitEditorPanel : VBoxContainer
 {
-    internal sealed record Draft(string Path, string Hash, UnitDefinition Unit);
-    private sealed record Entry(string Path, string Id, string Name, UnitShape Shape);
+    internal sealed record Draft(string Path, string Hash, Resource Definition);
+    private sealed record Entry(string Path, string Id, string Name, string Kind, bool Defense);
     private const string CatalogPath = "res://UNITS/CATALOG/DefaultUnitCatalog.tres";
+    private const string DefenseCatalogPath = "res://BUILDINGS/CATALOG/DefaultBuildingCatalog.tres";
+    private readonly OptionButton category = new();
+    private bool showDefenses;
+    private HFlowContainer overlays;
     private readonly List<Entry> entries = new();
     private readonly List<Entry> visibleEntries = new();
     private readonly ItemList list = new() { SizeFlagsVertical = SizeFlags.ExpandFill };
-    private readonly LineEdit search = new() { PlaceholderText = "Search units" };
+    private readonly LineEdit search = new() { PlaceholderText = "Search entities" };
     private readonly Label pathLabel = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true };
     private readonly Label status = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
-    private readonly Button save = new() { Text = "Save unit" };
+    private readonly Button save = new() { Text = "Save entity" };
     private readonly Button reload = new() { Text = "Reload" };
     private readonly Button refresh = new() { Text = "Refresh catalogue" };
     private readonly HFlowContainer fields = new() { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -26,19 +30,20 @@ public partial class UnitEditorPanel : VBoxContainer
     private readonly Label summary = new() { AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly List<Func<string>> checks = new();
     private readonly List<Action> refreshFields = new();
-    private readonly ConfirmationDialog confirmReload = new() { Title = "Discard unit changes?", DialogText = "Reload this unit from disk and discard the current draft?" };
+    private readonly ConfirmationDialog confirmReload = new() { Title = "Discard entity changes?", DialogText = "Reload this entity from disk and discard the current draft?" };
     private readonly ConfirmationDialog confirmSwitch = new()
     {
-        Title = "Switch units?",
+        Title = "Switch entities?",
         Exclusive = true,
         DialogHideOnOk = false
     };
     private Draft draft;
-    private string switchTarget;
+    private Action pendingSwitch;
     private bool dirty;
     private float speedScale = 0.8f;
     internal Draft PendingDraft => dirty ? draft : null;
-    private UnitDefinition Unit => draft.Unit;
+    private UnitDefinition Unit => (UnitDefinition)draft.Definition;
+    private BuildingDefinition Defense => (BuildingDefinition)draft.Definition;
 
     internal void Initialize(Draft suspended)
     {
@@ -53,7 +58,17 @@ public partial class UnitEditorPanel : VBoxContainer
         AddChild(split);
         var roster = new VBoxContainer { CustomMinimumSize = new Vector2(215, 0) };
         split.AddChild(roster);
+        category.AddItem("Units");
+        category.AddItem("Defenses");
+        roster.AddChild(category);
         roster.AddChild(search);
+        category.ItemSelected += index =>
+        {
+            bool defense = index == 1;
+            category.Select(showDefenses ? 1 : 0);
+            if (defense != showDefenses)
+                Callable.From(() => RequestSwitch(() => ShowCategory(defense))).CallDeferred();
+        };
         roster.AddChild(list);
 
         var workspace = new HSplitContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -70,7 +85,7 @@ public partial class UnitEditorPanel : VBoxContainer
         workspace.AddChild(previewColumn);
         previewColumn.AddChild(Heading("Combat preview"));
         previewColumn.AddChild(preview);
-        var overlays = new HFlowContainer();
+        overlays = new HFlowContainer();
         previewColumn.AddChild(overlays);
         ToggleOverlay(overlays, "Footprint", value => preview.ShowFootprint = value);
         ToggleOverlay(overlays, "Cleave", value => preview.ShowCleave = value);
@@ -81,19 +96,19 @@ public partial class UnitEditorPanel : VBoxContainer
         AddChild(confirmSwitch);
         confirmSwitch.GetOkButton().Text = "Save and Switch";
         confirmSwitch.AddButton("Discard and Switch", true, "discard");
-        confirmSwitch.Confirmed += () => FinishUnitSwitch(saveDraft: true);
+        confirmSwitch.Confirmed += () => FinishSwitch(saveDraft: true);
         confirmSwitch.CustomAction += action =>
         {
-            if (action == "discard") FinishUnitSwitch(saveDraft: false);
+            if (action == "discard") FinishSwitch(saveDraft: false);
         };
-        confirmSwitch.Canceled += () => switchTarget = null;
+        confirmSwitch.Canceled += () => pendingSwitch = null;
 
         list.ItemSelected += index =>
         {
             if (index < 0 || index >= visibleEntries.Count) return;
             string path = visibleEntries[(int)index].Path;
             // Allow any focused numeric field to commit before checking whether the draft is dirty.
-            Callable.From(() => RequestUnitSwitch(path)).CallDeferred();
+            Callable.From(() => { if (path != draft?.Path) RequestSwitch(() => LoadEntity(path)); }).CallDeferred();
         };
         search.TextChanged += _ => PopulateList();
         refresh.Pressed += RefreshCatalogue;
@@ -102,14 +117,16 @@ public partial class UnitEditorPanel : VBoxContainer
         {
             if (draft == null) return;
             if (dirty) confirmReload.PopupCentered();
-            else LoadUnit(draft.Path);
+            else LoadEntity(draft.Path);
         };
-        confirmReload.Confirmed += () => { if (draft != null) LoadUnit(draft.Path); };
+        confirmReload.Confirmed += () => { if (draft != null) LoadEntity(draft.Path); };
 
         if (suspended != null)
         {
             draft = suspended;
             dirty = true;
+            showDefenses = draft.Definition is BuildingDefinition;
+            category.Select(showDefenses ? 1 : 0);
             BuildForm();
         }
         RefreshCatalogue();
@@ -121,41 +138,73 @@ public partial class UnitEditorPanel : VBoxContainer
         // Populate the list once when restoring a suspended draft.
         if (dirty && entries.Count > 0) return;
         entries.Clear();
-        var catalog = ResourceLoader.Load<UnitCatalog>(CatalogPath, cacheMode: ResourceLoader.CacheMode.Ignore);
+        var catalog = ResourceLoader.Load<UnitCatalog>(CatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
+        var defenses = ResourceLoader.Load<BuildingCatalog>(DefenseCatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
         speedScale = ResourceLoader.Load<SimulationSettings>(SimulationSettings.DefaultPath,
             cacheMode: ResourceLoader.CacheMode.Ignore)?.EffectiveMovementSpeedMultiplier ?? 0.8f;
-        var ids = new HashSet<string>(StringComparer.Ordinal);
         var paths = new HashSet<string>(StringComparer.Ordinal);
+        var ids = new HashSet<(bool Defense, string Id)>();
         int invalid = 0;
-        if (catalog?.Definitions != null)
+
+        void Register(Entry entry)
         {
-            foreach (UnitDefinition unit in catalog.Definitions)
+            if (entry == null || string.IsNullOrWhiteSpace(entry.Id) ||
+                string.IsNullOrEmpty(entry.Path) || !entry.Path.StartsWith("res://", StringComparison.Ordinal) ||
+                !entry.Path.EndsWith(".tres", StringComparison.Ordinal) ||
+                entry.Path.Contains("::", StringComparison.Ordinal) || !FileAccess.FileExists(entry.Path) ||
+                paths.Contains(entry.Path) || !ids.Add((entry.Defense, entry.Id)))
             {
-                if (unit == null || string.IsNullOrWhiteSpace(unit.Id) || !Enum.IsDefined(unit.Shape) ||
-                    !IsUnitPath(unit.ResourcePath) || !FileAccess.FileExists(unit.ResourcePath) ||
-                    ids.Contains(unit.Id) || paths.Contains(unit.ResourcePath))
-                {
-                    invalid++;
-                    continue;
-                }
-                ids.Add(unit.Id);
-                paths.Add(unit.ResourcePath);
-                entries.Add(new Entry(unit.ResourcePath, unit.Id,
-                    string.IsNullOrWhiteSpace(unit.DisplayName) ? unit.Id : unit.DisplayName, unit.Shape));
+                invalid++;
+                return;
             }
+            paths.Add(entry.Path);
+            entries.Add(entry);
         }
-        PopulateList();
-        if (!dirty && entries.Count > 0)
-            LoadUnit(entries.Exists(entry => entry.Path == draft?.Path) ? draft.Path : entries[0].Path);
-        else if (dirty)
+
+        if (catalog?.Definitions != null)
+            foreach (var unit in catalog.Definitions) Register(Describe(unit));
+        if (defenses?.Definitions != null)
+            foreach (var defense in defenses.Definitions) Register(Describe(defense));
+
+        if (!dirty) ShowCategory(showDefenses);
+        else
+        {
+            PopulateList();
             status.Text = "Restored your unsaved draft.";
-        if (entries.Count == 0) status.Text = "No editable units found in the default catalogue.";
-        else if (invalid > 0) status.Text = $"Skipped {invalid} invalid or duplicate catalogue entries.";
+        }
+        if (invalid > 0) status.Text = $"Skipped {invalid} invalid or duplicate catalogue entries.";
     }
 
-    private static bool IsUnitPath(string path) =>
-        path.StartsWith("res://", StringComparison.Ordinal) && path.EndsWith(".tres", StringComparison.Ordinal) &&
-        !path.Contains("::", StringComparison.Ordinal);
+    private static Entry Describe(Resource definition) => definition switch
+    {
+        UnitDefinition unit when Enum.IsDefined(unit.Shape) =>
+            new Entry(unit.ResourcePath, unit.Id, DisplayName(unit.DisplayName, unit.Id), unit.Shape.ToString(), false),
+        BuildingDefinition defense =>
+            new Entry(defense.ResourcePath, defense.Id, DisplayName(defense.DisplayName, defense.Id), "Static defense", true),
+        _ => null
+    };
+
+    private static string DisplayName(string name, string id) => string.IsNullOrWhiteSpace(name) ? id : name;
+
+    private void ShowCategory(bool defense)
+    {
+        var entry = entries.Find(item => item.Defense == defense && item.Path == draft?.Path)
+            ?? entries.Find(item => item.Defense == defense);
+        if (entry != null)
+        {
+            LoadEntity(entry.Path);
+            return;
+        }
+
+        draft = null;
+        dirty = false;
+        showDefenses = defense;
+        category.Select(defense ? 1 : 0);
+        PopulateList();
+        BuildForm();
+        UpdateView();
+        status.Text = "No editable entries found in this catalogue.";
+    }
 
     private void PopulateList()
     {
@@ -164,10 +213,11 @@ public partial class UnitEditorPanel : VBoxContainer
         string filter = search.Text.Trim();
         foreach (Entry entry in entries)
         {
+            if (entry.Defense != showDefenses) continue;
             if (!entry.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
                 !entry.Id.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
-                !entry.Shape.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
-            list.AddItem($"{entry.Shape}  ·  {entry.Name}");
+                !entry.Kind.Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
+            list.AddItem(entry.Defense ? entry.Name : $"{entry.Kind}  ·  {entry.Name}");
             visibleEntries.Add(entry);
         }
         SelectActive();
@@ -181,25 +231,25 @@ public partial class UnitEditorPanel : VBoxContainer
     }
 
     // =========================================================
-    // Keep the roster and form on the same unit until a pending edit is resolved.
-    private void RequestUnitSwitch(string path)
+    // Keep the roster and form on the same entity until a pending edit is resolved.
+    private void RequestSwitch(Action action)
     {
-        if (!IsInsideTree() || path == draft?.Path || confirmSwitch.Visible) return;
+        if (!IsInsideTree() || confirmSwitch.Visible) return;
         if (!dirty)
         {
-            LoadUnit(path);
+            action();
             return;
         }
 
         SelectActive();
-        switchTarget = path;
-        confirmSwitch.DialogText = $"Save your changes to {Unit.DisplayName} before switching units?";
+        pendingSwitch = action;
+        confirmSwitch.DialogText = $"Save your changes to {Describe(draft.Definition)?.Name ?? draft.Path.GetFile()} before switching?";
         confirmSwitch.PopupCentered();
     }
 
-    private void FinishUnitSwitch(bool saveDraft)
+    private void FinishSwitch(bool saveDraft)
     {
-        if (switchTarget == null) return;
+        if (pendingSwitch == null) return;
         if (saveDraft)
         {
             Save();
@@ -210,34 +260,33 @@ public partial class UnitEditorPanel : VBoxContainer
             }
         }
 
-        string path = switchTarget;
-        switchTarget = null;
+        Action action = pendingSwitch;
+        pendingSwitch = null;
         confirmSwitch.Hide();
-        LoadUnit(path);
+        action();
     }
 
-    private void LoadUnit(string path)
+    private void LoadEntity(string path)
     {
         string hash = FileAccess.GetSha256(path);
-        var unit = ResourceLoader.Load<UnitDefinition>(path, cacheMode: ResourceLoader.CacheMode.Ignore);
-        if (unit == null || string.IsNullOrEmpty(hash) || hash != FileAccess.GetSha256(path))
+        Resource definition = ResourceLoader.Load(path, cacheMode: ResourceLoader.CacheMode.Ignore);
+        Entry updated = Describe(definition);
+        if (updated == null || string.IsNullOrEmpty(hash) || hash != FileAccess.GetSha256(path))
         {
-            status.Text = "Could not read a stable copy of the unit. Try reloading.";
+            status.Text = "Could not read a stable copy of the entity. Try reloading.";
             SelectActive();
             return;
         }
-        draft = new Draft(path, hash, unit);
+
+        draft = new Draft(path, hash, definition);
         dirty = false;
         status.Text = "";
         int index = entries.FindIndex(entry => entry.Path == path);
-        string displayName = string.IsNullOrWhiteSpace(unit.DisplayName) ? unit.Id : unit.DisplayName;
-        var updated = new Entry(path, unit.Id, displayName, unit.Shape);
-        if (index >= 0 && entries[index] != updated)
-        {
-            entries[index] = updated;
-            PopulateList();
-        }
-        else SelectActive();
+        if (index >= 0) entries[index] = updated with { Path = path };
+        if (updated.Defense != showDefenses) search.Text = "";
+        showDefenses = updated.Defense;
+        category.Select(showDefenses ? 1 : 0);
+        PopulateList();
         BuildForm();
         UpdateView();
     }
@@ -257,7 +306,7 @@ public partial class UnitEditorPanel : VBoxContainer
             status.Text = "The resource changed on disk. Reload to review the external changes before saving.";
             return;
         }
-        Error result = ResourceSaver.Save(Unit, draft.Path);
+        Error result = ResourceSaver.Save(draft.Definition, draft.Path);
         if (result != Error.Ok)
         {
             status.Text = $"Save failed ({result}). Your draft is still open.";
@@ -266,10 +315,10 @@ public partial class UnitEditorPanel : VBoxContainer
         string path = draft.Path;
         draft = draft with { Hash = FileAccess.GetSha256(path) };
         dirty = false;
-        ResourceLoader.Load<UnitDefinition>(path, cacheMode: ResourceLoader.CacheMode.Replace);
+        ResourceLoader.Load(path, cacheMode: ResourceLoader.CacheMode.Replace);
         EditorInterface.Singleton.GetResourceFilesystem().UpdateFile(path);
-        LoadUnit(path);
-        status.Text = "Unit saved. Restart the running battle to apply the values.";
+        LoadEntity(path);
+        status.Text = "Entity saved. Restart the benchmark scene to apply the values.";
         UpdateView();
     }
 
@@ -285,11 +334,24 @@ public partial class UnitEditorPanel : VBoxContainer
         save.Disabled = !dirty;
         reload.Disabled = draft == null;
         refresh.Disabled = dirty;
-        pathLabel.Text = draft == null ? "Unit Editor" : $"{draft.Path.GetFile()}   ·   {(dirty ? "Unsaved changes" : "Saved")}";
+        pathLabel.Text = draft == null ? "Entity Editor" : $"{draft.Path.GetFile()}   ·   {(dirty ? "Unsaved changes" : "Saved")}";
         pathLabel.TooltipText = draft?.Path ?? "";
-        if (draft == null) return;
+        overlays.Visible = draft?.Definition is UnitDefinition;
+        preview.SetEntity(draft?.Definition);
+        if (draft == null)
+        {
+            summary.Text = "";
+            return;
+        }
         foreach (var update in refreshFields) update();
-        preview.SetUnit(Unit);
+        if (showDefenses)
+        {
+            summary.Text = $"{Defense.Width} × {Defense.Depth} cells";
+            if (Defense.AttacksSoldiers)
+                summary.Text += $"\n{Defense.MinimumRange:0.##}–{Defense.MaximumRange:0.##} u range" +
+                    $"\n{Defense.Damage:0.##} damage · {Defense.ShotsPerSecond:0.##} shots/s";
+            return;
+        }
         float size = UnitOutline.EffectiveSize(Unit);
         float footprint = Enum.IsDefined(Unit.Shape) ? UnitOutline.FromDefinition(Unit, size).Footprint : 0f;
         bool melee = Unit.Style == AttackStyle.Melee;

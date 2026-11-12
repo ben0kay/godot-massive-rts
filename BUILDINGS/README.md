@@ -7,3 +7,5 @@ The default catalog registers `DEFINITIONS/LaserTower001.tres`. Its Inspector se
 The painter keeps up to 64 defenses independently of the wall allowance. Both compile into the existing obstacle index. Towers stay outside soldier targeting and are indestructible. The renderer batches bases, turret heads, barrels and laser pulses. A pulse is visual feedback for a hitscan attack. The simulation resolves at most one shot per tower per tick, and the shared pulse batch has a capacity of 256.
 
 Deployment saves use version 3 with stable building IDs. The loader still accepts version 1, version 2 and legacy soldier arrays. Initial turret orientation is derived from the default heading and subsequent targeting.
+
+Use **Entity Editor → Defenses** to edit registered towers with a footprint preview and the same draft controls as soldier definitions.

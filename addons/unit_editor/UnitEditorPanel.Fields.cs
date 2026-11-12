@@ -28,6 +28,12 @@ public partial class UnitEditorPanel
         checks.Clear();
         refreshFields.Clear();
         represented.Clear();
+        if (draft == null) return;
+        if (draft.Definition is BuildingDefinition)
+        {
+            BuildDefenseForm();
+            return;
+        }
         lastShockwaveCadence = Unit.ShockwaveEveryAttacks > 0 ? Unit.ShockwaveEveryAttacks : 5;
 
         Section("Identity");
@@ -157,6 +163,33 @@ public partial class UnitEditorPanel
             Text = "Edit in Inspector: " + string.Join(", ", unsupported),
             AutowrapMode = TextServer.AutowrapMode.WordSmart
         });
+    }
+
+    // =========================================================
+    // Use the same form controls and validation as the soldier editor.
+    private void BuildDefenseForm()
+    {
+        var defense = Defense;
+        Section("Identity");
+        Row("Stable ID", new LineEdit { Text = defense.Id, Editable = false }, "Used by deployment saves.");
+        TextField(nameof(defense.DisplayName), "Display name", defense.DisplayName, value => defense.DisplayName = value);
+
+        Section("Footprint");
+        Number(nameof(defense.Width), "Width", () => defense.Width, value => defense.Width = (int)value, 1, 16, 1, " cells");
+        Number(nameof(defense.Depth), "Depth", () => defense.Depth, value => defense.Depth = (int)value, 1, 16, 1, " cells");
+
+        AbilitySection("Static defense", nameof(defense.AttacksSoldiers), defense.AttacksSoldiers,
+            value => defense.AttacksSoldiers = value, () => true, () => defense.AttacksSoldiers);
+        Number(nameof(defense.MinimumRange), "Minimum range", () => defense.MinimumRange, value => defense.MinimumRange = value, 0, 100, 0.1, " u");
+        Number(nameof(defense.MaximumRange), "Maximum range", () => defense.MaximumRange, value => defense.MaximumRange = value, 0.1, 100, 0.1, " u");
+        checks.Add(() => defense.MinimumRange <= defense.MaximumRange ? null : "Minimum range cannot exceed maximum range.");
+        Number(nameof(defense.Damage), "Damage", () => defense.Damage, value => defense.Damage = value, 0, 100000, 0.1, "");
+        Number(nameof(defense.ShotsPerSecond), "Fire rate", () => defense.ShotsPerSecond, value => defense.ShotsPerSecond = value, 0.05, 60, 0.05, " shots/s");
+        Number(nameof(defense.TurretDegreesPerSecond), "Turret turn rate", () => defense.TurretDegreesPerSecond,
+            value => defense.TurretDegreesPerSecond = value, 1, 3600, 1, "°/s");
+        Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 2, 0.01, " s");
+        Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
+            value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
     }
 
     private PanelContainer Section(string title)

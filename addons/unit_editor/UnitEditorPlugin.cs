@@ -14,7 +14,7 @@ public partial class UnitEditorPlugin : EditorPlugin
     {
         panel = new UnitEditorPanel
         {
-            Name = "UnitEditorWorkspace",
+            Name = "EntityEditorWorkspace",
             Visible = false,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill
@@ -34,7 +34,7 @@ public partial class UnitEditorPlugin : EditorPlugin
     }
 
     public override bool _HasMainScreen() => true;
-    public override string _GetPluginName() => "Unit Editor";
+    public override string _GetPluginName() => "Entity Editor";
     public override Texture2D _GetPluginIcon() =>
         EditorInterface.Singleton.GetEditorTheme().GetIcon("Animation", "EditorIcons");
 
@@ -45,7 +45,7 @@ public partial class UnitEditorPlugin : EditorPlugin
 
     public override string _GetUnsavedStatus(string forScene) =>
         string.IsNullOrEmpty(forScene) && panel?.PendingDraft != null
-            ? "Save the Unit Editor draft before closing?" : "";
+            ? "Save the Entity Editor draft before closing?" : "";
 
     public override void _SaveExternalData() => panel?.Save();
 }

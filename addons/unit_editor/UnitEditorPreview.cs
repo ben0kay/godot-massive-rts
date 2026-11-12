@@ -13,6 +13,7 @@ public partial class UnitEditorPreview : Control
     private static readonly Color Cleave = new(0.99f, 0.70f, 0.36f, 0.92f);
     private static readonly Color Wave = new(0.73f, 0.62f, 0.92f, 0.9f);
     private UnitDefinition unit;
+    private BuildingDefinition defense;
     public bool ShowFootprint { get; set; } = true;
     public bool ShowCleave { get; set; } = true;
     public bool ShowShockwave { get; set; } = true;
@@ -24,15 +25,21 @@ public partial class UnitEditorPreview : Control
         Resized += QueueRedraw;
     }
 
-    public void SetUnit(UnitDefinition value)
+    public void SetEntity(Resource value)
     {
-        unit = value;
+        unit = value as UnitDefinition;
+        defense = value as BuildingDefinition;
         QueueRedraw();
     }
 
     public override void _Draw()
     {
         DrawRect(new Rect2(Vector2.Zero, Size), new Color(0.10f, 0.12f, 0.15f));
+        if (defense != null)
+        {
+            DrawDefense();
+            return;
+        }
         if (unit == null || !Enum.IsDefined(unit.Shape)) return;
 
         float scale = UnitOutline.EffectiveSize(unit);
@@ -76,5 +83,24 @@ public partial class UnitEditorPreview : Control
         DrawLine(tip, tail + wing, Colors.White, 1.5f, true);
         DrawLine(tip, tail - wing, Colors.White, 1.5f, true);
     }
+
+    // =========================================================
+    // Top-down schematic of the footprint and the default turret heading.
+    private void DrawDefense()
+    {
+        var cells = new Vector2(Mathf.Clamp(defense.Width, 1, 16), Mathf.Clamp(defense.Depth, 1, 16));
+        float scale = Mathf.Min(Size.X, Size.Y) * 0.7f / Mathf.Max(cells.X, cells.Y);
+        Vector2 center = Size * 0.5f, extent = cells * scale;
+        var bounds = new Rect2(center - extent * 0.5f, extent);
+        DrawRect(bounds, Body.Darkened(0.3f));
+        DrawRect(bounds, Footprint, false, 1f);
+        float turret = Mathf.Min(extent.X, extent.Y) * 0.26f;
+        DrawRect(new Rect2(center - new Vector2(turret * 0.12f, turret * 1.3f),
+            new Vector2(turret * 0.24f, turret)), Body.Lightened(0.3f));
+        DrawColoredPolygon(new[] { center - new Vector2(0f, turret * 0.7f),
+            center + new Vector2(turret * 0.6f, turret * 0.5f),
+            center + new Vector2(-turret * 0.6f, turret * 0.5f) }, Body);
+    }
+
 }
 #endif

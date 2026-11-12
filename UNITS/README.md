@@ -39,6 +39,6 @@ The catalogue fits each circular collision footprint around the scaled mesh outl
 
 ## Tuning units
 
-Edit the existing definition in the Inspector or enable the [full-screen Unit Editor](../addons/unit_editor/README.md). UNIT2 exposes the cleave target cap, ordinary melee facing angle and shockwave outer damage. The editor writes the selected unit resource and keeps its stable ID read-only.
+Edit the existing definition in the Inspector or enable the [full-screen Entity Editor](../addons/unit_editor/README.md). UNIT2 exposes the cleave target cap, ordinary melee facing angle and shockwave outer damage. The editor writes the selected unit resource and keeps its stable ID read-only.
 
 Heavy Artillery uses a 1.92-unit-wide, 0.99-unit-high chevron body, 20% larger in both dimensions than the default Pentagon Elite. Its barrel extends the circular footprint to 1.152 units. The unit resource sets the 12-unit minimum range, 70-unit maximum range, 80 centre damage, and recoil. The shared Artillery Shell resource sets the arc, blast radius, and edge damage fraction. Existing benchmark preset rosters stay fixed for comparisons. Use the deployment painter to add Heavy Artillery.

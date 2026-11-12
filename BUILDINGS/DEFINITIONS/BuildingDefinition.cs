@@ -3,6 +3,7 @@ using Godot;
 
 namespace MassiveRts;
 
+[Tool]
 [GlobalClass]
 public partial class BuildingDefinition : Resource
 {

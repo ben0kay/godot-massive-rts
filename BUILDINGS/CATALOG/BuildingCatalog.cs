@@ -5,6 +5,7 @@ using Godot;
 
 namespace MassiveRts;
 
+[Tool]
 [GlobalClass]
 public partial class BuildingCatalog : Resource
 {
