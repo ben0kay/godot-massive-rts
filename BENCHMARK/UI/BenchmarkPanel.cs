@@ -22,6 +22,8 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly CheckButton rangedTargetVariety = new() { Text = "Ranged target variety", ButtonPressed = true };
     private readonly CheckButton slowPursuitRefresh = new() { Text = "Slower long-range retargeting", ButtonPressed = true };
     public bool SlowPursuitRefresh => slowPursuitRefresh.ButtonPressed;
+    private readonly CheckButton prunePursuitCells = new() { Text = "Prune pursuit cells", ButtonPressed = true };
+    public bool PrunePursuitCells => prunePursuitCells.ButtonPressed;
     public bool RangedTargetVariety => rangedTargetVariety.ButtonPressed;
     public bool MeleeSidestep => meleeSidestep.ButtonPressed;
     public bool MeleeHold => meleeHold.ButtonPressed;
@@ -116,6 +118,7 @@ public partial class BenchmarkPanel : CanvasLayer
         Field(combat, "Ranged fire-rate multiplier", FireRate);
         combat.AddChild(rangedTargetVariety);
         combat.AddChild(slowPursuitRefresh);
+        combat.AddChild(prunePursuitCells);
         var separation = Section(column, "Live separation", false, out _);
         separationChoice.AddItem("Off", (int)SeparationMode.Off);
         separationChoice.AddItem("Normal", (int)SeparationMode.Normal);

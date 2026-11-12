@@ -128,3 +128,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — FRONT1: Added catalogue-driven Open RTS and Preset Battles campaign menus and a blank Open RTS Level 001. Preset Battles retains its existing scene and progress IDs.
 
 - 2026-11-12 — FRONT1: Fixed the C# array conversion for the campaign level return shortcut.
+
+- 2026-11-12 — Pursuit: Added conservative occupied-cell pruning and a live benchmark comparison toggle. Documented follow-up diagnostics and conditional shared replacements.

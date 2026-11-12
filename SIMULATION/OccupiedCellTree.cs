@@ -72,24 +72,38 @@ internal sealed class OccupiedCellTree
         return index;
     }
 
-    public int FindNearest(UnitState units, int[] next, int seeker, int previous)
+    public int FindNearest(UnitState units, int[] next, int seeker, int previous, bool pruneCells)
     {
         if (nodes.Count == 0) return -1;
         Vector3 origin = units.Position[seeker];
         int best = previous >= 0 && units.Health[previous] > 0 ? previous : -1;
         float bestDistance = best >= 0 ? origin.DistanceSquaredTo(units.Position[best]) : float.PositiveInfinity;
-        Search(0, units, next, origin, ref best, ref bestDistance);
+        Search(0, units, next, origin, pruneCells, ref best, ref bestDistance);
         return best;
     }
 
-    private static float Bound(Node node, Vector3 origin)
+    private static float Bound(Node node, Vector3 origin) => Bound(node.Min, node.Max, origin);
+
+    private static float Bound(Vector2 min, Vector2 max, Vector3 origin)
     {
-        float dx = Mathf.Max(0, Mathf.Max(node.Min.X - origin.X, origin.X - node.Max.X));
-        float dz = Mathf.Max(0, Mathf.Max(node.Min.Y - origin.Z, origin.Z - node.Max.Y));
+        float dx = Mathf.Max(0, Mathf.Max(min.X - origin.X, origin.X - max.X));
+        float dz = Mathf.Max(0, Mathf.Max(min.Y - origin.Z, origin.Z - max.Y));
         return dx * dx + dz * dz;
     }
 
-    private void Search(int index, UnitState units, int[] next, Vector3 origin, ref int best, ref float bestDistance)
+    // =========================================================
+    // XZ distance to the padded cell is a lower bound on every soldier's 3D distance.
+    private float CellBound(CellEntry cell, Vector3 origin)
+    {
+        Vector2 min = new(cell.X * cellSize, cell.Z * cellSize);
+        Vector2 max = new((cell.X + 1f) * cellSize, (cell.Z + 1f) * cellSize);
+        // Use an upper bound on the node's rounding margin without a square root.
+        Vector2 extent = min.Abs().Max(max.Abs());
+        Vector2 margin = Vector2.One * (0.001f + (extent.X + extent.Y) * 0.000001f);
+        return Bound(min - margin, max + margin, origin);
+    }
+
+    private void Search(int index, UnitState units, int[] next, Vector3 origin, bool pruneCells, ref int best, ref float bestDistance)
     {
         Node node = nodes[index];
         if (Bound(node, origin) >= bestDistance) return;
@@ -97,20 +111,24 @@ internal sealed class OccupiedCellTree
         {
             int near = node.Left, far = node.Right;
             if (Bound(nodes[far], origin) < Bound(nodes[near], origin)) (near, far) = (far, near);
-            Search(near, units, next, origin, ref best, ref bestDistance);
-            Search(far, units, next, origin, ref best, ref bestDistance);
+            Search(near, units, next, origin, pruneCells, ref best, ref bestDistance);
+            Search(far, units, next, origin, pruneCells, ref best, ref bestDistance);
             return;
         }
 
         for (int i = node.Start; i < node.End; i++)
-        for (int id = cells[i].Head; id >= 0; id = next[id])
         {
-            if (units.Health[id] <= 0) continue;
-            float distance = origin.DistanceSquaredTo(units.Position[id]);
-            if (distance >= bestDistance) continue;
-            best = id;
-            bestDistance = distance;
-            if (distance == 0) return;
+            CellEntry cell = cells[i];
+            if (pruneCells && CellBound(cell, origin) >= bestDistance) continue;
+            for (int id = cell.Head; id >= 0; id = next[id])
+            {
+                if (units.Health[id] <= 0) continue;
+                float distance = origin.DistanceSquaredTo(units.Position[id]);
+                if (distance >= bestDistance) continue;
+                best = id;
+                bestDistance = distance;
+                if (distance == 0) return;
+            }
         }
     }
 }

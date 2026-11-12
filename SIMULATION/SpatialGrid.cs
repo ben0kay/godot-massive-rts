@@ -19,6 +19,7 @@ public sealed class SpatialGrid
     private readonly OccupiedCellTree[] pursuitTrees;
     private bool pursuitTreesReady;
     private int occupiedFactions;
+    public bool PrunePursuitCells { get; set; } = true;
     public int LimitedQueries { get; private set; }
     private readonly bool profileTargeting;
     public long LocalSearchTicks { get; private set; }
@@ -229,7 +230,7 @@ public sealed class SpatialGrid
         for (int mask = enemies; mask != 0; mask &= mask - 1)
         {
             int faction = BitOperations.TrailingZeroCount(mask);
-            int found = pursuitTrees[faction].FindNearest(units, next, id, best);
+            int found = pursuitTrees[faction].FindNearest(units, next, id, best, PrunePursuitCells);
             if (found >= 0) best = found;
         }
         if (measure) PursuitSearchTicks += Stopwatch.GetTimestamp() - start;

@@ -79,3 +79,19 @@ Claude also proposed a per-tick CSV and deeper counters in `OccupiedCellTree.Sea
 The current tree prunes nodes by their bounds. Once a leaf passes that test, its loop walks the soldiers in each occupied cell. Claude proposed skipping a cell when a conservative lower bound on its distance is at least the current best squared distance. Check that the bound covers the positions the query actually reads, uses the same distance metric, and preserves the existing equal-distance rule. Compare target IDs against the original search before measuring CPU time. The added bounds check is worthwhile only if it avoids enough soldier checks.
 
 Claude described a Python replica using synthetic opposing blocks with 4,550 soldiers per side and 600 seekers. The message cut off before the results, so there is no reported speedup from that replica. The query split, deeper counters, and cell pruning are proposals.
+
+### Additional pursuit diagnostics
+
+- Count target changes per query reason, distinguishing live refreshes that keep their incumbent from those that switch. Track within-local-range and slow-refresh gate skips separately, units with no living target at the start of acquisition, deaths per tick, and ticks that consume all 128 extra replacements.
+- Record maximum and p95 soldiers examined per query, split by reason. Use cell and soldier counts to distinguish avoidable scans from genuinely dense cells. The suggested 40% wasted-soldier share is a heuristic. The proposed 15–30 µs per query is an estimate, with no measured per-reason timings yet.
+- For a diagnostic run, temporarily reduce `ExtraPursuitQueriesPerTick` from 128 to 0 and compare pursuit ms and query counts. This changes replacement timing and can change the battle, so keep it separate from the cell-pruning comparison.
+
+### Implemented cell-pruning comparison
+
+**Live combat → Prune pursuit cells** defaults to on and can be changed mid-battle. Each visited leaf compares the padded XZ bounds of each cell with the best squared distance so far. If even the closest point in the cell cannot beat the incumbent, the search skips that cell's soldier list. Cell order and strict closer-than tie handling are preserved. The checkbox is independent of the slower retargeting toggle.
+
+For comparison, start the same seeded deployment twice and keep refresh cadence fixed. Compare **Long-range pursuit** over the same simulation tick window and check per-tick target hashes when available. Compare equivalent ticks per rendered frame when using the current HUD's per-frame CPU figures. No in-game speedup or replay match has been measured.
+
+### Conditional proposal — share replacements for the same dead target
+
+If replacement queries dominate, consider caching one replacement per dead target and tick. The first eligible orphan queries normally, and later orphans whose previous target is the same can reuse the result if it is still alive. Keep local acquisition first. Because the shared replacement can change who soldiers pursue, compare the median and p95 extra distance against each orphan's own nearest result. Roughly one cell is a proposed tolerance. Leave this pending until the per-reason measurements justify it.

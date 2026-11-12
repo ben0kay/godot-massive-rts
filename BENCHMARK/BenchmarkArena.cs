@@ -272,6 +272,7 @@ public partial class BenchmarkArena : Node3D
             if (grid != null && preparedTargets < targetCount)
             {
                 int end = Math.Min(targetCount, preparedTargets + InitialTargetsPerFrame);
+                grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.PrepareTargets(units, grid, preparedTargets, end);
                 preparedTargets = end;
                 panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {targetCount:N0}";
@@ -371,6 +372,7 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
             start = Stamp();
+            grid.PrunePursuitCells = panel.PrunePursuitCells;
             CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh);
             targetingMs += Elapsed(start);
             start = Stamp();
