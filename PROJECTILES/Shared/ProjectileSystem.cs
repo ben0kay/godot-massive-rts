@@ -1,4 +1,4 @@
-// Fixed-capacity projectile pool with shallow arcs, swept hits and packed removal.
+// Fixed-capacity projectile pool with swept arrow and explosive shell impacts.
 using Godot;
 
 namespace MassiveRts;
@@ -33,7 +33,14 @@ public sealed class ProjectileSystem
         ProjectileFlight flight = catalog.Flight(type.ProjectileType);
         int i = Count++;
         origin[i] = Position[i] = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
-        Vector3 aim = units.Position[victim] + Vector3.Up * (units.Catalog[units.Type[victim]].Height * 0.5f);
+        if (type.Outline.IsChevron)
+        {
+            Vector2 heading = units.Facing[shooter];
+            origin[i] = Position[i] = units.Position[shooter] +
+                new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
+        }
+        Vector3 aim = units.Position[victim];
+        if (flight.ExplosionRadius <= 0f) aim.Y += units.Catalog[units.Type[victim]].Height * 0.5f;
         Vector3 path = aim - origin[i];
         displacement[i] = path;
         float distance = path.Length();
@@ -48,7 +55,7 @@ public sealed class ProjectileSystem
         Dirty = true;
     }
 
-    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding, ObstacleField obstacles = null)
+    public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding, ObstacleField obstacles = null, ShockwaveRenderer rings = null)
     {
         if (Count == 0) return;
         Dirty = true;
@@ -60,21 +67,65 @@ public sealed class ProjectileSystem
             float t = elapsed[i] / duration[i];
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
-            float wallHit = float.PositiveInfinity;
-            bool blocked = obstacles != null && catalog.Flight(Type[i]).BlocksOnObstacles &&
-                obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
-            int victim = wallHit > 0f
-                ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, wallHit)
-                : -1;
-            if (victim >= 0) units.Damage(victim, damage[i]);
-            else if (!blocked && elapsed[i] < endTime)
+            ProjectileFlight flight = catalog.Flight(Type[i]);
+            if (flight.ExplosionRadius > 0f)
             {
-                Position[i] = next;
-                Direction[i] = displacement[i] + Vector3.Up * (4f * arc[i] * (1f - 2f * t));
+                if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment))
+                {
+                    Remove(i);
+                    continue;
+                }
+            }
+            else
+            {
+                float wallHit = float.PositiveInfinity;
+                bool blocked = obstacles != null && flight.BlocksOnObstacles &&
+                    obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
+                int victim = wallHit > 0f
+                    ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out _, wallHit)
+                    : -1;
+                if (victim >= 0 || blocked)
+                {
+                    if (victim >= 0) units.Damage(victim, damage[i]);
+                    Remove(i);
+                    continue;
+                }
+            }
+            if (elapsed[i] >= endTime)
+            {
+                Remove(i);
                 continue;
             }
-            Remove(i);
+            Position[i] = next;
+            Direction[i] = displacement[i] + Vector3.Up * (4f * arc[i] * (1f - 2f * t));
         }
+    }
+
+    // =========================================================
+    // Resolve the first contact before querying the explosion radius.
+    private bool ImpactShell(int index, UnitState units, SpatialGrid grid, BenchmarkConfig config,
+        float movementPadding, ObstacleField obstacles, ShockwaveRenderer rings, ProjectileFlight flight, Vector3 segment)
+    {
+        Vector3 from = Position[index];
+        var terrain = units.Grounding?.Field;
+        float hit = flight.BlocksOnObstacles
+            ? obstacles?.AirborneHit(from, segment, config.ObstacleHeight) ?? float.PositiveInfinity
+            : float.PositiveInfinity;
+        float groundHit = terrain != null
+            ? terrain.SurfaceHit(from, segment, Mathf.Min(hit, 1f))
+            : (from.Y + segment.Y <= 0f && segment.Y < 0f ? Mathf.Clamp(-from.Y / segment.Y, 0f, 1f) : float.PositiveInfinity);
+        hit = Mathf.Min(hit, groundHit);
+        grid.FirstProjectileHit(units, sourceFaction[index], from, segment, config.ProjectileHitRadius,
+            movementPadding, out float firstHit, hit);
+        hit = firstHit;
+        // Completing the flight lands at the recorded ground aim point. Expiring in flight does not explode.
+        if (hit > 1f && elapsed[index] < duration[index]) return false;
+        Vector3 impact = from + segment * Mathf.Min(hit, 1f);
+        AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
+            damage[index], flight.ExplosionEdgeFraction, movementPadding);
+        impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
+        rings?.Emit(impact, flight.ExplosionRadius);
+        return true;
     }
 
     private void Remove(int index)

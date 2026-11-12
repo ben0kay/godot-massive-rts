@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron }
 public enum AttackStyle { Melee, Ranged }
 
 [Tool]
@@ -63,6 +63,7 @@ public partial class UnitDefinition : Resource
 
     [ExportGroup("Ranged")]
     [Export] public ProjectileDefinition Projectile { get; set; }
+    [Export(PropertyHint.Range, "0,100,0.1,or_greater,suffix:u")] public float MinimumFireRange { get; set; }
 
     [ExportGroup("Ranged recoil")]
     [Export] public bool RangedRecoilEnabled { get; set; }

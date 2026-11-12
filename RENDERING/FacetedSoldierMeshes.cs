@@ -24,8 +24,7 @@ public static class FacetedSoldierMeshes
         {
             ref readonly UnitStats type = ref catalog[i];
             UnitOutline outline = type.Outline;
-            meshes[i] = CreateBeveledPrism(outline.Sides, outline.RadiusX, outline.RadiusZ,
-                type.Height, outline.Rotation, material);
+            meshes[i] = CreateUnitMesh(outline, type.Height, material);
         }
         return meshes;
     }
@@ -33,14 +32,21 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // A narrow inset top ring creates a single, lightly shaded bevel around every silhouette.
     // The shoulders retain the original outer footprint, and the bottoms remain at -height/2.
-    private static ArrayMesh CreateBeveledPrism(int sides, float radiusX, float radiusZ,
-        float height, float rotation, Material material)
+    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
 
-        AppendPrism(surface, sides, radiusX, radiusZ, height, rotation, Vector3.Zero, Colors.White);
+        AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
+            Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null);
+        if (outline.IsChevron)
+        {
+            float length = outline.BarrelFront - outline.BarrelBack;
+            float midpoint = (outline.BarrelFront + outline.BarrelBack) * 0.5f;
+            AppendBeveledRectangle(surface, new Vector3(0f, height * 0.32f, -midpoint),
+                new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f));
+        }
         return surface.Commit();
     }
 
@@ -52,7 +58,7 @@ public static class FacetedSoldierMeshes
     }
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
-        float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f)
+        float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f, UnitOutline? chevron = null)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -68,11 +74,19 @@ public static class FacetedSoldierMeshes
         var shoulder = new Vector3[sides];
         var bottom = new Vector3[sides];
 
+        // This point sees all six chevron edges, so the concave cap can use the same triangle fan.
+        Vector3 cap = chevron.HasValue ? new Vector3(0f, 0f, -radiusZ * 0.44f) : Vector3.Zero;
         for (int i = 0; i < sides; i++)
         {
             float angle = rotation + i * Mathf.Tau / sides;
             float x = Mathf.Cos(angle) * radiusX, z = Mathf.Sin(angle) * radiusZ;
-            top[i] = center + new Vector3(x * (1f - insetX), half, z * (1f - insetZ));
+            if (chevron.HasValue)
+            {
+                Vector2 vertex = chevron.Value.Vertex(i);
+                x = vertex.X;
+                z = vertex.Y;
+            }
+            top[i] = center + new Vector3(Mathf.Lerp(x, cap.X, insetX), half, Mathf.Lerp(z, cap.Z, insetZ));
             shoulder[i] = center + new Vector3(x, half - bevelRise, z);
             bottom[i] = center + new Vector3(x, -half, z);
         }
@@ -83,8 +97,8 @@ public static class FacetedSoldierMeshes
             Vector3 edge = shoulder[next] - shoulder[i];
             Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
 
-            AddTriangle(surface, center + new Vector3(0, half, 0), top[next], top[i], Vector3.Up, TopTint * tint);
-            AddTriangle(surface, center + new Vector3(0, -half, 0), bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
+            AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint);
+            AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
                 outward, SideTint(outward) * tint);

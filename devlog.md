@@ -120,3 +120,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — Unit Editor: Clean roster selections open directly, and switching with an unsaved draft now prompts to save, discard, or cancel. Source implemented, awaiting editor validation.
 
 - 2026-11-12 — FRONT0: Fixed the Options menu build errors by initializing both buttons before wiring their callbacks. Updated the Unit Editor split setting to the Godot 4.7 API.
+
+- 2026-11-12 — ART1: Registered Heavy Artillery with a shared chevron-and-barrel mesh, height-aware indirect shells, shockwave radial damage and rings, and visual recoil. Source checks passed, awaiting owner playtest.

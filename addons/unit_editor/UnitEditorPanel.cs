@@ -296,6 +296,11 @@ public partial class UnitEditorPanel : VBoxContainer
         summary.Text = $"Size {size:0.##}×   ·   Footprint {footprint:0.###} u\n" +
             $"Effective speed {Unit.Speed * speedScale:0.###} u/s\n" +
             $"{Unit.Damage:0.##} damage every {Unit.Interval:0.##} s";
+        if (!melee && Unit.Projectile?.ExplodesOnImpact == true)
+        {
+            float edge = Unit.Damage * Unit.Projectile.ExplosionEdgeFraction;
+            summary.Text += $"\n{Unit.Projectile.ExplosionRadius:0.##} u blast radius   ·   {Unit.Damage:0.##} centre / {edge:0.##} outer";
+        }
         if (melee && Unit.CleaveEnabled)
             summary.Text += $"\n{Unit.CleaveAngleDegrees:0.#}° cleave   ·   {Unit.CleaveMaxAdditionalTargets} extras at {Unit.CleaveSecondaryFraction:P0}";
         if (melee && Unit.ShockwaveEveryAttacks > 0)

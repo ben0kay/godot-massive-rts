@@ -68,7 +68,7 @@ public sealed class DeploymentFactory
         if (painted == null)
         {
             // The three historical layouts retain their original spacing/composition.
-            int limit = layout < Deployment.LayeredRanks ? RuntimeUnitCatalog.Hexagon : units.Catalog.Count;
+            int limit = layout < Deployment.LayeredRanks ? RuntimeUnitCatalog.Hexagon : RuntimeUnitCatalog.Chevron;
             float maxRadius = 0f;
             for (int type = 0; type < limit; type++)
                 maxRadius = Mathf.Max(maxRadius, units.Catalog[type].Footprint);

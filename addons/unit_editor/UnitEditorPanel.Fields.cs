@@ -110,9 +110,14 @@ public partial class UnitEditorPanel
 
         var rangedSection = Section("Ranged");
         refreshFields.Add(() => rangedSection.Visible = !IsMelee);
+        Number(nameof(Unit.MinimumFireRange), "Minimum range", () => Unit.MinimumFireRange,
+            v => Unit.MinimumFireRange = v, 0, 100, 0.1, " u", () => !IsMelee,
+            "Ranged attacks cannot fire closer than this distance.", unbounded: true);
+        checks.Add(() => IsMelee || Unit.MinimumFireRange <= Unit.Reach
+            ? null : "Minimum range cannot exceed maximum firing range.");
         represented.Add(nameof(Unit.Projectile));
         var picker = new EditorResourcePicker { BaseType = nameof(ProjectileDefinition), EditedResource = Unit.Projectile };
-        Row("Projectile", picker, "Clear this field to use the default arrow. Open the reference to edit its own resource.");
+        Row("Projectile", picker, "Open the resource to edit flight, impact and explosion settings. Clear to use the default arrow.");
         picker.ResourceChanged += value =>
         {
             if (value != null && (value is not ProjectileDefinition || string.IsNullOrEmpty(value.ResourcePath) ||

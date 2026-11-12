@@ -148,6 +148,30 @@ public sealed class ObstacleField
         return hit;
     }
 
+    // =========================================================
+    // Reuse the XZ tree while clipping the sweep to the walls' shared vertical span.
+    public float AirborneHit(Vector3 from, Vector3 delta, float wallHeight)
+    {
+        float enter = 0f, exit = 1f, first = float.PositiveInfinity;
+        if (Axis(from.Y, delta.Y, 0f, wallHeight, ref enter, ref exit))
+            SearchAirborne(0, Xz(from), Xz(delta), enter, exit, ref first);
+        return first;
+    }
+
+    private void SearchAirborne(int index, Vector2 from, Vector2 delta, float enter, float exit, ref float first)
+    {
+        ref readonly Node node = ref nodes[index];
+        Box box = node.Bounds;
+        if (!Axis(from.X, delta.X, box.Min.X, box.Max.X, ref enter, ref exit) || enter >= first ||
+            !Axis(from.Y, delta.Y, box.Min.Y, box.Max.Y, ref enter, ref exit) || enter >= first) return;
+        if (node.Left < 0) first = enter;
+        else
+        {
+            SearchAirborne(node.Left, from, delta, enter, exit, ref first);
+            SearchAirborne(node.Right, from, delta, enter, exit, ref first);
+        }
+    }
+
     public bool BlocksCorridor(Vector2 from, Vector2 to, float radius)
     {
         long start = BeginSample(Query.Corridor);

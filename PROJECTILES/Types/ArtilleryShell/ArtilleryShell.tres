@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="1"]
+shading_mode = 0
+albedo_color = Color(1, 0.76, 0.36, 1)
+
+[sub_resource type="SphereMesh" id="2"]
+material = SubResource("1")
+radius = 0.24
+height = 0.48
+radial_segments = 8
+rings = 4
+
+[resource]
+script = ExtResource("1")
+ObstacleFire = 1
+VisualMesh = SubResource("2")
+Speed = 34.0
+ArcHeight = 24.0
+ArcHeightPerDistance = 0.55
+ExplodesOnImpact = true
+ExplosionRadius = 7.0
+ExplosionEdgeFraction = 0.3125

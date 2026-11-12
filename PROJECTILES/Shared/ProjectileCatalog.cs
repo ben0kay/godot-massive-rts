@@ -36,7 +36,11 @@ public sealed class ProjectileCatalog
             (float.IsFinite(definition.Speed) && definition.Speed > 0 ? definition.Speed : 45f) * movementScale,
             float.IsFinite(definition.ArcHeight) ? Mathf.Max(0, definition.ArcHeight) : 0f,
             float.IsFinite(definition.ArcHeightPerDistance) ? Mathf.Clamp(definition.ArcHeightPerDistance, 0, 1) : 0f,
-            definition.ObstacleFire, definition.BlocksOnObstacles));
+            definition.ObstacleFire, definition.BlocksOnObstacles,
+            definition.ExplodesOnImpact
+                ? (float.IsFinite(definition.ExplosionRadius) ? Mathf.Clamp(definition.ExplosionRadius, 0.1f, 64f) : 7f)
+                : 0f,
+            float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
         meshes.Add(mesh);
         return index;
     }

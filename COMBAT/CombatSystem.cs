@@ -41,8 +41,21 @@ public static class CombatSystem
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
-                    int rank = rangedVariety && type.Ranged ? RangedRank(i, battleSeed) : 1;
-                    if (rank > 1)
+                    int rank = rangedVariety && type.Ranged && type.MinimumFireRange == 0f ? RangedRank(i, battleSeed) : 1;
+                    if (type.MinimumFireRange > 0f)
+                    {
+                        ObstacleField cover = obstacles != null &&
+                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
+                            ? obstacles : null;
+                        int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, cover,
+                            minimumRange: type.MinimumFireRange);
+                        if (found >= 0)
+                        {
+                            target = found;
+                            distance = units.Position[i].DistanceSquaredTo(units.Position[target]);
+                        }
+                    }
+                    else if (rank > 1)
                     {
                         ObstacleField cover = obstacles != null &&
                             units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
@@ -124,6 +137,8 @@ public static class CombatSystem
             float radius = type.Ranged ? type.Reach :
                 MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
             if (offset.LengthSquared() > radius * radius) continue;
+            if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
+                type.MinimumFireRange * type.MinimumFireRange) continue;
             if (obstacles != null &&
                 (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                 obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
@@ -150,6 +165,16 @@ public static class CombatSystem
             }
             if (type.Ranged)
             {
+                if (type.Outline.IsChevron)
+                {
+                    Vector2 aim = ObstacleField.Xz(offset).Normalized();
+                    if (aim != Vector2.Zero && facing.Dot(aim) < 0.995f)
+                    {
+                        SoldierFacing.Turn(units, i, aim, turnStep);
+                        units.Dirty[i] = true;
+                        continue;
+                    }
+                }
                 // Only recoil when the projectile pool accepted the shot.
                 int before = projectiles.Count;
                 projectiles.Fire(i, target, units);

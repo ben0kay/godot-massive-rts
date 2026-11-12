@@ -47,6 +47,42 @@ public sealed class TerrainHeightField
         return new Vector3(point.X, chunks[chunk][z * Stride + x], point.Y);
     }
 
+    // =========================================================
+    // Along a segment the terrain is linear until a cell edge or triangle diagonal.
+    public float SurfaceHit(Vector3 from, Vector3 delta, float limit)
+    {
+        float x = NextBoundary(from.X, delta.X, out float xStep);
+        float z = NextBoundary(from.Z, delta.Z, out float zStep);
+        float diagonal = NextBoundary(from.X + from.Z, delta.X + delta.Z, out float diagonalStep);
+        float previous = 0f;
+        float above = from.Y - At(from.X, from.Z);
+        if (above <= 0f) return 0f;
+
+        while (previous < limit)
+        {
+            float next = Mathf.Min(limit, Mathf.Min(diagonal, Mathf.Min(x, z)));
+            Vector3 point = from + delta * next;
+            float nextAbove = point.Y - At(point.X, point.Z);
+            if (nextAbove <= 0f) return Mathf.Lerp(previous, next, above / (above - nextAbove));
+            if (x <= next) x += xStep;
+            if (z <= next) z += zStep;
+            if (diagonal <= next) diagonal += diagonalStep;
+            previous = next;
+            above = nextAbove;
+        }
+
+        return float.PositiveInfinity;
+    }
+
+    private static float NextBoundary(float position, float delta, out float step)
+    {
+        step = delta == 0f ? float.PositiveInfinity : Spacing / Mathf.Abs(delta);
+        if (delta == 0f) return step;
+        float scaled = position / Spacing;
+        float boundary = delta > 0f ? Mathf.Floor(scaled) + 1f : Mathf.Ceil(scaled) - 1f;
+        return Mathf.Max(0f, (boundary * Spacing - position) / delta);
+    }
+
     public float At(float x, float z)
     {
         var chunk = ChunkAt(new Vector2(x, z));

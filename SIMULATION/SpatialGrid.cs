@@ -97,16 +97,16 @@ public sealed class SpatialGrid
         }
     }
     // =========================================================
-    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1)
+    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f)
     {
-        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent);
+        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange);
         long start = Stopwatch.GetTimestamp();
-        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent);
+        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange);
         LocalSearchTicks += Stopwatch.GetTimestamp() - start;
         return found;
     }
 
-    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent)
+    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent, float minimumRange)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
@@ -123,21 +123,30 @@ public sealed class SpatialGrid
         Vector2I center = Cell(position);
         int cells = Mathf.CeilToInt(radius / cellSize), examined = 0, best = -1;
         float bestDistance = radius * radius;
+        float minimumSquared = minimumRange * minimumRange;
         bool varied = rank > 1;
         Span<(int Id, float Distance)> ranked = varied ? stackalloc (int, float)[3] : Span<(int, float)>.Empty;
         int rankedCount = 0;
         if (varied && incumbent >= 0)
         {
             float distance = position.DistanceSquaredTo(units.Position[incumbent]);
-            if (distance <= bestDistance && clearSight?.BlocksSight(position, units.Position[incumbent]) != true)
+            if (distance <= bestDistance &&
+                (minimumSquared == 0f || ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(units.Position[incumbent])) >= minimumSquared) &&
+                clearSight?.BlocksSight(position, units.Position[incumbent]) != true)
             {
                 ranked[0] = (incumbent, distance);
                 rankedCount = 1;
             }
         }
         // Search center outwards so dense distant cells cannot consume the entire query first.
-        for (int ring = 0; ring <= cells; ring++)
+        int firstRing = minimumRange > 0f ? Mathf.FloorToInt(minimumRange / (cellSize * 1.414214f)) : 0;
+        for (int ring = firstRing; ring <= cells; ring++)
         {
+            if (minimumRange > 0f && !varied && best >= 0)
+            {
+                float nextDistance = Mathf.Max(0, ring - 1) * cellSize;
+                if (nextDistance * nextDistance >= bestDistance) break;
+            }
             int width = ring * 2 + 1, perimeter = ring == 0 ? 1 : ring * 8;
             int start = (id + tick) % perimeter;
             for (int k = 0; k < perimeter; k++)
@@ -156,6 +165,8 @@ public sealed class SpatialGrid
                     {
                         if (++examined > budget) { LimitedQueries++; return varied ? ChooseRank(ranked, rankedCount, rank) : best; }
                         if (units.Health[other] <= 0f || (varied && other == incumbent)) continue;
+                        if (minimumSquared > 0f && ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(units.Position[other])) < minimumSquared)
+                            continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
                         if (!varied)
                         {
@@ -283,14 +294,14 @@ public sealed class SpatialGrid
     }
 
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
-    public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding, float before = float.PositiveInfinity)
+    public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding, out float fraction, float before = float.PositiveInfinity)
     {
         float padding = Mathf.Max(radius, units.MaxFootprint) + movementPadding;
         Vector3 end = from + segment;
         var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
         var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));
         float lengthSquared = segment.LengthSquared();
-        float earliest = before;
+        fraction = before;
         int hit = -1;
         var candidates = new CandidateCursor(this, min, max, EnemiesOf(sourceFaction));
         while (candidates.MoveNext())
@@ -310,8 +321,8 @@ public sealed class SpatialGrid
                 entry = (projection - Mathf.Sqrt(discriminant)) / lengthSquared;
                 if (entry > 1) continue;
             }
-            if (entry >= earliest) continue;
-            earliest = entry;
+            if (entry >= fraction) continue;
+            fraction = entry;
             hit = id;
             if (entry == 0) return hit;
         }

@@ -48,12 +48,14 @@ public partial class UnitEditorPreview : Control
         Vector2 origin = Size * 0.5f;
         float forward = unit.Shape == UnitShape.Diamond ? 0f : -Mathf.Pi * 0.5f;
         var polygon = new Vector2[outline.Sides];
-        for (int i = 0; i < polygon.Length; i++)
-        {
-            float angle = outline.Rotation + Mathf.Tau * i / polygon.Length;
-            polygon[i] = origin + new Vector2(Mathf.Cos(angle) * outline.RadiusX, Mathf.Sin(angle) * outline.RadiusZ) * pixels;
-        }
+        for (int i = 0; i < polygon.Length; i++) polygon[i] = origin + outline.Vertex(i) * pixels;
         DrawColoredPolygon(polygon, Body);
+        if (outline.IsChevron)
+        {
+            var barrel = new Rect2(origin + new Vector2(-outline.BarrelWidth * 0.5f, -outline.BarrelFront) * pixels,
+                new Vector2(outline.BarrelWidth, outline.BarrelFront - outline.BarrelBack) * pixels);
+            DrawRect(barrel, Body.Lightened(0.15f));
+        }
         if (ShowFootprint) DrawArc(origin, outline.Footprint * pixels, 0f, Mathf.Tau, 64, Footprint, 1f, true);
         if (drawWave) DrawArc(origin, waveRadius * pixels, 0f, Mathf.Tau, 96, Wave, 1.5f, true);
         if (drawCleave)
@@ -65,6 +67,7 @@ public partial class UnitEditorPreview : Control
             DrawLine(origin, origin + Vector2.FromAngle(forward + half) * coneRadius * pixels, Cleave, 1f, true);
         }
 
+        if (outline.IsChevron) return;
         Vector2 heading = Vector2.FromAngle(forward);
         Vector2 tip = origin + heading * outline.Footprint * pixels * 1.16f;
         Vector2 tail = tip - heading * 7f;
