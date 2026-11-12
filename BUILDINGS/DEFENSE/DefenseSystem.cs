@@ -76,7 +76,8 @@ internal sealed class DefenseSystem
             if (tower.Cooldown > 0f || Mathf.Abs(error) > step) continue;
             units.Damage(target, tower.Stats.Damage);
             Vector3 end = units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f);
-            renderer.Fire(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw), end, tower.Faction, tower.Stats.BeamSeconds);
+            renderer.Fire(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw), end, tower.Faction,
+                tower.Stats.BeamSeconds, tower.Yaw);
             tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
         }
     }

@@ -9,3 +9,7 @@ The painter keeps up to 64 defenses independently of the wall allowance. Both co
 Deployment saves use version 3 with stable building IDs. The loader still accepts version 1, version 2 and legacy soldier arrays. Initial turret orientation is derived from the default heading and subsequent targeting.
 
 Use **Entity Editor → Defenses** to edit registered towers with a footprint preview and the same draft controls as soldier definitions.
+
+## DEF1-A — Longer barrel and laser muzzle flash
+
+Laser Tower 001 now has a longer shared box barrel: its tip extends roughly 1.7 world units beyond the front edge of the default 2 × 2-cell base at its forward orientation. The beam starts at that exact tip. Each shot also emits a small white-core/cyan starburst at the muzzle, fading and shrinking over 0.11 seconds. Both the starburst and beam use fixed-capacity MultiMesh batches, with no per-shot nodes. The base footprint, combat targeting, damage, range, firing cadence and soldier obstruction are unchanged. Verify at your normal painter/battle zoom in Godot.
