@@ -8,6 +8,9 @@ public partial class BenchmarkPanel : CanvasLayer
     public event Action SpawnRequested, ClearRequested, PauseRequested;
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
     public event Action<float> CameraRotationChanged;
+    public event Action<bool> GroundShadowsChanged;
+    private readonly CheckButton groundShadows = new() { Text = "Ground shadows", ButtonPressed = true };
+    public bool GroundShadows => groundShadows.ButtonPressed;
     public RuntimeUnitCatalog Catalog { private get; set; }
     private readonly CheckButton smoothMotion = new() { Text = "Smooth soldier motion", ButtonPressed = true };
     private readonly HSlider cameraRotation = new() { MinValue = 0, MaxValue = 360, Step = 1, Value = 45,
@@ -179,6 +182,8 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
         var display = Section(column, "Display and controls", false, out _);
         display.AddChild(smoothMotion);
+        groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
+        display.AddChild(groundShadows);
         performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
         performanceToggle.Toggled += _ => UpdatePanelVisibility();
         display.AddChild(performanceToggle);

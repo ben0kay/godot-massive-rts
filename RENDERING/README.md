@@ -1,6 +1,6 @@
 # RENDERING
 
-`ArmyRenderer.cs` creates up to twenty-one MultiMesh batches (three factions × seven unit types), allocates exact deployment capacities and packs live slots on death. Dirty entries update reusable CPU buffers. Dense changes upload one buffer per affected batch. Sparse changes update individual slots. Projectile drawing lives in [PROJECTILES](../PROJECTILES/README.md). Soldier meshes are shared between factions and authored by `FacetedSoldierMeshes.cs` with brighter top faces and directionally darker sides (baked per-vertex grayscale tints). The existing MultiMesh blue/red/green instance colours multiply those tints; white damage flashes remain visible with darker side facets. Materials remain unshaded, requiring no lights or dynamic shadows; geometry and shading are shared per unit type. Shadows are disabled. Render sync runs on the main thread and is measured separately from simulation. Whole-batch culling and no LOD; no per-soldier nodes. BENCHMARK owns renderer creation/disposal.
+`ArmyRenderer.cs` creates up to twenty-one MultiMesh batches (three factions × seven unit types), allocates exact deployment capacities and packs live slots on death. Dirty entries update reusable CPU buffers. Dense changes upload one buffer per affected batch. Sparse changes update individual slots. Projectile drawing lives in [PROJECTILES](../PROJECTILES/README.md). Soldier meshes are shared between factions and authored by `FacetedSoldierMeshes.cs` with brighter top faces and directionally darker sides (baked per-vertex grayscale tints). The existing MultiMesh blue/red/green instance colours multiply those tints; white damage flashes remain visible with darker side facets. Materials remain unshaded, requiring no lights or dynamic shadows; geometry and shading are shared per unit type. Dynamic shadow casting is disabled. Render sync runs on the main thread and is measured separately from simulation. Whole-batch culling and no LOD; no per-soldier nodes. BENCHMARK owns renderer creation/disposal.
 
 ## FB0 — Future hit-feedback ownership
 
@@ -19,3 +19,7 @@ Circle Infantry bypasses visual yaw interpolation and rotation calculations beca
 Ranged recoil applies a visual-only XZ displacement to the packed MultiMesh transform after normal pose interpolation. An active-ID feedback list marks only recoiling soldiers dirty during recovery. No changes to simulation positions or projectile origins.
 
 Heavy Artillery adds one shared beveled mesh containing the concave chevron and its centered barrel. Both pieces turn and recoil together in the same instance.
+
+## SHADOW1 — Ground shadows
+
+The benchmark draws optional translucent oval shadows beneath soldiers and offset rectangular shadows for walls and defense footprints. Soldier batches share one oval mesh and reuse the army renderer's live slots, dirty updates and interpolated ground positions. Recoil and hit pulses affect the soldier mesh only. Static obstacle shadows are built with the battle layout. **Display and controls → Ground shadows** is enabled by default and stops shadow drawing and soldier shadow uploads when switched off.

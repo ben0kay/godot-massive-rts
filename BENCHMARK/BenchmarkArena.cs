@@ -11,6 +11,7 @@ public partial class BenchmarkArena : Node3D
     private RuntimeUnitCatalog catalog;
     private float projectileLifetime;
     private Mesh[] soldierMeshes;
+    private Mesh soldierShadow;
     private UnitState units;
     private SpatialGrid grid;
     private SeparationSystem separation;
@@ -31,7 +32,7 @@ public partial class BenchmarkArena : Node3D
     private DefenseRenderer defenseRenderer;
     private ObstacleField obstacles;
     private ObstacleNavigation navigation;
-    private MeshInstance3D battleWalls, flatGround;
+    private MeshInstance3D battleWalls, battleObstacleShadows, flatGround;
     private Node3D terrainMeshes;
     private TerrainHeightField terrain;
     private int groundSamples;
@@ -65,6 +66,7 @@ public partial class BenchmarkArena : Node3D
         // Keep the distance cap implied by the authored projectile lifetime.
         projectileLifetime = Config.ProjectileLifetime / movementScale;
         soldierMeshes = FacetedSoldierMeshes.Create(catalog);
+        soldierShadow = GroundShadowMeshes.Soldier();
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
         Config.SpawnPerFrame = Mathf.Clamp(Config.SpawnPerFrame, 100, 10000);
@@ -117,6 +119,13 @@ public partial class BenchmarkArena : Node3D
         panel.DefenseChoice.ItemSelected += index => painter.DefenseType = panel.DefenseChoice.GetItemId((int)index);
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleWalls);
+        battleObstacleShadows = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(battleObstacleShadows);
+        panel.GroundShadowsChanged += enabled =>
+        {
+            battleObstacleShadows.Visible = enabled;
+            armyRenderer?.SetShadowsVisible(enabled);
+        };
         panel.SpawnRequested += Spawn;
         panel.ClearRequested += () => { if (painter.Visible) painter.Clear(); else Clear(); };
         panel.PaintRequested += EnterDeployment;
@@ -151,7 +160,7 @@ public partial class BenchmarkArena : Node3D
         flatGround.Visible = true;
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
-        obstacles = null; navigation = null; battleWalls.Mesh = null;
+        obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
         meleeSteering = null;
         units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         targetingAccumulator = 0; targetingStep = 0;
@@ -224,6 +233,7 @@ public partial class BenchmarkArena : Node3D
         obstacles = field;
         obstacles?.ResetCounters();
         battleWalls.Mesh = mesh;
+        battleObstacleShadows.Mesh = GroundShadowMeshes.Obstacles(field, Config.ObstacleHeight);
     }
     private void UpdateDeploymentStatus() => panel.Status.Text = DeploymentCount();
 
@@ -315,7 +325,7 @@ public partial class BenchmarkArena : Node3D
                 if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
-                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes);
+                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 frameSamples = 0; frameCursor = 0;

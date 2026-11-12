@@ -11,6 +11,11 @@ public partial class ArmyRenderer : Node3D
     private int[][] changedSlots;
     private int[] changeCounts;
     private MultiMesh[] batches;
+    private MultiMeshInstance3D[] shadowBatches;
+    private float[][] shadowBuffers;
+    private Mesh shadowMesh;
+    private bool shadowsEnabled;
+    private const int ShadowStride = 12;
     private int[][] members;
     private int[] slots;
     private int[] counts;
@@ -30,7 +35,7 @@ public partial class ArmyRenderer : Node3D
     public double UploadMilliseconds { get; private set; }
     public int InstanceCount { get; private set; }
     // =========================================================
-    public void Initialize(UnitState state, Mesh[] shapes)
+    public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows)
     {
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
         typeCount = state.Catalog.Count;
@@ -68,8 +73,84 @@ public partial class ArmyRenderer : Node3D
             mm.InstanceCount = capacity; mm.VisibleInstanceCount = 0; batches[b] = mm;
             AddChild(new MultiMeshInstance3D { Multimesh = mm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
+        shadowMesh = sharedShadow;
+        SetShadowsVisible(showShadows);
         Sync();
     }
+    public void SetShadowsVisible(bool visible)
+    {
+        if (shadowsEnabled == visible) return;
+        shadowsEnabled = visible;
+        shadowBatches ??= new MultiMeshInstance3D[batches.Length];
+        shadowBuffers ??= new float[batches.Length][];
+        for (int b = 0; b < batches.Length; b++)
+        {
+            if (batches[b] == null) continue;
+            if (visible)
+            {
+                if (shadowBatches[b] == null)
+                {
+                    int capacity = batches[b].InstanceCount;
+                    var mesh = new MultiMesh
+                    {
+                        TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                        Mesh = shadowMesh, InstanceCount = capacity, VisibleInstanceCount = 0
+                    };
+                    shadowBuffers[b] = new float[capacity * ShadowStride];
+                    shadowBatches[b] = new MultiMeshInstance3D
+                    {
+                        Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+                    };
+                    AddChild(shadowBatches[b]);
+                }
+                for (int slot = 0; slot < counts[b]; slot++)
+                    WriteShadow(b, slot, GroundPose(members[b][slot]));
+                UploadShadows(b);
+            }
+            shadowBatches[b].Visible = visible;
+        }
+    }
+
+    private Vector3 GroundPose(int id) => hasPreviousPose && poseBlend < 1f
+        ? previousPositions[id].Lerp(units.Position[id], poseBlend) : units.Position[id];
+
+    private void WriteShadow(int batch, int slot, Vector3 position)
+    {
+        float[] buffer = shadowBuffers[batch];
+        int offset = slot * ShadowStride;
+        UnitOutline outline = units.Catalog[batch % typeCount].Outline;
+        buffer[offset] = outline.RadiusX * 1.45f;
+        buffer[offset + 5] = 1f;
+        buffer[offset + 10] = outline.RadiusZ * 1.15f;
+        buffer[offset + 3] = position.X + outline.Footprint * 0.45f;
+        buffer[offset + 7] = position.Y + 0.02f;
+        buffer[offset + 11] = position.Z + outline.Footprint * 0.55f;
+    }
+
+    private void UploadShadows(int batch, int changed = SparseUpdateLimit + 1)
+    {
+        MultiMesh mesh = shadowBatches[batch].Multimesh;
+        int visible = counts[batch];
+        float[] buffer = shadowBuffers[batch];
+        if (changed > SparseUpdateLimit)
+        {
+            if (visible > 0) mesh.Buffer = buffer;
+        }
+        else
+        {
+            for (int i = 0; i < changed; i++)
+            {
+                int slot = changedSlots[batch][i];
+                if (slot >= visible) continue;
+                int offset = slot * ShadowStride;
+                Basis basis = Basis.Identity.Scaled(new Vector3(buffer[offset], 1f, buffer[offset + 10]));
+                Vector3 position = new(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
+                mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
+            }
+        }
+        if (mesh.VisibleInstanceCount != visible) mesh.VisibleInstanceCount = visible;
+    }
+
     public void CapturePose()
     {
         previousPositions ??= new Vector3[units.Count];
@@ -102,13 +183,12 @@ public partial class ArmyRenderer : Node3D
     // Stage instance changes in reusable arrays. Only sparse batches need a slot list.
     private void Write(int id, int batch, int slot)
     {
-        Vector3 position = units.Position[id];
+        Vector3 position = GroundPose(id);
+        if (shadowsEnabled) WriteShadow(batch, slot, position);
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
         var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
         byte type = units.Type[id];
-        if (hasPreviousPose && poseBlend < 1f)
-            position = previousPositions[id].Lerp(position, poseBlend);
         // Visual mesh only; the authoritative position and projectile spawn stay unchanged.
         if (units.RangedRecoil != null && units.Catalog[type].RangedRecoil.Distance > 0f)
         {
@@ -187,6 +267,8 @@ public partial class ArmyRenderer : Node3D
             }
         }
         if (mesh.VisibleInstanceCount != visible) mesh.VisibleInstanceCount = visible;
+        if (shadowsEnabled && (changed > 0 || shadowBatches[batch].Multimesh.VisibleInstanceCount != visible))
+            UploadShadows(batch, changed);
         changeCounts[batch] = 0;
     }
 
