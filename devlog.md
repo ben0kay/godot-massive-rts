@@ -136,3 +136,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — SIM60: Defaulted the core simulation to 60 Hz with bounded five-step catch-up. Preserved 30 Hz acquisition and rendered-frame route budgets, scaled separation corrections, and added achieved tick rate to the HUD.
 
 - 2026-11-12 — Entity Editor: Renamed the editor tab and added catalogue-driven Units and Defenses categories with shared draft controls and editable laser tower stats.
+
+- 2026-11-12 — Benchmark: Split pursuit diagnostics by search reason and added F1 side-panel visibility while keeping the compact battle summary on screen.

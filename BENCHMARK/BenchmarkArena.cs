@@ -499,6 +499,17 @@ public partial class BenchmarkArena : Node3D
 
         double achievedRate = hudClock > 0 ? measuredTicks / hudClock : 0;
         double targetingTickToMsPerFrame = 1000.0 / Stopwatch.Frequency / divisor;
+        string PursuitLine(string label, PursuitReason reason, bool showChanges = false)
+        {
+            PursuitSample sample = grid?.PursuitTiming(reason) ?? default;
+            double msPerTick = sample.SearchTicks * 1000.0 / Stopwatch.Frequency / Math.Max(1, measuredTicks);
+            double queriesPerSecond = hudClock > 0 ? sample.Queries / hudClock : 0;
+            string average = sample.Queries == 0 ? "—" : $"{sample.SearchTicks * 1_000_000.0 / Stopwatch.Frequency / sample.Queries:F1} µs/query";
+            string changes = showChanges && sample.Queries > 0
+                ? $" · {(double)sample.ChangedTargets / sample.Queries:P0} changed" : "";
+            return $"{label}\n{queriesPerSecond:N0}/s · {msPerTick:F3} ms/tick\n{average}{changes}\n";
+        }
+
         panel.CpuMetrics.Text =
             $"Simulation rate  {achievedRate:F1} / {1f / Config.TickSeconds:F0} Hz\nSimulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
@@ -507,6 +518,10 @@ public partial class BenchmarkArena : Node3D
             $"  Local enemy search  {(grid?.LocalSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
             $"  Long-range pursuit  {(grid?.PursuitSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
             $"  Pursuit tree build  {(grid?.PursuitBuildTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
+            "\nPursuit search breakdown\n" +
+            PursuitLine("Live refresh", PursuitReason.LiveRefresh, showChanges: true) +
+            PursuitLine("Scheduled acquisition", PursuitReason.ScheduledAcquisition) +
+            PursuitLine("Extra replacement", PursuitReason.ExtraReplacement) + "\n" +
             $"Combat  {combatMs / divisor:F3}\nProjectiles  {projectileMs / divisor:F3}\n\n" +
             $"Query caps  {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops  {projectiles?.Dropped ?? 0:N0}\n" +
             $"Separation pairs / caps  {overlapPairs:N0} / {separationCaps:N0}\n" +

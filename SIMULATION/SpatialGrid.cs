@@ -6,6 +6,10 @@ using BitOperations = System.Numerics.BitOperations;
 using Godot;
 namespace MassiveRts;
 
+public enum PursuitReason { LiveRefresh, ScheduledAcquisition, ExtraReplacement, Preparation }
+
+public readonly record struct PursuitSample(int Queries, long SearchTicks, int ChangedTargets);
+
 public sealed class SpatialGrid
 {
     private readonly Dictionary<Vector3I, int> overflowHeads = new();
@@ -26,7 +30,14 @@ public sealed class SpatialGrid
     public long PursuitSearchTicks { get; private set; }
     public long PursuitBuildTicks { get; private set; }
 
-    public void ResetTargetingTimings() => LocalSearchTicks = PursuitSearchTicks = PursuitBuildTicks = 0;
+    private readonly PursuitSample[] pursuitSamples = new PursuitSample[(int)PursuitReason.Preparation];
+    public PursuitSample PursuitTiming(PursuitReason reason) => pursuitSamples[(int)reason];
+
+    public void ResetTargetingTimings()
+    {
+        LocalSearchTicks = PursuitSearchTicks = PursuitBuildTicks = 0;
+        Array.Clear(pursuitSamples);
+    }
 
     public SpatialGrid(int capacity, float size, bool profileTargeting = false)
     {
@@ -200,11 +211,11 @@ public sealed class SpatialGrid
     }
 
     // Long-range queries share a tree built once per tick, only when needed.
-    public int FindPursuitEnemy(UnitState units, int id, int previous, bool duringBattle = true)
+    public int FindPursuitEnemy(UnitState units, int id, int previous, PursuitReason reason)
     {
         int enemies = EnemiesOf(units.Faction[id]);
         if (enemies == 0) return -1;
-        bool measure = profileTargeting && duringBattle;
+        bool measure = profileTargeting && reason != PursuitReason.Preparation;
         long start = measure ? Stopwatch.GetTimestamp() : 0;
         if (!pursuitTreesReady)
         {
@@ -233,7 +244,14 @@ public sealed class SpatialGrid
             int found = pursuitTrees[faction].FindNearest(units, next, id, best, PrunePursuitCells);
             if (found >= 0) best = found;
         }
-        if (measure) PursuitSearchTicks += Stopwatch.GetTimestamp() - start;
+        if (measure)
+        {
+            long elapsed = Stopwatch.GetTimestamp() - start;
+            PursuitSearchTicks += elapsed;
+            ref PursuitSample sample = ref pursuitSamples[(int)reason];
+            sample = new PursuitSample(sample.Queries + 1, sample.SearchTicks + elapsed,
+                sample.ChangedTargets + (best != previous ? 1 : 0));
+        }
         return best;
     }
 

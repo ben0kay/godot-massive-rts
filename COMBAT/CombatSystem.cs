@@ -13,7 +13,7 @@ public static class CombatSystem
     public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
     {
         for (int i = start; i < end; i++)
-            units.Target[i] = grid.FindPursuitEnemy(units, i, -1, duringBattle: false);
+            units.Target[i] = grid.FindPursuitEnemy(units, i, -1, PursuitReason.Preparation);
     }
 
     // =========================================================
@@ -95,14 +95,15 @@ public static class CombatSystem
                 // Keep the normal replacement schedule and stagger live-target refreshes across twice as many ticks.
                 if (refreshPursuit && distance >= radius * radius &&
                     (!slowPursuitRefresh || target < 0 || i % retainedPursuitInterval == retainedPursuitPhase))
-                    target = grid.FindPursuitEnemy(units, i, target);
+                    target = grid.FindPursuitEnemy(units, i, target,
+                        target >= 0 ? PursuitReason.LiveRefresh : PursuitReason.ScheduledAcquisition);
                 else if (refreshLocal && target < 0 && previous >= 0 && extraPursuitQueries > 0)
                 {
                     int enemyAlive = units.Alive - units.FactionAlive[units.Faction[i]];
                     if (enemyAlive > 0)
                     {
                         extraPursuitQueries--;
-                        target = grid.FindPursuitEnemy(units, i, -1);
+                        target = grid.FindPursuitEnemy(units, i, -1, PursuitReason.ExtraReplacement);
                     }
                 }
             }

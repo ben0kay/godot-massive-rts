@@ -7,7 +7,7 @@ Standalone 3D army workload arena. No performance target is claimed. No campaign
 1. Import root `project.godot` in **Godot 4.7 .NET** with its required .NET SDK installed. The standard non-.NET Godot editor cannot compile C#.
 2. Build the C# project, then press **F6** with `BENCHMARK/BenchmarkArena.tscn` open. This direct launch needs no profile. **F5** opens the project’s profile picker.
 3. Initial deployment is 1,000 render-only soldiers. Select total count, mode, layout and seed, then click **Spawn / Reset selected**. The button always rebuilds from the current controls, resetting deaths, projectiles, timings and simulation ticks.
-4. **WASD / arrows** pan; **wheel** zooms; **Space** or the button pauses simulation; **F4** or the checkbox toggles the upper-right overlay. Camera remains active while paused.
+4. **WASD / arrows** pan; **wheel** zooms; **Space** or the button pauses simulation; **F4** or the checkbox toggles the right-hand performance details. Camera remains active while paused.
    - Open the left-side **Camera** section: **Rotation** is a live 0–360° slider (1° steps). **0°** aligns the view with the battlefield axes; **45°** restores the original diagonal. **Reset camera rotation (45°)** restores the default. WASD/arrow panning stays relative to the current view; zoom and pitch are unchanged. Click the battlefield to release keyboard focus from text/spin controls if necessary.
 5. **Clear all** releases the current workload. Firing rate is live; other deployment settings take effect on spawn/reset. Pause does not interrupt a deployment already being prepared.
 
@@ -128,3 +128,9 @@ Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tow
 Movement, separation, terrain grounding, charge contacts, cooldowns, and projectile sweeps use the 60 Hz fixed step. The combat spatial grid is rebuilt every core tick for current positions. Expensive acquisition uses a separate 30 Hz schedule. With default settings, local soldier searches and tower reacquisition stagger over 0.2 seconds. Scheduled pursuit keeps its 0.8-second cadence, and slower live pursuit remains at 1.6 seconds. The extra replacement cap is 128 per acquisition step. Pursuit trees are built on demand on those steps.
 
 Navigation retains its existing rendered-frame route budget and retry clock. **Display and controls → Smooth soldier motion** remains enabled by default. Projectile meshes use the latest simulated position when a frame advances the simulation.
+
+### Pursuit diagnostics and panel shortcuts
+
+Under **CPU and separation**, the pursuit breakdown shows live refresh, scheduled acquisition without a living target, and extra replacement. Each row reports searches per wall-clock second, CPU milliseconds per simulation tick, and average microseconds per search. Live refresh also reports the percentage that changed targets. Tree construction remains in its own timing, and initial deployment preparation is excluded.
+
+**F1** hides or restores the left controls and right performance details while keeping the compact battle summary visible. **F4** controls the right-hand details independently.

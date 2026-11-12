@@ -58,13 +58,21 @@ public partial class BenchmarkPanel : CanvasLayer
     public bool ReuseCorridors => reuseCorridors.ButtonPressed;
     public bool ProfileObstacles => profileObstacles.ButtonPressed;
     public readonly Button PauseButton = new() { Text = "Pause" };
-    private PanelContainer overlay;
+    private PanelContainer left, overlay;
+    private CheckButton performanceToggle;
+    private bool sidePanelsVisible = true;
+
+    private void UpdatePanelVisibility()
+    {
+        left.Visible = sidePanelsVisible;
+        overlay.Visible = sidePanelsVisible && performanceToggle.ButtonPressed;
+    }
     public static readonly int[] Counts = { 1000, 5000, 10000, 20000, 25000, 50000, 100000 };
     public int RequestedCount => Counts[CountChoice.Selected];
     // =========================================================
     public override void _Ready()
     {
-        var left = new PanelContainer
+        left = new PanelContainer
         {
             AnchorBottom = 1, OffsetLeft = 12, OffsetRight = 322, OffsetTop = 12, OffsetBottom = -12
         };
@@ -171,10 +179,10 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
         var display = Section(column, "Display and controls", false, out _);
         display.AddChild(smoothMotion);
-        var toggle = new CheckButton { Text = "Performance overlay (F4)", ButtonPressed = true };
-        toggle.Toggled += shown => overlay.Visible = shown;
-        display.AddChild(toggle);
-        display.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F4: overlay" });
+        performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
+        performanceToggle.Toggled += _ => UpdatePanelVisibility();
+        display.AddChild(performanceToggle);
+        display.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F1: side panels\nF4: performance details" });
 
         var actions = new HBoxContainer();
         shell.AddChild(actions);
@@ -186,17 +194,22 @@ public partial class BenchmarkPanel : CanvasLayer
         actions.AddChild(PauseButton);
         Status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         shell.AddChild(Status);
-        overlay = new PanelContainer
+        var right = new VBoxContainer
         {
             AnchorLeft = 1, AnchorRight = 1, AnchorBottom = 1,
-            OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12, OffsetBottom = -12
+            OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12, OffsetBottom = -12,
+            MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        AddChild(overlay);
+        AddChild(right);
+        var compact = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        right.AddChild(compact);
+        compact.AddChild(Metrics);
+        overlay = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        right.AddChild(overlay);
         var debugScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         overlay.AddChild(debugScroll);
         var debug = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         debugScroll.AddChild(debug);
-        debug.AddChild(Metrics);
         Section(debug, "CPU and separation", false, out _, true).AddChild(CpuMetrics);
         var obstacleDebug = Section(debug, "Obstacles and terrain", false, out _, true);
         obstacleDebug.AddChild(profileObstacles);
@@ -240,7 +253,17 @@ public partial class BenchmarkPanel : CanvasLayer
     public override void _UnhandledKeyInput(InputEvent input)
     {
         if (input is not InputEventKey key || !key.Pressed || key.Echo) return;
-        if (key.PhysicalKeycode == Key.F4) overlay.Visible = !overlay.Visible;
+        if (key.PhysicalKeycode == Controls.ToggleSidePanels)
+        {
+            sidePanelsVisible = !sidePanelsVisible;
+            UpdatePanelVisibility();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (key.PhysicalKeycode == Key.F4)
+        {
+            performanceToggle.ButtonPressed = !performanceToggle.ButtonPressed;
+            GetViewport().SetInputAsHandled();
+        }
         if (key.PhysicalKeycode == Key.Space) PauseRequested?.Invoke();
     }
 }
