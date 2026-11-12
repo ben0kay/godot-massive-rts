@@ -49,7 +49,7 @@ public partial class UnitEditorPanel : VBoxContainer
         toolbar.AddChild(reload);
         toolbar.AddChild(refresh);
 
-        var split = new HSplitContainer { SizeFlagsVertical = SizeFlags.ExpandFill, SplitOffset = 30 };
+        var split = new HSplitContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         AddChild(split);
         var roster = new VBoxContainer { CustomMinimumSize = new Vector2(215, 0) };
         split.AddChild(roster);
@@ -58,6 +58,7 @@ public partial class UnitEditorPanel : VBoxContainer
 
         var workspace = new HSplitContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         split.AddChild(workspace);
+        split.SplitOffsets = new[] { 30 };
         var scroll = new ScrollContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(295, 0),

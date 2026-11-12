@@ -118,3 +118,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — FRONT0: Added the local profile picker, campaign progress, display options, and blank Level001. The benchmark remains available directly via F6. Source implemented, awaiting owner validation.
 
 - 2026-11-12 — Unit Editor: Clean roster selections open directly, and switching with an unsaved draft now prompts to save, discard, or cancel. Source implemented, awaiting editor validation.
+
+- 2026-11-12 — FRONT0: Fixed the Options menu build errors by initializing both buttons before wiring their callbacks. Updated the Unit Editor split setting to the Godot 4.7 API.

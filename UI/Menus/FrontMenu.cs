@@ -207,8 +207,12 @@ public partial class FrontMenu : Control
         {
             var options = OptionsStore.Load(out bool recovered);
             if (recovered) Report("Recovered display options from the previous backup.");
-            var window = AddButton("", () => Change(options with { Fullscreen = !options.Fullscreen }));
-            var vsync = AddButton("", () => Change(options with { VSync = !options.VSync }));
+            var window = new Button();
+            var vsync = new Button();
+            UIButtonFactory.Apply(window);
+            UIButtonFactory.Apply(vsync);
+            content.AddChild(window);
+            content.AddChild(vsync);
             content.MoveChild(back, -1);
 
             void UpdateLabels()
@@ -225,6 +229,8 @@ public partial class FrontMenu : Control
                 Report("");
             }
 
+            window.Pressed += () => Run(() => Change(options with { Fullscreen = !options.Fullscreen }));
+            vsync.Pressed += () => Run(() => Change(options with { VSync = !options.VSync }));
             UpdateLabels();
             window.GrabFocus();
         });
