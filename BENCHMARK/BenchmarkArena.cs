@@ -366,7 +366,9 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
-            start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed); targetingMs += Elapsed(start);
+            start = Stamp();
+            CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh);
+            targetingMs += Elapsed(start);
             start = Stamp();
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);

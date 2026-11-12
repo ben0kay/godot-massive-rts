@@ -108,3 +108,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-12 | Visual ranged recoil | Source implemented; awaiting owner validation.** Triangle Archers kick back 0.12 world units and recover over 0.18 seconds on successful ranged shots. Added compact optional recoil fields in the full-screen Unit Editor, shared per-type settings and active-only feedback updates; no gameplay displacement or extra soldier nodes.
 
 - 2026-11-12 — BENCH0: Added live targeting timings for local enemy searches, long-range pursuit queries and lazy pursuit tree builds. Awaiting owner profiling in Godot.
+
+- 2026-11-12 — BENCH0: Added a live toggle to halve scheduled long-range refresh frequency for living targets while preserving local search and lost-target replacement cadence. Awaiting owner profiling.

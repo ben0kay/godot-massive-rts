@@ -17,12 +17,14 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false)
     {
         int localInterval = config.TargetRefreshTicks;
         int pursuitInterval = Mathf.Max(localInterval, Mathf.CeilToInt(0.8f / config.TickSeconds));
         int localPhase = tick % localInterval;
         int pursuitPhase = tick % pursuitInterval;
+        int retainedPursuitInterval = pursuitInterval * 2;
+        int retainedPursuitPhase = tick % retainedPursuitInterval;
         int extraPursuitQueries = ExtraPursuitQueriesPerTick;
         for (int i = 0; i < units.Count; i++)
         {
@@ -77,7 +79,9 @@ public static class CombatSystem
                         }
                     }
                 }
-                if (refreshPursuit && distance >= radius * radius)
+                // Keep the normal replacement schedule and stagger live-target refreshes across twice as many ticks.
+                if (refreshPursuit && distance >= radius * radius &&
+                    (!slowPursuitRefresh || target < 0 || i % retainedPursuitInterval == retainedPursuitPhase))
                     target = grid.FindPursuitEnemy(units, i, target);
                 else if (refreshLocal && target < 0 && previous >= 0 && extraPursuitQueries > 0)
                 {
