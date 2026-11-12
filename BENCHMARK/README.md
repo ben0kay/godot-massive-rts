@@ -87,3 +87,11 @@ Implementation validation is limited to source/diff review. No .NET executable i
 In **Edit painted deployment**, choose **Paint tool → Obstacles**. Drag left to draw a rectangle and drag right to erase a rectangular area. Release to commit the preview. Switch back to **Soldiers** to paint the teams and click **Start painted battle**. Painted walls persist through Save and Load. See [DEPLOYMENT](../DEPLOYMENT/README.md) for clearance and edit limits.
 
 For a reproducible obstacle comparison, leave the layout, seed, and soldier count fixed and toggle **Test wall in preset** before spawning. The preset wall crosses the middle lanes. Movement and combat modes use it for routing and collision. Rendering Only shows the mesh with no route or LOS work. The overlay shows wall count, LOS checks and blocks, clipped movements, steering time per tick, route build time per rendered frame, cache activity, queue depth and max route wait in frames for the current sample.
+
+## Live melee comparisons
+
+- **Melee sidestep** checks for room on either side when a pursuing soldier repeatedly loses forward progress. A soldier waits briefly if both sides are crowded. Requires Normal or Strong separation.
+- **Hold melee contact** gives engaged soldiers a small release margin so they can hold through tiny changes in distance. Separation can still move them.
+- **Footprint-weighted separation** switches ordinary overlap correction between footprint weighting and equal shares. The Allied archer yielding toggle remains separate.
+
+All three are on by default. Toggle them during the same battle, or restart the painted deployment for a comparison from identical starting positions. Turning all three off restores the previous melee steering with equal-weight ordinary separation. To reproduce the previous weighted baseline, leave the weight toggle on.

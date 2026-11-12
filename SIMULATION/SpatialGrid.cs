@@ -174,6 +174,12 @@ public sealed class SpatialGrid
         return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), EnemiesOf(sourceFaction));
     }
 
+    public CandidateCursor GetNearbySoldiers(Vector3 center, float radius)
+    {
+        Vector3 extent = new(radius, 0f, radius);
+        return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), occupiedFactions);
+    }
+
     public struct CandidateCursor
     {
         private readonly SpatialGrid grid;

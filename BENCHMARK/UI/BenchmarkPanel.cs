@@ -12,6 +12,12 @@ public partial class BenchmarkPanel : CanvasLayer
     public bool SmoothMotion => smoothMotion.ButtonPressed;
     private readonly OptionButton separationChoice = new();
     private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
+    private readonly CheckButton meleeSidestep = new() { Text = "Melee sidestep", ButtonPressed = true };
+    private readonly CheckButton meleeHold = new() { Text = "Hold melee contact", ButtonPressed = true };
+    private readonly CheckButton weightedSeparation = new() { Text = "Footprint-weighted separation", ButtonPressed = true };
+    public bool MeleeSidestep => meleeSidestep.ButtonPressed;
+    public bool MeleeHold => meleeHold.ButtonPressed;
+    public bool WeightedSeparation => weightedSeparation.ButtonPressed;
     public bool AlliedYield => alliedYield.ButtonPressed;
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public readonly OptionButton PaintToolChoice = new();
@@ -48,6 +54,9 @@ public partial class BenchmarkPanel : CanvasLayer
         separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
         Field(column, "Separation (live)", separationChoice);
         column.AddChild(alliedYield);
+        column.AddChild(meleeSidestep);
+        column.AddChild(meleeHold);
+        column.AddChild(weightedSeparation);
         column.AddChild(smoothMotion);
         column.AddChild(TestWall);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);

@@ -14,6 +14,7 @@ public partial class BenchmarkArena : Node3D
     private UnitState units;
     private SpatialGrid grid;
     private SeparationSystem separation;
+    private MeleeSteering meleeSteering;
     private TrampleSystem trample;
     private byte[] voluntaryMovement;
     private AlliedYieldSettings alliedYieldSettings;
@@ -119,6 +120,7 @@ public partial class BenchmarkArena : Node3D
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null;
+        meleeSteering = null;
         units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
@@ -337,8 +339,13 @@ public partial class BenchmarkArena : Node3D
         trample?.BeginTick(units, dt, obstacles);
         byte[] movementFlags = separate && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
+        bool holdMelee = grid != null && panel.MeleeHold;
+        bool sidestepMelee = grid != null && separate && panel.MeleeSidestep;
+        if (!holdMelee && !sidestepMelee) meleeSteering = null;
+        else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
+            meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering);
         float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         movementMs += Elapsed(start);
         float separationPadding = 0f;
@@ -348,7 +355,7 @@ public partial class BenchmarkArena : Node3D
             separation ??= new SeparationSystem(units.Position.Length);
             separationPadding = Config.SeparationMaxPushPerTick;
             separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
-                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles);
+                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles, panel.WeightedSeparation);
             separationMs += Elapsed(start);
         }
         if (trample != null)

@@ -8,7 +8,7 @@ public static class MovementSystem
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
-        ObstacleField obstacles = null, ObstacleNavigation navigation = null)
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null)
     {
         var catalog = units.Catalog;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
@@ -18,7 +18,12 @@ public static class MovementSystem
         for (int i = 0; i < units.Count; i++)
         {
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
-            if (units.Health[i] <= 0 || trample?.OverridesMovement(i) == true) continue;
+            if (units.Health[i] <= 0) continue;
+            if (trample?.OverridesMovement(i) == true)
+            {
+                melee?.Reset(i);
+                continue;
+            }
             int target = units.Target[i];
             bool hasTarget = target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
@@ -30,6 +35,8 @@ public static class MovementSystem
             }
             ref readonly UnitStats type = ref catalog[units.Type[i]];
             bool rangedCombat = !movementMode && type.Ranged;
+            bool steerMelee = melee != null && !movementMode && !type.Ranged && hasTarget;
+            if (!hasTarget) melee?.Reset(i);
             // Hold the firing line until there is a living target worth moving toward.
             if (rangedCombat && !hasTarget && units.MoveSpeed[i] == 0f) continue;
             Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
@@ -41,11 +48,18 @@ public static class MovementSystem
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
                 float reach = type.Ranged ? type.Reach :
                     CombatSystem.MeleeContact(type.Footprint, defender.Footprint, separationGap);
-                bool inRange = (rangedCombat || obstacles != null) && offset.LengthSquared() <= reach * reach;
-                bool blockedInRange = inRange && obstacles != null &&
+                float distanceSquared = offset.LengthSquared();
+                bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
+                float sightRange = steerMelee ? reach + 0.075f : reach;
+                bool blockedInRange = obstacles != null && distanceSquared <= sightRange * sightRange &&
                     (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                     obstacles.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
+                if (steerMelee && melee.Hold(i, target, distanceSquared, reach, blockedInRange))
+                {
+                    units.MoveSpeed[i] = 0f;
+                    continue;
+                }
                 if (rangedCombat && units.MoveSpeed[i] == 0f && hasClearShot) continue;
                 // A small inward margin maintains contact through separation corrections.
                 stop = rangedCombat ? reach - Mathf.Min(RangedStandOffBuffer, reach * 0.15f) : reach - 0.02f;
@@ -55,6 +69,7 @@ public static class MovementSystem
             {
                 if (hasClearShot && offset.X * offset.X + offset.Z * offset.Z <= stop * stop)
                 {
+                    if (steerMelee) melee.ResetSidestep(i);
                     units.MoveSpeed[i] = 0f;
                     continue;
                 }
@@ -62,6 +77,7 @@ public static class MovementSystem
                     ObstacleField.Xz(destination), hasTarget ? stop : 0f, out detouring, out routeCorner);
                 if (detouring)
                 {
+                    if (steerMelee) melee.ResetSidestep(i);
                     if (hasClearShot)
                     {
                         units.MoveSpeed[i] = 0f;
@@ -76,6 +92,7 @@ public static class MovementSystem
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
             if (distance <= stop)
             {
+                if (steerMelee) melee.ResetSidestep(i);
                 // Movement-only mode continuously marches back and forth along separate lanes.
                 if (movementMode && !detouring) units.Goal[i].X = -units.Goal[i].X;
                 else units.MoveSpeed[i] = 0f;
@@ -98,6 +115,17 @@ public static class MovementSystem
             Vector3 direction = marchingInLane
                 ? (offset.X < 0f ? Vector3.Left : Vector3.Right)
                 : offset / distance;
+            if (steerMelee)
+            {
+                if (!detouring && distance > stop + 0.10f)
+                    direction = melee.Steer(units, grid, obstacles, i, direction, type.Footprint, travel, catalog.MaxSpeed * dt);
+                else melee.ResetSidestep(i);
+                if (direction == Vector3.Zero)
+                {
+                    units.MoveSpeed[i] = 0f;
+                    continue;
+                }
+            }
             Vector3 next = units.Position[i] + direction * travel;
             if (obstacles != null)
             {

@@ -28,6 +28,7 @@ public sealed class SeparationSystem
     private readonly float[] slotX, slotZ, slotRadius, slotPushX, slotPushZ;
 
     private int[] cellStart = Array.Empty<int>();
+    private bool weighted;
     private float[] footprintByType = Array.Empty<float>();
     private int gridWidth, gridCells;
     private long candidateTotal;
@@ -57,10 +58,11 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true)
     {
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
         yieldEnabled = voluntaryMovement != null;
+        weighted = weightedSeparation;
         this.trample = trample;
         MaxPenetration = CandidatesPerSoldier = 0f;
         penetrationSum = 0;
@@ -288,7 +290,7 @@ public sealed class SeparationSystem
         float penetration = limit - distance;
         float radiusA = slotRadius[i], radiusB = slotRadius[j];
         // The larger body takes a smaller share of the same overlap correction.
-        float pushA = penetration * (radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
+        float pushA = penetration * (!weighted || radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
         float pushB = penetration - pushA;
         slotPushX[i] += nx * pushA; slotPushZ[i] += nz * pushA; slotContacts[i]++;
         slotPushX[j] -= nx * pushB; slotPushZ[j] -= nz * pushB; slotContacts[j]++;
