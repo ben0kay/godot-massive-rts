@@ -6,7 +6,6 @@ public static class CombatSystem
 {
     private const int ExtraPursuitQueriesPerTick = 128;
     private const float MeleeContactTolerance = 0.08f;
-    private const float SingleHitFacingCosineSquared = 0.413176f; // Half-angle of 50 degrees.
 
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
         attackerRadius + defenderRadius + Mathf.Max(0f, separationGap);
@@ -110,7 +109,7 @@ public static class CombatSystem
                 else
                 {
                     float forward = facing.Dot(aim);
-                    float cone = type.CleaveEnabled ? type.CleaveCosineSquared : SingleHitFacingCosineSquared;
+                    float cone = type.CleaveEnabled ? type.CleaveCosineSquared : type.MeleeFacingCosineSquared;
                     if (facing == Vector2.Zero || forward < 0f || forward * forward < aimSquared * cone)
                     {
                         SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared), turnStep);

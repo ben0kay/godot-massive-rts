@@ -18,4 +18,7 @@ Reach = 2.3
 Armour = 0.2
 Style = 0
 CleaveEnabled = true
+CleaveAngleDegrees = 100.0
+CleaveSecondaryFraction = 0.65
+CleaveMaxAdditionalTargets = 2
 ChargeResistance = 1.2

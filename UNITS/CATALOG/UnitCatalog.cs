@@ -9,7 +9,23 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 // Ground outline shared by the renderer and the circular simulation footprint.
 public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation)
 {
-    public static UnitOutline FromDefinition(UnitShape shape, float width, float diamondLongRadius)
+    public float Footprint => Mathf.Max(RadiusX, RadiusZ);
+
+    public static float EffectiveSize(UnitDefinition definition) =>
+        float.IsFinite(definition.SizeMultiplier) && definition.SizeMultiplier > 0f
+            ? Mathf.Clamp(definition.SizeMultiplier, 0.5f, 3f) : 1f;
+
+    public static UnitOutline FromDefinition(UnitDefinition definition, float size)
+    {
+        float width = float.IsFinite(definition.Width) && definition.Width > 0f ? definition.Width : 0.8f;
+        float legacyRadius = float.IsFinite(definition.FootprintRadius) && definition.FootprintRadius > 0f
+            ? definition.FootprintRadius : 0.57f;
+        float diamondLongRadius = definition.Shape == UnitShape.Diamond
+            ? Mathf.Max(width * 0.707107f, legacyRadius) * size * 0.96f : 0f;
+        return FromDimensions(definition.Shape, width * size, diamondLongRadius);
+    }
+
+    private static UnitOutline FromDimensions(UnitShape shape, float width, float diamondLongRadius)
     {
         float halfWidth = width * 0.5f;
         float squareRadius = width / Mathf.Sqrt(2f);
@@ -31,11 +47,12 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, UnitOutline Outline, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave)
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
 
+[Tool]
 [GlobalClass]
 public partial class UnitCatalog : Resource
 {
@@ -86,19 +103,15 @@ public sealed class RuntimeUnitCatalog
             string id = OrderedIds[i];
             if (!byId.TryGetValue(id, out UnitDefinition d)) throw new ArgumentException($"Missing unit definition {id}.");
             if (!Enum.IsDefined(d.Shape) || !Enum.IsDefined(d.Style)) throw new ArgumentException($"Invalid shape or attack style for {id}.");
-            float size = Mathf.Clamp(Positive(d.SizeMultiplier, 1f), 0.5f, 3f);
-            float baseWidth = Positive(d.Width, 0.8f);
-            // Preserve the diamond's authored silhouette, previously derived from its legacy radius.
-            float diamondLongRadius = d.Shape == UnitShape.Diamond
-                ? Mathf.Max(baseWidth * 0.707107f, Positive(d.FootprintRadius, 0.57f)) * size * 0.96f
-                : 0f;
-            UnitOutline outline = UnitOutline.FromDefinition(d.Shape, baseWidth * size, diamondLongRadius);
-            float footprint = Mathf.Max(outline.RadiusX, outline.RadiusZ);
+            float size = UnitOutline.EffectiveSize(d);
+            UnitOutline outline = UnitOutline.FromDefinition(d, size);
+            float footprint = outline.Footprint;
             bool ranged = d.Style == AttackStyle.Ranged;
             float reach = Positive(d.Reach, 1.6f);
             if (!ranged) reach *= size;
             float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
             float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
+            float facingCosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(ClampStat(d.MeleeFacingAngleDegrees, 1f, 180f, 100f) * 0.5f)));
             float secondary = float.IsFinite(d.CleaveSecondaryFraction) ? Mathf.Clamp(d.CleaveSecondaryFraction, 0f, 1f) : 0.65f;
             var trample = new TrampleStats(d.TrampleEnabled && d.Style == AttackStyle.Melee,
                 ClampStat(d.TrampleRunUp, 0.5f, 10f, 2f),
@@ -109,16 +122,17 @@ public sealed class RuntimeUnitCatalog
                 Mathf.Clamp(d.TrampleMaxHits, 1, 6));
             float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
             int shockwaveCadence = ranged ? 0 : Mathf.Clamp(d.ShockwaveEveryAttacks, 0, byte.MaxValue);
+            float shockwaveDamage = Positive(d.ShockwaveDamage, 50f);
             var shockwave = new ShockwaveStats(shockwaveCadence,
                 ClampStat(Positive(d.ShockwaveBaseRadius, 4f), 0.1f, 64f, 4f) * size,
-                Positive(d.ShockwaveDamage, 50f),
-                ClampStat(d.ShockwaveEdgeDamageFraction, 0f, 1f, 0.5f), d.ShockwaveRespectsCover);
+                shockwaveDamage, d.EffectiveShockwaveOuterDamage(shockwaveDamage) / shockwaveDamage, d.ShockwaveRespectsCover);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 outline, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
                 Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,
-                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, trample,
+                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
+                facingCosine * facingCosine, trample,
                 accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);

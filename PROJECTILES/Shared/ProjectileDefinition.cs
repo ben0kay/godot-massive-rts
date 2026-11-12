@@ -5,6 +5,7 @@ namespace MassiveRts;
 
 public enum ObstacleFireMode { RequiresDirectLineOfSight, IndirectFire }
 
+[Tool]
 [GlobalClass]
 public partial class ProjectileDefinition : Resource
 {

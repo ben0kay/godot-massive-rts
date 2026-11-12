@@ -1,6 +1,6 @@
 # UNIT3 — Full-Screen Unit Editor Plugin
 
-**Status:** Proposed / implementation plan for Codex. **Documentation only; no plugin or gameplay changes implemented.**  
+**Status:** Source implemented. Awaiting owner verification in Godot.
 **Target:** `ben0kay/godot-massive-rts`, branch `main` (Godot 4.7 .NET / C#).  
 **Purpose:** Let the owner pick a soldier and edit **all its authored parameters in a clear, full-size interface**, rather than using the narrow Godot Inspector. **Save changes directly to the existing `UnitDefinition` `.tres` resources.**
 

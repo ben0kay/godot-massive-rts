@@ -1,6 +1,6 @@
 # UNIT2 — Per-unit combat and balance parameters
 
-**Status:** Proposed / Codex implementation plan. **Not implemented.**
+**Status:** Source implemented. Awaiting owner verification in Godot.
 **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
 **Goal:** Make each `UNITS/DEFINITIONS/*.tres` the convenient single source for a soldier's gameplay numbers, especially melee arc/cleave and abilities, without sacrificing the compact high-unit-count simulation.
 

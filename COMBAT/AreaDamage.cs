@@ -1,4 +1,5 @@
 // Shared XZ area attacks using the existing faction grid and authoritative damage path.
+using System;
 using Godot;
 
 namespace MassiveRts;
@@ -10,12 +11,14 @@ public static class AreaDamage
     {
         Vector3 origin = units.Position[attacker];
         units.Damage(primary, type.Damage);
-        if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f) return;
+        int limit = type.CleaveMaxAdditionalTargets;
+        if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f || limit == 0) return;
 
         int sourceFaction = units.Faction[attacker];
         float queryRadius = CombatSystem.MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + tolerance + movementPadding;
-        int first = -1, second = -1;
-        float firstDistance = float.PositiveInfinity, secondDistance = float.PositiveInfinity;
+        Span<int> victims = stackalloc int[UnitDefinition.MaxCleaveAdditionalTargets];
+        Span<float> distances = stackalloc float[UnitDefinition.MaxCleaveAdditionalTargets];
+        int count = 0;
 
         var candidates = grid.GetCandidates(origin, queryRadius, sourceFaction);
         while (candidates.MoveNext())
@@ -30,25 +33,23 @@ public static class AreaDamage
             float forward = direction.X * offset.X + direction.Y * offset.Z;
             if (forward < 0f || forward * forward < planarDistance * type.CleaveCosineSquared) continue;
 
-            if (distance > secondDistance || obstacles?.BlocksSight(origin, units.Position[id]) == true) continue;
-
-            if (distance < firstDistance || (distance == firstDistance && id < first))
+            int insert = count;
+            while (insert > 0 && (distance < distances[insert - 1] ||
+                (distance == distances[insert - 1] && id < victims[insert - 1])))
+                insert--;
+            if (insert == limit || obstacles?.BlocksSight(origin, units.Position[id]) == true) continue;
+            count = Mathf.Min(count + 1, limit);
+            for (int index = count - 1; index > insert; index--)
             {
-                second = first;
-                secondDistance = firstDistance;
-                first = id;
-                firstDistance = distance;
+                victims[index] = victims[index - 1];
+                distances[index] = distances[index - 1];
             }
-            else if (distance < secondDistance || (distance == secondDistance && id < second))
-            {
-                second = id;
-                secondDistance = distance;
-            }
+            victims[insert] = id;
+            distances[insert] = distance;
         }
 
         float secondaryDamage = type.Damage * type.CleaveSecondaryFraction;
-        if (first >= 0) units.Damage(first, secondaryDamage);
-        if (second >= 0) units.Damage(second, secondaryDamage);
+        for (int index = 0; index < count; index++) units.Damage(victims[index], secondaryDamage);
     }
 
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.

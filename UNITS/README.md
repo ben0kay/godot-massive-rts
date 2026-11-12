@@ -1,13 +1,12 @@
 # UNITS — Soldier Catalogue
 
-**Status:** UNIT0 and UNIT1 source implemented. Awaiting owner validation.
+**Status:** UNIT0–UNIT3 source implemented. Awaiting owner validation.
 
 This **UPPERCASE major folder** owns the roster, unit definitions and catalogue lookup. `SIMULATION/` owns compact runtime soldier arrays; `COMBAT/` owns generic attacks and damage; `RENDERING/` owns faceted meshes and shared MultiMesh batches; `DEPLOYMENT/` owns painting and saved placements; `BENCHMARK/` owns test scenarios and controls.
 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — per-type size tuning and owner checks.
 - **[Starting roster and stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
-- **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — one `.tres` SizeMultiplier per soldier type, with consistent effective mesh, footprint, melee/cleave radius and cavalry trample contact; **planned, not implemented**.
 
 ## Folder structure
 
@@ -37,6 +36,6 @@ Open a definition resource to tune its silhouette, dimensions, speed, health, ar
 
 The catalogue fits each circular collision footprint around the scaled mesh outline. Polygon faces may sit inside that circle. The legacy Diamond `FootprintRadius` property only controls the length of its silhouette. The painter checks the resulting circular clearance against neighbours and battlefield edges. SEP1/SEP2 use the same compiled footprints. Saved layouts still use stable type IDs and the existing format. Loading a layout after increasing a type’s size can reject placements that no longer fit.
 
-## UNIT1 — Planned uniform size multiplier
+## Tuning units
 
-The [UNIT1 implementation plan](UNIT1_SIZE_SCALING_PLAN.md) proposes an editable `SizeMultiplier` on each `UnitDefinition` resource. It compiles physical and visual dimensions once per type, including melee swipe reach and trample contact radius where applicable. **Diamond Cavalry's desired default is 1.25×**, while every other type stays 1.0×. Ranged attack distance, damage and movement speed stay unchanged. **This is planning documentation; the runtime does not yet support the multiplier.**
+Edit the existing definition in the Inspector or enable the [full-screen Unit Editor](../addons/unit_editor/README.md). UNIT2 exposes the cleave target cap, ordinary melee facing angle and shockwave outer damage. The editor writes the selected unit resource and keeps its stable ID read-only.
