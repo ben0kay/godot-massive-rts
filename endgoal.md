@@ -4,7 +4,7 @@
 >
 > **Status:** Proposed game modes; simulation/benchmark development remains the active priority.
 >
-> **Last refined:** 2026-11-11 · **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
+> **Last refined:** 2026-11-12 · **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
 
 ## 1. The game in one sentence
 
@@ -72,7 +72,7 @@ A campaign of handcrafted challenges, different enemy arrangements, terrain obst
 1. Start with a **small base**, possibly a few walls, and a central **Citadel**.
 2. Place a **Barracks** that produces basic soldiers (a simple first example is continuous **Circle Infantry** production).
 3. Build or recruit basic **workers/miners**, potentially represented by a shape with a **pickaxe icon**.
-4. Workers **mine resource deposits and/or chop trees**, supporting more production and construction.
+4. Workers harvest **Carbon** from simple geometric deposits, supporting unit production and construction.
 5. Expand defenses with **walls and stationary towers**.
 6. Armies grow and **fight automatically**, while the player can optionally select large groups and issue simple tactical movement orders.
 7. A central strategic objective is to **destroy the opposing faction's Citadel**.
@@ -83,15 +83,50 @@ Think **Age of Empires mechanics at their simplest useful level**, overlaid on a
 
 - **Citadel:** each team owns a central structure; destroying the enemy Citadel is the proposed principal win condition.
 - **Barracks:** a placeable production building that emits units over time; Circle Infantry is the initial illustrative output. Additional unit types/buildings are optional future additions.
-- **Workers/miners:** lightweight resource gatherers; a pickaxe symbol is enough to communicate their job. Mining and chopping trees are proposed resource activities.
+- **Workers/collectors:** lightweight geometric drones; a small glyph, triangular silhouette or simple attachment communicates gathering. Harvest Carbon from discrete deposits and return it to a core or collection structure.
 - **Walls:** simple defensive obstacles, meaningful for both units and performance testing.
 - **Defensive towers:** stationary structures that attack enemies and help guard a base.
 - **Autonomous military units:** default behavior remains automatic fighting, even without player orders.
 - **Optional intervention:** players can reposition large selected groups when they want to change the battle.
 
-The starting economy should be deliberately small and easy to understand. Resource types, costs, harvesting/delivery details, production rates/caps, construction rules, tower variants, AI opponents and upgrades are **open design decisions**. Do not build a full conventional RTS economy merely because Age of Empires is an inspiration.
+The starting economy should be deliberately small and easy to understand: **Carbon is the one proposed initial resource**. Specific costs, harvesting/delivery rates, production pacing, construction rules, tower variants, AI opponents and upgrades are still **open design decisions**. Additional resources such as Charge (energy) or Data (research) are possible later, not approved for the initial loop. Do not build a conventional multi-resource RTS economy merely because Age of Empires is an inspiration.
 
 At huge unit counts, production should eventually have sensible pacing/limits and measurable simulation impact; a theoretically unbounded soldier faucet is not an implementation requirement.
+
+### Open RTS visual identity — futuristic vector-virus / machine-swarm world
+
+**Preferred direction (2026-11-12):** Replace the earlier tentative medieval/woodland framing with a restrained **futuristic vector / self-replicating machine-virus** aesthetic. The geometric soldiers are abstract autonomous machine organisms or digital-like swarms; blue and red factions resemble competing infections consuming matter and replicating. This is an art/lore direction, **not a requirement to simulate a literal computer, biological virus, or molecular chemistry**.
+
+- Preserve the existing clean, readable **polygon soldiers** and simple 3D isometric world. Ranged units share sharp, arrow/chevron silhouettes (triangle archers, chevron artillery with a barrel); melee units use their existing geometric shapes.
+- The ground can be dark and relatively minimal, with optional subtle grid/vector lines, angular obstacles, sparse colored connections or faint faction accents. No elaborate textures, forests, medieval trees, castles, or photorealistic terrain are required.
+- **Carbon** is the first and only planned gathered resource. Represent deposits with dark graphite-like **faceted crystal clusters / geometric nodes**; use finite quantities that lightweight collector units can harvest and return to a faction core/depot. Carbon supports unit fabrication and basic construction.
+- A **fabrication core / Citadel**, a simple **unit fabricator / Barracks**, and collector drones should look like machine geometry rather than villages. Names can evolve; continue to reuse the established Citadel/walls/towers concepts.
+- Resource visuals should remain legible at mass-army zoom, batch or pool where useful, and never create per-soldier trees of scene nodes. Salvage from destroyed enemies, a secondary **Charge** resource, and **Data** for upgrades are **ideas for later**, not v1 requirements.
+- Start with a simple loop: **collect Carbon → deposit it → spend it on units and structures → defend/attack the enemy core**. Costs, deposit depletion, worker assignment and victory conditions remain tunable proposals.
+
+### Open RTS Level 001 — owner-authored map
+
+**The owner's preference is to design the map by hand.** Open RTS **Level 001** must be a **separate Godot scene** that can be opened and edited directly in the editor. It should be safe to place/arrange terrain, obstacles, Carbon deposit nodes, Citadels, starting positions and future structures by editing scene data. These objects are planned content, not items to spawn or lock into a hard-coded layout today.
+
+- **Do not fill Level 001 with a random map**, a mandatory procedural seed, generic trees, or a copied benchmark arena. The scene can start intentionally empty.
+- Do not overwrite the existing blank `LEVELS/Level001/Level001.tscn` until the campaign-mode mapping is implemented; the menu plan reserves this existing authored level for **Preset Battles** and proposes a new `LEVELS/OpenRTS/Level001/Level001.tscn` for Open RTS.
+- Gameplay controllers can be composed when those systems are authorized; future map props should preferably be normal editable Godot scenes/resources with exposed settings, not procedural coordinates buried in code.
+- Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with Preset Battles rather than duplicate a second engine.
+- **Important:** Recording this direction does not mean workers, Carbon extraction, buildings or actual RTS battle gameplay are implemented.
+
+### Campaign menu hierarchy (two game modes to start)
+
+```text
+Profile -> Main Menu -> Campaign
+                          ├── Open RTS
+                          │     └── Level 001   (owner-authored Open RTS map)
+                          └── Preset Battles
+                                └── Level 001   (authored tactical / Army Painter challenge)
+```
+
+**Campaign** is an umbrella that can hold additional modes later. **Preset Battles** is the player-facing name for the existing Army Painter / tactical-battle concept, not a third game mode. Each mode has its **own level list, scene paths and per-profile progression**, sharing the established campaign catalog, menu widgets, launch/session plumbing and common soldier simulation. The two `Level001` IDs may be equal *within different campaign IDs* because progress keys are `CampaignId -> LevelId`; their **scene paths must be distinct**. Add future modes through the catalog, not by hard-coding new menus.
+
+Implementation scope and compatibility mapping are specified in [UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md](UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md). The hierarchy is **planned**, not implemented by this vision document.
 
 ## 5. Group selection and right-click orders — the player's performance tradeoff
 
@@ -147,7 +182,7 @@ These are architectural constraints and experiments, **not a request to implemen
 
 ### Terrain source choices for the two modes
 
-Both modes share the same authoritative compiled heightfield, per [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Army Painter emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. Open RTS may instead generate gentle low-frequency terrain from a repeatable seed, with protected flat building/start zones and optional broad ridges or plateaus. A future hybrid can overlay painted height overrides on a procedural map. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of terrain source. This is future design, not currently implemented code.
+Both modes share the same authoritative compiled heightfield, per [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Preset Battles (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
 
 ## 7. One simulation, separate optional mode systems
 
@@ -209,7 +244,7 @@ Leave these open until prototypes reveal what feels good:
 
 - Is ordinary right-click **Move** closer to move-and-defend, or should it aggressively pursue threats like **Attack Move**?
 - Are selected soldiers simply a temporary box-selected set, or should persistent battalion groups exist?
-- How much economy depth is worthwhile—one resource versus several; automatic versus explicit worker assignment?
+- Carbon is the initial resource. Should workers be assigned manually to deposits or harvest automatically? If/when would a second resource add meaningful gameplay?
 - How fast should Barracks produce, and what caps/resources prevent uncontrollable unit growth?
 - What are the Army Painter objective types and deployment restrictions?
 - How big should maps become, and when is elevation worth its simulation cost?
