@@ -92,3 +92,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-11 | Cleave target cap | Source updated; awaiting owner validation.** Raised configurable maximum additional cleave targets from 4 to 8 so the Unit Editor and Godot Inspector accept 6 (up to 7 total targets per swing). Existing defaults and attack behavior are unchanged; the existing allocation-free, bounded cleave selection uses the shared cap.
 
 - **2026-11-11 | Cleave target cap | Source updated; awaiting owner validation.** Increased per-unit maximum additional cleave targets from 8 to 50 (up to 51 total including the primary). The Unit Editor uses the shared cap; kept the existing default of 2. Cleave's temporary stack buffers now size to each unit's configured limit rather than always allocating the maximum, to avoid unnecessary work for normal two-extra-target units.
+
+- **2026-11-11 | TERR1-A | Source implemented.** Added the test plateau preset, static chunk meshes and shared height sampling after ground displacement. Awaiting Godot validation.

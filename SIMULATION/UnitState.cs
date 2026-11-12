@@ -25,10 +25,12 @@ public sealed class UnitState
     }
     public RuntimeUnitCatalog Catalog { get; }
     public HitFeedbackSystem HitFeedback { get; }
-    public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null)
+    public TerrainGrounding Grounding { get; }
+    public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null, TerrainHeightField terrain = null)
     {
         Catalog = catalog;
         HitFeedback = hitFeedback;
+        if (terrain != null) Grounding = new TerrainGrounding(terrain, capacity);
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
         Facing = new Vector2[capacity];
         Health = new float[capacity]; Cooldown = new float[capacity]; MoveSpeed = new float[capacity];
@@ -61,9 +63,4 @@ public sealed class UnitState
             Dirty[id] = true;
         }
     }
-}
-// Single flat-ground seam for later elevation; simulation owns world-space positions.
-public static class BattlefieldHeight
-{
-    public static float At(float x, float z) => 0f;
 }

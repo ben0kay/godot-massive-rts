@@ -28,7 +28,11 @@ public partial class BenchmarkArena : Node3D
     private DeploymentPainter painter;
     private ObstacleField obstacles;
     private ObstacleNavigation navigation;
-    private MeshInstance3D battleWalls;
+    private MeshInstance3D battleWalls, flatGround;
+    private Node3D terrainMeshes;
+    private TerrainHeightField terrain;
+    private int groundSamples;
+    private double terrainCompileMs, terrainMeshMs, groundingMs;
     private double routeBuildMs;
     private BenchmarkMode mode;
     private const int InitialTargetsPerFrame = 512;
@@ -82,9 +86,9 @@ public partial class BenchmarkArena : Node3D
             ClampFiniteSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
             ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f));
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
-        var ground = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
+        flatGround = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.075f, 0.085f, 0.10f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
-        AddChild(ground);
+        AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         panel = new BenchmarkPanel { Catalog = catalog }; AddChild(panel);
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
@@ -117,6 +121,14 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         shockwaves.Clear();
+        if (terrainMeshes != null)
+        {
+            RemoveChild(terrainMeshes);
+            terrainMeshes.QueueFree();
+            terrainMeshes = null;
+        }
+        terrain = null;
+        flatGround.Visible = true;
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null;
@@ -132,9 +144,12 @@ public partial class BenchmarkArena : Node3D
         SetDeploymentEditing(false);
         requested = panel.RequestedCount; targetCount = Mathf.Min(requested, Config.MaxSoldiers);
         mode = (BenchmarkMode)panel.ModeChoice.Selected;
+        if (panel.TerrainChoice.Selected == 1) PreparePlateau();
         if (panel.TestWall.ButtonPressed)
         {
-            var wall = new ObstacleField(new[] { new ObstacleRectangle(-2, -12, 4, 24) });
+            // Keep the preset wall on the flat plain when the plateau is active.
+            int wallX = terrain == null ? -2 : -6;
+            var wall = new ObstacleField(new[] { new ObstacleRectangle(wallX, -12, 4, 24) });
             SetBattleObstacles(wall, ObstacleRenderer.Build(wall, Config.ObstacleHeight, Config.ObstacleTint));
         }
         units = CreateUnitState();
@@ -144,12 +159,27 @@ public partial class BenchmarkArena : Node3D
         spawning = true;
         camera.Frame(Mathf.Sqrt(targetCount / 2f) * 4 + (panel.LayoutChoice.Selected == 2 ? 350 : 80));
     }
+    private void PreparePlateau()
+    {
+        float rise = float.IsFinite(Config.PlateauRise) ? Mathf.Clamp(Config.PlateauRise, 0.5f, 8f) : 4f;
+        float shoulder = float.IsFinite(Config.PlateauShoulder) ? Mathf.Clamp(Config.PlateauShoulder, 16f, 64f) : 20f;
+        shoulder = Mathf.Max(shoulder, 3f * rise);
+        long start = Stamp();
+        terrain = PlateauScenario.Create(rise, shoulder);
+        terrainCompileMs = Elapsed(start);
+        start = Stamp();
+        terrainMeshes = TerrainRenderer.Build(terrain, rise, 2500f);
+        AddChild(terrainMeshes);
+        flatGround.Visible = false;
+        terrainMeshMs = Elapsed(start);
+    }
+
     private UnitState CreateUnitState()
     {
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
-        return new UnitState(targetCount, catalog, feedback);
+        return new UnitState(targetCount, catalog, feedback, terrain);
     }
 
     private void SetDeploymentEditing(bool editing)
@@ -362,6 +392,12 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp(); trample.MeasureRunUp(units, dt); movementMs += Elapsed(start);
         }
+        if (units.Grounding != null)
+        {
+            start = Stamp();
+            groundSamples += units.Grounding.Apply(units);
+            groundingMs += Elapsed(start);
+        }
         float extraMovementPadding = separationPadding + tramplePadding;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
@@ -403,13 +439,16 @@ public partial class BenchmarkArena : Node3D
             obstacleStats += $"Nav steer {steerMs:F3} ms/tick • route build {routeBuildMs / divisor:F3} ms/frame\n" +
                 $"Route hits/misses {navigation.CacheHits:N0}/{navigation.CacheMisses:N0} • built/queued {navigation.RoutesBuilt:N0}/{navigation.QueueDepth:N0} • wait {navigation.MaxWaitFrames}f\n";
         }
+        string terrainStats = terrain == null ? "" :
+            $"Plateau • {terrain.ChunkCount} chunks • samples/tick {groundSamples / (double)Math.Max(1, measuredTicks):N0}\n" +
+            $"Grounding {groundingMs / Math.Max(1, measuredTicks):F3} ms/tick • setup {terrainCompileMs:F2} + {terrainMeshMs:F2} ms\n";
         panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
             $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
             $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.FactionAlive[Factions.Blue] ?? 0:N0} • Red {units?.FactionAlive[Factions.Red] ?? 0:N0} • Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
             $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
             $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
             $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\nSampled penetration avg/max: {separationSamples}\n\n" +
-            yieldStats + obstacleStats +
+            yieldStats + obstacleStats + terrainStats +
             $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
             $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
             $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
@@ -428,6 +467,8 @@ public partial class BenchmarkArena : Node3D
     }
     private void ResetTimings()
     {
+        groundSamples = 0;
+        groundingMs = 0;
         movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0;
         worstTickMs = armyUploadMs = routeBuildMs = 0;
         obstacles?.ResetCounters();

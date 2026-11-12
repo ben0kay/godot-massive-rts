@@ -374,8 +374,8 @@ public sealed class SeparationSystem
                 position.X = safe.X;
                 position.Z = safe.Y;
             }
-            position.Y = BattlefieldHeight.At(position.X, position.Z);
             units.Position[id] = position;
+            units.Grounding?.MarkMoved(id);
             units.Dirty[id] = true;
         }
     }

@@ -95,3 +95,7 @@ For a reproducible obstacle comparison, leave the layout, seed, and soldier coun
 - **Footprint-weighted separation** switches ordinary overlap correction between footprint weighting and equal shares. The Allied archer yielding toggle remains separate.
 
 All three are on by default. Toggle them during the same battle, or restart the painted deployment for a comparison from identical starting positions. Turning all three off restores the previous melee steering with equal-weight ordinary separation. To reproduce the previous weighted baseline, leave the weight toggle on.
+
+## TERR1-A terrain preset
+
+Select **Test plateau** under **Preset terrain**, then reset. Opposing Lines puts Red near the raised top and Blue on the plain. Movement mode makes both sides traverse the shoulder. Compare with **Flat ground** using the same count and seed. The overlay reports terrain compilation, mesh setup, and grounding cost. Painted deployments use flat ground. See [Terrain](../TERRAIN/README.md).

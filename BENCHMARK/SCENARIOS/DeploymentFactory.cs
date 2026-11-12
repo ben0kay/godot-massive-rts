@@ -39,7 +39,7 @@ public sealed class DeploymentFactory
             {
                 SoldierPlacement placement = painted[i];
                 Vector3 position = placement.Position();
-                position.Y = BattlefieldHeight.At(position.X, position.Z);
+                position.Y = units.Grounding?.Field.At(position.X, position.Z) ?? 0f;
                 units.Position[i] = position;
                 units.Faction[i] = placement.Faction;
                 units.Type[i] = placement.Type;
@@ -53,7 +53,7 @@ public sealed class DeploymentFactory
             float z = (local % columns - columns * 0.5f) * spacing;
             if (layout == Deployment.DistributedBattlefield)
             { x += random.RandfRange(0, 150); z += random.RandfRange(-150, 150); }
-            units.Position[i] = new Vector3(sign * x, BattlefieldHeight.At(sign * x, z), z);
+            units.Position[i] = new Vector3(sign * x, units.Grounding?.Field.At(sign * x, z) ?? 0f, z);
             if (mode == BenchmarkMode.Movement) units.Goal[i] = new Vector3(-sign * x, 0, z);
             units.Faction[i] = faction;
             units.Type[i] = PickType(units.Catalog);

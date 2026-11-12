@@ -303,7 +303,8 @@ public sealed class TrampleSystem
 
     private static void Place(UnitState units, int id, Vector2 p)
     {
-        units.Position[id] = new Vector3(p.X, BattlefieldHeight.At(p.X, p.Y), p.Y);
+        units.Position[id] = new Vector3(p.X, units.Position[id].Y, p.Y);
+        units.Grounding?.MarkMoved(id);
         units.Dirty[id] = true;
     }
 }

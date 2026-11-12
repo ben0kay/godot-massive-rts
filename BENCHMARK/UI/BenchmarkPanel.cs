@@ -21,6 +21,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public bool AlliedYield => alliedYield.ButtonPressed;
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public readonly OptionButton PaintToolChoice = new();
+    public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
     public readonly OptionButton FactionChoice = new();
@@ -58,6 +59,9 @@ public partial class BenchmarkPanel : CanvasLayer
         column.AddChild(meleeHold);
         column.AddChild(weightedSeparation);
         column.AddChild(smoothMotion);
+        TerrainChoice.AddItem("Flat ground");
+        TerrainChoice.AddItem("Test plateau");
+        Field(column, "Preset terrain", TerrainChoice);
         column.AddChild(TestWall);
         var spawn = new Button { Text = "Spawn / Reset selected" }; spawn.Pressed += () => SpawnRequested?.Invoke(); column.AddChild(spawn);
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());

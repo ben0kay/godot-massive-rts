@@ -147,7 +147,7 @@ public static class MovementSystem
             if (travel > 0.00001f && type.Shape != UnitShape.Circle)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnStep);
             units.Position[i] = next;
-            units.Position[i].Y = BattlefieldHeight.At(units.Position[i].X, units.Position[i].Z);
+            units.Grounding?.MarkMoved(i);
             units.Dirty[i] = true;
         }
     }

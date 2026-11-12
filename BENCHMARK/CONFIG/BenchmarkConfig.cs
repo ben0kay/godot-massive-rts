@@ -16,6 +16,9 @@ public partial class BenchmarkConfig : Resource
     [Export] public int TargetRefreshTicks { get; set; } = 6;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float MeleeAccelerationSeconds { get; set; } = 0.15f;
     [Export(PropertyHint.Range, "0,0.6,0.01")] public float RangedAccelerationSeconds { get; set; } = 0.32f;
+    [ExportGroup("Terrain benchmark")]
+    [Export(PropertyHint.Range, "0.5,8,0.5")] public float PlateauRise { get; set; } = 4f;
+    [Export(PropertyHint.Range, "16,64,1")] public float PlateauShoulder { get; set; } = 20f;
     [ExportGroup("Obstacles")]
     [Export(PropertyHint.Range, "0.2,8,0.1")] public float ObstacleHeight { get; set; } = 1f;
     [Export] public Color ObstacleTint { get; set; } = new(0.31f, 0.33f, 0.36f);

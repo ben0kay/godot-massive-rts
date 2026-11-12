@@ -1,7 +1,7 @@
 # TERR1 — Painted and Procedural Elevation (Unified Heightfield)
 
 **Repository:** ben0kay/godot-massive-rts · **Branch:** main
-**Status:** PLAN ONLY. This document does not mean elevation code is implemented.
+**Status:** TERR1-A source implemented. Awaiting owner validation. TERR1-B through TERR1-D remain planned.
 
 ## Goal and visual direction
 
@@ -29,7 +29,7 @@ Read the live root README, NOTES/CodePreferences.md, endgoal.md, BENCHMARK/READM
 - COMBAT/CombatSystem.cs, COMBAT/AreaDamage.cs: attacks currently use 3D distance and existing cleave.
 - PROJECTILES/Shared/ProjectileSystem.cs: shallow arcs from shooter to target, currently no surface collision.
 - UNITS/CATALOG/UnitCatalog.cs: UNIT1 scaled footprints, reaches and dimensions.
-- OBSTACLES/OBST1_IMPLEMENTATION_PLAN.md: **currently planned**, not available as an implementation. Share future traversal rules instead of duplicating systems.
+- OBSTACLES/OBST1_IMPLEMENTATION_PLAN.md: implemented on main. Share traversal rules instead of duplicating systems.
 
 Preserve 30 Hz fixed-step simulation, 10k vs 10k practical benchmark target, large benchmark presets, UNIT1, SEP1/SEP2, three factions, cavalry charge/acceleration, damage feedback, and MultiMesh rendering. Never add a terrain physics body, raycast or NavigationAgent3D per soldier.
 
@@ -79,7 +79,7 @@ Prefer final height samples or a compact bounded authoring representation, with 
 
 Current painter projects mouse to Y=0. Use one **editor-only ray-to-heightfield intersection** method for unit painting and terrain editing (e.g., coarse bounded traversal + refinement, or nearby terrain mesh intersection), not a per-soldier Godot physics raycast. Existing XZ placement coordinates can remain saved while Y is recomputed from terrain at load/spawn. Previews follow surface height.
 
-**Save compatibility:** Deployment currently uses user://deployment.json version 1; OBST1 has a proposed version 2. Do not overwrite either without an explicit migration. For initial terrain testing, version a separate user://terrain.json linked to the chosen battlefield, or define a versioned higher-level BattlefieldDefinition when both features are ready. Old saves without terrain load as flat. Validate input size/finite heights, clip strokes and preserve stable soldier IDs.
+**Save compatibility:** Deployment currently writes user://deployment.json version 2 and loads legacy formats. Do not overwrite either without an explicit migration. For initial terrain testing, version a separate user://terrain.json linked to the chosen battlefield, or define a versioned higher-level BattlefieldDefinition when both features are ready. Old saves without terrain load as flat. Validate input size/finite heights, clip strokes and preserve stable soldier IDs.
 
 ## Procedural source (priority for Open RTS)
 
@@ -99,7 +99,7 @@ Navigation must query combined conditions: **terrain slope/passability + static 
 
 Collisions and slope safeguards are correctness checks: even when no route exists, units must not teleport up cliffs or move through walls. A large Pentagon may need wider viable ramps than a Circle. Keep combat pursuit target separate from intermediate waypoint, preserve cavalry momentum and SEP2 archer yielding.
 
-OBST1 is presently a plan. Implement interfaces compatible with later static obstacle navigation, but do **not** write a second incompatible pathfinder merely to complete initial TERR1 height work.
+OBST1 provides static wall routing. Extend that traversal system for slopes in TERR1-D.
 
 ## High-ground fighting advantage
 
@@ -163,5 +163,3 @@ Implement/review/commit **one phase per authorized task**; update docs and appen
 - High-to-low damage bonus reaches 10% at configured height delta; flat/equal heights receive no bonus, no double modifiers.
 - Archers cannot shoot through ridge terrain and arrows stop on solid ground, while indirect-fire framework remains separate.
 - Compare 1k/10k/20k-unit tick timings and CPU/GPU with identical flat vs elevated scenarios.
-
-**TERR1 is a design plan until a Codex implementation task is explicitly authorized.**
