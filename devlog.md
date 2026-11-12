@@ -145,3 +145,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — SHADOW1: Added batched soldier ground shadows and static battle obstacle shadows with a live benchmark toggle. Awaiting owner visual and performance validation.
 
 - 2026-11-12 — BENCH visual: Lightened the flat benchmark map and plateau ground to a neutral cool grey. No changes to terrain geometry, obstacles, collision or simulation. Awaiting owner visual validation.
+
+- 2026-11-12 — BENCH0 pursuit experiments: Added independent live toggles for a distant melee retarget delay and a shared long-range search cap, with HUD deferral counts. Awaiting owner benchmark validation.

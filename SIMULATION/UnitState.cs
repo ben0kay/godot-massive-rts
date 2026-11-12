@@ -13,6 +13,17 @@ public sealed class UnitState
     public readonly bool[] Dirty;
     public readonly int[] FactionAlive = new int[Factions.Count];
     private byte[] completedAttacks;
+    private int[] retargetAfter;
+
+    internal int[] RetargetDeadlines(bool enabled)
+    {
+        if (!enabled)
+        {
+            retargetAfter = null;
+            return null;
+        }
+        return retargetAfter ??= new int[Target.Length];
+    }
     public int Count;
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }

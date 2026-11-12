@@ -25,6 +25,10 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly CheckButton rangedTargetVariety = new() { Text = "Ranged target variety", ButtonPressed = true };
     private readonly CheckButton slowPursuitRefresh = new() { Text = "Slower long-range retargeting", ButtonPressed = true };
     public bool SlowPursuitRefresh => slowPursuitRefresh.ButtonPressed;
+    private readonly CheckButton delayFarMeleeRetarget = new() { Text = "Delay distant melee retargeting" };
+    private readonly CheckButton limitPursuitQueries = new() { Text = "Cap long-range searches (512/step)" };
+    public bool DelayFarMeleeRetarget => delayFarMeleeRetarget.ButtonPressed;
+    public bool LimitPursuitQueries => limitPursuitQueries.ButtonPressed;
     private readonly CheckButton prunePursuitCells = new() { Text = "Prune pursuit cells", ButtonPressed = true };
     public bool PrunePursuitCells => prunePursuitCells.ButtonPressed;
     public bool RangedTargetVariety => rangedTargetVariety.ButtonPressed;
@@ -132,6 +136,8 @@ public partial class BenchmarkPanel : CanvasLayer
         combat.AddChild(rangedTargetVariety);
         combat.AddChild(slowPursuitRefresh);
         combat.AddChild(prunePursuitCells);
+        combat.AddChild(delayFarMeleeRetarget);
+        combat.AddChild(limitPursuitQueries);
         var separation = Section(column, "Live separation", false, out _);
         separationChoice.AddItem("Off", (int)SeparationMode.Off);
         separationChoice.AddItem("Normal", (int)SeparationMode.Normal);

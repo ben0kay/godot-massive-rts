@@ -40,13 +40,17 @@ public sealed class SpatialGrid
     public PursuitSample ScheduledPursuitTiming(ScheduledPursuitCause cause) => scheduledPursuitSamples[(int)cause];
     public int ReplacementBudgetExhaustedSteps { get; private set; }
     public int DeferredReplacements { get; private set; }
+    public int PursuitBudgetDeferrals { get; private set; }
+    public int PursuitDelayDeferrals { get; private set; }
     public int NearbyPursuitResults { get; private set; }
     public int NearbyPursuitResultsWithoutLocalSearch { get; private set; }
 
-    public void RecordReplacementBudget(bool exhausted, int deferred)
+    public void RecordReplacementBudget(bool exhausted, int deferred, int pursuitBudgetDeferrals, int pursuitDelayDeferrals)
     {
         if (exhausted) ReplacementBudgetExhaustedSteps++;
         DeferredReplacements += deferred;
+        PursuitBudgetDeferrals += pursuitBudgetDeferrals;
+        PursuitDelayDeferrals += pursuitDelayDeferrals;
     }
 
     public void ResetTargetingTimings()
@@ -55,6 +59,7 @@ public sealed class SpatialGrid
         Array.Clear(pursuitSamples);
         Array.Clear(scheduledPursuitSamples);
         ReplacementBudgetExhaustedSteps = DeferredReplacements = 0;
+        PursuitBudgetDeferrals = PursuitDelayDeferrals = 0;
         NearbyPursuitResults = NearbyPursuitResultsWithoutLocalSearch = 0;
     }
 

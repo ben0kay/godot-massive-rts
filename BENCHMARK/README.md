@@ -28,6 +28,8 @@ In the CPU overlay, **Scheduled acquisition causes** splits global searches by w
 
 Budget and nearby-result counts cover the current HUD sample. An exhausted step used all 128 extra replacement queries. Deferred replacements count eligible attempts blocked by the cap, so a soldier can count again on a later step. Nearby results measure distance only. A local search can still reject those enemies due to cover, minimum range, or its candidate limit.
 
+**Live combat** has two independent comparison toggles, both off by default. **Delay distant melee retargeting** skips scheduled and extra pursuit for about 0.4 simulation seconds after a melee soldier first observes the target loss. Local acquisition continues, and getting within local search range of the old waypoint makes pursuit eligible early. **Cap long-range searches (512/step)** shares 512 queries across all live pursuit reasons per acquisition step (normally 30 Hz), with a rotating starting unit ID. The 128-query extra replacement cap still applies. Skipped searches retry on existing slots. The CPU overlay reports deferred attempts for each toggle over its current sample.
+
 ## Configuration and ownership
 
 `CONFIG/DefaultBenchmark.tres`, assigned to the arena's exported `Config`, controls benchmark workloads. Defaults and fields live in `CONFIG/BenchmarkConfig.cs`:

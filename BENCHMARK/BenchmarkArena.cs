@@ -423,7 +423,8 @@ public partial class BenchmarkArena : Node3D
                 start = Stamp();
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles,
-                    panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh);
+                    panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
+                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries);
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
@@ -551,6 +552,8 @@ public partial class BenchmarkArena : Node3D
             ScheduledLine("Ranged far loss", ScheduledPursuitCause.RangedFarLoss) +
             $"Replacement budget exhausted  {grid?.ReplacementBudgetExhaustedSteps ?? 0:N0} steps\n" +
             $"Eligible replacements deferred  {grid?.DeferredReplacements ?? 0:N0}\n" +
+            $"Pursuit deferred by shared cap  {grid?.PursuitBudgetDeferrals ?? 0:N0}\n" +
+            $"Pursuit deferred by melee delay  {grid?.PursuitDelayDeferrals ?? 0:N0}\n" +
             $"Pursuit results in local range  {grid?.NearbyPursuitResults ?? 0:N0} / {pursuitQueries:N0}\n" +
             $"  Without local search that step  {grid?.NearbyPursuitResultsWithoutLocalSearch ?? 0:N0}\n\n" +
             $"Combat  {combatMs / divisor:F3}\nProjectiles  {projectileMs / divisor:F3}\n\n" +

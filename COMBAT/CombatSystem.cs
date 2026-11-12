@@ -5,6 +5,8 @@ namespace MassiveRts;
 public static class CombatSystem
 {
     private const int ExtraPursuitQueriesPerAcquisitionStep = 128;
+    private const int PursuitQueriesPerAcquisitionStep = 512;
+    private const float FarMeleeRetargetDelaySeconds = 0.4f;
     private const float MeleeContactTolerance = 0.08f;
 
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
@@ -17,7 +19,8 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false)
+    public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false,
+        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false)
     {
         int localInterval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
         int pursuitInterval = Mathf.Max(localInterval, Mathf.RoundToInt(0.8f / acquisitionSeconds));
@@ -27,11 +30,20 @@ public static class CombatSystem
         int retainedPursuitPhase = tick % retainedPursuitInterval;
         int extraPursuitQueries = ExtraPursuitQueriesPerAcquisitionStep;
         int deferredReplacements = 0;
-        for (int i = 0; i < units.Count; i++)
+        int remainingPursuitQueries = limitPursuitQueries ? PursuitQueriesPerAcquisitionStep : int.MaxValue;
+        int budgetDeferrals = 0, delayDeferrals = 0;
+        int[] deadlines = units.RetargetDeadlines(delayFarMeleeRetarget);
+        int delaySteps = Mathf.CeilToInt(FarMeleeRetargetDelaySeconds / acquisitionSeconds);
+        // Rotate the starting ID so recurring budget pressure is spread across the formation.
+        int first = limitPursuitQueries && units.Count > 0 ? (int)(tick * 997L % units.Count) : 0;
+        for (int visited = 0, i = first; visited < units.Count; visited++, i = i + 1 == units.Count ? 0 : i + 1)
         {
             if (units.Health[i] <= 0) continue;
             int previous = units.Target[i];
             int target = previous >= 0 && units.Health[previous] > 0 ? previous : -1;
+
+            if (deadlines != null && target < 0 && previous >= 0 && deadlines[i] == 0)
+                deadlines[i] = tick + delaySteps;
 
             bool refreshLocal = i % localInterval == localPhase;
             bool refreshPursuit = i % pursuitInterval == pursuitPhase;
@@ -93,28 +105,35 @@ public static class CombatSystem
                         }
                     }
                 }
-                // Keep the normal replacement schedule and stagger live-target refreshes across twice as many ticks.
-                if (refreshPursuit && distance >= radius * radius &&
-                    (!slowPursuitRefresh || target < 0 || i % retainedPursuitInterval == retainedPursuitPhase))
-                    target = grid.FindPursuitEnemy(units, i, target,
-                        target >= 0 ? PursuitReason.LiveRefresh : PursuitReason.ScheduledAcquisition,
-                        previous, radius, refreshLocal);
-                else if (refreshLocal && target < 0 && previous >= 0 && (extraPursuitQueries > 0 || grid.ProfileTargeting))
+                float radiusSquared = radius * radius;
+                bool scheduled = refreshPursuit && distance >= radiusSquared &&
+                    (!slowPursuitRefresh || target < 0 || i % retainedPursuitInterval == retainedPursuitPhase);
+                bool extra = !scheduled && refreshLocal && target < 0 && previous >= 0 &&
+                    (extraPursuitQueries > 0 || grid.ProfileTargeting) &&
+                    units.Alive > units.FactionAlive[units.Faction[i]];
+                if (scheduled || extra)
                 {
-                    int enemyAlive = units.Alive - units.FactionAlive[units.Faction[i]];
-                    if (enemyAlive > 0 && extraPursuitQueries > 0)
+                    bool delayed = deadlines != null && !type.Ranged && target < 0 && previous >= 0 &&
+                        tick < deadlines[i] &&
+                        units.Position[i].DistanceSquaredTo(units.Position[previous]) > radiusSquared;
+                    if (delayed) delayDeferrals++;
+                    else if (extra && extraPursuitQueries == 0) deferredReplacements++;
+                    else if (remainingPursuitQueries == 0) budgetDeferrals++;
+                    else
                     {
-                        extraPursuitQueries--;
-                        target = grid.FindPursuitEnemy(units, i, -1, PursuitReason.ExtraReplacement,
-                            previous, radius, refreshLocal);
+                        remainingPursuitQueries--;
+                        if (extra) extraPursuitQueries--;
+                        PursuitReason reason = extra ? PursuitReason.ExtraReplacement :
+                            target >= 0 ? PursuitReason.LiveRefresh : PursuitReason.ScheduledAcquisition;
+                        target = grid.FindPursuitEnemy(units, i, target, reason, previous, radius, refreshLocal);
                     }
-                    else if (enemyAlive > 0) deferredReplacements++;
                 }
             }
+            if (deadlines != null && target >= 0) deadlines[i] = 0;
             // A dead target remains a movement waypoint until replacement. Attacks require a live target.
             units.Target[i] = target >= 0 ? target : previous;
         }
-        if (grid.ProfileTargeting) grid.RecordReplacementBudget(extraPursuitQueries == 0, deferredReplacements);
+        if (grid.ProfileTargeting) grid.RecordReplacementBudget(extraPursuitQueries == 0, deferredReplacements, budgetDeferrals, delayDeferrals);
     }
     // Fixed per soldier and battle seed. No random calls or per-shot retargets.
     private static int RangedRank(int id, uint seed)
