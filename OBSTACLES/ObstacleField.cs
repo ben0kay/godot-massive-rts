@@ -110,10 +110,22 @@ public sealed class ObstacleField
         return blocked;
     }
 
-    public Vector2 ClipMove(Vector2 from, Vector2 to, float radius)
+    public Vector2 ClipMove(Vector2 from, Vector2 to, float radius, bool slide = false)
     {
         long start = BeginSample(Query.Clip);
         Vector2 result = ClipMoveCore(from, to, radius);
+        if (result != to)
+        {
+            ClippedMoves++;
+            if (slide)
+            {
+                // Preserve a safe axis-aligned remainder along a rectangular wall.
+                Vector2 remaining = to - result;
+                Vector2 alongX = ClipMoveCore(result, result + new Vector2(remaining.X, 0f), radius);
+                Vector2 alongZ = ClipMoveCore(result, result + new Vector2(0f, remaining.Y), radius);
+                result = result.DistanceSquaredTo(alongX) >= result.DistanceSquaredTo(alongZ) ? alongX : alongZ;
+            }
+        }
         EndSample(Query.Clip, start);
         return result;
     }
@@ -128,7 +140,6 @@ public sealed class ObstacleField
         bool hitWall = Trace(from, to, radius, false, out float hit) && hit <= limit;
         if (!hitWall && limit >= 1f) return to;
 
-        ClippedMoves++;
         float fraction = Mathf.Max(0f, Mathf.Min(hit, limit) - 0.002f / delta.Length());
         return from + delta * fraction;
     }

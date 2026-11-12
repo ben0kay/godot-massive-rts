@@ -370,7 +370,7 @@ public sealed class SeparationSystem
             if (obstacles != null)
             {
                 Vector2 safe = obstacles.ClipMove(ObstacleField.Xz(units.Position[id]), ObstacleField.Xz(position),
-                    footprintByType[units.Type[id]]);
+                    footprintByType[units.Type[id]], slide: true);
                 position.X = safe.X;
                 position.Z = safe.Y;
             }

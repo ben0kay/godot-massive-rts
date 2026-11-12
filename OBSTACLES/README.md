@@ -7,3 +7,5 @@
 Melee, cleave and direct-fire weapons check cover at attack time. Direct projectiles compare the earliest wall and unit contact along each flight segment. Walls win ties. The initial cover test is 2D across XZ, including for shallow arrow arcs. **Obstacle Fire** and **Blocks On Obstacles** on the projectile definition separately control aim permission and projectile contact. Indirect fire bypasses the aiming gate. Height-aware projectile collisions are a future feature.
 
 See [NAVIGATION](../NAVIGATION/README.md) for routing and the [OBST1 plan](OBST1_IMPLEMENTATION_PLAN.md) for the owner checks.
+
+Ordinary movement and separation try a swept slide along a wall when a diagonal step is clipped. Charges and trample shoves retain their straight-line contact behavior.
