@@ -119,6 +119,10 @@ Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATIO
 
 [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md) designs a shared chunked heightfield with **two producers**: painted flat plateaus/smooth slopes for Army Painter and deterministic gentle procedural landscapes with protected flats for Open RTS. Both eventually share slope-aware movement, high-ground bonuses and terrain LOS. **Planning only; flat simulation remains unchanged.** Build in phases A (heightfield), B (painter), C (procedural) and D (combat/nav).
 
+## FRONT0 — Profiles, main menu and campaign levels (planned)
+
+[FRONT0 implementation plan](UI/FRONT0_IMPLEMENTATION_PLAN.md) introduces a minimal profile picker at boot, GUID-based local progress, shared consistent menu buttons/styles, main menu, campaign level buttons, options and a Level 1 link to the existing BENCHMARK/BenchmarkArena.tscn. Benchmark F6 direct launch remains available. The design selectively adapts patterns from godot-tower-defense without copying its full battle checkpoint/XP systems. **Planning document only; runtime menus and saves are not yet implemented.**
+
 ## Development order (proposed, not completed)
 
 1. **BENCH0:** Independently launchable benchmark room, batched visuals, repeatable unit counts and instrumentation.
