@@ -140,3 +140,4 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — Benchmark: Split pursuit diagnostics by search reason and added F1 side-panel visibility while keeping the compact battle summary on screen.
 
 - 2026-11-12 — DEF1-A: Extended the Laser Tower's shared barrel past its square base, aligned beam emission with the new tip and added a pooled, fading cyan/white muzzle starburst per shot. Rendering only; gameplay and collision footprints unchanged. Awaiting owner visual validation.
+- 2026-11-12 — BENCH0 pursuit profiling: Split scheduled searches by target history, unit type, and distance at query time. Report extra replacement budget pressure and nearby global results. Awaiting owner benchmark validation.

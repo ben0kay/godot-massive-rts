@@ -22,6 +22,12 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
+## Pursuit diagnostics
+
+In the CPU overlay, **Scheduled acquisition causes** splits global searches by whether the soldier had a previous target. Loss rows use the distance to the retained dead target **at search time**, compared with that soldier's local search radius. Rows show searches per real second and CPU ms per simulation tick.
+
+Budget and nearby-result counts cover the current HUD sample. An exhausted step used all 128 extra replacement queries. Deferred replacements count eligible attempts blocked by the cap, so a soldier can count again on a later step. Nearby results measure distance only. A local search can still reject those enemies due to cover, minimum range, or its candidate limit.
+
 ## Configuration and ownership
 
 `CONFIG/DefaultBenchmark.tres`, assigned to the arena's exported `Config`, controls benchmark workloads. Defaults and fields live in `CONFIG/BenchmarkConfig.cs`:

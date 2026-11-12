@@ -510,6 +510,17 @@ public partial class BenchmarkArena : Node3D
             return $"{label}\n{queriesPerSecond:N0}/s · {msPerTick:F3} ms/tick\n{average}{changes}\n";
         }
 
+        string ScheduledLine(string label, ScheduledPursuitCause cause)
+        {
+            PursuitSample sample = grid?.ScheduledPursuitTiming(cause) ?? default;
+            double queriesPerSecond = hudClock > 0 ? sample.Queries / hudClock : 0;
+            double msPerTick = sample.SearchTicks * 1000.0 / Stopwatch.Frequency / Math.Max(1, measuredTicks);
+            return $"  {label}  {queriesPerSecond:N0}/s · {msPerTick:F3} ms/tick\n";
+        }
+
+        int pursuitQueries = (grid?.PursuitTiming(PursuitReason.LiveRefresh).Queries ?? 0) +
+            (grid?.PursuitTiming(PursuitReason.ScheduledAcquisition).Queries ?? 0) +
+            (grid?.PursuitTiming(PursuitReason.ExtraReplacement).Queries ?? 0);
         panel.CpuMetrics.Text =
             $"Simulation rate  {achievedRate:F1} / {1f / Config.TickSeconds:F0} Hz\nSimulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
@@ -522,6 +533,16 @@ public partial class BenchmarkArena : Node3D
             PursuitLine("Live refresh", PursuitReason.LiveRefresh, showChanges: true) +
             PursuitLine("Scheduled acquisition", PursuitReason.ScheduledAcquisition) +
             PursuitLine("Extra replacement", PursuitReason.ExtraReplacement) + "\n" +
+            "Scheduled acquisition causes\n" +
+            ScheduledLine("No previous target", ScheduledPursuitCause.NoPreviousTarget) +
+            ScheduledLine("Melee near loss", ScheduledPursuitCause.MeleeNearLoss) +
+            ScheduledLine("Melee far loss", ScheduledPursuitCause.MeleeFarLoss) +
+            ScheduledLine("Ranged near loss", ScheduledPursuitCause.RangedNearLoss) +
+            ScheduledLine("Ranged far loss", ScheduledPursuitCause.RangedFarLoss) +
+            $"Replacement budget exhausted  {grid?.ReplacementBudgetExhaustedSteps ?? 0:N0} steps\n" +
+            $"Eligible replacements deferred  {grid?.DeferredReplacements ?? 0:N0}\n" +
+            $"Pursuit results in local range  {grid?.NearbyPursuitResults ?? 0:N0} / {pursuitQueries:N0}\n" +
+            $"  Without local search that step  {grid?.NearbyPursuitResultsWithoutLocalSearch ?? 0:N0}\n\n" +
             $"Combat  {combatMs / divisor:F3}\nProjectiles  {projectileMs / divisor:F3}\n\n" +
             $"Query caps  {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops  {projectiles?.Dropped ?? 0:N0}\n" +
             $"Separation pairs / caps  {overlapPairs:N0} / {separationCaps:N0}\n" +

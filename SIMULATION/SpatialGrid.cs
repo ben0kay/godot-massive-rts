@@ -8,6 +8,8 @@ namespace MassiveRts;
 
 public enum PursuitReason { LiveRefresh, ScheduledAcquisition, ExtraReplacement, Preparation }
 
+public enum ScheduledPursuitCause { NoPreviousTarget, MeleeNearLoss, MeleeFarLoss, RangedNearLoss, RangedFarLoss }
+
 public readonly record struct PursuitSample(int Queries, long SearchTicks, int ChangedTargets);
 
 public sealed class SpatialGrid
@@ -26,6 +28,7 @@ public sealed class SpatialGrid
     public bool PrunePursuitCells { get; set; } = true;
     public int LimitedQueries { get; private set; }
     private readonly bool profileTargeting;
+    public bool ProfileTargeting => profileTargeting;
     public long LocalSearchTicks { get; private set; }
     public long PursuitSearchTicks { get; private set; }
     public long PursuitBuildTicks { get; private set; }
@@ -33,10 +36,26 @@ public sealed class SpatialGrid
     private readonly PursuitSample[] pursuitSamples = new PursuitSample[(int)PursuitReason.Preparation];
     public PursuitSample PursuitTiming(PursuitReason reason) => pursuitSamples[(int)reason];
 
+    private readonly PursuitSample[] scheduledPursuitSamples = new PursuitSample[5];
+    public PursuitSample ScheduledPursuitTiming(ScheduledPursuitCause cause) => scheduledPursuitSamples[(int)cause];
+    public int ReplacementBudgetExhaustedSteps { get; private set; }
+    public int DeferredReplacements { get; private set; }
+    public int NearbyPursuitResults { get; private set; }
+    public int NearbyPursuitResultsWithoutLocalSearch { get; private set; }
+
+    public void RecordReplacementBudget(bool exhausted, int deferred)
+    {
+        if (exhausted) ReplacementBudgetExhaustedSteps++;
+        DeferredReplacements += deferred;
+    }
+
     public void ResetTargetingTimings()
     {
         LocalSearchTicks = PursuitSearchTicks = PursuitBuildTicks = 0;
         Array.Clear(pursuitSamples);
+        Array.Clear(scheduledPursuitSamples);
+        ReplacementBudgetExhaustedSteps = DeferredReplacements = 0;
+        NearbyPursuitResults = NearbyPursuitResultsWithoutLocalSearch = 0;
     }
 
     public SpatialGrid(int capacity, float size, bool profileTargeting = false)
@@ -211,7 +230,8 @@ public sealed class SpatialGrid
     }
 
     // Long-range queries share a tree built once per tick, only when needed.
-    public int FindPursuitEnemy(UnitState units, int id, int previous, PursuitReason reason)
+    public int FindPursuitEnemy(UnitState units, int id, int previous, PursuitReason reason,
+        int retainedTarget = -1, float localRadius = 0f, bool searchedLocally = false)
     {
         int enemies = EnemiesOf(units.Faction[id]);
         if (enemies == 0) return -1;
@@ -251,6 +271,27 @@ public sealed class SpatialGrid
             ref PursuitSample sample = ref pursuitSamples[(int)reason];
             sample = new PursuitSample(sample.Queries + 1, sample.SearchTicks + elapsed,
                 sample.ChangedTargets + (best != previous ? 1 : 0));
+
+            float radiusSquared = localRadius * localRadius;
+            if (best >= 0 && units.Position[id].DistanceSquaredTo(units.Position[best]) <= radiusSquared)
+            {
+                NearbyPursuitResults++;
+                if (!searchedLocally) NearbyPursuitResultsWithoutLocalSearch++;
+            }
+            if (reason == PursuitReason.ScheduledAcquisition)
+            {
+                ScheduledPursuitCause cause = ScheduledPursuitCause.NoPreviousTarget;
+                if (retainedTarget >= 0)
+                {
+                    bool near = units.Position[id].DistanceSquaredTo(units.Position[retainedTarget]) <= radiusSquared;
+                    bool ranged = units.Catalog[units.Type[id]].Ranged;
+                    cause = ranged
+                        ? (near ? ScheduledPursuitCause.RangedNearLoss : ScheduledPursuitCause.RangedFarLoss)
+                        : (near ? ScheduledPursuitCause.MeleeNearLoss : ScheduledPursuitCause.MeleeFarLoss);
+                }
+                ref PursuitSample scheduled = ref scheduledPursuitSamples[(int)cause];
+                scheduled = new PursuitSample(scheduled.Queries + 1, scheduled.SearchTicks + elapsed, 0);
+            }
         }
         return best;
     }

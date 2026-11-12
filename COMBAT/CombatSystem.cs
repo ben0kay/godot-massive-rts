@@ -26,6 +26,7 @@ public static class CombatSystem
         int retainedPursuitInterval = pursuitInterval * 2;
         int retainedPursuitPhase = tick % retainedPursuitInterval;
         int extraPursuitQueries = ExtraPursuitQueriesPerAcquisitionStep;
+        int deferredReplacements = 0;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
@@ -96,20 +97,24 @@ public static class CombatSystem
                 if (refreshPursuit && distance >= radius * radius &&
                     (!slowPursuitRefresh || target < 0 || i % retainedPursuitInterval == retainedPursuitPhase))
                     target = grid.FindPursuitEnemy(units, i, target,
-                        target >= 0 ? PursuitReason.LiveRefresh : PursuitReason.ScheduledAcquisition);
-                else if (refreshLocal && target < 0 && previous >= 0 && extraPursuitQueries > 0)
+                        target >= 0 ? PursuitReason.LiveRefresh : PursuitReason.ScheduledAcquisition,
+                        previous, radius, refreshLocal);
+                else if (refreshLocal && target < 0 && previous >= 0 && (extraPursuitQueries > 0 || grid.ProfileTargeting))
                 {
                     int enemyAlive = units.Alive - units.FactionAlive[units.Faction[i]];
-                    if (enemyAlive > 0)
+                    if (enemyAlive > 0 && extraPursuitQueries > 0)
                     {
                         extraPursuitQueries--;
-                        target = grid.FindPursuitEnemy(units, i, -1, PursuitReason.ExtraReplacement);
+                        target = grid.FindPursuitEnemy(units, i, -1, PursuitReason.ExtraReplacement,
+                            previous, radius, refreshLocal);
                     }
+                    else if (enemyAlive > 0) deferredReplacements++;
                 }
             }
             // A dead target remains a movement waypoint until replacement. Attacks require a live target.
             units.Target[i] = target >= 0 ? target : previous;
         }
+        if (grid.ProfileTargeting) grid.RecordReplacementBudget(extraPursuitQueries == 0, deferredReplacements);
     }
     // Fixed per soldier and battle seed. No random calls or per-shot retargets.
     private static int RangedRank(int id, uint seed)
