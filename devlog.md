@@ -104,3 +104,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-12 | Wall sliding | Source implemented.** Clipped movement and separation now preserve a safe wall-parallel remainder. Awaiting funnel gameplay validation.
 
 - **2026-11-12 | Wall corner routing | Source implemented.** Reverted wall sliding and applied wider corner clearance, bounded look-ahead, and previous-corner recovery. Awaiting funnel testing.
+
+- **2026-11-12 | Visual ranged recoil | Source implemented; awaiting owner validation.** Triangle Archers kick back 0.12 world units and recover over 0.18 seconds on successful ranged shots. Added compact optional recoil fields in the full-screen Unit Editor, shared per-type settings and active-only feedback updates; no gameplay displacement or extra soldier nodes.

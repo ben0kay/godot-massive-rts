@@ -144,7 +144,14 @@ public static class CombatSystem
                     }
                 }
             }
-            if (type.Ranged) projectiles.Fire(i, target, units);
+            if (type.Ranged)
+            {
+                // Only recoil when the projectile pool accepted the shot.
+                int before = projectiles.Count;
+                projectiles.Fire(i, target, units);
+                if (projectiles.Count > before && type.RangedRecoil.Distance > 0f)
+                    units.RangedRecoil?.OnFire(units, i, target);
+            }
             else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
             {
                 ShockwaveStats stomp = type.Shockwave;

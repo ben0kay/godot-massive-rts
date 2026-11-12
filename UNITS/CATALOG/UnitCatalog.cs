@@ -5,6 +5,7 @@ using Godot;
 namespace MassiveRts;
 
 public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, float Damage, float EdgeDamageFraction, bool RespectsCover);
+public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
 public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation)
@@ -47,7 +48,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, UnitOutline Outline, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave)
+    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil)
 {
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
@@ -74,6 +75,7 @@ public sealed class RuntimeUnitCatalog
     public int Count => stats.Length;
     public float MaxSpeed { get; }
     public float MaxFootprint { get; }
+    public bool HasRangedRecoil { get; }
     public ref readonly UnitStats this[int index] => ref stats[index];
     public bool TryResolve(string id, out byte index)
     {
@@ -98,6 +100,7 @@ public sealed class RuntimeUnitCatalog
             if (hexagon != null) byId.Add(HexagonId, hexagon);
         }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
+        bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
         {
             string id = OrderedIds[i];
@@ -123,6 +126,10 @@ public sealed class RuntimeUnitCatalog
             float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
             int shockwaveCadence = ranged ? 0 : Mathf.Clamp(d.ShockwaveEveryAttacks, 0, byte.MaxValue);
             float shockwaveDamage = Positive(d.ShockwaveDamage, 50f);
+            var recoil = new RangedRecoilStats(ranged && d.RangedRecoilEnabled
+                    ? ClampStat(d.RangedRecoilDistance, 0f, 4f, 0.12f) : 0f,
+                ClampStat(d.RangedRecoilReturnSeconds, 0.05f, 2f, 0.18f));
+            hasRangedRecoil |= recoil.Distance > 0f;
             var shockwave = new ShockwaveStats(shockwaveCadence,
                 ClampStat(Positive(d.ShockwaveBaseRadius, 4f), 0.1f, 64f, 4f) * size,
                 shockwaveDamage, d.EffectiveShockwaveOuterDamage(shockwaveDamage) / shockwaveDamage, d.ShockwaveRespectsCover);
@@ -133,11 +140,12 @@ public sealed class RuntimeUnitCatalog
                 ranged ? Projectiles.Register(d.Projectile) : -1,
                 d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
                 facingCosine * facingCosine, trample,
-                accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave);
+                accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave, recoil);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);
         }
+        HasRangedRecoil = hasRangedRecoil;
         if (Array.TrueForAll(stats, type => type.Ranged)) throw new ArgumentException("The catalogue needs a melee unit.");
     }
 

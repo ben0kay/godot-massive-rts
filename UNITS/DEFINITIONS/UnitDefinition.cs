@@ -64,6 +64,12 @@ public partial class UnitDefinition : Resource
     [ExportGroup("Ranged")]
     [Export] public ProjectileDefinition Projectile { get; set; }
 
+    [ExportGroup("Ranged recoil")]
+    [Export] public bool RangedRecoilEnabled { get; set; }
+    // Visual displacement only: no changes to physics, AI or projectile origins.
+    [Export(PropertyHint.Range, "0,4,0.01")] public float RangedRecoilDistance { get; set; } = 0.12f;
+    [Export(PropertyHint.Range, "0.05,2,0.01")] public float RangedRecoilReturnSeconds { get; set; } = 0.18f;
+
     public float EffectiveShockwaveOuterDamage(float centreDamage) =>
         float.IsFinite(ShockwaveOuterDamage) && ShockwaveOuterDamage >= 0f
             ? Mathf.Min(ShockwaveOuterDamage, centreDamage)

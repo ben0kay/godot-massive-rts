@@ -181,7 +181,9 @@ public partial class BenchmarkArena : Node3D
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
-        return new UnitState(targetCount, catalog, feedback, terrain);
+        var recoil = mode == BenchmarkMode.Ranged && catalog.HasRangedRecoil
+            ? new RangedRecoilSystem(targetCount) : null;
+        return new UnitState(targetCount, catalog, feedback, terrain, recoil);
     }
 
     private void SetDeploymentEditing(bool editing)
@@ -365,7 +367,10 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
             start = Stamp(); CombatSystem.Acquire(units, grid, Config, tick, obstacles, panel.RangedTargetVariety, battleSeed); targetingMs += Elapsed(start);
-            start = Stamp(); units.HitFeedback?.Advance(units, dt); combatMs += Elapsed(start);
+            start = Stamp();
+            units.HitFeedback?.Advance(units, dt);
+            units.RangedRecoil?.Advance(units, dt);
+            combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;

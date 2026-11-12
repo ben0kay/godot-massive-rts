@@ -25,11 +25,13 @@ public sealed class UnitState
     }
     public RuntimeUnitCatalog Catalog { get; }
     public HitFeedbackSystem HitFeedback { get; }
+    public RangedRecoilSystem RangedRecoil { get; }
     public TerrainGrounding Grounding { get; }
-    public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null, TerrainHeightField terrain = null)
+    public UnitState(int capacity, RuntimeUnitCatalog catalog, HitFeedbackSystem hitFeedback = null, TerrainHeightField terrain = null, RangedRecoilSystem rangedRecoil = null)
     {
         Catalog = catalog;
         HitFeedback = hitFeedback;
+        RangedRecoil = rangedRecoil;
         if (terrain != null) Grounding = new TerrainGrounding(terrain, capacity);
         Position = new Vector3[capacity]; Goal = new Vector3[capacity];
         Facing = new Vector2[capacity];

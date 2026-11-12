@@ -109,6 +109,13 @@ public partial class ArmyRenderer : Node3D
         byte type = units.Type[id];
         if (hasPreviousPose && poseBlend < 1f)
             position = previousPositions[id].Lerp(position, poseBlend);
+        // Visual mesh only; the authoritative position and projectile spawn stay unchanged.
+        if (units.RangedRecoil != null && units.Catalog[type].RangedRecoil.Distance > 0f)
+        {
+            Vector2 kick = units.RangedRecoil.VisualOffset(id, units.Catalog[type].RangedRecoil);
+            position.X += kick.X;
+            position.Z += kick.Y;
+        }
         // A circle looks identical from every direction: keep its transform unrotated,
         // but still interpolate position and apply the normal hit-feedback scale.
         float cosine = 1f, sine = 0f;

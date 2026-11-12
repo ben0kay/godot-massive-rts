@@ -15,3 +15,5 @@ Soldiers turn toward deliberate movement, including charges, and keep their last
 Smooth soldier motion is on by default. It blends the latest two simulation poses and adds roughly one tick of visual latency. Extra uploads between ticks are limited to about 60 Hz. Projectile poses and hit feedback still update on simulation ticks. Disable smoothing for tick-only soldier uploads.
 
 Circle Infantry bypasses visual yaw interpolation and rotation calculations because its shared mesh is rotationally symmetric. The renderer still interpolates Circle position and applies hit-pulse scaling, flash colour and MultiMesh uploads as before. Other unit shapes retain smooth turning.
+
+Ranged recoil applies a visual-only XZ displacement to the packed MultiMesh transform after normal pose interpolation. An active-ID feedback list marks only recoiling soldiers dirty during recovery. No changes to simulation positions or projectile origins.

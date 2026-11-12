@@ -131,6 +131,16 @@ public partial class UnitEditorPanel
         refreshFields.Add(() => picker.Editable = !IsMelee);
         Row("Projectile", picker, "Clear this field to use the default arrow. Open the reference to edit its own resource.");
 
+        var recoilSection = AbilitySection("Ranged recoil", nameof(Unit.RangedRecoilEnabled), Unit.RangedRecoilEnabled,
+            v => Unit.RangedRecoilEnabled = v, () => !IsMelee, () => !IsMelee && Unit.RangedRecoilEnabled);
+        refreshFields.Add(() => recoilSection.Visible = !IsMelee);
+        Number(nameof(Unit.RangedRecoilDistance), "Recoil distance", () => Unit.RangedRecoilDistance,
+            v => Unit.RangedRecoilDistance = v, 0, 4, 0.01, " u", () => !IsMelee && Unit.RangedRecoilEnabled,
+            "Visual-only backward kick. Does not affect movement or projectile origins.");
+        Number(nameof(Unit.RangedRecoilReturnSeconds), "Recovery time", () => Unit.RangedRecoilReturnSeconds,
+            v => Unit.RangedRecoilReturnSeconds = v, 0.05, 2, 0.01, " s", () => !IsMelee && Unit.RangedRecoilEnabled,
+            "Time for the ranged unit to settle back after firing.");
+
         var unsupported = typeof(UnitDefinition).GetProperties()
             .Where(p => Attribute.IsDefined(p, typeof(ExportAttribute)) && !represented.Contains(p.Name))
             .Select(p => p.Name).ToArray();
@@ -155,10 +165,10 @@ public partial class UnitEditorPanel
     }
 
     // Optional abilities use one consistent compact header; the detail controls exist only in this editor.
-    private void AbilitySection(string title, string key, bool initial, Action<bool> set,
+    private PanelContainer AbilitySection(string title, string key, bool initial, Action<bool> set,
         Func<bool> available, Func<bool> active)
     {
-        Section(title);
+        var panel = Section(title);
         VBoxContainer section = card;
         var toggle = new CheckBox { Text = "Enabled", ButtonPressed = initial };
         section.AddChild(toggle);
@@ -173,6 +183,7 @@ public partial class UnitEditorPanel
             toggle.SetPressedNoSignal(active());
             details.Visible = active();
         });
+        return panel;
     }
 
     private void Row(string name, Control editor, string tooltip = "")
