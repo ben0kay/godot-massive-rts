@@ -109,7 +109,7 @@ At huge unit counts, production should eventually have sensible pacing/limits an
 **The owner's preference is to design the map by hand.** Open RTS **Level 001** must be a **separate Godot scene** that can be opened and edited directly in the editor. It should be safe to place/arrange terrain, obstacles, Carbon deposit nodes, Citadels, starting positions and future structures by editing scene data. These objects are planned content, not items to spawn or lock into a hard-coded layout today.
 
 - **Do not fill Level 001 with a random map**, a mandatory procedural seed, generic trees, or a copied benchmark arena. The scene can start intentionally empty.
-- Do not overwrite the existing blank `LEVELS/Level001/Level001.tscn` until the campaign-mode mapping is implemented; the menu plan reserves this existing authored level for **Preset Battles** and proposes a new `LEVELS/OpenRTS/Level001/Level001.tscn` for Open RTS.
+- Preset Battles keeps `LEVELS/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/OpenRTS/Level001/Level001.tscn`.
 - Gameplay controllers can be composed when those systems are authorized; future map props should preferably be normal editable Godot scenes/resources with exposed settings, not procedural coordinates buried in code.
 - Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with Preset Battles rather than duplicate a second engine.
 - **Important:** Recording this direction does not mean workers, Carbon extraction, buildings or actual RTS battle gameplay are implemented.
@@ -126,7 +126,7 @@ Profile -> Main Menu -> Campaign
 
 **Campaign** is an umbrella that can hold additional modes later. **Preset Battles** is the player-facing name for the existing Army Painter / tactical-battle concept, not a third game mode. Each mode has its **own level list, scene paths and per-profile progression**, sharing the established campaign catalog, menu widgets, launch/session plumbing and common soldier simulation. The two `Level001` IDs may be equal *within different campaign IDs* because progress keys are `CampaignId -> LevelId`; their **scene paths must be distinct**. Add future modes through the catalog, not by hard-coding new menus.
 
-Implementation scope and compatibility mapping are specified in [UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md](UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md). The hierarchy is **planned**, not implemented by this vision document.
+Implementation scope and compatibility mapping are specified in [UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md](UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md). FRONT1 implements the menu hierarchy and blank scenes for future level authoring.
 
 ## 5. Group selection and right-click orders — the player's performance tradeoff
 

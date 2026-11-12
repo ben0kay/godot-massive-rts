@@ -17,6 +17,16 @@ internal static class MenuNavigation
     }
 
     // =========================================================
+    // Restore the mode from the level session rather than a global last selection.
+    public static void ReturnToCampaign(Node source, string campaignId)
+    {
+        if (!source.IsInsideTree()) return;
+        var menu = LoadScene(Campaign).Instantiate<FrontMenu>();
+        menu.ReturnCampaignId = campaignId;
+        Change(source, menu);
+    }
+
+    // =========================================================
     // Surface missing or invalid references before touching the active scene.
     public static PackedScene LoadScene(string path)
     {

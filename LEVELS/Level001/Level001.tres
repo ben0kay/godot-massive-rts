@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "Level001"
-DisplayName = "Level 1"
+DisplayName = "Level 001"
 Order = 1
 Description = "Blank campaign level."
 ScenePath = "res://LEVELS/Level001/Level001.tscn"

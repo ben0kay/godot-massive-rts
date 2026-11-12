@@ -2,7 +2,7 @@
 
 **Repository:** `ben0kay/godot-massive-rts`  
 **Branch:** `main`  
-**Status:** **Planned; NOT implemented by this document.**  
+**Status:** Source implemented. Awaiting owner validation.
 **Owner intent:** Reorganize the existing FRONT0 Campaign menu to present two game modes, each with its own Level 001. Future modes should require data/catalogue authoring rather than additional hard-coded navigation branches.
 
 ## Required player-facing hierarchy
@@ -22,7 +22,7 @@ Select / create profile
 
 **Campaign is a category**, not itself a battle type. **Open RTS** and **Preset Battles** are the two current planned game modes. "Preset Battles" is the new player-facing label for the previously discussed **Army Painter / tactical battle** concept. Additional modes can join Campaign later.
 
-## Current source facts (read live source again before implementation)
+## FRONT0 baseline before implementation
 
 - `project.godot` launches `UI/Menus/BootScreen.tscn` via F5; the benchmark remains directly runnable via F6.
 - `UI/Menus/FrontMenu.cs` currently uses `MenuScreen.Campaign` to show one `OptionButton` of campaigns followed immediately by level buttons. It already derives both from `CampaignCatalog.Load()`, not a list of hard-coded UI entries.

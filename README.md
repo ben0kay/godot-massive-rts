@@ -125,7 +125,7 @@ Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATIO
 
 ## FRONT0 — Profiles, main menu and campaign levels
 
-**Source implemented. Awaiting owner validation.** Run Project (F5) opens the local profile picker, main menu, campaign selector, and display options. The campaign opens the blank [Level001](LEVELS/README.md) scene. Open `BENCHMARK/BenchmarkArena.tscn` and use Run Current Scene (F6) to test the benchmark directly. See the [UI guide](UI/README.md) for menu settings and save ownership.
+**Source implemented. Awaiting owner validation.** Run Project (F5) opens the local profile picker, main menu, campaign selector, and display options. Campaign opens a catalogue-driven mode picker with Open RTS and Preset Battles. Each has its own blank [Level 001 scene](LEVELS/README.md). Open `BENCHMARK/BenchmarkArena.tscn` and use Run Current Scene (F6) to test the benchmark directly. See the [UI guide](UI/README.md) for menu settings and save ownership.
 
 ## Development order (proposed, not completed)
 

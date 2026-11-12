@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LevelDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "Level001"
+DisplayName = "Level 001"
+Order = 1
+Description = "Blank Open RTS map for hand authoring in Godot."
+ScenePath = "res://LEVELS/OpenRTS/Level001/Level001.tscn"

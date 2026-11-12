@@ -1,7 +1,6 @@
-// Owns the four FRONT0 screen actions and shared back/error handling.
+// Owns front-end screen actions, campaign mode selection and shared back/error handling.
 using System;
 using System.IO;
-using System.Linq;
 using Godot;
 
 namespace MassiveRts;
@@ -10,7 +9,10 @@ public partial class FrontMenu : Control
 {
     public enum MenuScreen { Boot, Main, Campaign, Options }
     [Export] public MenuScreen Screen { get; set; }
-    private static string selectedCampaignId;
+    internal string ReturnCampaignId { get; set; }
+    private VBoxContainer campaignModes;
+    private VBoxContainer campaignLevels;
+    private Button lastModeButton;
     private static bool startupOptionsApplied;
     private VBoxContainer content;
     private Label status;
@@ -145,58 +147,85 @@ public partial class FrontMenu : Control
     }
 
     // =========================================================
-    // Keep campaign choice in memory and render each level from the authored catalog.
+    // Build mode choices in catalog order and open a level list only after selection or return.
     private void BuildCampaign()
     {
+        campaignModes = new VBoxContainer();
+        campaignLevels = new VBoxContainer { Visible = false };
+        int spacing = UIMasterConfig.Current.Spacing;
+        campaignModes.AddThemeConstantOverride("separation", spacing);
+        campaignLevels.AddThemeConstantOverride("separation", spacing);
+        content.AddChild(campaignModes);
+        content.AddChild(campaignLevels);
+        var modes = MenuLayout.ScrollList(campaignModes);
         var back = AddButton("Back", Back);
-        var selector = new OptionButton();
-        UIButtonFactory.Apply(selector);
-        var description = MenuLayout.Label("", muted: true);
-        content.AddChild(selector);
-        content.AddChild(description);
-        var list = MenuLayout.ScrollList(content);
-        content.MoveChild(back, -1);
         back.GrabFocus();
 
         Run(() =>
         {
-            var catalog = CampaignCatalog.Load();
-            var progress = CampaignProgressStore.Load(ProfileStore.Selected.Id, out bool recovered);
-            if (recovered) Report("Recovered campaign progress from the previous backup.");
-            var campaigns = catalog.Campaigns.ToArray();
-
-            void Render(int index)
+            Button first = null;
+            CampaignDefinition returning = null;
+            foreach (var campaign in CampaignCatalog.Load().Campaigns)
             {
-                var campaign = campaigns[index];
-                selectedCampaignId = campaign.Id;
-                description.Text = campaign.Description ?? "";
-                description.Visible = description.Text.Length > 0;
-                foreach (Node child in list.GetChildren())
+                var button = new Button { Text = campaign.DisplayName };
+                UIButtonFactory.Apply(button, UIButtonStyle.Primary);
+                button.Pressed += () => Run(() =>
                 {
-                    list.RemoveChild(child);
-                    child.QueueFree();
-                }
-                foreach (var level in CampaignCatalog.OrderedLevels(campaign))
+                    lastModeButton = button;
+                    ShowCampaignLevels(campaign, back);
+                });
+                button.TooltipText = campaign.Description ?? "";
+                modes.AddChild(button);
+                first ??= button;
+                if (campaign.Id == ReturnCampaignId)
                 {
-                    bool unlocked = CampaignCatalog.IsUnlocked(campaign, level, progress);
-                    bool missing = level.Enabled && !MenuNavigation.SceneExists(level.ScenePath);
-                    string suffix = !level.Enabled ? " (Coming Soon)" : missing ? " (Scene Unavailable)" : !unlocked ? " (Locked)" :
-                        progress.IsComplete(campaign.Id, level.Id) ? " (Complete)" : "";
-                    var button = UIButtonFactory.Create(level.DisplayName + suffix, () => Run(
-                        () => LevelLauncher.Launch(this, campaign.Id, level.Id)), UIButtonStyle.Primary);
-                    button.Disabled = !level.Enabled || missing || !unlocked;
-                    button.TooltipText = missing ? $"Scene unavailable: {level.ScenePath}" : level.Description ?? "";
-                    list.AddChild(button);
+                    returning = campaign;
+                    lastModeButton = button;
                 }
             }
 
-            foreach (var campaign in campaigns) selector.AddItem(campaign.DisplayName);
-            int initial = Math.Max(0, Array.FindIndex(campaigns, campaign => campaign.Id == selectedCampaignId));
-            selector.Select(initial);
-            Render(initial);
-            selector.ItemSelected += index => Run(() => Render((int)index));
-            selector.GrabFocus();
+            if (returning != null) ShowCampaignLevels(returning, back);
+            else first?.GrabFocus();
         });
+    }
+
+    // =========================================================
+    // Reload progress for the active profile when showing a mode, including after a level.
+    private void ShowCampaignLevels(CampaignDefinition campaign, Button back)
+    {
+        foreach (Node child in campaignLevels.GetChildren())
+        {
+            campaignLevels.RemoveChild(child);
+            child.QueueFree();
+        }
+
+        campaignModes.Hide();
+        campaignLevels.Show();
+        Report("");
+        campaignLevels.AddChild(MenuLayout.Label(campaign.DisplayName));
+        if (!string.IsNullOrWhiteSpace(campaign.Description))
+            campaignLevels.AddChild(MenuLayout.Label(campaign.Description, muted: true));
+        back.GrabFocus();
+
+        var progress = CampaignProgressStore.Load(ProfileStore.Selected.Id, out bool recovered);
+        if (recovered) Report("Recovered campaign progress from the previous backup.");
+        var list = MenuLayout.ScrollList(campaignLevels);
+        Button firstPlayable = null;
+        foreach (var level in CampaignCatalog.OrderedLevels(campaign))
+        {
+            bool unlocked = CampaignCatalog.IsUnlocked(campaign, level, progress);
+            bool missing = level.Enabled && !MenuNavigation.SceneExists(level.ScenePath);
+            string suffix = !level.Enabled ? " (Coming Soon)" : missing ? " (Scene Unavailable)" : !unlocked ? " (Locked)" :
+                progress.IsComplete(campaign.Id, level.Id) ? " (Complete)" : "";
+            var button = UIButtonFactory.Create(level.DisplayName + suffix, () => Run(
+                () => LevelLauncher.Launch(this, campaign.Id, level.Id)), UIButtonStyle.Primary);
+            button.Disabled = !level.Enabled || missing || !unlocked;
+            button.TooltipText = missing ? $"Scene unavailable: {level.ScenePath}" : level.Description ?? "";
+            list.AddChild(button);
+            if (!button.Disabled) firstPlayable ??= button;
+        }
+
+        firstPlayable?.GrabFocus();
     }
 
     private void BuildOptions()
@@ -242,7 +271,13 @@ public partial class FrontMenu : Control
         {
             MenuNavigation.Open(this, MenuNavigation.Boot);
             ProfileStore.ClearSelection();
-            selectedCampaignId = null;
+        }
+        else if (Screen == MenuScreen.Campaign && campaignLevels?.Visible == true)
+        {
+            campaignLevels.Hide();
+            campaignModes.Show();
+            Report("");
+            lastModeButton?.GrabFocus();
         }
         else MenuNavigation.Open(this, MenuNavigation.Main);
     }

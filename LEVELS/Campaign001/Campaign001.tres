@@ -7,5 +7,5 @@
 [resource]
 script = ExtResource("1")
 Id = "Campaign001"
-DisplayName = "Main Campaign"
+DisplayName = "Preset Battles"
 Levels = Array[ExtResource("2")]([ExtResource("3")])

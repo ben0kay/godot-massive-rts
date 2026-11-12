@@ -38,7 +38,6 @@ internal static class LevelLauncher
         panel.AddThemeStyleboxOverride("panel", MenuLayout.PanelStyle);
         layer.AddChild(panel);
 
-
         var buttons = new VBoxContainer();
         buttons.AddThemeConstantOverride("separation", UIMasterConfig.Current.Spacing);
         panel.AddChild(buttons);
@@ -51,7 +50,7 @@ internal static class LevelLauncher
             try
             {
                 if (complete) session.CompleteCurrentLevel(victory: true);
-                MenuNavigation.Open(panel, MenuNavigation.Campaign);
+                MenuNavigation.ReturnToCampaign(panel, session.CampaignId);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
@@ -62,6 +61,7 @@ internal static class LevelLauncher
 
         buttons.AddChild(MenuLayout.Label(level.DisplayName));
         var back = UIButtonFactory.Create("Return to Campaign", () => Return(false));
+        back.Shortcut = new Shortcut { Events = InputMap.ActionGetEvents("ui_cancel") };
         buttons.AddChild(back);
         if (allowTestCompletion)
             buttons.AddChild(UIButtonFactory.Create("Mark Test Level Complete (Dev)", () => Return(true)));
