@@ -1,7 +1,6 @@
 // Shares static corner graphs and budgeted sector routes across soldiers.
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Godot;
 
 namespace MassiveRts;
@@ -37,7 +36,6 @@ public sealed class ObstacleNavigation
     public int CacheMisses { get; private set; }
     public int RoutesBuilt { get; private set; }
     public int MaxWaitFrames { get; private set; }
-    public long SteeringTicks { get; private set; }
 
     public ObstacleNavigation(ObstacleField field, RuntimeUnitCatalog catalog, int soldiers,
         float sectorSize, int capacity, int budget)
@@ -55,7 +53,6 @@ public sealed class ObstacleNavigation
     public void ResetCounters()
     {
         CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = 0;
-        SteeringTicks = 0;
     }
 
     public void AdvanceFrame() => frame++;
@@ -80,15 +77,6 @@ public sealed class ObstacleNavigation
 
     // Approach cover while waiting for a shared route, and carry speed through route corners.
     public Vector2 Steer(int id, byte type, Vector2 start, Vector2 goal, float stop,
-        out bool detouring, out bool routeCorner)
-    {
-        long stamp = Stopwatch.GetTimestamp();
-        Vector2 result = ChooseWaypoint(id, type, start, goal, stop, out detouring, out routeCorner);
-        SteeringTicks += Stopwatch.GetTimestamp() - stamp;
-        return result;
-    }
-
-    private Vector2 ChooseWaypoint(int id, byte type, Vector2 start, Vector2 goal, float stop,
         out bool detouring, out bool routeCorner)
     {
         float radius = graphs[type].Radius;

@@ -1,5 +1,6 @@
 // Static XZ obstacle index shared by ground movement, visibility and projectile sweeps.
 using System;
+using System.Diagnostics;
 using Godot;
 
 namespace MassiveRts;
@@ -16,6 +17,33 @@ public sealed class ObstacleField
     public int LosQueries { get; private set; }
     public int LosBlocks { get; private set; }
     public int ClippedMoves { get; private set; }
+    public bool ProfileQueries { get; set; }
+
+    public enum Query { Corridor, Clip, Sweep, Sight, Circle }
+    public struct QuerySample
+    {
+        public int Calls, Timed;
+        public long Ticks;
+        public double Microseconds => Timed == 0 ? 0d : Ticks * 1_000_000d / Stopwatch.Frequency / Timed;
+    }
+
+    private readonly QuerySample[] samples = new QuerySample[5];
+    public QuerySample Sample(Query query) => samples[(int)query];
+
+    private long BeginSample(Query query)
+    {
+        if (!ProfileQueries) return 0;
+        ref QuerySample sample = ref samples[(int)query];
+        return (++sample.Calls & 63) == 1 ? Stopwatch.GetTimestamp() : 0;
+    }
+
+    private void EndSample(Query query, long start)
+    {
+        if (start == 0) return;
+        ref QuerySample sample = ref samples[(int)query];
+        sample.Ticks += Stopwatch.GetTimestamp() - start;
+        sample.Timed++;
+    }
 
     public ObstacleField(ObstacleRectangle[] rectangles)
     {
@@ -48,10 +76,20 @@ public sealed class ObstacleField
             ? (a.Min.X + a.Max.X).CompareTo(b.Min.X + b.Max.X)
             : (a.Min.Y + a.Max.Y).CompareTo(b.Min.Y + b.Max.Y));
 
-    public void ResetCounters() => LosQueries = LosBlocks = ClippedMoves = 0;
+    public void ResetCounters()
+    {
+        LosQueries = LosBlocks = ClippedMoves = 0;
+        Array.Clear(samples);
+    }
     public static Vector2 Xz(Vector3 point) => new(point.X, point.Z);
 
-    public bool IntersectsCircle(Vector2 point, float radius) => IntersectsCircle(0, point, radius * radius);
+    public bool IntersectsCircle(Vector2 point, float radius)
+    {
+        long start = BeginSample(Query.Circle);
+        bool hit = IntersectsCircle(0, point, radius * radius);
+        EndSample(Query.Circle, start);
+        return hit;
+    }
 
     private bool IntersectsCircle(int index, Vector2 point, float radiusSquared)
     {
@@ -65,19 +103,29 @@ public sealed class ObstacleField
     public bool BlocksSight(Vector3 from, Vector3 to)
     {
         LosQueries++;
-        if (!BlocksCorridor(Xz(from), Xz(to), 0f)) return false;
-        LosBlocks++;
-        return true;
+        long start = BeginSample(Query.Sight);
+        bool blocked = Trace(Xz(from), Xz(to), 0f, true, out _);
+        EndSample(Query.Sight, start);
+        if (blocked) LosBlocks++;
+        return blocked;
     }
 
     public Vector2 ClipMove(Vector2 from, Vector2 to, float radius)
+    {
+        long start = BeginSample(Query.Clip);
+        Vector2 result = ClipMoveCore(from, to, radius);
+        EndSample(Query.Clip, start);
+        return result;
+    }
+
+    private Vector2 ClipMoveCore(Vector2 from, Vector2 to, float radius)
     {
         if (from == to) return to;
         float edge = DeploymentLayout.HalfWidth * DeploymentLayout.CellSize - radius;
         Vector2 delta = to - from;
         float limit = Mathf.Min(BoundaryFraction(from.X, to.X, delta.X, edge),
             BoundaryFraction(from.Y, to.Y, delta.Y, edge));
-        bool hitWall = FirstHit(from, to, radius, out float hit) && hit <= limit;
+        bool hitWall = Trace(from, to, radius, false, out float hit) && hit <= limit;
         if (!hitWall && limit >= 1f) return to;
 
         ClippedMoves++;
@@ -94,16 +142,25 @@ public sealed class ObstacleField
 
     public bool FirstHit(Vector2 from, Vector2 to, float radius, out float fraction)
     {
-        fraction = float.PositiveInfinity;
-        Search(0, from, to - from, radius, false, ref fraction);
-        return fraction <= 1f;
+        long start = BeginSample(Query.Sweep);
+        bool hit = Trace(from, to, radius, false, out fraction);
+        EndSample(Query.Sweep, start);
+        return hit;
     }
 
     public bool BlocksCorridor(Vector2 from, Vector2 to, float radius)
     {
-        float hit = float.PositiveInfinity;
-        Search(0, from, to - from, radius, true, ref hit);
-        return hit <= 1f;
+        long start = BeginSample(Query.Corridor);
+        bool hit = Trace(from, to, radius, true, out _);
+        EndSample(Query.Corridor, start);
+        return hit;
+    }
+
+    private bool Trace(Vector2 from, Vector2 to, float radius, bool anyHit, out float fraction)
+    {
+        fraction = float.PositiveInfinity;
+        Search(0, from, to - from, radius, anyHit, ref fraction);
+        return fraction <= 1f;
     }
 
     private void Search(int index, Vector2 from, Vector2 delta, float radius, bool anyHit, ref float first)

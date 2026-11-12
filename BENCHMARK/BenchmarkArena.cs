@@ -243,6 +243,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Process(double delta)
     {
+        if (obstacles != null) obstacles.ProfileQueries = panel.ProfileObstacles;
         frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
         if (!paused) shockwaves.Advance((float)delta);
         if (spawning)
@@ -428,33 +429,71 @@ public partial class BenchmarkArena : Node3D
         double renderGpu = RenderingServer.ViewportGetMeasuredRenderTimeGpu(viewport);
         double syncDivisor = Math.Max(1, measuredSyncs);
         string separationSamples = separating && separation != null
-            ? $"{separation.MeanPenetration:F3} / {separation.MaxPenetration:F3} • {separation.CandidatesPerSoldier:F1} checks/unit/pass"
+            ? $"{separation.MeanPenetration:F3} / {separation.MaxPenetration:F3}"
             : "N/A";
         string yieldStats = separating && panel.AlliedYield && separation != null
-            ? $"Allied yield skip / push / exit: {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
+            ? $"Yield skip / push / exit  {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
             : "";
-        string obstacleStats = obstacles == null ? "" :
-            $"Walls {obstacles.RectangleCount} • LOS checks/blocks {obstacles.LosQueries:N0}/{obstacles.LosBlocks:N0} • clips {obstacles.ClippedMoves:N0}\n";
+        panel.Metrics.Text =
+            $"BENCH0 · {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
+            $"{Engine.GetFramesPerSecond():F0} FPS · {avg:F2} ms avg\nWorst frame  {worst:F2} ms\n" +
+            $"Alive  {units?.Alive ?? 0:N0} / {units?.Count ?? 0:N0}\n" +
+            $"Blue {units?.FactionAlive[Factions.Blue] ?? 0:N0} · Red {units?.FactionAlive[Factions.Red] ?? 0:N0} · Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\n" +
+            $"Projectiles  {projectiles?.Count ?? 0:N0}";
+
+        panel.CpuMetrics.Text =
+            $"Simulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
+            $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
+            $"CPU time / rendered frame (ms)\nSimulation  {simulationMs / divisor:F3}\nMovement  {movementMs / divisor:F3}\n" +
+            $"Separation  {separationMs / divisor:F3}\nGrid rebuild  {gridMs / divisor:F3}\nTargeting  {targetingMs / divisor:F3}\n" +
+            $"Combat  {combatMs / divisor:F3}\nProjectiles  {projectileMs / divisor:F3}\n\n" +
+            $"Query caps  {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops  {projectiles?.Dropped ?? 0:N0}\n" +
+            $"Separation pairs / caps  {overlapPairs:N0} / {separationCaps:N0}\n" +
+            $"Candidates / unit / pass  {(separating ? separation?.CandidatesPerSoldier ?? 0f : 0f):F1}\n" +
+            $"Penetration avg / max  {separationSamples}\n" + yieldStats;
+
+        string obstacleStats = obstacles == null ? "No active walls.\n" :
+            $"Walls  {obstacles.RectangleCount}\nLOS checks / blocks  {obstacles.LosQueries:N0} / {obstacles.LosBlocks:N0}\nClipped moves  {obstacles.ClippedMoves:N0}\n";
         if (navigation != null)
         {
-            double steerMs = navigation.SteeringTicks * 1000.0 / Stopwatch.Frequency / Math.Max(1, measuredTicks);
-            obstacleStats += $"Nav steer {steerMs:F3} ms/tick • route build {routeBuildMs / divisor:F3} ms/frame\n" +
-                $"Route hits/misses {navigation.CacheHits:N0}/{navigation.CacheMisses:N0} • built/queued {navigation.RoutesBuilt:N0}/{navigation.QueueDepth:N0} • wait {navigation.MaxWaitFrames}f\n";
+            obstacleStats += $"Route build  {routeBuildMs / divisor:F3} ms/frame\n" +
+                $"Route cache hit / miss  {navigation.CacheHits:N0} / {navigation.CacheMisses:N0}\n" +
+                $"Routes built / queued  {navigation.RoutesBuilt:N0} / {navigation.QueueDepth:N0}\n" +
+                $"Longest route wait  {navigation.MaxWaitFrames} frames\n";
         }
-        string terrainStats = terrain == null ? "" :
-            $"Plateau • {terrain.ChunkCount} chunks • samples/tick {groundSamples / (double)Math.Max(1, measuredTicks):N0}\n" +
-            $"Grounding {groundingMs / Math.Max(1, measuredTicks):F3} ms/tick • setup {terrainCompileMs:F2} + {terrainMeshMs:F2} ms\n";
-        panel.Metrics.Text = $"BENCH0 — {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
-            $"FPS {Engine.GetFramesPerSecond():F0} • avg {avg:F2} ms\nRecent worst ({frameSamples} frames): {worst:F2} ms\n" +
-            $"Alive {units?.Alive ?? 0:N0} / spawned {units?.Count ?? 0:N0}\nBlue {units?.FactionAlive[Factions.Blue] ?? 0:N0} • Red {units?.FactionAlive[Factions.Red] ?? 0:N0} • Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\nProjectiles {projectiles?.Count ?? 0:N0}\n\n" +
-            $"GAME CPU • ms per rendered frame\nSimulation total {simulationMs / divisor:F3}\nMovement {movementMs / divisor:F3}\nSeparation {separationMs / divisor:F3}\nGrid rebuild {gridMs / divisor:F3}\nTargeting {targetingMs / divisor:F3}\nCombat {combatMs / divisor:F3}\nProjectiles {projectileMs / divisor:F3}\nRender sync {renderMs / divisor:F3}\n" +
-            $"Simulation per tick {costPerTick} (worst {worstTickMs:F2})\nSeparation per tick {separationPerTick}\nRender sync / tick {renderMs / Math.Max(1, measuredTicks):F3} ms\nArmy uploads / sync {armyUploadMs / syncDivisor:F3} ms\nDense / sparse / writes per sync {denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\nTicks/frame {measuredTicks / divisor:F2} (peak {maxTicksInFrame})\n" +
-            $"Skipped ticks {skippedSteps:N0}\nQuery caps (last tick) {grid?.LimitedQueries ?? 0:N0}\nProjectile cap drops {projectiles?.Dropped ?? 0:N0}\nSeparation pairs / caps (last tick) {overlapPairs:N0} / {separationCaps:N0}\nSampled penetration avg/max: {separationSamples}\n\n" +
-            yieldStats + obstacleStats + terrainStats +
-            $"ENGINE COUNTERS (whole viewport)\nDraw calls {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\nRendered objects {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
-            $"Soldier instances {armyRenderer?.InstanceCount ?? 0:N0}\nManaged heap {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory {StaticMemory()}\n" +
-            $"Viewport render CPU / GPU: {ViewportTime(renderCpu)} / {ViewportTime(renderGpu)}";
+        if (obstacles != null && panel.ProfileObstacles)
+        {
+            obstacleStats += "\nCalls / HUD interval · sampled µs/call\n" +
+                QueryLine("Corridor", obstacles.Sample(ObstacleField.Query.Corridor)) +
+                QueryLine("Move clip", obstacles.Sample(ObstacleField.Query.Clip)) +
+                QueryLine("First-hit sweep", obstacles.Sample(ObstacleField.Query.Sweep)) +
+                QueryLine("Line of sight", obstacles.Sample(ObstacleField.Query.Sight)) +
+                QueryLine("Circle overlap", obstacles.Sample(ObstacleField.Query.Circle));
+        }
+        if (terrain != null)
+        {
+            obstacleStats += $"\nPlateau  {terrain.ChunkCount} chunks\n" +
+                $"Samples / tick  {groundSamples / (double)Math.Max(1, measuredTicks):N0}\n" +
+                $"Grounding  {groundingMs / Math.Max(1, measuredTicks):F3} ms/tick\n" +
+                $"Setup  {terrainCompileMs:F2} + {terrainMeshMs:F2} ms";
+        }
+        panel.ObstacleMetrics.Text = obstacleStats.TrimEnd();
+
+        panel.EngineMetrics.Text =
+            $"Render sync  {renderMs / divisor:F3} ms/frame\n" +
+            $"Render sync / tick  {renderMs / Math.Max(1, measuredTicks):F3} ms\n" +
+            $"Army upload / sync  {armyUploadMs / syncDivisor:F3} ms\n" +
+            $"Dense / sparse / writes per sync\n{denseUploads / syncDivisor:F1} / {sparseUploads / syncDivisor:F1} / {changedWrites / syncDivisor:F0}\n\n" +
+            $"Viewport CPU  {ViewportTime(renderCpu)}\nViewport GPU  {ViewportTime(renderGpu)}\n" +
+            $"Draw calls  {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame):F0}\n" +
+            $"Rendered objects  {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame):F0}\n" +
+            $"Soldier instances  {armyRenderer?.InstanceCount ?? 0:N0}\n" +
+            $"Managed heap  {GC.GetTotalMemory(false) / 1048576.0:F1} MiB\nStatic memory  {StaticMemory()}";
     }
+
+    private static string QueryLine(string label, ObstacleField.QuerySample sample) =>
+        $"{label}  {sample.Calls:N0} · {(sample.Timed > 0 ? $"{sample.Microseconds:F2}" : "—")}\n";
+
     private static float ClampFiniteSetting(float value, float max, float fallback) =>
         float.IsFinite(value) ? Mathf.Clamp(value, 0, max) : fallback;
 

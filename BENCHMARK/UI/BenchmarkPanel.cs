@@ -41,7 +41,10 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly SpinBox Seed = new() { MinValue = 0, MaxValue = 2147483647, Value = 12345, Step = 1 };
     public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 1 };
     public readonly SpinBox RangedPercent = new() { MinValue = 0, MaxValue = 100, Step = 5, Value = 40 };
-    public readonly Label Status = new(), Metrics = new();
+    public readonly Label Status = new();
+    public readonly Label Metrics = DebugLabel(), CpuMetrics = DebugLabel(), ObstacleMetrics = DebugLabel(), EngineMetrics = DebugLabel();
+    private readonly CheckButton profileObstacles = new() { Text = "Sample obstacle queries" };
+    public bool ProfileObstacles => profileObstacles.ButtonPressed;
     public readonly Button PauseButton = new() { Text = "Pause" };
     private PanelContainer overlay;
     public static readonly int[] Counts = { 1000, 5000, 10000, 20000, 25000, 50000, 100000 };
@@ -138,12 +141,34 @@ public partial class BenchmarkPanel : CanvasLayer
         actions.AddChild(PauseButton);
         Status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         shell.AddChild(Status);
-        overlay = new PanelContainer { AnchorLeft = 1, AnchorRight = 1, OffsetLeft = -415, OffsetRight = -12, OffsetTop = 12 };
-        AddChild(overlay); overlay.AddChild(Metrics); Metrics.AddThemeFontSizeOverride("font_size", 15);
+        overlay = new PanelContainer
+        {
+            AnchorLeft = 1, AnchorRight = 1, AnchorBottom = 1,
+            OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12, OffsetBottom = -12
+        };
+        AddChild(overlay);
+        var debugScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        overlay.AddChild(debugScroll);
+        var debug = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        debugScroll.AddChild(debug);
+        debug.AddChild(Metrics);
+        Section(debug, "CPU and separation", false, out _, true).AddChild(CpuMetrics);
+        var obstacleDebug = Section(debug, "Obstacles and terrain", false, out _, true);
+        obstacleDebug.AddChild(profileObstacles);
+        obstacleDebug.AddChild(ObstacleMetrics);
+        Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
     }
-    private static VBoxContainer Section(VBoxContainer parent, string title, bool open, out Button header)
+    private static Label DebugLabel()
     {
-        var button = new Button { ToggleMode = true, ButtonPressed = open, Alignment = HorizontalAlignment.Left };
+        var label = new Label { HorizontalAlignment = HorizontalAlignment.Right,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        label.AddThemeFontSizeOverride("font_size", 14);
+        return label;
+    }
+
+    private static VBoxContainer Section(VBoxContainer parent, string title, bool open, out Button header, bool alignRight = false)
+    {
+        var button = new Button { ToggleMode = true, ButtonPressed = open, Alignment = alignRight ? HorizontalAlignment.Right : HorizontalAlignment.Left };
         button.Text = (open ? "▾ " : "▸ ") + title;
         parent.AddChild(button);
         var body = new VBoxContainer { Visible = open };
