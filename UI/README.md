@@ -11,3 +11,7 @@ See [LEVELS](../LEVELS/README.md) for campaign authoring and [SYSTEMS](../SYSTEM
 ## FRONT1 — Campaign game modes
 
 Campaign shows **Open RTS** and **Preset Battles**, each with its own **Level 001**. Mode buttons follow the order in `LEVELS/Catalog/DefaultCampaignCatalog.tres`. A launched level returns to the level list for its own mode. See the [FRONT1 plan](CAMPAIGN_MODE_STRUCTURE_PLAN.md) for the compatibility mapping and owner checks.
+
+## Gameplay HUD
+
+[UI/GameplayHUD](GameplayHUD/README.md) owns the new **army balance bar** used by BENCHMARK. Unlike the development diagnostics panels, the bar is reusable presentation UI: Blue on the left, Red on the right, optional Green in the middle, smoothly tracking surviving unit shares from cached faction totals. It stays hidden during deployment editing and generation.

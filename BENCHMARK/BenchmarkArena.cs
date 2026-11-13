@@ -25,6 +25,7 @@ public partial class BenchmarkArena : Node3D
     private ShockwaveRenderer shockwaves;
     private IsometricCamera camera;
     private BenchmarkPanel panel;
+    private ArmyBalanceHud armyBalanceHud;
     private DeploymentFactory deployment;
     private int autoAttackCount;
     private GuardGroup[] guards;
@@ -109,6 +110,11 @@ public partial class BenchmarkArena : Node3D
         buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"));
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
+        // Keep the gameplay bar separate from BENCHMARK's developer panels.
+        var gameplayHudLayer = new CanvasLayer { Layer = 2 };
+        AddChild(gameplayHudLayer);
+        armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
+        gameplayHudLayer.AddChild(armyBalanceHud);
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
         Config.RouteSectorSize = float.IsFinite(Config.RouteSectorSize) ? Mathf.Clamp(Config.RouteSectorSize, 4f, 32f) : 12f;
         painter = new DeploymentPainter
@@ -146,6 +152,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     private void Clear()
     {
+        armyBalanceHud?.Reset();
         guards = null;
         autoAttackIds = null;
         autoAttackCount = 0;
@@ -358,6 +365,7 @@ public partial class BenchmarkArena : Node3D
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
+                armyBalanceHud.BeginBattle(units);
                 frameSamples = 0; frameCursor = 0;
             }
         }
@@ -414,7 +422,7 @@ public partial class BenchmarkArena : Node3D
         }
         shockwaves.Sync();
         measuredFrames++; hudClock += delta;
-        if (hudClock >= 0.3) { UpdateOverlay(); hudClock = 0; ResetTimings(); }
+        if (hudClock >= 0.3) { armyBalanceHud?.RefreshCounts(); UpdateOverlay(); hudClock = 0; ResetTimings(); }
     }
     // =========================================================
     private bool ValidateSpawn(int first)

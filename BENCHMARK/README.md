@@ -22,6 +22,10 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
+## Army balance HUD
+
+A thin top-centre bar from [UI/GameplayHUD](../UI/GameplayHUD/README.md) reflects the current **relative number of living soldiers**. Blue occupies the left, Red the right; Green takes a middle segment in three-faction battles. Counts appear alongside the bar, and the colored proportions ease smoothly as soldiers die. It reads only existing faction counters during the 0.3-second UI update. It appears after the army has fully spawned and disappears while clearing or editing; no soldier-level scans, additional damage calculations or benchmark metric changes are involved.
+
 ## Painted battle orders
 
 Under **Edit painted deployment → Paint tools → Battle orders**, choose **Auto Attack** or a Hold Ground variant independently for Blue, Red, and Green. Set the shared melee guard radius (default 12 world units). Melee first detects enemies within half that radius and can retain them out to the full radius. Ranged first detects enemies within half its attack range and can retain them out to its full attack range. Both distances are measured from the painted post. The melee guard radius also bounds voluntary movement for all guards. When its area clears, plain **Hold Ground** stops in place and **Return to Position** walks back to the post. **Hold Ground – Auto Attack** switches only that faction once it has detected an enemy, gone a full local scan cycle without contact, and enemies remain alive. Guards skip cavalry charges until promoted to Auto Attack. Separation and enemy charge impacts can still displace guards. The arena reads these settings at battle start. Presets use Auto Attack. Orders are session settings.

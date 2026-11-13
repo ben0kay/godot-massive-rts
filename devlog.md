@@ -157,3 +157,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-13 — BENCH0: Split guard detection and retention ranges. Melee detects at half the guard radius and ranged at half its weapon range.
 
 - 2026-11-13 — BENCH0: Added independent orders for Blue, Red, and Green in painted battles. Counterattack promotes only its own faction.
+
+- **2026-11-13 | UI Army balance bar | Source implemented; awaiting owner visual validation.** Added a shared, top-centered gameplay HUD under UI/GameplayHUD. Blue/Red surviving-count proportions animate after casualties; an optional Green middle segment supports three-faction matches. The arena supplies existing constant-time FactionAlive counters every 0.3 seconds. Hidden during incremental spawn and deployment editing; no simulation scans, collision or target changes.
