@@ -12,3 +12,7 @@ To add another projectile, create a ProjectileDefinition resource in its own dir
 The reusable `Types/ArtilleryShell/ArtilleryShell.tres` enables **Indirect Fire** and **Explodes on Impact**. The aim point is the target's ground position at launch. A shell can clear a wall if its swept segment is above the wall. It detonates on contact with an enemy, a blocking wall, or the terrain surface. Terrain tests follow the same heightfield triangles as the renderer. If an airborne shell expires before reaching its aim point, it is removed.
 
 The explosion uses the same XZ enemy-only damage query as the Hexagon shockwave. The default shell radius is 7 units and its edge fraction is 31.25% of the firing unit's damage. With Heavy Artillery's 80 damage, that gives 25 at the edge before armour. The blast can reach enemies across nearby cover. The brief ring reuses the shockwave batch and is drawn at ground height at the impact center.
+
+## PROJ-GLOW1 — Planned low-flying projectile ground glow (not implemented)
+
+[PROJ-GLOW1 implementation plan](PROJ-GLOW1_IMPLEMENTATION_PLAN.md) documents an optional additive radial quad below future **low-flying travelling laser/plasma projectiles**. It would use per-projectile `.tres` settings and shared MultiMesh batches, with terrain-relative height fading. **The existing high-arc artillery shell and ordinary arrows must remain unlit by this effect.** This is a future visual-only plan; no shader, settings or rendering code has been added yet.
