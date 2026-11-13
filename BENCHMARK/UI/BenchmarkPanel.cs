@@ -40,6 +40,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public RuntimeBuildingCatalog Buildings { get; set; }
     public readonly OptionButton DefenseChoice = new();
     public readonly OptionButton HoldGroundChoice = new();
+    public readonly OptionButton HoldingFaction = new();
+    public readonly SpinBox GuardRadius = new() { MinValue = 1, MaxValue = 100, Step = 1, Value = 12 };
     public readonly OptionButton PaintToolChoice = new();
     public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
@@ -186,11 +188,20 @@ public partial class BenchmarkPanel : CanvasLayer
             defenseControls.Visible = tool == 2;
             factionLabel.Visible = FactionChoice.Visible = tool != 1;
         };
-        HoldGroundChoice.AddItem("All teams auto attack", 0);
-        HoldGroundChoice.AddItem("Blue holds ground", Factions.Blue + 1);
-        HoldGroundChoice.AddItem("Red holds ground", Factions.Red + 1);
-        HoldGroundChoice.AddItem("Green holds ground", Factions.Green + 1);
+        HoldGroundChoice.AddItem("Auto Attack", (int)GuardOrder.AutoAttack);
+        HoldGroundChoice.AddItem("Hold Ground", (int)GuardOrder.Hold);
+        HoldGroundChoice.AddItem("Hold Ground – Return to Position", (int)GuardOrder.Return);
+        HoldGroundChoice.AddItem("Hold Ground – Auto Attack", (int)GuardOrder.Counterattack);
         Field(paintControls, "Battle orders", HoldGroundChoice);
+        var guardControls = new VBoxContainer { Visible = false };
+        paintControls.AddChild(guardControls);
+        HoldingFaction.AddItem("Blue", Factions.Blue);
+        HoldingFaction.AddItem("Red", Factions.Red);
+        HoldingFaction.AddItem("Green", Factions.Green);
+        HoldingFaction.Select(1);
+        Field(guardControls, "Holding team", HoldingFaction);
+        Field(guardControls, "Guard radius", GuardRadius);
+        HoldGroundChoice.ItemSelected += index => guardControls.Visible = HoldGroundChoice.GetItemId((int)index) != (int)GuardOrder.AutoAttack;
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());

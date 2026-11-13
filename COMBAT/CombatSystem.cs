@@ -136,26 +136,6 @@ public static class CombatSystem
         }
         if (grid.ProfileTargeting) grid.RecordReplacementBudget(extraPursuitQueries == 0, deferredReplacements, budgetDeferrals, delayDeferrals);
     }
-    // Holders use the same staggered local search without pursuit or voluntary movement.
-    public static void AcquireHolding(UnitState units, SpatialGrid grid, BenchmarkConfig config, int start,
-        int tick, float acquisitionSeconds, float separationGap, ObstacleField obstacles)
-    {
-        int interval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
-        int offset = (tick % interval - start % interval + interval) % interval;
-        for (int id = start + offset; id < units.Count; id += interval)
-        {
-            if (units.Health[id] <= 0f) continue;
-            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
-            float range = type.Ranged ? type.Reach :
-                MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + MeleeContactTolerance;
-            ObstacleField cover = !type.Ranged ||
-                units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
-                ? obstacles : null;
-            units.Target[id] = grid.FindEnemy(units, id, range, config.QueryCandidateLimit, tick, cover,
-                minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged ? -1f : separationGap + MeleeContactTolerance);
-        }
-    }
-
     // Fixed per soldier and battle seed. No random calls or per-shot retargets.
     private static int RangedRank(int id, uint seed)
     {

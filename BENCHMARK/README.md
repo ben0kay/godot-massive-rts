@@ -24,7 +24,7 @@ Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters**
 
 ## Painted battle orders
 
-Under **Edit painted deployment → Paint tools → Battle orders**, choose **All teams auto attack** or pick one faction to **hold ground**. Paint soldiers for the holding faction and at least one attacking faction. The arena reads the selection at battle start. Holders acquire enemies locally and attack within their normal reach. They skip voluntary movement, charges and long-range pursuit. Separation and enemy charge impacts can still displace them. All factions share the spatial grid and combat rules. Presets use auto attack, and the battle-order choice belongs to the current benchmark session.
+Under **Edit painted deployment → Paint tools → Battle orders**, select **Auto Attack** or a Hold Ground variant. Choose a holding faction and a guard radius (default 12 world units). Each guard detects and pursues enemies inside the radius around its own painted position. When its area clears, plain **Hold Ground** stops in place and **Return to Position** walks back to the post. **Hold Ground – Auto Attack** switches the entire holding faction once it has detected an enemy, gone a full local scan cycle without contact, and enemies remain alive. Guards skip cavalry charges until promoted to Auto Attack. Separation and enemy charge impacts can still displace guards. The arena reads these settings at battle start. Presets use Auto Attack. Orders are session settings.
 
 ## Movement diagnostics
 

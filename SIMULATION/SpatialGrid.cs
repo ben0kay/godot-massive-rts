@@ -133,31 +133,33 @@ public sealed class SpatialGrid
         }
     }
     // =========================================================
-    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f, float meleeReachPadding = -1f)
+    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f, float meleeReachPadding = -1f, Vector3? guardPost = null, float guardRadius = 0f)
     {
-        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding);
+        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding, guardPost, guardRadius);
         long start = Stopwatch.GetTimestamp();
-        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding);
+        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding, guardPost, guardRadius);
         LocalSearchTicks += Stopwatch.GetTimestamp() - start;
         return found;
     }
 
-    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent, float minimumRange, float meleeReachPadding)
+    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent, float minimumRange, float meleeReachPadding, Vector3? guardPost, float guardRadius)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
+        Vector3 searchCenter = guardPost ?? position;
+        float searchRadius = guardPost.HasValue ? guardRadius : radius;
         // A disjoint XZ interval proves the spherical query cannot reach that faction.
         for (int mask = enemies; mask != 0; mask &= mask - 1)
         {
             int faction = BitOperations.TrailingZeroCount(mask);
             Vector2 min = factionMin[faction], max = factionMax[faction];
-            if (position.X + radius < min.X || position.X - radius > max.X ||
-                position.Z + radius < min.Y || position.Z - radius > max.Y)
+            if (searchCenter.X + searchRadius < min.X || searchCenter.X - searchRadius > max.X ||
+                searchCenter.Z + searchRadius < min.Y || searchCenter.Z - searchRadius > max.Y)
                 enemies &= ~(1 << faction);
         }
         if (enemies == 0) return -1;
-        Vector2I center = Cell(position);
-        int cells = Mathf.CeilToInt(radius / cellSize), examined = 0, best = -1;
+        Vector2I center = Cell(searchCenter);
+        int cells = Mathf.CeilToInt(searchRadius / cellSize), examined = 0, best = -1;
         float bestDistance = radius * radius;
         float minimumSquared = minimumRange * minimumRange;
         bool varied = rank > 1;
@@ -204,6 +206,9 @@ public sealed class SpatialGrid
                         if (minimumSquared > 0f && ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(units.Position[other])) < minimumSquared)
                             continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
+                        if (guardPost is Vector3 post &&
+                            ObstacleField.Xz(post).DistanceSquaredTo(ObstacleField.Xz(units.Position[other])) > guardRadius * guardRadius)
+                            continue;
                         if (meleeReachPadding >= 0f)
                         {
                             float contact = units.Catalog[units.Type[id]].Footprint +

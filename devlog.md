@@ -151,3 +151,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-13 — BENCH0 movement profiling: Added a CPU overlay toggle for sampled melee sidestep and contact-hold costs, direct cavalry run-up timing, and estimated remaining movement. Awaiting owner validation.
 
 - 2026-11-13 — BENCH0: Added painted battle orders for all-auto combat or one holding faction, with local-only acquisition and no voluntary movement for holders. Awaiting owner validation.
+
+- 2026-11-13 — BENCH0: Added configurable painted guard areas with stay, return to post, and one-way counterattack orders. Awaiting owner validation.
