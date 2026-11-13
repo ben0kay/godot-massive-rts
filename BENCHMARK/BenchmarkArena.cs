@@ -27,7 +27,8 @@ public partial class BenchmarkArena : Node3D
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
     private int autoAttackCount;
-    private GuardGroup guards;
+    private GuardGroup[] guards;
+    private int[] autoAttackIds;
     private DeploymentPainter painter;
     private RuntimeBuildingCatalog buildings;
     private DefenseSystem defenseSystem;
@@ -146,6 +147,7 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         guards = null;
+        autoAttackIds = null;
         autoAttackCount = 0;
         shockwaves.Clear();
         defenseSystem = null;
@@ -267,26 +269,33 @@ public partial class BenchmarkArena : Node3D
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
-        var order = (GuardOrder)panel.HoldGroundChoice.GetSelectedId();
-        int defender = order == GuardOrder.AutoAttack ? -1 : panel.HoldingFaction.GetSelectedId();
+        var orders = new GuardOrder[Factions.Count];
+        for (int faction = 0; faction < orders.Length; faction++) orders[faction] = panel.OrderFor(faction);
+        var snapshot = new SoldierPlacement[placements.Count];
         int attackerCount = 0;
         foreach (SoldierPlacement placement in placements)
-            if (placement.Faction != defender) attackerCount++;
-        if (defender >= 0 && (attackerCount == 0 || attackerCount == placements.Count))
-        {
-            panel.Status.Text = "Paint soldiers for the holding team and an attacking team.\n" + DeploymentCount();
-            return;
-        }
-        var snapshot = new SoldierPlacement[placements.Count];
-        int attackerSlot = 0, defenderSlot = attackerCount;
-        foreach (SoldierPlacement placement in placements)
-            snapshot[placement.Faction == defender ? defenderSlot++ : attackerSlot++] = placement;
+            if (orders[placement.Faction] == GuardOrder.AutoAttack)
+                snapshot[attackerCount++] = placement;
+
         Clear();
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
-        if (defender >= 0)
-            guards = new GuardGroup(attackerCount, snapshot, (float)panel.GuardRadius.Value, order);
         autoAttackCount = attackerCount;
+        if (attackerCount < snapshot.Length)
+        {
+            guards = new GuardGroup[Factions.Count];
+            int next = attackerCount;
+            for (int faction = 0; faction < Factions.Count; faction++)
+            {
+                GuardOrder order = orders[faction];
+                if (order == GuardOrder.AutoAttack) continue;
+                int start = next;
+                foreach (SoldierPlacement placement in placements)
+                    if (placement.Faction == faction) snapshot[next++] = placement;
+                if (start < next)
+                    guards[faction] = new GuardGroup(start, next, snapshot, (float)panel.GuardRadius.Value, order);
+            }
+        }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
         SetBattleObstacles(painter.Layout.CollisionField, painter.ObstacleMesh);
         if (painter.Layout.Defenses.Count > 0)
@@ -427,6 +436,37 @@ public partial class BenchmarkArena : Node3D
             !obstacles.IntersectsCircle(ObstacleField.Xz(position), radius);
     }
 
+    private void AcquireGuards(int acquisitionStep)
+    {
+        bool anyGuarding = false, promoted = false;
+        for (int faction = 0; faction < guards.Length; faction++)
+        {
+            GuardGroup group = guards[faction];
+            if (group == null) continue;
+            if (!group.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles))
+            {
+                anyGuarding = true;
+                continue;
+            }
+
+            if (autoAttackIds == null)
+            {
+                autoAttackIds = new int[units.Count];
+                for (int id = 0; id < autoAttackCount; id++) autoAttackIds[id] = id;
+            }
+            for (int id = group.Start; id < group.End; id++)
+                autoAttackIds[autoAttackCount++] = id;
+            guards[faction] = null;
+            promoted = true;
+        }
+        if (!anyGuarding)
+        {
+            guards = null;
+            autoAttackIds = null;
+        }
+        if (promoted) trample = TrampleSystem.Create(units, autoAttackCount, autoAttackIds, trample);
+    }
+
     private void Step(float dt)
     {
         long total = Stamp(), start;
@@ -445,13 +485,8 @@ public partial class BenchmarkArena : Node3D
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles,
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
-                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount);
-                if (guards?.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles) == true)
-                {
-                    guards = null;
-                    autoAttackCount = units.Count;
-                    trample = TrampleSystem.Create(units);
-                }
+                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds);
+                if (guards != null) AcquireGuards(acquisitionStep);
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
@@ -474,8 +509,10 @@ public partial class BenchmarkArena : Node3D
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount);
-        guards?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds);
+        if (guards != null)
+            foreach (GuardGroup group in guards)
+                group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
         float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;

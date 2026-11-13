@@ -7,32 +7,34 @@ public enum GuardOrder { AutoAttack, Hold, Return, Counterattack }
 
 public sealed class GuardGroup
 {
-    private readonly int start;
+    public int Start { get; }
+    public int End { get; }
     private readonly Vector3[] posts;
     private readonly float radius, radiusSquared;
     private readonly bool returnToPost, counterattack;
     private int lastContact = -1;
 
-    public GuardGroup(int start, SoldierPlacement[] placements, float radius, GuardOrder order)
+    public GuardGroup(int start, int end, SoldierPlacement[] placements, float radius, GuardOrder order)
     {
-        this.start = start;
+        Start = start;
+        End = end;
         this.radius = radius;
         radiusSquared = radius * radius;
         returnToPost = order == GuardOrder.Return;
         counterattack = order == GuardOrder.Counterattack;
-        posts = new Vector3[placements.Length - start];
-        for (int i = start; i < placements.Length; i++) posts[i - start] = placements[i].Position();
+        posts = new Vector3[end - start];
+        for (int i = start; i < end; i++) posts[i - start] = placements[i].Position();
     }
 
     public bool Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick,
         float acquisitionSeconds, ObstacleField obstacles)
     {
         int interval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
-        int offset = (tick % interval - start % interval + interval) % interval;
-        for (int id = start + offset; id < units.Count; id += interval)
+        int offset = (tick % interval - Start % interval + interval) % interval;
+        for (int id = Start + offset; id < End; id += interval)
         {
             if (units.Health[id] <= 0f) continue;
-            Vector3 post = posts[id - start];
+            Vector3 post = posts[id - Start];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             float engagementRadius = type.Ranged ? type.Reach : radius;
             int target = units.Target[id];
@@ -45,7 +47,7 @@ public sealed class GuardGroup
             if (units.Target[id] >= 0) lastContact = tick;
         }
 
-        int faction = units.Faction[start];
+        int faction = units.Faction[Start];
         return counterattack && lastContact >= 0 && tick - lastContact >= interval &&
             units.FactionAlive[faction] > 0 && units.Alive > units.FactionAlive[faction];
     }
@@ -58,11 +60,11 @@ public sealed class GuardGroup
         ObstacleNavigation navigation, byte[] movementFlags)
     {
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
-        for (int id = start; id < units.Count; id++)
+        for (int id = Start; id < End; id++)
         {
             if (movementFlags != null) movementFlags[id] = 0;
             if (units.Health[id] <= 0f) continue;
-            Vector3 post = posts[id - start];
+            Vector3 post = posts[id - Start];
             Vector2 anchor = ObstacleField.Xz(post);
             Vector3 position = units.Position[id];
             Vector2 from = ObstacleField.Xz(position);

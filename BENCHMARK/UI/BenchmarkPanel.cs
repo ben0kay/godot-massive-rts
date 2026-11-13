@@ -39,8 +39,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public RuntimeBuildingCatalog Buildings { get; set; }
     public readonly OptionButton DefenseChoice = new();
-    public readonly OptionButton HoldGroundChoice = new();
-    public readonly OptionButton HoldingFaction = new();
+    private readonly OptionButton[] teamOrders = new OptionButton[Factions.Count];
+    public GuardOrder OrderFor(int faction) => (GuardOrder)teamOrders[faction].GetSelectedId();
     public readonly SpinBox GuardRadius = new() { MinValue = 1, MaxValue = 100, Step = 1, Value = 12 };
     public readonly OptionButton PaintToolChoice = new();
     public readonly OptionButton TerrainChoice = new();
@@ -188,20 +188,20 @@ public partial class BenchmarkPanel : CanvasLayer
             defenseControls.Visible = tool == 2;
             factionLabel.Visible = FactionChoice.Visible = tool != 1;
         };
-        HoldGroundChoice.AddItem("Auto Attack", (int)GuardOrder.AutoAttack);
-        HoldGroundChoice.AddItem("Hold Ground", (int)GuardOrder.Hold);
-        HoldGroundChoice.AddItem("Hold Ground – Return to Position", (int)GuardOrder.Return);
-        HoldGroundChoice.AddItem("Hold Ground – Auto Attack", (int)GuardOrder.Counterattack);
-        Field(paintControls, "Battle orders", HoldGroundChoice);
-        var guardControls = new VBoxContainer { Visible = false };
-        paintControls.AddChild(guardControls);
-        HoldingFaction.AddItem("Blue", Factions.Blue);
-        HoldingFaction.AddItem("Red", Factions.Red);
-        HoldingFaction.AddItem("Green", Factions.Green);
-        HoldingFaction.Select(1);
-        Field(guardControls, "Holding team", HoldingFaction);
-        Field(guardControls, "Melee guard radius", GuardRadius);
-        HoldGroundChoice.ItemSelected += index => guardControls.Visible = HoldGroundChoice.GetItemId((int)index) != (int)GuardOrder.AutoAttack;
+        var orders = Section(paintControls, "Battle orders", true, out _);
+        string[] teamNames = { "Blue", "Red", "Green" };
+        for (int faction = 0; faction < Factions.Count; faction++)
+        {
+            var choice = new OptionButton();
+            choice.AddItem("Auto Attack", (int)GuardOrder.AutoAttack);
+            choice.AddItem("Hold Ground", (int)GuardOrder.Hold);
+            choice.AddItem("Hold Ground – Return to Position", (int)GuardOrder.Return);
+            choice.AddItem("Hold Ground – Auto Attack", (int)GuardOrder.Counterattack);
+            choice.Select(0);
+            teamOrders[faction] = choice;
+            Field(orders, teamNames[faction], choice);
+        }
+        Field(orders, "Melee guard radius", GuardRadius);
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());

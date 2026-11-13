@@ -20,7 +20,7 @@ public static class CombatSystem
 
     // =========================================================
     public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false,
-        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false, int end = -1)
+        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false, int end = -1, int[] activeIds = null)
     {
         int localInterval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
         int pursuitInterval = Mathf.Max(localInterval, Mathf.RoundToInt(0.8f / acquisitionSeconds));
@@ -37,8 +37,9 @@ public static class CombatSystem
         // Rotate the starting ID so recurring budget pressure is spread across the formation.
         int count = end < 0 ? units.Count : end;
         int first = limitPursuitQueries && count > 0 ? (int)(tick * 997L % count) : 0;
-        for (int visited = 0, i = first; visited < count; visited++, i = i + 1 == count ? 0 : i + 1)
+        for (int visited = 0, slot = first; visited < count; visited++, slot = slot + 1 == count ? 0 : slot + 1)
         {
+            int i = activeIds == null ? slot : activeIds[slot];
             if (units.Health[i] <= 0) continue;
             int previous = units.Target[i];
             int target = previous >= 0 && units.Health[previous] > 0 ? previous : -1;

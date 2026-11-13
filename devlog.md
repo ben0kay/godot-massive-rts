@@ -155,3 +155,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-13 — BENCH0: Added configurable painted guard areas with stay, return to post, and one-way counterattack orders. Awaiting owner validation.
 
 - 2026-11-13 — BENCH0: Split guard detection and retention ranges. Melee detects at half the guard radius and ranged at half its weapon range.
+
+- 2026-11-13 — BENCH0: Added independent orders for Blue, Red, and Green in painted battles. Counterattack promotes only its own faction.

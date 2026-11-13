@@ -29,7 +29,7 @@ public sealed class TrampleSystem
     private readonly bool[] queued;
     private int shoveCount;
 
-    private TrampleSystem(UnitState units, int count, int end)
+    private TrampleSystem(UnitState units, int count, int end, int[] activeIds)
     {
         ids = new int[count];
         states = new Charge[count];
@@ -40,21 +40,37 @@ public sealed class TrampleSystem
         shovedIds = new int[units.Count];
         queued = new bool[units.Count];
         int slot = 0;
-        for (int id = 0; id < end; id++)
+        for (int index = 0; index < end; index++)
         {
+            int id = activeIds == null ? index : activeIds[index];
             if (!units.Catalog[units.Type[id]].Trample.Enabled) continue;
             slots[id] = slot;
             ids[slot++] = id;
         }
     }
 
-    public static TrampleSystem Create(UnitState units, int end = -1)
+    public static TrampleSystem Create(UnitState units, int end = -1, int[] activeIds = null, TrampleSystem previous = null)
     {
         int count = 0;
         if (end < 0) end = units.Count;
-        for (int i = 0; i < end; i++)
-            if (units.Catalog[units.Type[i]].Trample.Enabled) count++;
-        return count > 0 ? new TrampleSystem(units, count, end) : null;
+        for (int index = 0; index < end; index++)
+        {
+            int id = activeIds == null ? index : activeIds[index];
+            if (units.Catalog[units.Type[id]].Trample.Enabled) count++;
+        }
+        if (count == 0) return null;
+        var result = new TrampleSystem(units, count, end, activeIds);
+        if (previous != null)
+        {
+            // Orders change before the charge pass, with no queued shoves.
+            for (int slot = 0; slot < previous.ids.Length; slot++)
+            {
+                int next = result.slots[previous.ids[slot]];
+                result.states[next] = previous.states[slot];
+                Array.Copy(previous.hits, slot * HitSlots, result.hits, next * HitSlots, HitSlots);
+            }
+        }
+        return result;
     }
 
     public bool OverridesMovement(int id)
