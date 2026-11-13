@@ -133,16 +133,16 @@ public sealed class SpatialGrid
         }
     }
     // =========================================================
-    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f)
+    public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f, float meleeReachPadding = -1f)
     {
-        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange);
+        if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding);
         long start = Stopwatch.GetTimestamp();
-        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange);
+        int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding);
         LocalSearchTicks += Stopwatch.GetTimestamp() - start;
         return found;
     }
 
-    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent, float minimumRange)
+    private int SearchLocal(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight, int rank, int incumbent, float minimumRange, float meleeReachPadding)
     {
         Vector3 position = units.Position[id];
         int enemies = EnemiesOf(units.Faction[id]);
@@ -204,6 +204,12 @@ public sealed class SpatialGrid
                         if (minimumSquared > 0f && ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(units.Position[other])) < minimumSquared)
                             continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
+                        if (meleeReachPadding >= 0f)
+                        {
+                            float contact = units.Catalog[units.Type[id]].Footprint +
+                                units.Catalog[units.Type[other]].Footprint + meleeReachPadding;
+                            if (distance > contact * contact) continue;
+                        }
                         if (!varied)
                         {
                             if (distance < bestDistance && clearSight?.BlocksSight(position, units.Position[other]) != true)

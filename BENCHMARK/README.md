@@ -22,6 +22,10 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
+## Painted battle orders
+
+Under **Edit painted deployment → Paint tools → Battle orders**, choose **All teams auto attack** or pick one faction to **hold ground**. Paint soldiers for the holding faction and at least one attacking faction. The arena reads the selection at battle start. Holders acquire enemies locally and attack within their normal reach. They skip voluntary movement, charges and long-range pursuit. Separation and enemy charge impacts can still displace them. All factions share the spatial grid and combat rules. Presets use auto attack, and the battle-order choice belongs to the current benchmark session.
+
 ## Movement diagnostics
 
 Enable **CPU and separation → Profile movement** for a per-tick breakdown. Melee sidestep and contact-hold timings are estimates from a rotating 1-in-32 soldier sample. The calls and blocked counts show the actual sample, including sidestep calls that return no movement during their wait period. Cavalry run-up is timed directly. Remaining movement is the estimated residual and includes the rest of the soldier loop and charge movement. Separation and terrain grounding have their own existing measurements. Switch profiling off for baseline FPS comparisons.

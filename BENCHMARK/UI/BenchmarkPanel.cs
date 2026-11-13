@@ -39,6 +39,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
     public RuntimeBuildingCatalog Buildings { get; set; }
     public readonly OptionButton DefenseChoice = new();
+    public readonly OptionButton HoldGroundChoice = new();
     public readonly OptionButton PaintToolChoice = new();
     public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
@@ -185,6 +186,11 @@ public partial class BenchmarkPanel : CanvasLayer
             defenseControls.Visible = tool == 2;
             factionLabel.Visible = FactionChoice.Visible = tool != 1;
         };
+        HoldGroundChoice.AddItem("All teams auto attack", 0);
+        HoldGroundChoice.AddItem("Blue holds ground", Factions.Blue + 1);
+        HoldGroundChoice.AddItem("Red holds ground", Factions.Red + 1);
+        HoldGroundChoice.AddItem("Green holds ground", Factions.Green + 1);
+        Field(paintControls, "Battle orders", HoldGroundChoice);
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());

@@ -29,7 +29,7 @@ public sealed class TrampleSystem
     private readonly bool[] queued;
     private int shoveCount;
 
-    private TrampleSystem(UnitState units, int count)
+    private TrampleSystem(UnitState units, int count, int end)
     {
         ids = new int[count];
         states = new Charge[count];
@@ -40,7 +40,7 @@ public sealed class TrampleSystem
         shovedIds = new int[units.Count];
         queued = new bool[units.Count];
         int slot = 0;
-        for (int id = 0; id < units.Count; id++)
+        for (int id = 0; id < end; id++)
         {
             if (!units.Catalog[units.Type[id]].Trample.Enabled) continue;
             slots[id] = slot;
@@ -48,12 +48,13 @@ public sealed class TrampleSystem
         }
     }
 
-    public static TrampleSystem Create(UnitState units)
+    public static TrampleSystem Create(UnitState units, int end = -1)
     {
         int count = 0;
-        for (int i = 0; i < units.Count; i++)
+        if (end < 0) end = units.Count;
+        for (int i = 0; i < end; i++)
             if (units.Catalog[units.Type[i]].Trample.Enabled) count++;
-        return count > 0 ? new TrampleSystem(units, count) : null;
+        return count > 0 ? new TrampleSystem(units, count, end) : null;
     }
 
     public bool OverridesMovement(int id)

@@ -20,7 +20,7 @@ public static class CombatSystem
 
     // =========================================================
     public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false,
-        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false)
+        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false, int end = -1)
     {
         int localInterval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
         int pursuitInterval = Mathf.Max(localInterval, Mathf.RoundToInt(0.8f / acquisitionSeconds));
@@ -35,8 +35,9 @@ public static class CombatSystem
         int[] deadlines = units.RetargetDeadlines(delayFarMeleeRetarget);
         int delaySteps = Mathf.CeilToInt(FarMeleeRetargetDelaySeconds / acquisitionSeconds);
         // Rotate the starting ID so recurring budget pressure is spread across the formation.
-        int first = limitPursuitQueries && units.Count > 0 ? (int)(tick * 997L % units.Count) : 0;
-        for (int visited = 0, i = first; visited < units.Count; visited++, i = i + 1 == units.Count ? 0 : i + 1)
+        int count = end < 0 ? units.Count : end;
+        int first = limitPursuitQueries && count > 0 ? (int)(tick * 997L % count) : 0;
+        for (int visited = 0, i = first; visited < count; visited++, i = i + 1 == count ? 0 : i + 1)
         {
             if (units.Health[i] <= 0) continue;
             int previous = units.Target[i];
@@ -135,6 +136,26 @@ public static class CombatSystem
         }
         if (grid.ProfileTargeting) grid.RecordReplacementBudget(extraPursuitQueries == 0, deferredReplacements, budgetDeferrals, delayDeferrals);
     }
+    // Holders use the same staggered local search without pursuit or voluntary movement.
+    public static void AcquireHolding(UnitState units, SpatialGrid grid, BenchmarkConfig config, int start,
+        int tick, float acquisitionSeconds, float separationGap, ObstacleField obstacles)
+    {
+        int interval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
+        int offset = (tick % interval - start % interval + interval) % interval;
+        for (int id = start + offset; id < units.Count; id += interval)
+        {
+            if (units.Health[id] <= 0f) continue;
+            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            float range = type.Ranged ? type.Reach :
+                MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + MeleeContactTolerance;
+            ObstacleField cover = !type.Ranged ||
+                units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
+                ? obstacles : null;
+            units.Target[id] = grid.FindEnemy(units, id, range, config.QueryCandidateLimit, tick, cover,
+                minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged ? -1f : separationGap + MeleeContactTolerance);
+        }
+    }
+
     // Fixed per soldier and battle seed. No random calls or per-shot retargets.
     private static int RangedRank(int id, uint seed)
     {

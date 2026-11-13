@@ -9,14 +9,15 @@ public static class MovementSystem
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
-        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null)
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1)
     {
         var catalog = units.Catalog;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
         bool movementMode = mode == BenchmarkMode.Movement;
         float meleeRampRate = meleeRampSeconds > 0f ? 1f / meleeRampSeconds : 0f;
         float rangedRampRate = rangedRampSeconds > 0f ? 1f / rangedRampSeconds : 0f;
-        for (int i = 0; i < units.Count; i++)
+        int count = end < 0 ? units.Count : end;
+        for (int i = 0; i < count; i++)
         {
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
             if (units.Health[i] <= 0) continue;

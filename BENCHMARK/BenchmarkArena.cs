@@ -26,6 +26,8 @@ public partial class BenchmarkArena : Node3D
     private IsometricCamera camera;
     private BenchmarkPanel panel;
     private DeploymentFactory deployment;
+    private int autoAttackCount;
+    private Action<int> acquireDefenders;
     private DeploymentPainter painter;
     private RuntimeBuildingCatalog buildings;
     private DefenseSystem defenseSystem;
@@ -143,6 +145,8 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     private void Clear()
     {
+        acquireDefenders = null;
+        autoAttackCount = 0;
         shockwaves.Clear();
         defenseSystem = null;
         if (defenseRenderer != null)
@@ -263,11 +267,28 @@ public partial class BenchmarkArena : Node3D
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
+        int defender = panel.HoldGroundChoice.GetSelectedId() - 1;
+        int attackerCount = 0;
+        foreach (SoldierPlacement placement in placements)
+            if (placement.Faction != defender) attackerCount++;
+        if (defender >= 0 && (attackerCount == 0 || attackerCount == placements.Count))
+        {
+            panel.Status.Text = "Paint soldiers for the holding team and an attacking team.\n" + DeploymentCount();
+            return;
+        }
         var snapshot = new SoldierPlacement[placements.Count];
-        for (int i = 0; i < snapshot.Length; i++) snapshot[i] = placements[i];
+        int attackerSlot = 0, defenderSlot = attackerCount;
+        foreach (SoldierPlacement placement in placements)
+            snapshot[placement.Faction == defender ? defenderSlot++ : attackerSlot++] = placement;
         Clear();
         SetDeploymentEditing(false);
         requested = targetCount = snapshot.Length;
+        if (defender >= 0)
+        {
+            acquireDefenders = acquisitionStep => CombatSystem.AcquireHolding(units, grid, Config,
+                attackerCount, acquisitionStep, targetingStepSeconds, panel.Separation == SeparationMode.Off ? 0f : Config.SeparationGap, obstacles);
+        }
+        autoAttackCount = attackerCount;
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
         SetBattleObstacles(painter.Layout.CollisionField, painter.ObstacleMesh);
         if (painter.Layout.Defenses.Count > 0)
@@ -309,20 +330,21 @@ public partial class BenchmarkArena : Node3D
                 }
                 panel.Status.Text = $"Preparing {units.Count:N0} / {requested:N0} soldiers";
                 if (units.Count < targetCount) return;
+                if (acquireDefenders == null) autoAttackCount = units.Count;
                 grid?.Rebuild(units);
             }
-            if (grid != null && preparedTargets < targetCount)
+            if (grid != null && preparedTargets < autoAttackCount)
             {
-                int end = Math.Min(targetCount, preparedTargets + InitialTargetsPerFrame);
+                int end = Math.Min(autoAttackCount, preparedTargets + InitialTargetsPerFrame);
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.PrepareTargets(units, grid, preparedTargets, end);
                 preparedTargets = end;
-                panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {targetCount:N0}";
-                if (preparedTargets < targetCount) return;
+                panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {autoAttackCount:N0}";
+                if (preparedTargets < autoAttackCount) return;
             }
             if (units.Count == targetCount)
             {
-                if (grid != null) trample = TrampleSystem.Create(units);
+                if (grid != null) trample = TrampleSystem.Create(units, autoAttackCount);
                 if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
@@ -425,7 +447,8 @@ public partial class BenchmarkArena : Node3D
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, obstacles,
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
-                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries);
+                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount);
+                acquireDefenders?.Invoke(acquisitionStep);
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
@@ -448,7 +471,7 @@ public partial class BenchmarkArena : Node3D
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount);
         float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;
