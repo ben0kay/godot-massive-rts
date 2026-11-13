@@ -147,3 +147,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-12 — BENCH visual: Lightened the flat benchmark map and plateau ground to a neutral cool grey. No changes to terrain geometry, obstacles, collision or simulation. Awaiting owner visual validation.
 
 - 2026-11-12 — BENCH0 pursuit experiments: Added independent live toggles for a distant melee retarget delay and a shared long-range search cap, with HUD deferral counts. Awaiting owner benchmark validation.
+
+- 2026-11-13 — BENCH0 movement profiling: Added a CPU overlay toggle for sampled melee sidestep and contact-hold costs, direct cavalry run-up timing, and estimated remaining movement. Awaiting owner validation.

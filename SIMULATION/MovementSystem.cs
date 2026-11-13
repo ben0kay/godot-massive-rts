@@ -1,4 +1,5 @@
 // Shared movement pass for live combat targets and movement-only march lanes.
+using System.Diagnostics;
 using Godot;
 namespace MassiveRts;
 
@@ -7,7 +8,7 @@ public static class MovementSystem
     private const float RangedStandOffBuffer = 0.25f;
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
-        byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
+        ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
         ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null)
     {
         var catalog = units.Catalog;
@@ -55,7 +56,15 @@ public static class MovementSystem
                     (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                     obstacles.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
-                if (steerMelee && melee.Hold(i, target, distanceSquared, reach, blockedInRange))
+                bool holding = false;
+                if (steerMelee)
+                {
+                    bool sample = (i & (MovementProfile.SampleStride - 1)) == samplePhase;
+                    long start = sample ? Stopwatch.GetTimestamp() : 0;
+                    holding = melee.Hold(i, target, distanceSquared, reach, blockedInRange);
+                    if (sample) profile.HoldTicks += Stopwatch.GetTimestamp() - start;
+                }
+                if (holding)
                 {
                     units.MoveSpeed[i] = 0f;
                     continue;
@@ -118,7 +127,17 @@ public static class MovementSystem
             if (steerMelee)
             {
                 if (!detouring && distance > stop + 0.10f)
+                {
+                    bool sample = (i & (MovementProfile.SampleStride - 1)) == samplePhase;
+                    long start = sample ? Stopwatch.GetTimestamp() : 0;
                     direction = melee.Steer(units, grid, obstacles, i, direction, type.Footprint, travel, catalog.MaxSpeed * dt);
+                    if (sample)
+                    {
+                        profile.SidestepTicks += Stopwatch.GetTimestamp() - start;
+                        profile.SidestepCalls++;
+                        if (direction == Vector3.Zero) profile.BlockedSidesteps++;
+                    }
+                }
                 else melee.ResetSidestep(i);
                 if (direction == Vector3.Zero)
                 {

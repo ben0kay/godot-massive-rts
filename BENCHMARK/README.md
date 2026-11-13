@@ -22,6 +22,10 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
 
+## Movement diagnostics
+
+Enable **CPU and separation → Profile movement** for a per-tick breakdown. Melee sidestep and contact-hold timings are estimates from a rotating 1-in-32 soldier sample. The calls and blocked counts show the actual sample, including sidestep calls that return no movement during their wait period. Cavalry run-up is timed directly. Remaining movement is the estimated residual and includes the rest of the soldier loop and charge movement. Separation and terrain grounding have their own existing measurements. Switch profiling off for baseline FPS comparisons.
+
 ## Pursuit diagnostics
 
 In the CPU overlay, **Scheduled acquisition causes** splits global searches by whether the soldier had a previous target. Loss rows use the distance to the retained dead target **at search time**, compared with that soldier's local search radius. Rows show searches per real second and CPU ms per simulation tick.

@@ -49,6 +49,7 @@ public partial class BenchmarkArena : Node3D
     private long skippedSteps;
     private readonly double[] frames = new double[120];
     private int frameCursor, frameSamples;
+    private MovementProfile movementProfile;
     private double movementMs, separationMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
     private int measuredFrames, measuredTicks, maxTicksInFrame;
     private int measuredSyncs, denseUploads, sparseUploads, changedWrites;
@@ -435,6 +436,8 @@ public partial class BenchmarkArena : Node3D
         }
         SeparationMode separationMode = panel.Separation;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
+        bool profileMovement = panel.ProfileMovement;
+        int samplePhase = profileMovement ? tick % MovementProfile.SampleStride : -1;
         start = Stamp();
         trample?.BeginTick(units, dt, obstacles);
         byte[] movementFlags = separate && panel.AlliedYield
@@ -444,10 +447,16 @@ public partial class BenchmarkArena : Node3D
         if (!holdMelee && !sidestepMelee) meleeSteering = null;
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
-        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, movementFlags,
+        MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
             Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering);
         float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
-        movementMs += Elapsed(start);
+        double movementElapsed = Elapsed(start);
+        movementMs += movementElapsed;
+        if (profileMovement)
+        {
+            movementProfile.Ticks++;
+            movementProfile.TotalMilliseconds += movementElapsed;
+        }
         float separationPadding = 0f;
         if (separate)
         {
@@ -460,7 +469,15 @@ public partial class BenchmarkArena : Node3D
         }
         if (trample != null)
         {
-            start = Stamp(); trample.MeasureRunUp(units, dt); movementMs += Elapsed(start);
+            start = Stamp();
+            trample.MeasureRunUp(units, dt);
+            double runUp = Elapsed(start);
+            movementMs += runUp;
+            if (profileMovement)
+            {
+                movementProfile.TotalMilliseconds += runUp;
+                movementProfile.RunUpMilliseconds += runUp;
+            }
         }
         if (units.Grounding != null)
         {
@@ -536,6 +553,7 @@ public partial class BenchmarkArena : Node3D
             $"Simulation rate  {achievedRate:F1} / {1f / Config.TickSeconds:F0} Hz\nSimulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
             $"CPU time / rendered frame (ms)\nSimulation  {simulationMs / divisor:F3}\nMovement  {movementMs / divisor:F3}\n" +
+            MovementBreakdown() +
             $"Separation  {separationMs / divisor:F3}\nGrid rebuild  {gridMs / divisor:F3}\nTargeting  {targetingMs / divisor:F3}\n" +
             $"  Local enemy search  {(grid?.LocalSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
             $"  Long-range pursuit  {(grid?.PursuitSearchTicks ?? 0) * targetingTickToMsPerFrame:F3}\n" +
@@ -617,8 +635,27 @@ public partial class BenchmarkArena : Node3D
         double bytes = Performance.GetMonitor(Performance.Monitor.MemoryStatic);
         return bytes > 0 ? $"{bytes / 1048576.0:F1} MiB" : "N/A";
     }
+    private string MovementBreakdown()
+    {
+        if (!panel.ProfileMovement) return "";
+        int ticks = movementProfile.Ticks;
+        if (ticks == 0) return "Movement breakdown: waiting for simulation ticks\n\n";
+        double sampleToMsPerTick = 1000.0 * MovementProfile.SampleStride / Stopwatch.Frequency / ticks;
+        double sidestep = movementProfile.SidestepTicks * sampleToMsPerTick;
+        double hold = movementProfile.HoldTicks * sampleToMsPerTick;
+        double runUp = movementProfile.RunUpMilliseconds / ticks;
+        double remaining = Math.Max(0, movementProfile.TotalMilliseconds / ticks - sidestep - hold - runUp);
+        return "\nMovement breakdown (ms/tick)\n" +
+            $"Melee sidestep  ~{sidestep:F3}\n" +
+            $"  Sampled calls / blocked  {movementProfile.SidestepCalls:N0} / {movementProfile.BlockedSidesteps:N0}\n" +
+            $"Melee contact hold  ~{hold:F3}\n" +
+            $"Cavalry run-up  {runUp:F3}\n" +
+            $"Remaining movement  ~{remaining:F3}\n\n";
+    }
+
     private void ResetTimings()
     {
+        movementProfile = default;
         groundSamples = 0;
         groundingMs = 0;
         movementMs = separationMs = gridMs = targetingMs = combatMs = projectileMs = simulationMs = renderMs = 0;
