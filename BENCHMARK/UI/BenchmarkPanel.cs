@@ -200,7 +200,7 @@ public partial class BenchmarkPanel : CanvasLayer
         HoldingFaction.AddItem("Green", Factions.Green);
         HoldingFaction.Select(1);
         Field(guardControls, "Holding team", HoldingFaction);
-        Field(guardControls, "Guard radius", GuardRadius);
+        Field(guardControls, "Melee guard radius", GuardRadius);
         HoldGroundChoice.ItemSelected += index => guardControls.Visible = HoldGroundChoice.GetItemId((int)index) != (int)GuardOrder.AutoAttack;
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());

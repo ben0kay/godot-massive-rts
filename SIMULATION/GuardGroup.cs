@@ -33,9 +33,15 @@ public sealed class GuardGroup
         {
             if (units.Health[id] <= 0f) continue;
             Vector3 post = posts[id - start];
-            // Include height in the search bound while keeping the guard area on the ground plane.
-            units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity, counterattack ? int.MaxValue : config.QueryCandidateLimit, tick,
-                guardPost: post, guardRadius: radius);
+            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            float engagementRadius = type.Ranged ? type.Reach : radius;
+            int target = units.Target[id];
+            if (!IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
+            {
+                units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
+                    counterattack ? int.MaxValue : config.QueryCandidateLimit, tick,
+                    guardPost: post, guardRadius: engagementRadius * 0.5f);
+            }
             if (units.Target[id] >= 0) lastContact = tick;
         }
 
@@ -43,6 +49,10 @@ public sealed class GuardGroup
         return counterattack && lastContact >= 0 && tick - lastContact >= interval &&
             units.FactionAlive[faction] > 0 && units.Alive > units.FactionAlive[faction];
     }
+
+    private static bool IsEngaging(UnitState units, int target, Vector2 post, float rangeSquared) =>
+        target >= 0 && units.Health[target] > 0f &&
+        post.DistanceSquaredTo(ObstacleField.Xz(units.Position[target])) <= rangeSquared;
 
     public void Move(UnitState units, float dt, float separationGap, ObstacleField obstacles,
         ObstacleNavigation navigation, byte[] movementFlags)
@@ -57,14 +67,14 @@ public sealed class GuardGroup
             Vector3 position = units.Position[id];
             Vector2 from = ObstacleField.Xz(position);
             int target = units.Target[id];
-            bool engaging = target >= 0 && units.Health[target] > 0f &&
-                anchor.DistanceSquaredTo(ObstacleField.Xz(units.Position[target])) <= radiusSquared;
+            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            float engagementRadiusSquared = type.Ranged ? type.Reach * type.Reach : radiusSquared;
+            bool engaging = IsEngaging(units, target, anchor, engagementRadiusSquared);
             if (!engaging)
             {
                 units.Target[id] = -1;
                 if (!returnToPost) continue;
             }
-            ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             Vector2 destination = engaging ? ObstacleField.Xz(units.Position[target]) : anchor;
             float stop = 0f;
             if (engaging)
