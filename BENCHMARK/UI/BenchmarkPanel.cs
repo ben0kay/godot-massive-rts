@@ -110,7 +110,7 @@ public partial class BenchmarkPanel : CanvasLayer
         AddChild(left);
         var shell = new VBoxContainer();
         left.AddChild(shell);
-        var heading = new Label { Text = "BENCH0  •  MASSIVE RTS" };
+        var heading = new Label { Text = "AUTO-BATTLE BENCHMARK" };
         heading.AddThemeFontSizeOverride("font_size", 17);
         heading.AddThemeColorOverride("font_color", new Color("#CCE8F6"));
         shell.AddChild(heading);

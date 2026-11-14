@@ -7,5 +7,5 @@
 [resource]
 script = ExtResource("1")
 Id = "OpenRTS"
-DisplayName = "Open RTS"
+DisplayName = "Fortress Defense"
 Levels = Array[ExtResource("2")]([ExtResource("3")])

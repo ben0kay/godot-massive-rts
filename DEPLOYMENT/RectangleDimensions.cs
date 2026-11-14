@@ -50,7 +50,7 @@ public partial class RectangleDimensions : Node2D
         DrawDimension(corner, lengthEnd, widthEnd - corner, lengthText);
     }
 
-    private void DrawDimension(Vector2 start, Vector2 end, Vector2 interior, string label)
+    protected void DrawDimension(Vector2 start, Vector2 end, Vector2 interior, string label)
     {
         Vector2 edge = end - start;
         float distance = edge.Length();

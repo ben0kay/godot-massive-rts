@@ -173,3 +173,10 @@ Under **CPU and separation**, the pursuit breakdown shows live refresh, schedule
 ### Named painted battles
 
 In **Edit painted deployment → Paint tools**, enter a **Preset name** and click **Save as preset**. The preset stores the painted soldier positions, types and teams, walls, defenses, team orders, guard radius, and seed in `user://benchmark_presets`. Names are unique. Choose it under **Preset battle → Saved battle** and click **Spawn / Reset selected** to replay the deployment, including after restarting Godot. Choose **Generated battle** to use the standard benchmark controls. Saved battles use the current unit definitions and live tuning settings. The existing single deployment slot still loads into the painter.
+
+
+## Fortress Defense Command Sandbox
+
+Open `BENCHMARK/RTS/CommandSandbox.tscn` in Godot and press **F6**. Left-click a Blue soldier or drag a selection box across any squad member to select all 20. Right-click the ground to move into a centered 5×4 formation. Hold and drag right-click to set the front line. Wider drags fit more columns, up to a single rank of 20. The faint circles show the destination slots, and the dimension arrows show the line length in world units. Release to issue the previewed order. Press Escape to clear selection.
+
+The sandbox uses the shared unit catalog, renderer and camera. Command input and preview live in `BENCHMARK/RTS/`, and the movement pass lives in `SIMULATION/COMMANDS/CommandMovement.cs`. Movement goes directly to assigned slots on flat ground. Obstacle routing, collision avoidance and combat orders are outside this first pass. The Auto-Battle Benchmark remains runnable from `BENCHMARK/BenchmarkArena.tscn`.
