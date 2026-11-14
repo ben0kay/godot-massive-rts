@@ -13,7 +13,8 @@ public partial class DeathEffectRenderer : Node3D
     private uint syncedRevision;
     private static readonly Vector3[] PuffDirections =
     {
-        new(1f, 0f, 0f), new(-0.5f, 0f, 0.866f), new(-0.5f, 0f, -0.866f)
+        new(1f, 0f, 0f), new(0f, 0f, 1f),
+        new(-1f, 0f, 0f), new(0f, 0f, -1f)
     };
 
     public void Initialize(RuntimeUnitCatalog units, Mesh[] meshes)
@@ -88,7 +89,8 @@ void fragment() { ALBEDO = tint.rgb; ALPHA = tint.a; }"
                 float distance = (0.22f + 0.28f * variation) * outward;
                 float height = 0.035f + 0.16f * time * (1f - time);
                 Vector3 point = effect.Ground + rotation * PuffDirections[j] * distance + Vector3.Up * height;
-                float scale = (0.06f + 0.05f * variation) * (1f + time * 0.45f);
+                // Larger, still low-poly blood puffs: roughly 45% more readable at battle zoom.
+                float scale = (0.09f + 0.065f * variation) * (1f + time * 0.45f);
                 blobs.SetInstanceTransform(blobCount, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), point));
                 blobs.SetInstanceColor(blobCount++, new Color(0.23f + 0.1f * variation, 0.025f, 0.035f, 1f - time * time));
             }

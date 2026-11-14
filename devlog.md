@@ -187,3 +187,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — BENCH0: Added a filled soldier rectangle tool using the obstacle drag interaction and footprint-aware paint density.
 
 - 2026-11-14 — SHADOW1-B: Doubled fake ground-shadow opacity, reduced soldier shadow sizes (especially Pentagon/Hexagon), and shifted them to a slight right/down cast; compacted and aligned static obstacle/tower shadows. Existing batching and gameplay preserved; awaiting owner visual validation.
+
+- 2026-11-14 — DEATH1-B: Increased dark-red death blobs from 3 to 4 per soldier and enlarged their shared geometry scale for readability, retaining the 0.28-second lifetime and pooled MultiMesh rendering. Source implemented; awaiting owner visual validation.

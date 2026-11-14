@@ -6,7 +6,7 @@ namespace MassiveRts;
 public sealed class DeathFeedbackSystem
 {
     public const int Capacity = 512;
-    public const int BlobsPerDeath = 3;
+    public const int BlobsPerDeath = 4;
     public const float ShrinkSeconds = 0.20f;
     public const float BlobSeconds = 0.28f;
 
