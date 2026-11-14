@@ -53,8 +53,6 @@ public partial class BenchmarkArena : Node3D
     private float targetingStepSeconds, separationPushPerStep;
     private int targetingStep;
     private long skippedSteps;
-    private readonly double[] frames = new double[120];
-    private int frameCursor, frameSamples;
     private MovementProfile movementProfile;
     private double movementMs, separationMs, gridMs, targetingMs, combatMs, projectileMs, simulationMs, renderMs;
     private int measuredFrames, measuredTicks, maxTicksInFrame;
@@ -203,7 +201,7 @@ public partial class BenchmarkArena : Node3D
         targetingAccumulator = 0; targetingStep = 0;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
-        frameSamples = 0; frameCursor = 0; ResetTimings(); panel.Status.Text = "Cleared";
+        panel.Summary.ResetSamples(); ResetTimings(); panel.Status.Text = "Cleared";
     }
     private void Spawn()
     {
@@ -450,7 +448,7 @@ public partial class BenchmarkArena : Node3D
             navigation.ReuseCorridors = panel.ReuseCorridors;
             navigation.ReuseWaypoints = panel.ReuseWaypoints;
         }
-        frames[frameCursor] = delta * 1000; frameCursor = (frameCursor + 1) % frames.Length; frameSamples = Math.Min(frameSamples + 1, frames.Length);
+        panel.Summary.Sample(delta);
         if (!paused)
         {
             shockwaves.Advance((float)delta);
@@ -493,7 +491,7 @@ public partial class BenchmarkArena : Node3D
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units);
-                frameSamples = 0; frameCursor = 0;
+                panel.Summary.ResetSamples();
             }
         }
         else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0))
@@ -700,9 +698,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     private void UpdateOverlay()
     {
-        double sum = 0, worst = 0;
-        for (int i = 0; i < frameSamples; i++) { sum += frames[i]; worst = Math.Max(worst, frames[i]); }
-        double avg = frameSamples > 0 ? sum / frameSamples : 0, divisor = Math.Max(1, measuredFrames);
+        double divisor = Math.Max(1, measuredFrames);
         string costPerTick = measuredTicks > 0 ? $"{simulationMs / measuredTicks:F3} ms" : "N/A";
         string separationPerTick = measuredTicks > 0 ? $"{separationMs / measuredTicks:F3} ms" : "N/A";
         bool separating = panel.Separation != SeparationMode.Off && units?.Alive > 1 && !spawning && mode != BenchmarkMode.RenderingOnly;
@@ -718,12 +714,9 @@ public partial class BenchmarkArena : Node3D
         string yieldStats = separating && panel.AlliedYield && separation != null
             ? $"Yield skip / push / exit  {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
             : "";
-        panel.Metrics.Text =
-            $"BENCH0 · {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}\n" +
-            $"{Engine.GetFramesPerSecond():F0} FPS · {avg:F2} ms avg\nWorst frame  {worst:F2} ms\n" +
-            $"Alive  {units?.Alive ?? 0:N0} / {units?.Count ?? 0:N0}\n" +
-            $"Blue {units?.FactionAlive[Factions.Blue] ?? 0:N0} · Red {units?.FactionAlive[Factions.Red] ?? 0:N0} · Green {units?.FactionAlive[Factions.Green] ?? 0:N0}\n" +
-            $"Projectiles  {projectiles?.Count ?? 0:N0}";
+        panel.Summary.Refresh(
+            $"BENCH0 · {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}",
+            units, projectiles?.Count ?? 0);
 
         double achievedRate = hudClock > 0 ? measuredTicks / hudClock : 0;
         double targetingTickToMsPerFrame = 1000.0 / Stopwatch.Frequency / divisor;

@@ -1,4 +1,5 @@
 // Standalone flat-ground scene for testing Fortress Defense squad commands.
+using System;
 using Godot;
 
 namespace MassiveRts;
@@ -7,6 +8,15 @@ public partial class CommandSandbox : Node3D
 {
     private CommandMovement movement;
     private ArmyRenderer army;
+    private UnitState units;
+    private CommandOverlay overlay;
+    private BenchmarkSummary summary;
+    private ArmyBalanceHud armyBalance;
+    private SelectionHud selection;
+    private readonly int[] squadIds = new int[CommandMovement.SquadSize];
+    private const string SummaryTitle = "Fortress Defense · Command Sandbox";
+    private double hudClock;
+    private bool wasSelected;
 
     public override void _Ready()
     {
@@ -27,10 +37,11 @@ public partial class CommandSandbox : Node3D
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
-        var units = new UnitState(CommandMovement.SquadSize, catalog) { Count = CommandMovement.SquadSize };
+        units = new UnitState(CommandMovement.SquadSize, catalog) { Count = CommandMovement.SquadSize };
         movement = new CommandMovement(units);
         for (int i = 0; i < units.Count; i++)
         {
+            squadIds[i] = i;
             units.Type[i] = RuntimeUnitCatalog.Circle;
             units.Faction[i] = Factions.Blue;
             units.Health[i] = catalog[units.Type[i]].Health;
@@ -47,17 +58,57 @@ public partial class CommandSandbox : Node3D
 
         var hud = new CanvasLayer();
         AddChild(hud);
-        var overlay = new CommandOverlay { View = camera, Units = units, Movement = movement };
+        overlay = new CommandOverlay { View = camera, Units = units, Movement = movement };
         hud.AddChild(overlay);
         var input = new SquadCommandInput();
         input.Initialize(overlay);
         AddChild(input);
         hud.AddChild(new Label
         {
-            Position = new Vector2(20f, 16f),
+            Position = new Vector2(20f, 48f),
             MouseFilter = Control.MouseFilterEnum.Ignore,
             Text = "Fortress Defense Command Sandbox\nClick or box-select the squad · Right-click to move · Right-drag to set formation\nWASD or arrows to pan · Wheel to zoom"
         });
+        summary = new BenchmarkSummary
+        {
+            AnchorLeft = 1, AnchorRight = 1,
+            OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12,
+            GrowVertical = Control.GrowDirection.End
+        };
+        hud.AddChild(summary);
+        summary.Refresh(SummaryTitle, units);
+
+        armyBalance = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
+        hud.AddChild(armyBalance);
+        armyBalance.BeginBattle(units);
+
+        selection = new SelectionHud
+        {
+            AnchorRight = 1, AnchorTop = 1, AnchorBottom = 1,
+            OffsetLeft = 12, OffsetRight = -12, OffsetTop = -96, OffsetBottom = -12,
+            GrowVertical = Control.GrowDirection.Begin
+        };
+        hud.AddChild(selection);
+        RefreshSelection();
+    }
+
+    public override void _Process(double delta)
+    {
+        summary.Sample(delta);
+        hudClock += delta;
+        if (wasSelected != overlay.Selected) RefreshSelection();
+        if (hudClock < 0.3) return;
+
+        hudClock = 0;
+        summary.Refresh(SummaryTitle, units);
+        armyBalance.RefreshCounts();
+        if (wasSelected) RefreshSelection();
+    }
+
+    private void RefreshSelection()
+    {
+        wasSelected = overlay.Selected;
+        selection.Refresh(units, wasSelected ? squadIds.AsSpan() : Span<int>.Empty);
     }
 
     public override void _PhysicsProcess(double delta)

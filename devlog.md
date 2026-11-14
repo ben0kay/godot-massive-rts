@@ -197,3 +197,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — BENCH0: New deployments use 2-world-unit cells. Version 5 saves retain each layout’s grid size and legacy battles keep their original geometry.
 
 - **2026-11-14 | Fortress Defense Command Sandbox | Source implemented.** Added a standalone 20-soldier squad with box selection, right-click movement, and a measured right-drag formation preview. Awaiting Godot .NET playtesting.
+
+- **2026-11-14 | Shared benchmark HUD | Source implemented.** Shared the compact FPS panel between both benchmarks and added the army balance and selection health bars to the Command Sandbox. Awaiting Godot visual validation.

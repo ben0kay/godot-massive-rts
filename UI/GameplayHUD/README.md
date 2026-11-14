@@ -18,3 +18,7 @@ Proportions interpolate with a lightweight exponential ease only after count cha
 The HUD is one `Control` inside one `CanvasLayer` above the benchmark's two side panels; drawing is pointer-transparent. Its screen-space width adapts to the viewport, reserving space for left/right panels. Combat data is supplied explicitly; it does not reach into the benchmark scene by path.
 
 **Source implemented; pending owner visual validation.** Check the bar in blue/red and green-included battles, respawns, casualties, pause, and different window widths. No performance guarantee is asserted.
+
+## Selection bar
+
+The Command Sandbox uses this army balance bar and adds `SelectionHud.cs` along the bottom. The left side lists the number of selected living units and a count per unit type. Health divides the sum of their current HP by the sum of their maximum HP, so each unit contributes according to its HP pool. The HUD receives the selected unit IDs and supports mixed types. The sandbox currently selects one squad of 20 Circles.

@@ -75,7 +75,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly SpinBox FireRate = new() { MinValue = 0.2, MaxValue = 20, Step = 0.2, Value = 1 };
     public readonly SpinBox RangedPercent = new() { MinValue = 0, MaxValue = 100, Step = 5, Value = 40 };
     public readonly Label Status = new();
-    public readonly Label Metrics = DebugLabel(), CpuMetrics = DebugLabel(), ObstacleMetrics = DebugLabel(), EngineMetrics = DebugLabel();
+    public readonly BenchmarkSummary Summary = new();
+    public readonly Label CpuMetrics = DebugLabel(), ObstacleMetrics = DebugLabel(), EngineMetrics = DebugLabel();
     private readonly CheckButton profileMovement = new() { Text = "Profile movement" };
     public bool ProfileMovement => profileMovement.ButtonPressed;
     private readonly CheckButton profileObstacles = new() { Text = "Sample obstacle queries" };
@@ -302,9 +303,7 @@ public partial class BenchmarkPanel : CanvasLayer
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         AddChild(right);
-        var compact = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        right.AddChild(compact);
-        compact.AddChild(Metrics);
+        right.AddChild(Summary);
         overlay = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         right.AddChild(overlay);
         var debugScroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
