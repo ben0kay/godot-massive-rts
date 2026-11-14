@@ -28,6 +28,21 @@ public sealed class UnitState
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
 
+    // Appends a stable soldier ID when the preallocated state has room.
+    public int TrySpawn(byte type, byte faction, Vector3 position)
+    {
+        if (Count == Position.Length) return -1;
+        int id = Count++;
+        Type[id] = type;
+        Faction[id] = faction;
+        Position[id] = Goal[id] = position;
+        Health[id] = Catalog[type].Health;
+        Target[id] = -1;
+        Dirty[id] = true;
+        RegisterSpawn(faction, type);
+        return id;
+    }
+
     public void RegisterSpawn(byte faction, byte type)
     {
         FactionAlive[faction]++;

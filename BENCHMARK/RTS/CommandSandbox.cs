@@ -1,5 +1,5 @@
 // Standalone flat-ground scene for testing Fortress Defense squad commands.
-using System;
+using System.Runtime.InteropServices;
 using Godot;
 
 namespace MassiveRts;
@@ -13,10 +13,13 @@ public partial class CommandSandbox : Node3D
     private BenchmarkSummary summary;
     private ArmyBalanceHud armyBalance;
     private SelectionHud selection;
-    private readonly int[] squadIds = new int[CommandMovement.SquadSize];
+    private const int UnitCapacity = 2048;
+    [Export(PropertyHint.Range, "1,50000,1")] public float CitadelHealth { get; set; } = 5000f;
+    private CommandBuildings buildings;
+    private FabricationHud fabrication;
     private const string SummaryTitle = "Fortress Defense · Command Sandbox";
     private double hudClock;
-    private bool wasSelected;
+    private double selectionClock;
 
     public override void _Ready()
     {
@@ -37,20 +40,16 @@ public partial class CommandSandbox : Node3D
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
-        units = new UnitState(CommandMovement.SquadSize, catalog) { Count = CommandMovement.SquadSize };
+        units = new UnitState(UnitCapacity, catalog);
         movement = new CommandMovement(units);
-        for (int i = 0; i < units.Count; i++)
+        float spacing = 2f * catalog[RuntimeUnitCatalog.Circle].Footprint + 0.3f;
+        for (int i = 0; i < CommandMovement.SquadSize; i++)
         {
-            squadIds[i] = i;
-            units.Type[i] = RuntimeUnitCatalog.Circle;
-            units.Faction[i] = Factions.Blue;
-            units.Health[i] = catalog[units.Type[i]].Health;
-            units.Target[i] = -1;
-            units.Position[i] = movement.Slot(Vector3.Back * -1.5f * movement.Spacing,
-                Vector3.Right, CommandMovement.DefaultColumns, i);
-            units.Dirty[i] = true;
-            units.RegisterSpawn(units.Faction[i], units.Type[i]);
+            Vector3 position = CommandMovement.Slot(Vector3.Back * -1.5f * spacing, Vector3.Right,
+                CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
+            units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
         }
+        buildings = new CommandBuildings(this, units, movement, Mathf.Max(1, CitadelHealth));
 
         army = new ArmyRenderer();
         AddChild(army);
@@ -58,16 +57,15 @@ public partial class CommandSandbox : Node3D
 
         var hud = new CanvasLayer();
         AddChild(hud);
-        overlay = new CommandOverlay { View = camera, Units = units, Movement = movement };
+        overlay = new CommandOverlay { View = camera, Units = units };
         hud.AddChild(overlay);
         var input = new SquadCommandInput();
-        input.Initialize(overlay);
-        AddChild(input);
+
         hud.AddChild(new Label
         {
             Position = new Vector2(20f, 48f),
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            Text = "Fortress Defense Command Sandbox\nClick or box-select the squad · Right-click to move · Right-drag to set formation\nWASD or arrows to pan · Wheel to zoom"
+            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click to move · Right-drag formation\nWASD or arrows to pan · Wheel to zoom"
         });
         summary = new BenchmarkSummary
         {
@@ -89,6 +87,12 @@ public partial class CommandSandbox : Node3D
             GrowVertical = Control.GrowDirection.Begin
         };
         hud.AddChild(selection);
+        fabrication = new FabricationHud();
+        hud.AddChild(fabrication);
+        fabrication.Initialize(catalog);
+        fabrication.Refresh(buildings, null);
+        AddChild(input);
+        input.Initialize(overlay, movement, buildings, fabrication);
         RefreshSelection();
     }
 
@@ -96,23 +100,30 @@ public partial class CommandSandbox : Node3D
     {
         summary.Sample(delta);
         hudClock += delta;
-        if (wasSelected != overlay.Selected) RefreshSelection();
+        selectionClock += delta;
+        if (selectionClock >= 0.08)
+        {
+            selectionClock = 0;
+            RefreshSelection();
+            fabrication.Refresh(buildings, overlay.Building);
+        }
         if (hudClock < 0.3) return;
 
         hudClock = 0;
         summary.Refresh(SummaryTitle, units);
         armyBalance.RefreshCounts();
-        if (wasSelected) RefreshSelection();
     }
 
     private void RefreshSelection()
     {
-        wasSelected = overlay.Selected;
-        selection.Refresh(units, wasSelected ? squadIds.AsSpan() : Span<int>.Empty);
+        selection.Visible = overlay.Building == null;
+        if (selection.Visible) selection.Refresh(units, CollectionsMarshal.AsSpan(overlay.Selection));
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        if (movement != null && movement.Step((float)delta)) army.Sync();
+        int previousCount = units.Count;
+        buildings.Step((float)delta);
+        if (movement.Step((float)delta) || previousCount != units.Count) army.Sync();
     }
 }

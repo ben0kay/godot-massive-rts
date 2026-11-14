@@ -1,5 +1,6 @@
 // Draws squad selection and the projected formation preview in viewport pixels.
 using System.Globalization;
+using System.Collections.Generic;
 using Godot;
 
 namespace MassiveRts;
@@ -8,8 +9,11 @@ public partial class CommandOverlay : RectangleDimensions
 {
     internal Camera3D View;
     internal UnitState Units;
-    internal CommandMovement Movement;
-    internal bool Selected, Selecting, Preview;
+    internal readonly List<int> Selection = new();
+    internal CommandStructure Building;
+    internal bool Selecting, Preview;
+    internal float Spacing;
+    internal float Radius(int id) => Units.Catalog[Units.Type[id]].Footprint;
     internal Vector2 Press, Pointer;
     internal Vector3 Front, Right, LineStart, LineEnd;
     internal int Columns;
@@ -19,8 +23,14 @@ public partial class CommandOverlay : RectangleDimensions
     public override void _Draw()
     {
         if (View == null) return;
-        if (Selected)
-            for (int i = 0; i < Units.Count; i++) DrawFootprint(Units.Position[i], SelectionInk);
+        foreach (int id in Selection)
+            if (Units.Health[id] > 0) DrawFootprint(Units.Position[id], Radius(id), SelectionInk);
+        if (Building?.Rally is Vector3 rally && !Building.Destroyed)
+        {
+            Vector3 gate = Building.Center + Vector3.Back * 3f;
+            DrawLine(View.UnprojectPosition(gate), View.UnprojectPosition(rally), GhostInk, 1.25f, true);
+            DrawFootprint(rally, 0.65f, SelectionInk);
+        }
         if (Selecting)
         {
             var box = new Rect2(Press, Pointer - Press).Abs();
@@ -29,7 +39,9 @@ public partial class CommandOverlay : RectangleDimensions
         }
         if (!Preview) return;
 
-        for (int i = 0; i < Units.Count; i++) DrawFootprint(Movement.Slot(Front, Right, Columns, i), GhostInk);
+        for (int i = 0; i < Selection.Count; i++)
+            DrawFootprint(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing),
+                Radius(Selection[i]), GhostInk);
         Vector2 start = View.UnprojectPosition(LineStart);
         Vector2 end = View.UnprojectPosition(LineEnd);
         DrawLine(start, end, GhostInk, 1.5f, true);
@@ -38,15 +50,15 @@ public partial class CommandOverlay : RectangleDimensions
         DrawDimension(start, end, interior, width.ToString("0.##", CultureInfo.InvariantCulture) + " u");
     }
 
-    private void DrawFootprint(Vector3 center, Color color)
+    private void DrawFootprint(Vector3 center, float radius, Color color)
     {
         if (View.IsPositionBehind(center)) return;
         const int segments = 20;
-        Vector2 previous = View.UnprojectPosition(center + Vector3.Right * Movement.Radius);
+        Vector2 previous = View.UnprojectPosition(center + Vector3.Right * radius);
         for (int i = 1; i <= segments; i++)
         {
             float angle = Mathf.Tau * i / segments;
-            Vector3 point = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Movement.Radius;
+            Vector3 point = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
             Vector2 next = View.UnprojectPosition(point);
             DrawLine(previous, next, color, 1f, true);
             previous = next;

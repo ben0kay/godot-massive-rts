@@ -201,3 +201,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | Shared benchmark HUD | Source implemented.** Shared the compact FPS panel between both benchmarks and added the army balance and selection health bars to the Command Sandbox. Awaiting Godot visual validation.
 
 - **2026-11-14 | Project layout.** Grouped features under GAMEPLAY, WORLD and VISUALS. Kept LEVELS at the root and grouped maps by campaign mode while preserving campaign and level IDs. Updated Godot resource references.
+
+- **2026-11-14 | FAB1.** Added Carbon, a prebuilt Citadel, Fabricator placement and construction, editable batch production with blocked-exit retries, and rally orders in the Command Sandbox. Dynamic soldiers share simulation state and grow their renderer batches on demand. Awaiting Godot playtesting.

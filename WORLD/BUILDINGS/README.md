@@ -17,3 +17,7 @@ Laser Tower 001 now has a longer shared box barrel: its tip extends roughly 1.7 
 ## DEF1-B — Faceted tower silhouette
 
 The Laser Tower chassis now uses **one shared three-tier beveled square mesh**, with a dark outer plinth, inset upper platform and baked brighter top/darker side faces like the soldier meshes. Its rotating triangular turret head is roughly 45–50% wider and taller than before, with a dark mounting collar and beveled shoulders. The long barrel is slightly thicker and gains beveled side faces plus a brighter tip sleeve. These are baked shared meshes within the existing base/head/barrel **MultiMesh** batches. The faction tint, firing-muzzle position, laser/muzzle flash, combat behavior and collision footprint are unchanged. Source implemented; in-game visual acceptance pending.
+
+## FAB1 command structures
+
+`FABRICATION/CommandStructure.cs` supplies shared beveled geometry and health/construction state for the Citadel and Fabricator001. The Command Sandbox exposes starting Citadel HP in the scene Inspector. `CommandBuildings.cs` reserves grid footprints at placement, updates the shared obstacle field, and checks the gate and holding/rally slots before release. Future combat can call the structure's `Damage` method to change health and remove a destroyed structure.

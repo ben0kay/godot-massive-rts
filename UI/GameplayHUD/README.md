@@ -22,3 +22,7 @@ The HUD is one `Control` inside one `CanvasLayer` above the benchmark's two side
 ## Selection bar
 
 The Command Sandbox uses this army balance bar and adds `SelectionHud.cs` along the bottom. The left side lists the number of selected living units and a count per unit type. Health divides the sum of their current HP by the sum of their maximum HP, so each unit contributes according to its HP pool. The HUD receives the selected unit IDs and supports mixed types. The sandbox currently selects one squad of 20 Circles.
+
+## FAB1 controls
+
+`FabricationHud.cs` adds Carbon at the top left, a Ctrl-toggled build menu, and a bottom panel for selected structures. Fabricator controls show the next recipe, current batch progress, automatic production and rally status. The existing unit selection panel returns when selecting soldiers.

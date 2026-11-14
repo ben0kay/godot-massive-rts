@@ -14,6 +14,7 @@ public partial class ArmyRenderer : Node3D
     private MultiMeshInstance3D[] shadowBatches;
     private float[][] shadowBuffers;
     private Mesh shadowMesh;
+    private Mesh[] batchShapes;
     private bool shadowsEnabled;
     private const int ShadowStride = 12;
     // Relative to the previous oval footprint; large elites get extra reduction.
@@ -59,28 +60,62 @@ public partial class ArmyRenderer : Node3D
         }
         var capacities = new int[batchCount];
         for (int i = 0; i < state.Count; i++) capacities[Batch(i)]++;
+        batchShapes = shapes;
         for (int b = 0; b < batchCount; b++)
-        {
-            int capacity = capacities[b];
-            if (capacity == 0) continue;
-            members[b] = new int[capacity];
-            buffers[b] = new float[capacity * InstanceStride];
-            changedSlots[b] = new int[SparseUpdateLimit];
-            Color faction = FactionColor(b / typeCount);
-            for (int offset = 0; offset < buffers[b].Length; offset += InstanceStride)
-            {
-                buffers[b][offset] = buffers[b][offset + 5] = buffers[b][offset + 10] = 1f;
-                StoreColor(buffers[b], offset, faction);
-            }
-            Mesh mesh = shapes[b % typeCount];
-            var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = mesh };
-            mm.InstanceCount = capacity; mm.VisibleInstanceCount = 0; batches[b] = mm;
-            AddChild(new MultiMeshInstance3D { Multimesh = mm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-        }
+            if (capacities[b] > 0) AllocateBatch(b, capacities[b]);
         shadowMesh = sharedShadow;
         SetShadowsVisible(showShadows);
         Sync();
     }
+    // =========================================================
+    private void AllocateBatch(int batch, int capacity)
+    {
+        var mesh = batches[batch];
+        if (mesh == null)
+        {
+            mesh = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = true, Mesh = batchShapes[batch % typeCount]
+            };
+            batches[batch] = mesh;
+            changedSlots[batch] = new int[SparseUpdateLimit];
+            AddChild(new MultiMeshInstance3D { Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+        int previousCapacity = members[batch]?.Length ?? 0;
+        System.Array.Resize(ref members[batch], capacity);
+        System.Array.Resize(ref buffers[batch], capacity * InstanceStride);
+        Color faction = FactionColor(batch / typeCount);
+        for (int offset = previousCapacity * InstanceStride; offset < buffers[batch].Length; offset += InstanceStride)
+        {
+            buffers[batch][offset] = buffers[batch][offset + 5] = buffers[batch][offset + 10] = 1f;
+            StoreColor(buffers[batch], offset, faction);
+        }
+        mesh.InstanceCount = capacity;
+        mesh.VisibleInstanceCount = counts[batch];
+        if (counts[batch] > 0) mesh.Buffer = buffers[batch];
+        if (shadowsEnabled || shadowBatches?[batch] != null)
+        {
+            EnsureShadowBatch(batch);
+            var shadow = shadowBatches[batch].Multimesh;
+            System.Array.Resize(ref shadowBuffers[batch], capacity * ShadowStride);
+            shadow.InstanceCount = capacity;
+            shadow.VisibleInstanceCount = counts[batch];
+            if (counts[batch] > 0) shadow.Buffer = shadowBuffers[batch];
+        }
+    }
+
+    private void EnsureShadowBatch(int batch)
+    {
+        if (shadowBatches[batch] != null) return;
+        var mesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = shadowMesh };
+        shadowBatches[batch] = new MultiMeshInstance3D
+        {
+            Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+        };
+        AddChild(shadowBatches[batch]);
+    }
+
     public void SetShadowsVisible(bool visible)
     {
         if (shadowsEnabled == visible) return;
@@ -94,24 +129,18 @@ public partial class ArmyRenderer : Node3D
             {
                 if (shadowBatches[b] == null)
                 {
+                    EnsureShadowBatch(b);
                     int capacity = batches[b].InstanceCount;
-                    var mesh = new MultiMesh
-                    {
-                        TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                        Mesh = shadowMesh, InstanceCount = capacity, VisibleInstanceCount = 0
-                    };
                     shadowBuffers[b] = new float[capacity * ShadowStride];
-                    shadowBatches[b] = new MultiMeshInstance3D
-                    {
-                        Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
-                    };
-                    AddChild(shadowBatches[b]);
+                    var mesh = shadowBatches[b].Multimesh;
+                    mesh.InstanceCount = capacity;
+                    mesh.VisibleInstanceCount = 0;
                 }
                 for (int slot = 0; slot < counts[b]; slot++)
                     WriteShadow(b, slot, GroundPose(members[b][slot]));
                 UploadShadows(b);
             }
-            shadowBatches[b].Visible = visible;
+            if (shadowBatches[b] != null) shadowBatches[b].Visible = visible;
         }
     }
 
@@ -305,7 +334,16 @@ public partial class ArmyRenderer : Node3D
             }
             else
             {
-                if (slot < 0) { slot = counts[batch]++; members[batch][slot] = id; slots[id] = slot; InstanceCount++; }
+                if (slot < 0)
+                {
+                    int capacity = members[batch]?.Length ?? 0;
+                    if (counts[batch] == capacity)
+                        AllocateBatch(batch, System.Math.Min(slots.Length, System.Math.Max(32, capacity * 2)));
+                    slot = counts[batch]++;
+                    members[batch][slot] = id;
+                    slots[id] = slot;
+                    InstanceCount++;
+                }
                 Write(id, batch, slot);
             }
         }
