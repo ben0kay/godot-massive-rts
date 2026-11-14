@@ -40,6 +40,8 @@ public partial class BenchmarkPanel : CanvasLayer
     public bool RangedTargetVariety => rangedTargetVariety.ButtonPressed;
     public bool MeleeSidestep => meleeSidestep.ButtonPressed;
     public bool MeleeHold => meleeHold.ButtonPressed;
+    private readonly CheckButton preventCrowdStacking = new() { Text = "Prevent crowd stacking (Normal)" };
+    public bool PreventCrowdStacking => preventCrowdStacking.ButtonPressed;
     public bool WeightedSeparation => weightedSeparation.ButtonPressed;
     public bool AlliedYield => alliedYield.ButtonPressed;
     public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
@@ -172,6 +174,7 @@ public partial class BenchmarkPanel : CanvasLayer
         separation.AddChild(meleeSidestep);
         separation.AddChild(meleeHold);
         separation.AddChild(weightedSeparation);
+        separation.AddChild(preventCrowdStacking);
 
         AddButton(column, "Edit painted deployment", () => PaintRequested?.Invoke());
         paintSection = new VBoxContainer { Visible = false };

@@ -171,3 +171,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | BENCH left controls readability | Source implemented; awaiting owner visual validation.** Widened the left benchmark panel from ~310 to ~440 px, switched editable fields to compact label/control rows (including per-team orders and camera yaw), added contrasting category headers/inset section bodies and distinct muted help text. Added F2 to independently toggle only the left panel; F1 still toggles both and F4 controls only expanded right-hand diagnostics. No combat, simulation or deployment data changes.
 
 - 2026-11-14 — BENCH0: Added opt-in reuse of verified route waypoints and a benchmark reuse counter.
+
+- 2026-11-14 — BENCH0: Added opt-in preventive crowd separation for voluntary movement in Normal mode.

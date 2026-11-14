@@ -13,7 +13,7 @@ public partial class BenchmarkArena : Node3D
     private Mesh[] soldierMeshes;
     private Mesh soldierShadow;
     private UnitState units;
-    private SpatialGrid grid;
+    private SpatialGrid grid, marchCrowdGrid;
     private SeparationSystem separation;
     private MeleeSteering meleeSteering;
     private TrampleSystem trample;
@@ -181,7 +181,7 @@ public partial class BenchmarkArena : Node3D
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
         meleeSteering = null;
-        units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
+        units = null; projectiles = null; grid = null; marchCrowdGrid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         targetingAccumulator = 0; targetingStep = 0;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
@@ -525,11 +525,23 @@ public partial class BenchmarkArena : Node3D
         if (!holdMelee && !sidestepMelee) meleeSteering = null;
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
+        CrowdMovement crowd = default;
+        if (separate && separationMode == SeparationMode.Normal && panel.PreventCrowdStacking)
+        {
+            SpatialGrid crowdGrid = grid;
+            if (crowdGrid == null)
+            {
+                marchCrowdGrid ??= new SpatialGrid(units.Position.Length, Config.CellSize);
+                marchCrowdGrid.Rebuild(units);
+                crowdGrid = marchCrowdGrid;
+            }
+            crowd = new CrowdMovement(crowdGrid, units.Catalog.MaxSpeed * dt);
+        }
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, crowd);
         if (guards != null)
             foreach (GuardGroup group in guards)
-                group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
+                group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags, crowd);
         float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;
