@@ -28,6 +28,8 @@ public sealed class ObstacleNavigation
         public Route Route;
         public int Next;
         public Vector2I GoalSector;
+        public Vector2 VerifiedStart;
+        public bool WaypointVerified, WaypointHasMargin;
     }
 
     private readonly ObstacleField field;
@@ -35,6 +37,8 @@ public sealed class ObstacleNavigation
     private readonly Follower[] followers;
     private readonly ApproachMemo[] approachMemos;
     public bool ReuseCorridors { get; set; } = true;
+    public bool ReuseWaypoints { get; set; }
+    public int WaypointReuses { get; private set; }
     public int CorridorReuses { get; private set; }
     private readonly Dictionary<RouteKey, Route> routes = new();
     private readonly Queue<RouteKey> cacheOrder = new();
@@ -65,7 +69,7 @@ public sealed class ObstacleNavigation
 
     public void ResetCounters()
     {
-        CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = CorridorReuses = 0;
+        CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = CorridorReuses = WaypointReuses = 0;
     }
 
     public void AdvanceFrame() => frame++;
@@ -111,12 +115,22 @@ public sealed class ObstacleNavigation
             Vector2[] points = follower.Route.Points;
             while (follower.Next < points.Length &&
                 start.DistanceSquaredTo(points[follower.Next]) <= ArrivalDistance * ArrivalDistance)
+            {
                 follower.Next++;
+                follower.WaypointVerified = false;
+            }
+            if (ReuseWaypoints && follower.WaypointVerified && follower.Next < points.Length &&
+                CanReuseWaypoint(follower, start, points[follower.Next]))
+            {
+                WaypointReuses++;
+                routeCorner = true;
+                return points[follower.Next];
+            }
             int last = Math.Min(points.Length - 1, follower.Next + 3);
             for (int next = last; next >= follower.Next; next--)
             {
                 if (field.BlocksCorridor(start, points[next], radius)) continue;
-                follower.Next = next;
+                RememberWaypoint(ref follower, next, start, points[next], radius);
                 routeCorner = true;
                 return points[next];
             }
@@ -124,7 +138,7 @@ public sealed class ObstacleNavigation
             if (follower.Next > 0 && follower.Next < points.Length &&
                 !field.BlocksCorridor(start, points[follower.Next - 1], radius))
             {
-                follower.Next--;
+                RememberWaypoint(ref follower, follower.Next - 1, start, points[follower.Next - 1], radius);
                 routeCorner = true;
                 return points[follower.Next];
             }
@@ -149,6 +163,7 @@ public sealed class ObstacleNavigation
                     {
                         CacheHits++;
                         follower = new Follower { Route = route, Next = next, GoalSector = goalSector };
+                        RememberWaypoint(ref follower, next, start, points[next], radius);
                         routeCorner = true;
                         return points[next];
                     }
@@ -175,6 +190,27 @@ public sealed class ObstacleNavigation
         if (distance == 0f || !field.FirstHit(start, goal, radius, out float hit)) return start;
         float advance = Mathf.Max(0f, distance * hit - WaitingClearance);
         return start + offset * (advance / distance);
+    }
+
+    private static bool CanReuseWaypoint(Follower follower, Vector2 start, Vector2 waypoint)
+    {
+        if (start == follower.VerifiedStart) return true;
+        if (!follower.WaypointHasMargin) return false;
+        Vector2 segment = waypoint - follower.VerifiedStart;
+        float lengthSquared = segment.LengthSquared();
+        if (lengthSquared <= 0f) return false;
+        Vector2 offset = start - follower.VerifiedStart;
+        float progress = Mathf.Clamp(offset.Dot(segment) / lengthSquared, 0f, 1f);
+        return (offset - segment * progress).LengthSquared() <= CorridorMargin * CorridorMargin;
+    }
+
+    private void RememberWaypoint(ref Follower follower, int index, Vector2 start, Vector2 waypoint, float radius)
+    {
+        follower.Next = index;
+        follower.WaypointVerified = ReuseWaypoints;
+        if (!ReuseWaypoints) return;
+        follower.VerifiedStart = start;
+        follower.WaypointHasMargin = !field.BlocksCorridor(start, waypoint, radius + ProofInset);
     }
 
     private bool CanApproachSoldier(int id, Vector2 start, Vector2 goal, float radius, float stop)

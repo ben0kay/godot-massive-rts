@@ -164,3 +164,5 @@ Navigation retains its existing rendered-frame route budget and retry clock. **D
 Under **CPU and separation**, the pursuit breakdown shows live refresh, scheduled acquisition without a living target, and extra replacement. Each row reports searches per wall-clock second, CPU milliseconds per simulation tick, and average microseconds per search. Live refresh also reports the percentage that changed targets. Tree construction remains in its own timing, and initial deployment preparation is excluded.
 
 **F1** hides or restores the left controls and right performance details while keeping the compact battle summary visible. **F4** controls the right-hand details independently.
+
+**Reuse route waypoints** (off by default) keeps the current waypoint while the soldier stays inside its verified corridor. Waypoint arrival, leaving that corridor or losing the route restores normal waypoint selection. Wall clipping still runs on each movement step. Compare **Route waypoints reused**, corridor calls and movement time in the same obstacle layout.
