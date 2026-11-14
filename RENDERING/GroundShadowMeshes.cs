@@ -7,7 +7,8 @@ internal static class GroundShadowMeshes
 {
     private static StandardMaterial3D Material() => new()
     {
-        AlbedoColor = new Color(0.005f, 0.008f, 0.012f, 0.26f),
+        // About twice the previous opacity for stronger near-black contact shadows.
+        AlbedoColor = new Color(0.005f, 0.008f, 0.012f, 0.52f),
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled
@@ -36,10 +37,13 @@ internal static class GroundShadowMeshes
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(Material());
-        Vector2 offset = new Vector2(0.55f, 0.75f) * height;
+        // Toward screen-right/down at the default 45-degree camera, as if light
+        // falls from the upper-left. Keep the obstacle/tower shadow compact.
+        Vector2 offset = new Vector2(0.55f, -0.20f) * height;
         foreach (ObstacleRectangle rect in field.Rectangles)
         {
-            Vector2 min = rect.Min + offset, max = rect.Max + offset;
+            Vector2 inset = (rect.Max - rect.Min) * 0.05f;
+            Vector2 min = rect.Min + inset + offset, max = rect.Max - inset + offset;
             Vector3 a = new(min.X, 0.02f, min.Y), b = new(max.X, 0.02f, min.Y);
             Vector3 c = new(max.X, 0.02f, max.Y), d = new(min.X, 0.02f, max.Y);
             surface.AddVertex(a); surface.AddVertex(b); surface.AddVertex(c);

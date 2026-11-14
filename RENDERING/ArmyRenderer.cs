@@ -16,6 +16,10 @@ public partial class ArmyRenderer : Node3D
     private Mesh shadowMesh;
     private bool shadowsEnabled;
     private const int ShadowStride = 12;
+    // Relative to the previous oval footprint; large elites get extra reduction.
+    private const float SoldierShadowScale = 0.80f;
+    private const float PentagonShadowScale = 0.70f;
+    private const float HexagonShadowScale = 0.58f;
     private int[][] members;
     private int[] slots;
     private int[] counts;
@@ -118,13 +122,17 @@ public partial class ArmyRenderer : Node3D
     {
         float[] buffer = shadowBuffers[batch];
         int offset = slot * ShadowStride;
-        UnitOutline outline = units.Catalog[batch % typeCount].Outline;
-        buffer[offset] = outline.RadiusX * 1.45f;
+        int type = batch % typeCount;
+        UnitOutline outline = units.Catalog[type].Outline;
+        float size = type == RuntimeUnitCatalog.Hexagon ? HexagonShadowScale
+            : type == RuntimeUnitCatalog.Pentagon ? PentagonShadowScale : SoldierShadowScale;
+        buffer[offset] = outline.RadiusX * 1.45f * size;
         buffer[offset + 5] = 1f;
-        buffer[offset + 10] = outline.RadiusZ * 1.15f;
-        buffer[offset + 3] = position.X + outline.Footprint * 0.45f;
+        buffer[offset + 10] = outline.RadiusZ * 1.15f * size;
+        // World-space sun direction: down-right on the default 45-degree camera.
+        buffer[offset + 3] = position.X + outline.Footprint * 0.40f;
         buffer[offset + 7] = position.Y + 0.02f;
-        buffer[offset + 11] = position.Z + outline.Footprint * 0.55f;
+        buffer[offset + 11] = position.Z - outline.Footprint * 0.16f;
     }
 
     private void UploadShadows(int batch, int changed = SparseUpdateLimit + 1)

@@ -23,3 +23,7 @@ Heavy Artillery adds one shared beveled mesh containing the concave chevron and 
 ## SHADOW1 — Ground shadows
 
 The benchmark draws optional translucent oval shadows beneath soldiers and offset rectangular shadows for walls and defense footprints. Soldier batches share one oval mesh and reuse the army renderer's live slots, dirty updates and interpolated ground positions. Recoil and hit pulses affect the soldier mesh only. Static obstacle shadows are built with the battle layout. **Display and controls → Ground shadows** is enabled by default and stops shadow drawing and soldier shadow uploads when switched off.
+
+## SHADOW1-B — Darker, tighter, directional shadows
+
+The shared unshaded ground-shadow material now uses **0.52 alpha instead of 0.26** (about twice the opacity). Soldier shadow ellipse sizes are **80% of their previous size**, except **Pentagon (70%)** and **Hexagon (58%)**, keeping the large units' shadows compact. Their world-space offsets are **+0.40 footprint in X** and **−0.16 footprint in Z**, casting slightly right/down at the default 45° camera view to imply sunlight from the upper-left. Static obstacle/tower shadows use the same general direction, with a centered **10% footprint-size reduction**. This is a shared material/transform/mesh-only visual change: no individual light or shadow nodes, gameplay positioning, collision, death feedback, interpolation, or shadow-toggle logic changed. Source-implemented; pending owner visual validation at normal gameplay zoom.
