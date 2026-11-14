@@ -165,3 +165,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-13 — DEF1-B: Replaced flat laser tower parts with shared beveled layered chassis, a larger faceted triangular head and thicker beveled barrel with muzzle sleeve. Preserved MultiMesh batching, beam/flash endpoints and gameplay; owner visual validation pending.
 
 - 2026-11-13 — BENCH0: Melee guards now detect enemies at the full configured guard radius.
+
+- **2026-11-14 | Deployment placement grid | Source implemented; awaiting owner Godot validation.** Added a toggleable, semitransparent 2.1-unit world-space grid to the painted benchmark editor. One unshaded shader plane avoids per-cell meshes and draws only while editing; the grid follows obstacle, defense and soldier snapping, stays aligned through camera movement, and fades when zoomed out. Preserved simulation and deployment save format.

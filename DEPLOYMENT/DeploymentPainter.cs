@@ -19,7 +19,7 @@ public partial class DeploymentPainter : Node3D
     public int SoldierBrushSize { get; set; } = 3;
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
-    private MeshInstance3D walls, rectanglePreview;
+    private MeshInstance3D walls, rectanglePreview, placementGrid;
     private bool dragging;
     private long paintTool;
     private MouseButton dragButton;
@@ -40,6 +40,13 @@ public partial class DeploymentPainter : Node3D
         rectanglePreview.Hide();
     }
 
+    // =========================================================
+    // The parent DeploymentPainter is itself hidden outside edit mode.
+    public void SetPlacementGridVisible(bool show)
+    {
+        if (placementGrid != null) placementGrid.Visible = show;
+    }
+
     public void Initialize(RuntimeUnitCatalog unitCatalog, Mesh[] shapes, RuntimeBuildingCatalog buildingCatalog)
     {
         catalog = unitCatalog;
@@ -50,6 +57,23 @@ public partial class DeploymentPainter : Node3D
         previews = new DeploymentPreview[catalog.Count];
         for (int i = 0; i < previews.Length; i++)
             previews[i] = new DeploymentPreview(this, shapes[i], catalog[i].Height);
+        // Shader draws the same 2.1-unit boundaries used by TryCell and obstacle footprints.
+        // One flat surface; no per-cell nodes, physics, or mesh rebuilds while panning.
+        var gridMaterial = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://DEPLOYMENT/PlacementGrid.gdshader")
+        };
+        gridMaterial.SetShaderParameter("cell_size", DeploymentLayout.CellSize);
+        placementGrid = new MeshInstance3D
+        {
+            Name = "PlacementGrid",
+            Mesh = new PlaneMesh { Size = new Vector2(5000f, 5000f) },
+            MaterialOverride = gridMaterial,
+            Position = new Vector3(0f, 0.035f, 0f),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+        };
+        AddChild(placementGrid);
+
         walls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(walls);
         rectanglePreview = new MeshInstance3D

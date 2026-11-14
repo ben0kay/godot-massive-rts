@@ -7,3 +7,9 @@ Obstacle edits are atomic. A rectangle that crosses the battlefield edge, overla
 **Save deployment** writes version 2 to `user://deployment.json`. Version 1 and legacy arrays still load with no walls. Loads validate all cells and soldier positions before replacing the draft. **Clear all** clears both layers. A painted battle uses the wall geometry and troop placements captured when it starts.
 
 The selected soldier brush size is an editor tool setting and is not part of `user://deployment.json`; saves continue to store resulting individual soldier cells with the existing version. Collision/footprint checks, per-cell validation, painting previews and faction selection are unchanged.
+
+## Placement grid overlay
+
+During **Edit painted deployment**, a **Show placement grid** checkbox (on by default) draws fine, semitransparent cell boundaries directly on the flat editor ground. Lines lie on the exact world-space multiples of `DeploymentLayout.CellSize` (2.1 units), so obstacle drag rectangles, soldier stamps (1×1 / 3×3 / 5×5 / 10×10), and defense footprint outlines correspond to visible cells. The overlay is shared across all paint tools and automatically disappears on battle launch or when leaving edit mode.
+
+`PlacementGrid.gdshader` draws the grid on a **single 5000×5000 plane** slightly above the ordinary Y=0 surface; there are no per-cell nodes, CPU line generation, timers, physics bodies or saves. Anti-aliasing and a zoom-based fade reduce aliasing when distant; camera pan and rotation do not change grid alignment. The grid toggle changes visibility immediately and is a transient editor preference, not a deployment-save field. This initial flat-ground editing overlay does **not** project grid lines onto the separate elevated test-plateau terrain; raised terrain is currently available in preset benchmark mode, not as editable deployment terrain.

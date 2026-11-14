@@ -9,6 +9,12 @@ public partial class BenchmarkPanel : CanvasLayer
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
     public event Action<float> CameraRotationChanged;
     public event Action<bool> GroundShadowsChanged;
+    public event Action<bool> PlacementGridChanged;
+    private readonly CheckButton placementGridToggle = new()
+    {
+        Text = "Show placement grid", ButtonPressed = true
+    };
+    public bool ShowPlacementGrid => placementGridToggle.ButtonPressed;
     private readonly CheckButton groundShadows = new() { Text = "Ground shadows", ButtonPressed = true };
     public bool GroundShadows => groundShadows.ButtonPressed;
     public RuntimeUnitCatalog Catalog { private get; set; }
@@ -167,6 +173,8 @@ public partial class BenchmarkPanel : CanvasLayer
         PaintToolChoice.AddItem("Obstacles");
         PaintToolChoice.AddItem("Defenses");
         Field(paintControls, "Paint tool", PaintToolChoice);
+        placementGridToggle.Toggled += enabled => PlacementGridChanged?.Invoke(enabled);
+        paintControls.AddChild(placementGridToggle);
         var soldierControls = new VBoxContainer();
         paintControls.AddChild(soldierControls);
         var factionLabel = new Label { Text = "Paint faction" };

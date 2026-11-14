@@ -123,6 +123,8 @@ public partial class BenchmarkArena : Node3D
         };
         AddChild(painter);
         painter.Initialize(catalog, soldierMeshes, buildings);
+        painter.SetPlacementGridVisible(panel.ShowPlacementGrid);
+        panel.PlacementGridChanged += painter.SetPlacementGridVisible;
         painter.Changed += UpdateDeploymentStatus;
         painter.EditRejected += message => panel.Status.Text = message + "\n" + DeploymentCount();
         panel.PaintToolChoice.ItemSelected += painter.SetPaintTool;
