@@ -16,6 +16,7 @@ internal sealed class CarbonBalance
 
 internal sealed class FabricatorProduction
 {
+    private const float ReleaseIntervalSeconds = 0.075f; // Twice the original 0.15-second cadence.
     private BatchRecipe paid;
     private float remainingTime, releaseDelay;
     private int remainingUnits;
@@ -53,7 +54,7 @@ internal sealed class FabricatorProduction
         }
         releaseDelay -= delta;
         if (releaseDelay > 0) return;
-        releaseDelay = 0.15f;
+        releaseDelay = ReleaseIntervalSeconds;
         if (release(paid.Type))
         {
             remainingUnits--;

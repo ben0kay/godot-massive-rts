@@ -203,3 +203,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | Project layout.** Grouped features under GAMEPLAY, WORLD and VISUALS. Kept LEVELS at the root and grouped maps by campaign mode while preserving campaign and level IDs. Updated Godot resource references.
 
 - **2026-11-14 | FAB1.** Added Carbon, a prebuilt Citadel, Fabricator placement and construction, editable batch production with blocked-exit retries, and rally orders in the Command Sandbox. Dynamic soldiers share simulation state and grow their renderer batches on demand. Awaiting Godot playtesting.
+
+- **2026-11-14 | FAB1 exit tuning | Source implemented; awaiting owner validation.** Halved the Fabricator release interval to 0.075 seconds, applied a 1.5× move-speed boost only along the gate-to-exit leg, and allowed follow-on releases once the hatch itself is clear. Kept blocked-spawn retries and normal movement speed after exit.

@@ -6,6 +6,8 @@ namespace MassiveRts;
 
 internal sealed class CommandMovement
 {
+    // Speed up only the Fabricator's first gate-to-exit leg; normal orders use authored speed.
+    private const float FabricatorExitSpeedMultiplier = 1.5f;
     public const int SquadSize = 20;
     public const int DefaultColumns = 5;
     private readonly UnitState units;
@@ -94,7 +96,8 @@ internal sealed class CommandMovement
                 navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
                 waypoint = navigation.Steer(id, type, start, waypoint, 0, out _, out _);
             }
-            Vector2 next = start.MoveToward(waypoint, stats.Speed * delta);
+            float speed = stats.Speed * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);
+            Vector2 next = start.MoveToward(waypoint, speed * delta);
             if (field != null) next = field.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;
             units.Position[id] = new Vector3(next.X, 0, next.Y);

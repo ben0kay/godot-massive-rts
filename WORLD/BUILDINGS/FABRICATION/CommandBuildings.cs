@@ -126,7 +126,7 @@ internal sealed class CommandBuildings
         float front = (building.Area.Max.Y - building.Area.Min.Y) * 0.5f;
         Vector3 spawn = building.Center + Vector3.Back * (front + radius + 0.15f);
         Vector3 exit = spawn + Vector3.Back * (radius + 1.0f);
-        if (!OnMap(spawn, radius) || !OnMap(exit, radius) || !ExitClear(spawn, exit, radius) ||
+        if (!OnMap(spawn, radius) || !OnMap(exit, radius) || !SpawnClear(spawn, radius) ||
             field?.IntersectsCircle(ObstacleField.Xz(spawn), radius) == true ||
             field?.IntersectsCircle(ObstacleField.Xz(exit), radius) == true ||
             field?.BlocksCorridor(ObstacleField.Xz(spawn), ObstacleField.Xz(exit), radius) == true) return false;
@@ -150,17 +150,15 @@ internal sealed class CommandBuildings
         return false;
     }
 
-    private bool ExitClear(Vector3 spawn, Vector3 exit, float radius)
+    // Check the hatch itself against live units; a clear static exit corridor is checked separately.
+    // This lets successive units follow one another without waiting for the entire path to empty.
+    private bool SpawnClear(Vector3 spawn, float radius)
     {
-        Vector3 path = exit - spawn;
-        float inverseLengthSquared = 1f / path.LengthSquared();
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0) continue;
-            Vector3 offset = units.Position[id] - spawn;
-            float along = Mathf.Clamp(offset.Dot(path) * inverseLengthSquared, 0f, 1f);
             float clearance = radius + units.Catalog[units.Type[id]].Footprint + 0.08f;
-            if ((offset - path * along).LengthSquared() < clearance * clearance) return false;
+            if (units.Position[id].DistanceSquaredTo(spawn) < clearance * clearance) return false;
         }
         return true;
     }
