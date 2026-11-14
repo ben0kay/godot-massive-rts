@@ -6,16 +6,26 @@ namespace MassiveRts;
 
 public readonly record struct SoldierPlacement(int X, int Z, byte Faction, byte Type)
 {
-    public Vector3 Position() => new((X + 0.5f) * DeploymentLayout.CellSize, 0, (Z + 0.5f) * DeploymentLayout.CellSize);
+    public Vector3 Position() => new(
+        (X / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * DeploymentLayout.CellSize, 0,
+        (Z / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * DeploymentLayout.CellSize);
 }
 
 public sealed class DeploymentLayout
 {
     public const float CellSize = 2.1f;
+    public const int SoldierSubdivisions = 40;
+    public const float SoldierStep = CellSize / SoldierSubdivisions;
     public const int HalfWidth = 1190; // 2.1-unit cells spanning the 5,000-unit battlefield.
+    private const int SoldierBoundary = HalfWidth * SoldierSubdivisions;
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
+    private readonly Dictionary<Vector2I, List<Vector2I>> soldierBuckets = new();
     private readonly RuntimeUnitCatalog catalog;
+
+    private static Vector2I Bucket(Vector2I point) => new(
+        Mathf.FloorToInt(point.X / (float)SoldierSubdivisions + 0.5f),
+        Mathf.FloorToInt(point.Y / (float)SoldierSubdivisions + 0.5f));
     public ObstacleLayout Obstacles { get; private set; } = new();
 
     public const int MaxBuildings = 64;
@@ -59,11 +69,15 @@ public sealed class DeploymentLayout
         for (int z = area.Z - padding; z < area.Z + area.Depth + padding; z++)
         for (int x = area.X - padding; x < area.X + area.Width + padding; x++)
         {
-            if (!TryGet(new Vector2I(x, z), out var soldier)) continue;
-            Vector2 point = ObstacleField.Xz(soldier.Position());
-            Vector2 closest = point.Max(area.Min).Min(area.Max);
-            float radius = catalog[soldier.Type].Footprint;
-            if (point.DistanceSquaredTo(closest) <= radius * radius) return false;
+            if (!soldierBuckets.TryGetValue(new Vector2I(x, z), out var bucket)) continue;
+            foreach (var key in bucket)
+            {
+                SoldierPlacement soldier = placements[slots[key]];
+                Vector2 point = ObstacleField.Xz(soldier.Position());
+                Vector2 closest = point.Max(area.Min).Min(area.Max);
+                float radius = catalog[soldier.Type].Footprint;
+                if (point.DistanceSquaredTo(closest) <= radius * radius) return false;
+            }
         }
         return true;
     }
@@ -105,8 +119,8 @@ public sealed class DeploymentLayout
     public bool TryPaint(SoldierPlacement placement, out int slot)
     {
         slot = -1;
-        if (placement.X < -HalfWidth || placement.X >= HalfWidth ||
-            placement.Z < -HalfWidth || placement.Z >= HalfWidth ||
+        if (placement.X < -SoldierBoundary - SoldierSubdivisions / 2 || placement.X >= SoldierBoundary - SoldierSubdivisions / 2 ||
+            placement.Z < -SoldierBoundary - SoldierSubdivisions / 2 || placement.Z >= SoldierBoundary - SoldierSubdivisions / 2 ||
             placement.Faction >= Factions.Count || placement.Type >= catalog.Count) return false;
 
         var cell = new Vector2I(placement.X, placement.Z);
@@ -117,14 +131,19 @@ public sealed class DeploymentLayout
 
         if (CollisionField?.IntersectsCircle(ObstacleField.Xz(position), radius) == true) return false;
 
-        int extent = Mathf.Min(HalfWidth * 2 - 1, Mathf.CeilToInt((radius + catalog.MaxFootprint) / CellSize));
-        for (int z = System.Math.Max(-HalfWidth, cell.Y - extent); z <= System.Math.Min(HalfWidth - 1, cell.Y + extent); z++)
-        for (int x = System.Math.Max(-HalfWidth, cell.X - extent); x <= System.Math.Min(HalfWidth - 1, cell.X + extent); x++)
+        Vector2I center = Bucket(cell);
+        int extent = Mathf.CeilToInt((radius + catalog.MaxFootprint) / CellSize);
+        for (int z = center.Y - extent; z <= center.Y + extent; z++)
+        for (int x = center.X - extent; x <= center.X + extent; x++)
         {
-            if ((x == cell.X && z == cell.Y) || !slots.TryGetValue(new Vector2I(x, z), out int neighbor)) continue;
-            float spacing = radius + catalog[placements[neighbor].Type].Footprint;
-            float dx = (x - cell.X) * CellSize, dz = (z - cell.Y) * CellSize;
-            if (dx * dx + dz * dz < spacing * spacing) return false;
+            if (!soldierBuckets.TryGetValue(new Vector2I(x, z), out var neighbors)) continue;
+            foreach (var neighbor in neighbors)
+            {
+                if (neighbor == cell) continue;
+                float spacing = radius + catalog[placements[slots[neighbor]].Type].Footprint;
+                float dx = (neighbor.X - cell.X) * SoldierStep, dz = (neighbor.Y - cell.Y) * SoldierStep;
+                if (dx * dx + dz * dz < spacing * spacing) return false;
+            }
         }
 
         if (slots.TryGetValue(cell, out slot))
@@ -136,6 +155,9 @@ public sealed class DeploymentLayout
 
         slot = placements.Count;
         slots.Add(cell, slot);
+        if (!soldierBuckets.TryGetValue(center, out var bucket))
+            soldierBuckets.Add(center, bucket = new List<Vector2I>());
+        bucket.Add(cell);
         placements.Add(placement);
         return true;
     }
@@ -143,6 +165,10 @@ public sealed class DeploymentLayout
     public bool TryErase(Vector2I cell, out int slot)
     {
         if (!slots.Remove(cell, out slot)) return false;
+        var bucketKey = Bucket(cell);
+        var bucket = soldierBuckets[bucketKey];
+        bucket.Remove(cell);
+        if (bucket.Count == 0) soldierBuckets.Remove(bucketKey);
         int last = placements.Count - 1;
         if (slot != last)
         {
@@ -196,5 +222,6 @@ public sealed class DeploymentLayout
         defenses.Clear();
         placements.Clear();
         slots.Clear();
+        soldierBuckets.Clear();
     }
 }

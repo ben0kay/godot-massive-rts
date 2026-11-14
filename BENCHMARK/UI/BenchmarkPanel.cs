@@ -19,6 +19,8 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly CheckButton groundShadows = new() { Text = "Ground shadows", ButtonPressed = true };
     public bool GroundShadows => groundShadows.ButtonPressed;
     public RuntimeUnitCatalog Catalog { private get; set; }
+    public readonly CheckButton DeathEffects = new() { Text = "Death effects", ButtonPressed = true };
+    public readonly HSlider PaintSpread = new() { MinValue = 0, MaxValue = 3, Step = 0.1, Value = 1, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
     private readonly CheckButton smoothMotion = new() { Text = "Smooth soldier motion", ButtonPressed = true };
     private readonly HSlider cameraRotation = new() { MinValue = 0, MaxValue = 360, Step = 1, Value = 45,
         SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -216,6 +218,13 @@ public partial class BenchmarkPanel : CanvasLayer
             SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
         SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
         Field(soldierControls, "Paint size", SoldierBrushSizeChoice);
+        var density = new HBoxContainer();
+        var spreadLabel = new Label { Text = "1.0×" };
+        density.AddChild(PaintSpread);
+        density.AddChild(spreadLabel);
+        PaintSpread.ValueChanged += value => spreadLabel.Text = value == 0 ? "Touching" : $"{value:F1}×";
+        PaintSpread.TooltipText = "Spacing relative to the default. The unit footprint sets the minimum.";
+        Field(soldierControls, "Paint density", density);
         var wallHelp = new Label { Text = "Drag left to draw rectangle\nDrag right to erase area", Visible = false };
         paintControls.AddChild(wallHelp);
         var defenseControls = new VBoxContainer { Visible = false };
@@ -255,6 +264,7 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
         var display = Section(column, "Display and controls", false, out _);
         display.AddChild(smoothMotion);
+        display.AddChild(DeathEffects);
         groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
         display.AddChild(groundShadows);
         performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };

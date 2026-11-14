@@ -14,7 +14,7 @@ FEEDBACK/
     HitFeedbackSystem.cs
     HitFeedbackSettings.cs
     HitFeedbackSettings.tres
-  UNIT_DEATHS/                  # Future debris / death particles — do not create yet
+  UNIT_DEATHS/                  # Pooled shrink and puff visuals
   CAMERA_SHAKE/                 # Future camera effects — do not create yet
   IMPACTS/                      # Future impact flashes / particles — do not create yet
 ```
@@ -28,3 +28,7 @@ The shared `UNIT_HITS/HitFeedbackSettings.tres` is assigned in the default bench
 ## Ranged recoil (visual-only)
 
 [UNIT_RECOIL/RangedRecoilSystem.cs](UNIT_RECOIL/RangedRecoilSystem.cs) tracks only active shooters after successful projectile spawns. A small backwards world-space offset is applied to the rendered MultiMesh transforms, then eased to zero over the configured per-unit recovery duration. Authoritative positions, navigation, collisions and projectile origins are unchanged. The controller is allocated only in ranged battles if at least one catalogue type enables recoil. No per-soldier scene nodes or physics bodies.
+
+## Soldier deaths
+
+[UNIT_DEATHS](UNIT_DEATHS/README.md) captures the final grounded pose on lethal damage and batches the short-lived shrink and puff effects separately from the living army.

@@ -16,6 +16,7 @@ public partial class DeploymentPainter : Node3D
     public byte BrushFaction { get; set; }
     public byte BrushType { get; set; }
     // Number of placement cells per side; defaults to the original 3×3 brush.
+    public float SoldierBrushSpread { get; set; } = 1f;
     public int SoldierBrushSize { get; set; } = 3;
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
@@ -118,22 +119,48 @@ public partial class DeploymentPainter : Node3D
         }
         else return;
 
-        if (!TryCell(screen, out Vector2I cell)) return;
+        if (!TryGround(screen, out Vector3 ground)) return;
         bool changed = false;
         int side = Mathf.Clamp(SoldierBrushSize, 1, 10);
-        // Even-width brushes use four cells before and five after the cursor at 10×10.
+        int subdivisions = DeploymentLayout.SoldierSubdivisions;
+        float spread = Mathf.Clamp(SoldierBrushSpread, 0f, 3f);
+        int stride = Mathf.Max(Mathf.RoundToInt(spread * subdivisions),
+            Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / DeploymentLayout.SoldierStep));
+        // Keep the original cell alignment at default spacing.
+        float xCell = ground.X / DeploymentLayout.CellSize, zCell = ground.Z / DeploymentLayout.CellSize;
+        Vector2I center = spread == 1f
+            ? new Vector2I(Mathf.FloorToInt(xCell), Mathf.FloorToInt(zCell)) * subdivisions
+            : new Vector2I(Mathf.RoundToInt((xCell - 0.5f) * subdivisions / stride),
+                Mathf.RoundToInt((zCell - 0.5f) * subdivisions / stride)) * stride;
         int first = -(side - 1) / 2;
-        for (int z = first; z < first + side; z++)
-        for (int x = first; x < first + side; x++)
+        if (erase)
         {
-            var point = cell + new Vector2I(x, z);
-            bool existed = Layout.TryGet(point, out SoldierPlacement previous);
-            var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
-            bool edited = erase ? Layout.TryErase(point, out _) : Layout.TryPaint(placement, out _);
-            if (!edited) continue;
-            if (existed) previews[previous.Type].Remove(point);
-            if (!erase) previews[placement.Type].Add(placement);
-            changed = true;
+            int min = first * stride - stride / 2;
+            int max = (first + side) * stride - stride / 2;
+            for (int i = Layout.Placements.Count - 1; i >= 0; i--)
+            {
+                SoldierPlacement previous = Layout.Placements[i];
+                int x = previous.X - center.X, z = previous.Z - center.Y;
+                if (x < min || x >= max || z < min || z >= max) continue;
+                var point = new Vector2I(previous.X, previous.Z);
+                Layout.TryErase(point, out _);
+                previews[previous.Type].Remove(point);
+                changed = true;
+            }
+        }
+        else
+        {
+            for (int z = first; z < first + side; z++)
+            for (int x = first; x < first + side; x++)
+            {
+                var point = center + new Vector2I(x * stride, z * stride);
+                bool existed = Layout.TryGet(point, out SoldierPlacement previous);
+                var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
+                if (!Layout.TryPaint(placement, out _)) continue;
+                if (existed) previews[previous.Type].Remove(point);
+                previews[placement.Type].Add(placement);
+                changed = true;
+            }
         }
         if (changed) Changed?.Invoke();
     }
@@ -171,12 +198,19 @@ public partial class DeploymentPainter : Node3D
     private bool TryCell(Vector2 screen, out Vector2I cell)
     {
         cell = default;
+        if (!TryGround(screen, out Vector3 ground)) return false;
+        cell = new Vector2I(Mathf.FloorToInt(ground.X / DeploymentLayout.CellSize),
+            Mathf.FloorToInt(ground.Z / DeploymentLayout.CellSize));
+        return true;
+    }
+
+    private bool TryGround(Vector2 screen, out Vector3 ground)
+    {
+        ground = default;
         Vector3 origin = Camera.ProjectRayOrigin(screen);
         Vector3 direction = Camera.ProjectRayNormal(screen);
         if (direction.Y >= 0 || origin.Y < 0) return false;
-        Vector3 ground = origin - direction * (origin.Y / direction.Y);
-        cell = new Vector2I(Mathf.FloorToInt(ground.X / DeploymentLayout.CellSize),
-            Mathf.FloorToInt(ground.Z / DeploymentLayout.CellSize));
+        ground = origin - direction * (origin.Y / direction.Y);
         return true;
     }
 
@@ -268,7 +302,7 @@ public partial class DeploymentPainter : Node3D
             var building = Layout.Defenses[i];
             defenses[i] = new SavedDefense(building.X, building.Z, building.Faction, buildings[building.Type].Id);
         }
-        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(3, saved, Layout.Obstacles.Field == null
+        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(4, saved, Layout.Obstacles.Field == null
             ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses)));
         return file.GetError() == Error.Ok ? "Deployment saved." : "Could not write deployment.";
     }
@@ -300,14 +334,14 @@ public partial class DeploymentPainter : Node3D
             else
             {
                 var saved = document.RootElement.Deserialize<SavedDeployment>();
-                if (saved == null || saved.Version is not (1 or 2 or 3) || saved.Placements == null) return "Unsupported deployment format.";
+                if (saved == null || saved.Version is not (1 or 2 or 3 or 4) || saved.Placements == null) return "Unsupported deployment format.";
                 if (saved.Version >= 2)
                 {
                     if (!ObstacleLayout.TryLoad(saved.Obstacles, out ObstacleLayout obstacles))
                         return "Saved deployment contains invalid obstacle rectangles.";
                     validated.SetLoadedObstacles(obstacles);
                 }
-                if (saved.Version == 3)
+                if (saved.Version >= 3)
                 {
                     if (saved.Defenses == null || saved.Defenses.Length > DeploymentLayout.MaxBuildings)
                         return "Saved deployment contains invalid defenses.";
@@ -319,7 +353,7 @@ public partial class DeploymentPainter : Node3D
                 foreach (SavedPlacement placement in saved.Placements)
                 {
                     if (placement == null || !catalog.TryResolve(placement.UnitId, out byte type) ||
-                        !TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type))
+                        !TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type, saved.Version == 4))
                         return "Saved deployment contains invalid placements.";
                 }
             }
@@ -339,8 +373,15 @@ public partial class DeploymentPainter : Node3D
         return "Deployment loaded.";
     }
 
-    private bool TryLoadPlacement(DeploymentLayout draft, int x, int z, byte faction, byte type)
+    private bool TryLoadPlacement(DeploymentLayout draft, int x, int z, byte faction, byte type, bool fine = false)
     {
+        if (!fine)
+        {
+            if (x < -DeploymentLayout.HalfWidth || x >= DeploymentLayout.HalfWidth ||
+                z < -DeploymentLayout.HalfWidth || z >= DeploymentLayout.HalfWidth) return false;
+            x *= DeploymentLayout.SoldierSubdivisions;
+            z *= DeploymentLayout.SoldierSubdivisions;
+        }
         return !draft.TryGet(new Vector2I(x, z), out _) &&
             draft.TryPaint(new SoldierPlacement(x, z, faction, type), out _);
     }

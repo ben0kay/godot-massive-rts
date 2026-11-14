@@ -23,6 +23,8 @@ public partial class BenchmarkArena : Node3D
     private ArmyRenderer armyRenderer;
     private ProjectileRenderer projectileRenderer;
     private ShockwaveRenderer shockwaves;
+    private readonly DeathFeedbackSystem deathFeedback = new();
+    private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
     private BenchmarkPanel panel;
     private ArmyBalanceHud armyBalanceHud;
@@ -152,6 +154,17 @@ public partial class BenchmarkArena : Node3D
         panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         shockwaves = new ShockwaveRenderer();
         AddChild(shockwaves);
+        deathRenderer = new DeathEffectRenderer();
+        AddChild(deathRenderer);
+        deathRenderer.Initialize(catalog, soldierMeshes);
+        panel.DeathEffects.Toggled += enabled =>
+        {
+            deathFeedback.Enabled = enabled;
+            if (enabled) return;
+            deathFeedback.Clear();
+            deathRenderer.Sync(deathFeedback);
+        };
+        panel.PaintSpread.ValueChanged += value => painter.SoldierBrushSpread = (float)value;
         Spawn();
     }
     // =========================================================
@@ -162,6 +175,8 @@ public partial class BenchmarkArena : Node3D
         autoAttackIds = null;
         autoAttackCount = 0;
         shockwaves.Clear();
+        deathFeedback.Clear();
+        deathRenderer.Sync(deathFeedback);
         defenseSystem = null;
         if (defenseRenderer != null)
         {
@@ -234,7 +249,10 @@ public partial class BenchmarkArena : Node3D
             : null;
         var recoil = mode == BenchmarkMode.Ranged && catalog.HasRangedRecoil
             ? new RangedRecoilSystem(targetCount) : null;
-        return new UnitState(targetCount, catalog, feedback, terrain, recoil);
+        return new UnitState(targetCount, catalog, feedback, terrain, recoil)
+        {
+            DeathFeedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? deathFeedback : null
+        };
     }
 
     private void SetDeploymentEditing(bool editing)
@@ -337,6 +355,7 @@ public partial class BenchmarkArena : Node3D
         if (!paused)
         {
             shockwaves.Advance((float)delta);
+            deathFeedback.Advance((float)delta);
             defenseRenderer?.Advance((float)delta);
         }
         if (spawning)
@@ -430,6 +449,7 @@ public partial class BenchmarkArena : Node3D
             smoothingWasEnabled = smooth;
         }
         shockwaves.Sync();
+        deathRenderer.Sync(deathFeedback);
         measuredFrames++; hudClock += delta;
         if (hudClock >= 0.3) { armyBalanceHud?.RefreshCounts(); UpdateOverlay(); hudClock = 0; ResetTimings(); }
     }

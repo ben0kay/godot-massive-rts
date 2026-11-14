@@ -59,6 +59,8 @@ public sealed class UnitState
         return true;
     }
 
+    public DeathFeedbackSystem DeathFeedback { get; set; }
+
     public void Damage(int id, float damage)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
@@ -68,6 +70,7 @@ public sealed class UnitState
         {
             FactionAlive[Faction[id]]--;
             Alive--;
+            DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id]);
             Dirty[id] = true;
         }
         else if (Health[id] < previous && HitFeedback != null)
