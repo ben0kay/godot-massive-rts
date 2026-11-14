@@ -140,7 +140,9 @@ public partial class BenchmarkArena : Node3D
             battleObstacleShadows.Visible = enabled;
             armyRenderer?.SetShadowsVisible(enabled);
         };
-        panel.SpawnRequested += Spawn;
+        RefreshSavedBattles();
+        panel.SpawnRequested += SpawnSelectedBattle;
+        panel.SavePresetRequested += SaveBattlePreset;
         panel.ClearRequested += () => { if (painter.Visible) painter.Clear(); else Clear(); };
         panel.PaintRequested += EnterDeployment;
         panel.BattleRequested += StartPaintedBattle;
@@ -242,9 +244,9 @@ public partial class BenchmarkArena : Node3D
         terrainMeshMs = Elapsed(start);
     }
 
-    private UnitState CreateUnitState()
+    private UnitState CreateUnitState(uint? seed = null)
     {
-        battleSeed = (uint)panel.Seed.Value;
+        battleSeed = seed ?? (uint)panel.Seed.Value;
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
@@ -284,9 +286,106 @@ public partial class BenchmarkArena : Node3D
         UpdateDeploymentStatus();
     }
 
-    private void StartPaintedBattle()
+    private const string SavedBattlesDirectory = "user://benchmark_presets";
+
+    private DeploymentPainter.BattleSettings ReadBattleSettings()
     {
-        var placements = painter.Layout.Placements;
+        var orders = new GuardOrder[Factions.Count];
+        for (int faction = 0; faction < orders.Length; faction++) orders[faction] = panel.OrderFor(faction);
+        return new DeploymentPainter.BattleSettings((int)panel.Seed.Value, orders, (float)panel.GuardRadius.Value);
+    }
+
+    private void RefreshSavedBattles(string selectedFile = "")
+    {
+        var choice = panel.SavedBattleChoice;
+        choice.Clear();
+        choice.AddItem("Generated battle");
+        var files = DirAccess.DirExistsAbsolute(ProjectSettings.GlobalizePath(SavedBattlesDirectory))
+            ? DirAccess.GetFilesAt(SavedBattlesDirectory) : Array.Empty<string>();
+        int selected = 0;
+        foreach (string file in files)
+        {
+            if (!file.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
+            int index = choice.ItemCount;
+            choice.AddItem(file[..^5]);
+            choice.SetItemMetadata(index, file);
+            if (file == selectedFile) selected = index;
+        }
+        choice.Select(selected);
+    }
+
+    private void SaveBattlePreset()
+    {
+        string name = panel.PresetName.Text.Trim();
+        if (name.Length == 0 || name == "Generated battle")
+        {
+            panel.Status.Text = "Enter a distinct preset name.";
+            return;
+        }
+        foreach (char character in name)
+        {
+            if (char.IsLetterOrDigit(character) || character is ' ' or '-' or '_') continue;
+            panel.Status.Text = "Use letters, numbers, spaces, hyphens or underscores in preset names.";
+            return;
+        }
+        if (painter.Layout.Placements.Count == 0)
+        {
+            panel.Status.Text = "Paint soldiers before saving a battle preset.";
+            return;
+        }
+        Error directoryError = DirAccess.MakeDirRecursiveAbsolute(ProjectSettings.GlobalizePath(SavedBattlesDirectory));
+        if (directoryError != Error.Ok)
+        {
+            panel.Status.Text = $"Could not open preset storage ({directoryError}).";
+            return;
+        }
+        string file = name + ".json";
+        string destination = $"{SavedBattlesDirectory}/{file}";
+        if (FileAccess.FileExists(destination))
+        {
+            panel.Status.Text = "A preset already has that name. Choose another name.";
+            return;
+        }
+        string temporary = destination + ".tmp";
+        string message = painter.Save(temporary, ReadBattleSettings());
+        if (message != "Deployment saved.")
+        {
+            panel.Status.Text = message;
+            return;
+        }
+        Error result = DirAccess.RenameAbsolute(ProjectSettings.GlobalizePath(temporary), ProjectSettings.GlobalizePath(destination));
+        if (result != Error.Ok)
+        {
+            panel.Status.Text = $"Could not save preset ({result}).";
+            return;
+        }
+        RefreshSavedBattles(file);
+        panel.Status.Text = $"Saved battle preset: {name}";
+    }
+
+    private void SpawnSelectedBattle()
+    {
+        var choice = panel.SavedBattleChoice;
+        if (choice.Selected <= 0)
+        {
+            Spawn();
+            return;
+        }
+        string file = choice.GetItemMetadata(choice.Selected).AsString();
+        string message = painter.ReadDeployment($"{SavedBattlesDirectory}/{file}", out var layout, out var settings);
+        if (layout == null || settings == null)
+        {
+            panel.Status.Text = layout == null ? message : "Saved battle settings are missing.";
+            return;
+        }
+        StartPaintedBattle(layout, settings, ObstacleRenderer.Build(layout.Obstacles.Field, Config.ObstacleHeight, Config.ObstacleTint));
+    }
+
+    private void StartPaintedBattle() => StartPaintedBattle(painter.Layout, ReadBattleSettings(), painter.ObstacleMesh);
+
+    private void StartPaintedBattle(DeploymentLayout layout, DeploymentPainter.BattleSettings settings, Mesh wallMesh)
+    {
+        var placements = layout.Placements;
         int factionMask = 0;
         bool ranged = false;
         foreach (SoldierPlacement placement in placements)
@@ -294,14 +393,13 @@ public partial class BenchmarkArena : Node3D
             factionMask |= 1 << placement.Faction;
             ranged |= catalog[placement.Type].Ranged;
         }
-        foreach (var defense in painter.Layout.Defenses) factionMask |= 1 << defense.Faction;
+        foreach (var defense in layout.Defenses) factionMask |= 1 << defense.Faction;
         if (placements.Count == 0 || System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
         {
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
-        var orders = new GuardOrder[Factions.Count];
-        for (int faction = 0; faction < orders.Length; faction++) orders[faction] = panel.OrderFor(faction);
+        var orders = settings.Orders;
         var snapshot = new SoldierPlacement[placements.Count];
         int attackerCount = 0;
         foreach (SoldierPlacement placement in placements)
@@ -324,22 +422,22 @@ public partial class BenchmarkArena : Node3D
                 foreach (SoldierPlacement placement in placements)
                     if (placement.Faction == faction) snapshot[next++] = placement;
                 if (start < next)
-                    guards[faction] = new GuardGroup(start, next, snapshot, (float)panel.GuardRadius.Value, order);
+                    guards[faction] = new GuardGroup(start, next, snapshot, settings.GuardRadius, order);
             }
         }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
-        SetBattleObstacles(painter.Layout.CollisionField, painter.ObstacleMesh);
-        if (painter.Layout.Defenses.Count > 0)
+        SetBattleObstacles(layout.CollisionField, wallMesh);
+        if (layout.Defenses.Count > 0)
         {
             defenseRenderer = new DefenseRenderer();
             AddChild(defenseRenderer);
-            defenseRenderer.Initialize(painter.Layout.Defenses, buildings, Config.ObstacleHeight, battle: true);
-            defenseSystem = new DefenseSystem(painter.Layout.Defenses, buildings, Config.ObstacleHeight, defenseRenderer);
+            defenseRenderer.Initialize(layout.Defenses, buildings, Config.ObstacleHeight, battle: true);
+            defenseSystem = new DefenseSystem(layout.Defenses, buildings, Config.ObstacleHeight, defenseRenderer);
         }
-        units = CreateUnitState();
+        units = CreateUnitState((uint)settings.Seed);
         grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
-        deployment = new DeploymentFactory(snapshot, (ulong)panel.Seed.Value);
+        deployment = new DeploymentFactory(snapshot, (ulong)settings.Seed);
         spawning = true;
     }
 

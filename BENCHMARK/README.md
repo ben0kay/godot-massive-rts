@@ -169,3 +169,7 @@ Under **CPU and separation**, the pursuit breakdown shows live refresh, schedule
 **F1** hides or restores the left controls and right performance details while keeping the compact battle summary visible. **F4** controls the right-hand details independently.
 
 **Reuse route waypoints** (off by default) keeps the current waypoint while the soldier stays inside its verified corridor. Waypoint arrival, leaving that corridor or losing the route restores normal waypoint selection. Wall clipping still runs on each movement step. Compare **Route waypoints reused**, corridor calls and movement time in the same obstacle layout.
+
+### Named painted battles
+
+In **Edit painted deployment → Paint tools**, enter a **Preset name** and click **Save as preset**. The preset stores the painted soldier positions, types and teams, walls, defenses, team orders, guard radius, and seed in `user://benchmark_presets`. Names are unique. Choose it under **Preset battle → Saved battle** and click **Spawn / Reset selected** to replay the deployment, including after restarting Godot. Choose **Generated battle** to use the standard benchmark controls. Saved battles use the current unit definitions and live tuning settings. The existing single deployment slot still loads into the painter.

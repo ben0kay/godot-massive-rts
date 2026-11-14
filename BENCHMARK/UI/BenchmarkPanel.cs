@@ -6,6 +6,9 @@ namespace MassiveRts;
 public partial class BenchmarkPanel : CanvasLayer
 {
     public event Action SpawnRequested, ClearRequested, PauseRequested;
+    public event Action SavePresetRequested;
+    public readonly OptionButton SavedBattleChoice = new();
+    public readonly LineEdit PresetName = new() { PlaceholderText = "Name this battle", MaxLength = 48 };
     public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
     public event Action<float> CameraRotationChanged;
     public event Action<bool> GroundShadowsChanged;
@@ -140,6 +143,8 @@ public partial class BenchmarkPanel : CanvasLayer
         TerrainChoice.AddItem("Test plateau");
         Field(preset, "Preset terrain", TerrainChoice);
         preset.AddChild(TestWall);
+        SavedBattleChoice.AddItem("Generated battle");
+        Field(preset, "Saved battle", SavedBattleChoice);
         AddButton(preset, "Spawn / Reset selected", () => SpawnRequested?.Invoke());
 
         var cameraControls = Section(column, "Camera", true, out _);
@@ -266,6 +271,8 @@ public partial class BenchmarkPanel : CanvasLayer
         }
         Field(orders, "Melee guard radius", GuardRadius);
         AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
+        Field(paintControls, "Preset name", PresetName);
+        AddButton(paintControls, "Save as preset", () => SavePresetRequested?.Invoke());
         AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
         AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
         var display = Section(column, "Display and controls", false, out _);

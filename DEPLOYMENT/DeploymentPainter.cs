@@ -353,10 +353,14 @@ public partial class DeploymentPainter : Node3D
 
     private sealed record SavedPlacement(int X, int Z, byte Faction, string UnitId);
     private sealed record SavedDefense(int X, int Z, byte Faction, string BuildingId);
-    private sealed record SavedDeployment(int Version, SavedPlacement[] Placements, ObstacleRectangle[] Obstacles, SavedDefense[] Defenses);
+    public sealed record BattleSettings(int Seed, GuardOrder[] Orders, float GuardRadius);
+    private sealed record SavedDeployment(int Version, SavedPlacement[] Placements, ObstacleRectangle[] Obstacles,
+        SavedDefense[] Defenses, BattleSettings Battle = null);
     private readonly record struct LegacyPlacement(int X, int Z, byte Faction, byte Kind);
 
-    public string Save()
+    public string Save() => Save(SavePath, null);
+
+    public string Save(string path, BattleSettings battle)
     {
         var saved = new SavedPlacement[Layout.Placements.Count];
         for (int i = 0; i < saved.Length; i++)
@@ -364,7 +368,7 @@ public partial class DeploymentPainter : Node3D
             SoldierPlacement placement = Layout.Placements[i];
             saved[i] = new SavedPlacement(placement.X, placement.Z, placement.Faction, catalog[placement.Type].Id);
         }
-        using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
         if (file == null) return $"Save failed ({FileAccess.GetOpenError()}).";
         var defenses = new SavedDefense[Layout.Defenses.Count];
         for (int i = 0; i < defenses.Length; i++)
@@ -373,13 +377,29 @@ public partial class DeploymentPainter : Node3D
             defenses[i] = new SavedDefense(building.X, building.Z, building.Faction, buildings[building.Type].Id);
         }
         file.StoreString(JsonSerializer.Serialize(new SavedDeployment(4, saved, Layout.Obstacles.Field == null
-            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses)));
+            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses, battle)));
         return file.GetError() == Error.Ok ? "Deployment saved." : "Could not write deployment.";
     }
 
     public string Load()
     {
-        using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
+        string message = ReadDeployment(SavePath, out var loaded, out _);
+        if (loaded == null) return message;
+        CancelDrag();
+        Layout = loaded;
+        RebuildWalls();
+        RefreshDefenses();
+        foreach (DeploymentPreview preview in previews) preview.Clear();
+        foreach (SoldierPlacement placement in Layout.Placements) previews[placement.Type].Add(placement);
+        Changed?.Invoke();
+        return message;
+    }
+
+    public string ReadDeployment(string path, out DeploymentLayout layout, out BattleSettings battle)
+    {
+        layout = null;
+        battle = null;
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         if (file == null) return "No readable saved deployment.";
 
         var validated = new DeploymentLayout(catalog, buildings);
@@ -420,6 +440,15 @@ public partial class DeploymentPainter : Node3D
                             !validated.TryPlaceDefense(new BuildingPlacement(defense.X, defense.Z, defense.Faction, type)))
                             return "Saved deployment contains invalid defenses.";
                 }
+                if (saved.Battle != null)
+                {
+                    if (saved.Battle.Seed < 0 || saved.Battle.Orders?.Length != Factions.Count ||
+                        !float.IsFinite(saved.Battle.GuardRadius) || saved.Battle.GuardRadius < 1f || saved.Battle.GuardRadius > 100f)
+                        return "Saved battle settings are invalid.";
+                    foreach (GuardOrder order in saved.Battle.Orders)
+                        if (!System.Enum.IsDefined(order)) return "Saved battle order is invalid.";
+                }
+                battle = saved.Battle;
                 foreach (SavedPlacement placement in saved.Placements)
                 {
                     if (placement == null || !catalog.TryResolve(placement.UnitId, out byte type) ||
@@ -433,13 +462,7 @@ public partial class DeploymentPainter : Node3D
             return "Saved deployment is invalid.";
         }
 
-        CancelDrag();
-        Layout = validated;
-        RebuildWalls();
-        RefreshDefenses();
-        foreach (DeploymentPreview preview in previews) preview.Clear();
-        foreach (SoldierPlacement placement in Layout.Placements) previews[placement.Type].Add(placement);
-        Changed?.Invoke();
+        layout = validated;
         return "Deployment loaded.";
     }
 
