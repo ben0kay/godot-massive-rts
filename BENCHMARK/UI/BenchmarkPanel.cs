@@ -46,6 +46,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
+    public readonly OptionButton SoldierBrushSizeChoice = new();
     public readonly OptionButton FactionChoice = new();
     private VBoxContainer paintControls, paintSection;
     private Button paintHeader;
@@ -174,6 +175,10 @@ public partial class BenchmarkPanel : CanvasLayer
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
         Field(soldierControls, "Drag left to paint • right to erase", BrushChoice);
+        foreach (int size in new[] { 1, 3, 5, 10 })
+            SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
+        SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
+        Field(soldierControls, "Paint size", SoldierBrushSizeChoice);
         var wallHelp = new Label { Text = "Drag left to draw rectangle\nDrag right to erase area", Visible = false };
         paintControls.AddChild(wallHelp);
         var defenseControls = new VBoxContainer { Visible = false };

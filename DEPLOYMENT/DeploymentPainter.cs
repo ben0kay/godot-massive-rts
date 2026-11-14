@@ -15,6 +15,8 @@ public partial class DeploymentPainter : Node3D
     public Camera3D Camera { get; set; }
     public byte BrushFaction { get; set; }
     public byte BrushType { get; set; }
+    // Number of placement cells per side; defaults to the original 3×3 brush.
+    public int SoldierBrushSize { get; set; } = 3;
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
     private MeshInstance3D walls, rectanglePreview;
@@ -94,8 +96,11 @@ public partial class DeploymentPainter : Node3D
 
         if (!TryCell(screen, out Vector2I cell)) return;
         bool changed = false;
-        for (int z = -1; z <= 1; z++)
-        for (int x = -1; x <= 1; x++)
+        int side = Mathf.Clamp(SoldierBrushSize, 1, 10);
+        // Even-width brushes use four cells before and five after the cursor at 10×10.
+        int first = -(side - 1) / 2;
+        for (int z = first; z < first + side; z++)
+        for (int x = first; x < first + side; x++)
         {
             var point = cell + new Vector2I(x, z);
             bool existed = Layout.TryGet(point, out SoldierPlacement previous);

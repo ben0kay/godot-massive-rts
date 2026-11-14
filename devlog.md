@@ -159,3 +159,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-13 — BENCH0: Added independent orders for Blue, Red, and Green in painted battles. Counterattack promotes only its own faction.
 
 - **2026-11-13 | UI Army balance bar | Source implemented; awaiting owner visual validation.** Added a shared, top-centered gameplay HUD under UI/GameplayHUD. Blue/Red surviving-count proportions animate after casualties; an optional Green middle segment supports three-faction matches. The arena supplies existing constant-time FactionAlive counters every 0.3 seconds. Hidden during incremental spawn and deployment editing; no simulation scans, collision or target changes.
+
+- **2026-11-13 | Painted soldier brush sizes | Source implemented; owner validation pending.** Added a soldier-only dropdown for 1×1, 3×3 (default), 5×5 and 10×10 cell stamps. Left-click/drag paints and right-click/drag erases using the selected brush; obstacle rectangles, defense footprints and deployment save format remain unchanged.
