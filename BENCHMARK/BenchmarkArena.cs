@@ -127,7 +127,7 @@ public partial class BenchmarkArena : Node3D
         panel.PlacementGridChanged += painter.SetPlacementGridVisible;
         painter.Changed += UpdateDeploymentStatus;
         painter.EditRejected += message => panel.Status.Text = message + "\n" + DeploymentCount();
-        panel.PaintToolChoice.ItemSelected += painter.SetPaintTool;
+        panel.PaintToolSelected += painter.SetPaintTool;
         panel.DefenseChoice.ItemSelected += index => painter.DefenseType = panel.DefenseChoice.GetItemId((int)index);
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleWalls);

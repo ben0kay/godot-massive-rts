@@ -10,6 +10,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public event Action<float> CameraRotationChanged;
     public event Action<bool> GroundShadowsChanged;
     public event Action<bool> PlacementGridChanged;
+    public event Action<long> PaintToolSelected;
     private readonly CheckButton placementGridToggle = new()
     {
         Text = "Show placement grid", ButtonPressed = true
@@ -48,7 +49,6 @@ public partial class BenchmarkPanel : CanvasLayer
     private readonly OptionButton[] teamOrders = new OptionButton[Factions.Count];
     public GuardOrder OrderFor(int faction) => (GuardOrder)teamOrders[faction].GetSelectedId();
     public readonly SpinBox GuardRadius = new() { MinValue = 1, MaxValue = 100, Step = 1, Value = 12 };
-    public readonly OptionButton PaintToolChoice = new();
     public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
@@ -180,19 +180,38 @@ public partial class BenchmarkPanel : CanvasLayer
         FactionChoice.AddItem("Blue", Factions.Blue);
         FactionChoice.AddItem("Red", Factions.Red);
         FactionChoice.AddItem("Green", Factions.Green);
-        PaintToolChoice.AddItem("Soldiers");
-        PaintToolChoice.AddItem("Obstacles");
-        PaintToolChoice.AddItem("Defenses");
-        Field(paintControls, "Paint tool", PaintToolChoice);
+        // Single-click radio selection keeps all three tools visible without opening a dropdown.
+        var toolRow = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        toolRow.AddThemeConstantOverride("separation", 8);
+        toolRow.AddChild(new Label
+        {
+            Text = "Paint tool", VerticalAlignment = VerticalAlignment.Center,
+            CustomMinimumSize = new Vector2(86f, 0f)
+        });
+        var toolOptions = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        toolOptions.AddThemeConstantOverride("separation", 8);
+        toolRow.AddChild(toolOptions);
+        paintControls.AddChild(toolRow);
+        var toolGroup = new ButtonGroup();
+        var toolButtons = new CheckBox[3];
+        string[] toolNames = { "Soldiers", "Obstacles", "Defenses" };
+        for (int i = 0; i < toolButtons.Length; i++)
+        {
+            var button = new CheckBox
+            {
+                Text = toolNames[i], ButtonGroup = toolGroup, ButtonPressed = i == 0
+            };
+            toolOptions.AddChild(button);
+            toolButtons[i] = button;
+        }
         placementGridToggle.Toggled += enabled => PlacementGridChanged?.Invoke(enabled);
         paintControls.AddChild(placementGridToggle);
+        var factionRow = Field(paintControls, "Paint faction", FactionChoice);
         var soldierControls = new VBoxContainer();
         paintControls.AddChild(soldierControls);
-        var factionRow = Field(paintControls, "Paint faction", FactionChoice);
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
         Field(soldierControls, "Soldier type", BrushChoice);
-        soldierControls.AddChild(Hint("Left-drag: paint   •   Right-drag: erase"));
         foreach (int size in new[] { 1, 3, 5, 10 })
             SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
         SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
@@ -204,13 +223,19 @@ public partial class BenchmarkPanel : CanvasLayer
         for (int type = 0; type < Buildings.Count; type++) DefenseChoice.AddItem(Buildings[type].Name, type);
         Field(defenseControls, "Defense type", DefenseChoice);
         defenseControls.AddChild(new Label { Text = "Left click to place • right click to remove" });
-        PaintToolChoice.ItemSelected += tool =>
+        for (int i = 0; i < toolButtons.Length; i++)
         {
-            soldierControls.Visible = tool == 0;
-            wallHelp.Visible = tool == 1;
-            defenseControls.Visible = tool == 2;
-            factionRow.Visible = tool != 1;
-        };
+            int tool = i;
+            toolButtons[i].Toggled += selected =>
+            {
+                if (!selected) return;
+                soldierControls.Visible = tool == 0;
+                wallHelp.Visible = tool == 1;
+                defenseControls.Visible = tool == 2;
+                factionRow.Visible = tool != 1;
+                PaintToolSelected?.Invoke(tool);
+            };
+        }
         var orders = Section(paintControls, "Battle orders", true, out _);
         string[] teamNames = { "Blue", "Red", "Green" };
         for (int faction = 0; faction < Factions.Count; faction++)

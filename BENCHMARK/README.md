@@ -84,6 +84,8 @@ The original three layouts retain their historical composition and spacing so be
 
 ## Painted deployments
 
+The **Paint tools** selector uses visible, mutually exclusive radio buttons for **Soldiers**, **Obstacles** and **Defenses** instead of a dropdown. **Paint faction** appears above **Soldier type** and stays available for soldiers and defenses, while the redundant soldier drag/erase hint has been removed. Tool selection still changes the existing painter mode; brush size, placement grid, paint behavior and saved deployment formats are unchanged.
+
 Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction and one of the six unit brushes. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. Painted armies have no troop-count cap. The count selector applies to seeded presets. **Clear all** clears soldiers and walls from the draft while editing.
 
 **Save deployment** and **Load deployment** use one local slot at `user://deployment.json`. Version 2 saves include the wall rectangles and stable unit IDs. Version 1 and legacy layouts load with no walls. Older melee and ranged placements load as Circle and Triangle. **Start painted battle** requires at least two different teams and uses melee or ranged combat based on the placed units. Reopen the editor to revise or replay the same draft. The preset spawn button still runs the selected Blue vs Red benchmark layout. Existing saves keep Blue and Red IDs, and Green uses ID 2.
