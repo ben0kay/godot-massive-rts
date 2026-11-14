@@ -7,7 +7,7 @@ Standalone 3D army workload arena. No performance target is claimed. No campaign
 1. Import root `project.godot` in **Godot 4.7 .NET** with its required .NET SDK installed. The standard non-.NET Godot editor cannot compile C#.
 2. Build the C# project, then press **F6** with `BENCHMARK/BenchmarkArena.tscn` open. This direct launch needs no profile. **F5** opens the project’s profile picker.
 3. Initial deployment is 1,000 render-only soldiers. Select total count, mode, layout and seed, then click **Spawn / Reset selected**. The button always rebuilds from the current controls, resetting deaths, projectiles, timings and simulation ticks.
-4. **WASD / arrows** pan; **wheel** zooms; **Space** or the button pauses simulation; **F4** or the checkbox toggles the right-hand performance details. Camera remains active while paused.
+4. **WASD / arrows** pan; **wheel** zooms; **Space** or the button pauses simulation. **F1** hides both left controls and the entire right diagnostics HUD, then shows both again. **F2** toggles only the left control panel and leaves the right diagnostics unchanged. **F4** or the checkbox toggles only the expanded right-hand performance details; the compact top-right metrics remain. Camera remains active while paused.
    - Open the left-side **Camera** section: **Rotation** is a live 0–360° slider (1° steps). **0°** aligns the view with the battlefield axes; **45°** restores the original diagonal. **Reset camera rotation (45°)** restores the default. WASD/arrow panning stays relative to the current view; zoom and pitch are unchanged. Click the battlefield to release keyboard focus from text/spin controls if necessary.
 5. **Clear all** releases the current workload. Firing rate is live; other deployment settings take effect on spawn/reset. Pause does not interrupt a deployment already being prepared.
 
@@ -21,6 +21,12 @@ Supported total counts: 1k, 5k, 10k, 25k, 50k, 100k, split across blue/red. Stat
 | D — Ranged | Mixed melee/ranged force plus pooled, moving projectiles with swept first-enemy hit checks and lifetime expiry. |
 
 Layouts: **Opposing lines** uses rectangular opposing blocks; **Dense clusters** decreases spacing; **Distributed battlefield** uses seeded offsets across a wider battlefield. The five tactical layouts below add full-roster formations. All remain reproducible with the same count, mode, composition, resource settings and seed. Hexagon Siege Infantry is available in painted battles. Seeded presets use the original five types.
+
+## Wider benchmark controls
+
+The left benchmark interface is approximately **440 px wide**, up from about 310 px. Most editable settings (soldier count, mode, layout, seed, camera yaw, ranged %, paint tool, soldier type/size, faction, each team's battle order, guard radius and separation settings) now show their labels and controls side-by-side. Collapsible category headers have a contrasting blue-grey accent and their contents have recessed backgrounds to distinguish category titles from individual parameters. Long dropdown options truncate visually without expanding the entire panel; open the dropdown to read the full option. Mouse input, debug controls and actual benchmark values are unchanged.
+
+**F1** toggles both panels as a pair. **F2** toggles the left control panel only, without changing right-side compact statistics or the optional F4 expanded diagnostics. No simulation or rendering changes are involved.
 
 ## Army balance HUD
 

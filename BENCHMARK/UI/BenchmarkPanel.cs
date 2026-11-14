@@ -78,13 +78,17 @@ public partial class BenchmarkPanel : CanvasLayer
     public bool ProfileObstacles => profileObstacles.ButtonPressed;
     public readonly Button PauseButton = new() { Text = "Pause" };
     private PanelContainer left, overlay;
+    private VBoxContainer right;
     private CheckButton performanceToggle;
-    private bool sidePanelsVisible = true;
+    private bool leftPanelVisible = true, rightPanelVisible = true;
 
+    // =========================================================
+    // F1 controls both sides; F2 affects the left side without touching the right HUD.
     private void UpdatePanelVisibility()
     {
-        left.Visible = sidePanelsVisible;
-        overlay.Visible = sidePanelsVisible && performanceToggle.ButtonPressed;
+        left.Visible = leftPanelVisible;
+        right.Visible = rightPanelVisible;
+        overlay.Visible = rightPanelVisible && performanceToggle.ButtonPressed;
     }
     public static readonly int[] Counts = { 1000, 5000, 10000, 20000, 25000, 50000, 100000 };
     public int RequestedCount => Counts[CountChoice.Selected];
@@ -93,12 +97,15 @@ public partial class BenchmarkPanel : CanvasLayer
     {
         left = new PanelContainer
         {
-            AnchorBottom = 1, OffsetLeft = 12, OffsetRight = 322, OffsetTop = 12, OffsetBottom = -12
+            AnchorBottom = 1, OffsetLeft = 12, OffsetRight = 452, OffsetTop = 12, OffsetBottom = -12
         };
         AddChild(left);
         var shell = new VBoxContainer();
         left.AddChild(shell);
-        shell.AddChild(new Label { Text = "BENCH0 • MASSIVE RTS" });
+        var heading = new Label { Text = "BENCH0  •  MASSIVE RTS" };
+        heading.AddThemeFontSizeOverride("font_size", 17);
+        heading.AddThemeColorOverride("font_color", new Color("#CCE8F6"));
+        shell.AddChild(heading);
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
@@ -107,6 +114,7 @@ public partial class BenchmarkPanel : CanvasLayer
         };
         shell.AddChild(scroll);
         var column = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        column.AddThemeConstantOverride("separation", 8);
         scroll.AddChild(column);
 
         var preset = Section(column, "Preset battle", true, out _);
@@ -121,11 +129,7 @@ public partial class BenchmarkPanel : CanvasLayer
         }) LayoutChoice.AddItem(layout);
         Field(preset, "Total soldiers", CountChoice); Field(preset, "Mode", ModeChoice);
         Field(preset, "Layout", LayoutChoice); Field(preset, "Seed", Seed);
-        preset.AddChild(new Label
-        {
-            Text = "New formations use all six shapes in mixed modes; Melee excludes archers.",
-            AutowrapMode = TextServer.AutowrapMode.WordSmart
-        });
+        preset.AddChild(Hint("New formations include all six shapes; Melee excludes archers."));
         Field(preset, "Ranged %", RangedPercent);
         TerrainChoice.AddItem("Flat ground");
         TerrainChoice.AddItem("Test plateau");
@@ -134,17 +138,22 @@ public partial class BenchmarkPanel : CanvasLayer
         AddButton(preset, "Spawn / Reset selected", () => SpawnRequested?.Invoke());
 
         var cameraControls = Section(column, "Camera", true, out _);
-        Field(cameraControls, "Rotation (0° = straight, 45° = diagonal)", cameraRotation);
-        cameraControls.AddChild(cameraRotationValue);
+        cameraRotation.TooltipText = "0° = straight, 45° = original diagonal view";
+        cameraRotationValue.Text = "45°";
+        cameraRotationValue.CustomMinimumSize = new Vector2(46f, 0f);
+        cameraRotationValue.HorizontalAlignment = HorizontalAlignment.Right;
+        var rotationRow = Field(cameraControls, "Camera yaw", cameraRotation);
+        rotationRow.AddChild(cameraRotationValue);
         cameraRotation.ValueChanged += degrees =>
         {
-            cameraRotationValue.Text = $"{degrees:0}°" + (degrees == 45 ? " (original diagonal)" : "");
+            cameraRotationValue.Text = $"{degrees:0}°";
             CameraRotationChanged?.Invoke((float)degrees);
         };
         AddButton(cameraControls, "Reset camera rotation (45°)", () => cameraRotation.Value = 45);
 
         var combat = Section(column, "Live combat", false, out _);
-        Field(combat, "Ranged fire-rate multiplier", FireRate);
+        FireRate.TooltipText = "Live multiplier applied to ranged attacks";
+        Field(combat, "Fire-rate ×", FireRate);
         combat.AddChild(rangedTargetVariety);
         combat.AddChild(slowPursuitRefresh);
         combat.AddChild(prunePursuitCells);
@@ -177,12 +186,11 @@ public partial class BenchmarkPanel : CanvasLayer
         paintControls.AddChild(placementGridToggle);
         var soldierControls = new VBoxContainer();
         paintControls.AddChild(soldierControls);
-        var factionLabel = new Label { Text = "Paint faction" };
-        paintControls.AddChild(factionLabel);
-        paintControls.AddChild(FactionChoice);
+        var factionRow = Field(paintControls, "Paint faction", FactionChoice);
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
-        Field(soldierControls, "Drag left to paint • right to erase", BrushChoice);
+        Field(soldierControls, "Soldier type", BrushChoice);
+        soldierControls.AddChild(Hint("Left-drag: paint   •   Right-drag: erase"));
         foreach (int size in new[] { 1, 3, 5, 10 })
             SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
         SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
@@ -199,7 +207,7 @@ public partial class BenchmarkPanel : CanvasLayer
             soldierControls.Visible = tool == 0;
             wallHelp.Visible = tool == 1;
             defenseControls.Visible = tool == 2;
-            factionLabel.Visible = FactionChoice.Visible = tool != 1;
+            factionRow.Visible = tool != 1;
         };
         var orders = Section(paintControls, "Battle orders", true, out _);
         string[] teamNames = { "Blue", "Red", "Green" };
@@ -225,7 +233,7 @@ public partial class BenchmarkPanel : CanvasLayer
         performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
         performanceToggle.Toggled += _ => UpdatePanelVisibility();
         display.AddChild(performanceToggle);
-        display.AddChild(new Label { Text = "WASD / arrows: pan\nMouse wheel: zoom\nSpace: pause • F1: side panels\nF4: performance details" });
+        display.AddChild(Hint("WASD / arrows: pan  •  Wheel: zoom\nSpace: pause  •  F1: both panels  •  F2: left only\nF4: performance details"));
 
         var actions = new HBoxContainer();
         shell.AddChild(actions);
@@ -237,7 +245,7 @@ public partial class BenchmarkPanel : CanvasLayer
         actions.AddChild(PauseButton);
         Status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         shell.AddChild(Status);
-        var right = new VBoxContainer
+        right = new VBoxContainer
         {
             AnchorLeft = 1, AnchorRight = 1, AnchorBottom = 1,
             OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12, OffsetBottom = -12,
@@ -270,37 +278,135 @@ public partial class BenchmarkPanel : CanvasLayer
         return label;
     }
 
+    // =========================================================
+    // Shared horizontal label/value row: one line instead of two for every tweakable field.
+    private static HBoxContainer Field(VBoxContainer column, string title, Control input)
+    {
+        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        row.AddThemeConstantOverride("separation", 8);
+        var label = new Label
+        {
+            Text = title,
+            VerticalAlignment = VerticalAlignment.Center,
+            ClipText = true,
+            TooltipText = title,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsStretchRatio = 1f
+        };
+        label.AddThemeFontSizeOverride("font_size", 13);
+        label.AddThemeColorOverride("font_color", new Color("#C7D2E0"));
+        row.AddChild(label);
+        input.CustomMinimumSize = new Vector2(Mathf.Max(input.CustomMinimumSize.X, 166f), input.CustomMinimumSize.Y);
+        input.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        input.SizeFlagsStretchRatio = 1.2f;
+        if (input is OptionButton choice)
+        {
+            // Long layout/order names should not force the complete panel to grow.
+            choice.FitToLongestItem = false;
+            choice.ClipText = true;
+        }
+        row.AddChild(input);
+        column.AddChild(row);
+        return row;
+    }
+
+    // =========================================================
+    private static Label Hint(string text)
+    {
+        var label = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        label.AddThemeColorOverride("font_color", new Color("#91A5B8"));
+        label.AddThemeFontSizeOverride("font_size", 12);
+        return label;
+    }
+
+    // =========================================================
+    // Left sections have colored headers and an inset body; right diagnostics stay unchanged.
     private static VBoxContainer Section(VBoxContainer parent, string title, bool open, out Button header, bool alignRight = false)
     {
-        var button = new Button { ToggleMode = true, ButtonPressed = open, Alignment = alignRight ? HorizontalAlignment.Right : HorizontalAlignment.Left };
-        button.Text = (open ? "▾ " : "▸ ") + title;
-        parent.AddChild(button);
-        var body = new VBoxContainer { Visible = open };
-        parent.AddChild(body);
-        button.Toggled += expanded =>
+        var button = new Button
         {
-            body.Visible = expanded;
-            button.Text = (expanded ? "▾ " : "▸ ") + title;
+            ToggleMode = true, ButtonPressed = open,
+            Alignment = alignRight ? HorizontalAlignment.Right : HorizontalAlignment.Left
         };
+        button.Text = (open ? "▾ " : "▸ ") + title;
+        if (!alignRight)
+        {
+            button.AddThemeFontSizeOverride("font_size", 15);
+            button.AddThemeColorOverride("font_color", new Color("#D5EDFC"));
+            button.AddThemeStyleboxOverride("normal", SectionStyle(new Color("#24374B")));
+            button.AddThemeStyleboxOverride("hover", SectionStyle(new Color("#304B62")));
+            button.AddThemeStyleboxOverride("pressed", SectionStyle(new Color("#304B62")));
+        }
+        parent.AddChild(button);
+
+        var body = new VBoxContainer();
+        if (!alignRight)
+        {
+            var background = new PanelContainer { Visible = open };
+            background.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color("#1C2735") });
+            parent.AddChild(background);
+            var inset = new MarginContainer();
+            inset.AddThemeConstantOverride("margin_left", 10);
+            inset.AddThemeConstantOverride("margin_right", 10);
+            inset.AddThemeConstantOverride("margin_top", 8);
+            inset.AddThemeConstantOverride("margin_bottom", 10);
+            background.AddChild(inset);
+            inset.AddChild(body);
+            body.AddThemeConstantOverride("separation", 7);
+            button.Toggled += expanded =>
+            {
+                background.Visible = expanded;
+                button.Text = (expanded ? "▾ " : "▸ ") + title;
+            };
+        }
+        else
+        {
+            body.Visible = open;
+            parent.AddChild(body);
+            button.Toggled += expanded =>
+            {
+                body.Visible = expanded;
+                button.Text = (expanded ? "▾ " : "▸ ") + title;
+            };
+        }
         header = button;
         return body;
     }
 
+    private static StyleBoxFlat SectionStyle(Color background) => new()
+    {
+        BgColor = background,
+        BorderColor = new Color("#64A9CA"),
+        BorderWidthLeft = 3,
+        ContentMarginLeft = 10,
+        ContentMarginRight = 8,
+        ContentMarginTop = 6,
+        ContentMarginBottom = 6
+    };
+
     private static void AddButton(VBoxContainer column, string title, Action action)
     {
-        var button = new Button { Text = title };
+        var button = new Button { Text = title, CustomMinimumSize = new Vector2(0f, 30f) };
+        button.AddThemeStyleboxOverride("normal", new StyleBoxFlat { BgColor = new Color("#29425A") });
+        button.AddThemeStyleboxOverride("hover", new StyleBoxFlat { BgColor = new Color("#355873") });
         button.Pressed += action;
         column.AddChild(button);
     }
-    private static void Field(VBoxContainer column, string title, Control input)
-    { column.AddChild(new Label { Text = title }); column.AddChild(input); }
     // =========================================================
     public override void _UnhandledKeyInput(InputEvent input)
     {
         if (input is not InputEventKey key || !key.Pressed || key.Echo) return;
         if (key.PhysicalKeycode == Controls.ToggleSidePanels)
         {
-            sidePanelsVisible = !sidePanelsVisible;
+            // F1 always hides both if either is visible; press again to show both.
+            bool showBoth = !leftPanelVisible && !rightPanelVisible;
+            leftPanelVisible = rightPanelVisible = showBoth;
+            UpdatePanelVisibility();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (key.PhysicalKeycode == Controls.ToggleLeftPanel)
+        {
+            leftPanelVisible = !leftPanelVisible;
             UpdatePanelVisibility();
             GetViewport().SetInputAsHandled();
         }
