@@ -173,3 +173,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — BENCH0: Added opt-in reuse of verified route waypoints and a benchmark reuse counter.
 
 - 2026-11-14 — BENCH0: Added opt-in preventive crowd separation for voluntary movement in Normal mode.
+
+- 2026-11-14 — UNIT balance: Set Circle to 50 HP/5 damage, Square to 85/12, Triangle to 25/9, Diamond to 105/14, Pentagon to 285/22 (0.9× size), and Hexagon to 600/36. Other stats and Chevron Artillery unchanged; updated roster documentation. Awaiting owner gameplay validation.
