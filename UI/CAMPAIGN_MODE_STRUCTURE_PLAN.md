@@ -26,8 +26,8 @@ Select / create profile
 
 - `project.godot` launches `UI/Menus/BootScreen.tscn` via F5; the benchmark remains directly runnable via F6.
 - `UI/Menus/FrontMenu.cs` currently uses `MenuScreen.Campaign` to show one `OptionButton` of campaigns followed immediately by level buttons. It already derives both from `CampaignCatalog.Load()`, not a list of hard-coded UI entries.
-- `LEVELS/Catalog/CampaignDefinition.cs` has `Id`, `DisplayName`, `Description`, `Levels`. `CampaignCatalog.cs` loads and validates the catalog and orders levels. Current `LEVELS/Catalog/DefaultCampaignCatalog.tres` registers only `LEVELS/Campaign001/Campaign001.tres`, displayed as "Main Campaign".
-- The existing `LEVELS/Level001/Level001.tscn` is an intentionally blank `Node3D`. `LevelLauncher` uses campaign + level IDs and attaches temporary return/development completion controls.
+- `LEVELS/Catalog/CampaignDefinition.cs` has `Id`, `DisplayName`, `Description`, `Levels`. `CampaignCatalog.cs` loads and validates the catalog and orders levels. Current `LEVELS/Catalog/DefaultCampaignCatalog.tres` registers only `LEVELS/PresetBattles/Campaign001.tres`, displayed as "Main Campaign".
+- The existing `LEVELS/PresetBattles/Level001/Level001.tscn` is an intentionally blank `Node3D`. `LevelLauncher` uses campaign + level IDs and attaches temporary return/development completion controls.
 - `CampaignProgressStore` keys completed levels by **campaign ID and level ID**, so a `Level001` ID can exist in each mode without collisions if the campaign IDs differ. Existing profile progress must be preserved.
 
 ## Required implementation — menu and catalog only
@@ -52,8 +52,8 @@ Change **Campaign** to show **one visible mode choice per registered `CampaignDe
 
 | Role | Catalog identity | Resources |
 |---|---|---|
-| Preset Battles | **Keep existing** `Campaign001` ID to preserve saved progress; rename **DisplayName** to `Preset Battles` | Keep `LEVELS/Campaign001/Campaign001.tres`, `LEVELS/Level001/Level001.tres`, and existing blank `LEVELS/Level001/Level001.tscn`. This is the future owner-authored tactical battle/Army Painter map. |
-| Open RTS | New stable campaign ID, e.g. `OpenRTS` | New `LEVELS/OpenRTS/OpenRTS.tres`, `LEVELS/OpenRTS/Level001/Level001.tres`, `LEVELS/OpenRTS/Level001/Level001.tscn`. The `Level001` scene starts as a **blank, editable Godot scene** (e.g. root `Node3D`) and is where the owner will author the Open RTS battlefield later. |
+| Preset Battles | **Keep existing** `Campaign001` ID to preserve saved progress; rename **DisplayName** to `Preset Battles` | Keep `LEVELS/PresetBattles/Campaign001.tres`, `LEVELS/PresetBattles/Level001/Level001.tres`, and existing blank `LEVELS/PresetBattles/Level001/Level001.tscn`. This is the future owner-authored tactical battle/Army Painter map. |
+| Open RTS | New stable campaign ID, e.g. `OpenRTS` | New `LEVELS/FortressDefense/OpenRTS.tres`, `LEVELS/FortressDefense/Level001/Level001.tres`, `LEVELS/FortressDefense/Level001/Level001.tscn`. The `Level001` scene starts as a **blank, editable Godot scene** (e.g. root `Node3D`) and is where the owner will author the Open RTS battlefield later. |
 
 - Register both campaign resources in `LEVELS/Catalog/DefaultCampaignCatalog.tres`. Preserve existing IDs, references and completion data.
 - `Open RTS Level 001` is intentionally a **different scene** from `Preset Battles Level 001`; don't route both menu choices to one placeholder.
@@ -68,7 +68,7 @@ The owner wants to **design the Open RTS map manually in Godot**. Reserve the bl
 - **Do not** generate random terrain/resource coordinates in the first map.
 - **Do not** populate the level with default trees, woodland, medieval villages, existing benchmark armies or a fully working RTS system.
 - Leave placement to normal Godot scene authoring; when map/building/resource systems are separately authorized, use editor-placeable scenes/resources with clear exported settings.
-- Reuse shared `TERRAIN/`, `OBSTACLES/`, `UNITS/`, `SIMULATION/`, `COMBAT/` and `RENDERING/` infrastructure. The blank scene should not instantiate tens of thousands of units merely to test menu routing.
+- Reuse shared `WORLD/TERRAIN/`, `WORLD/OBSTACLES/`, `GAMEPLAY/UNITS/`, `GAMEPLAY/SIMULATION/`, `GAMEPLAY/COMBAT/` and `VISUALS/RENDERING/` infrastructure. The blank scene should not instantiate tens of thousands of units merely to test menu routing.
 - `BENCHMARK/BenchmarkArena.tscn` remains untouched and independent.
 
 ## Open RTS direction — reference, not implementation scope
@@ -83,7 +83,7 @@ Read [`endgoal.md`](../endgoal.md), **Open RTS visual identity** subsection. The
 - `UI/Menus/MenuNavigation.cs` — keep central scene navigation, adapt only if needed.
 - `LEVELS/Catalog/DefaultCampaignCatalog.tres` and campaign/level `.tres` — register two modes and unique level scene references.
 - `LEVELS/Runtime/LevelLauncher.cs` — preserve/adjust return-to-mode UX without compromising launch validation.
-- `LEVELS/OpenRTS/` — new campaign resource + editable Level 001 scene and level definition.
+- `LEVELS/FortressDefense/` — new campaign resource + editable Level 001 scene and level definition.
 - `LEVELS/README.md`, `UI/README.md`, `devlog.md` — update after implementation.
 
 Maintain uppercase top-level folders and existing shared UI architecture. Do not create a second campaign registry, profile system, or menu implementation.
@@ -92,7 +92,7 @@ Maintain uppercase top-level folders and existing shared UI architecture. Do not
 
 1. F5 -> profile picker -> Main -> Campaign shows **Open RTS** and **Preset Battles** as two distinct selectable modes.
 2. Open RTS -> **Level 001** opens its own **blank** editable Open RTS scene; return takes the user to the Open RTS level list.
-3. Preset Battles -> **Level 001** opens the current blank `LEVELS/Level001/Level001.tscn`; return goes to the Preset Battles list.
+3. Preset Battles -> **Level 001** opens the current blank `LEVELS/PresetBattles/Level001/Level001.tscn`; return goes to the Preset Battles list.
 4. Back/Escape navigation works through the hierarchy without losing the selected profile, changing progress on return, or creating stuck focus.
 5. Both modes and levels come from catalog resources; adding a third `CampaignDefinition` should add a third mode without editing menu labels or switches.
 6. Old saved completion data for `Campaign001/Level001` remains associated with Preset Battles; no profile/progress migration or destructive reset.

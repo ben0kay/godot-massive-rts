@@ -34,7 +34,7 @@ A thin top-centre bar from [UI/GameplayHUD](../UI/GameplayHUD/README.md) reflect
 
 ## Placement grid in deployment editor
 
-**Edit painted deployment → Paint tools → Show placement grid** displays a faint, ground-aligned placement grid (on by default), behind soldiers, obstacles and defenses. The same cells are used for placement snapping. The one-surface shader grid fades out at distant zoom, follows world coordinates under camera rotation/panning, and hides outside edit mode. The checkbox affects only presentation; save files and placement validity remain unchanged. See [DEPLOYMENT](../DEPLOYMENT/README.md) for the rendering details and flat-terrain limitation.
+**Edit painted deployment → Paint tools → Show placement grid** displays a faint, ground-aligned placement grid (on by default), behind soldiers, obstacles and defenses. The same cells are used for placement snapping. The one-surface shader grid fades out at distant zoom, follows world coordinates under camera rotation/panning, and hides outside edit mode. The checkbox affects only presentation; save files and placement validity remain unchanged. See [DEPLOYMENT](../GAMEPLAY/DEPLOYMENT/README.md) for the rendering details and flat-terrain limitation.
 
 ## Painted battle orders
 
@@ -59,10 +59,10 @@ Budget and nearby-result counts cover the current HUD sample. An exhausted step 
 - 60 Hz core simulation, at most five steps per rendered frame. Excess elapsed ticks are discarded and counted. The CPU overlay shows the achieved and configured tick rates.
 - Maximum 100,000 soldiers; prepare 4,000 array entries per frame before initializing visuals. Combat modes prepare initial targets in groups of 512 per rendered frame before the battle starts. GPU buffers and initial renderer upload are still a single finalization pass, which may briefly hitch at large counts.
 - Spatial cell 6; targets refreshed every 6 ticks, staggered by ID; maximum 96 enemy candidates/query.
-- Unit speed, health, damage, reach and interval come from the [roster](../UNITS/DEFINITIONS/STARTING_ROSTER.md). The shared [hit feedback settings](../FEEDBACK/README.md) control the 0.12-second flash and 0.18-second scale pulse. Disable Pulse Enabled and respawn for a white-only comparison.
+- Unit speed, health, damage, reach and interval come from the [roster](../GAMEPLAY/UNITS/DEFINITIONS/STARTING_ROSTER.md). The shared [hit feedback settings](../VISUALS/FEEDBACK/README.md) control the 0.12-second flash and 0.18-second scale pulse. Disable Pulse Enabled and respawn for a white-only comparison.
 - Projectile cap 30,000, lifetime 4 sec, minimum hit radius 0.8. Full pools drop new shots and count drops. The live ranged fire-rate multiplier defaults to 1× and scales the authored attack rate.
 
-Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; `UI/` owns controls and overlay. `BenchmarkArena.cs` handles lifecycle and orchestration. `SIMULATION/` owns compact arrays, movement and spatial indexing. `COMBAT/` owns benchmark damage/attacks and projectiles. `RENDERING/` owns instance slots and geometry. `CAMERA/` owns independent pan/zoom.
+Only necessary major folders exist. `SCENARIOS/` owns deterministic deployment; `UI/` owns controls and overlay. `BenchmarkArena.cs` handles lifecycle and orchestration. `GAMEPLAY/SIMULATION/` owns compact arrays, movement and spatial indexing. `GAMEPLAY/COMBAT/` owns benchmark damage/attacks and projectiles. `VISUALS/RENDERING/` owns instance slots and geometry. `VISUALS/CAMERA/` owns independent pan/zoom.
 
 Flow: prepare unit arrays → allocate up to ten mesh/faction batches → fixed-step spatial/targeting/movement/combat/projectile passes → dirty render sync → throttled overlay. No soldier or projectile has its own Node, processing callback, scene, timer or physics body. Flat ground uses a shared height-query seam; elevation-aware combat is future work. Benchmark flat ground and the plateau terrain now use a lighter, neutral cool-grey palette for improved readability against the red/blue units and dark obstacle shadows.
 
@@ -117,7 +117,7 @@ Skipped ticks, capped local queries (latest completed combat tick) and dropped s
 
 - Candidate-bounded queries search cells center-out and may miss better targets in dense cells. The grid indexes factions separately so friendly crowds cannot exhaust enemy-query budgets. This is approximate targeting, not guaranteed global nearest selection.
 - Combat soldiers pursue living targets directly. Local searches use the existing candidate cap. After a target dies, a soldier can continue toward its last position while waiting for a replacement. Up to 128 extra long-range searches per tick can replace lost targets on the local refresh schedule. Long-range nearest-enemy searches use a shared tree over occupied cells. **Live combat → Slower long-range retargeting** is on by default and doubles the staggered refresh interval for soldiers pursuing a living target outside local range (roughly 1.6 simulation seconds at default settings). Soldiers without a living target keep the original roughly 0.8-second schedule and the existing extra replacement budget. Turn the toggle off to compare the original cadence during the same battle. Movement-only mode keeps mirrored march lanes. Combat can bunch at the front and will need obstacle navigation for maps with impassable terrain.
-- Basic arrows follow a shallow arc to the target's launch-time position. They use swept hits and disappear on their first enemy impact, arrival, or lifetime expiry. The arrow mesh faces along the flight path. Tune the arc in the [projectile definition](../PROJECTILES/Types/BasicArrow/BasicArrow.tres).
+- Basic arrows follow a shallow arc to the target's launch-time position. They use swept hits and disappear on their first enemy impact, arrival, or lifetime expiry. The arrow mesh faces along the flight path. Tune the arc in the [projectile definition](../GAMEPLAY/PROJECTILES/Types/BasicArrow/BasicArrow.tres).
 - Smooth soldier motion interpolates positions and turns between fixed steps. Disable it for tick-only benchmark uploads. MultiMesh batches have broad aggregate bounds, without spatial chunk culling or per-instance LOD. The dirty pass scans IDs and stages changed slots in reusable buffers. Batches with more than 64 staged writes upload their buffer once, while smaller changes use individual setters. Deaths pack active slots using swap removal. Render-only skips the pass entirely.
 - Array allocation, deployment finalization, clear and GPU allocation can hitch. Spawning is bounded but not a background loading pipeline. UI allocations are throttled; dictionary storage is reused after capacity grows. No multithreading.
 - State determinism assumes identical settings and simulation tick counts, not identical wall-clock results across different FPS or live rate edits. Melee applies damage in stable ID order; it is a workload, not a fairness/balance model.
@@ -130,7 +130,7 @@ Implementation validation is limited to source/diff review. No .NET executable i
 
 ## OBST1 — Obstacle benchmark
 
-In **Edit painted deployment**, choose **Paint tool → Obstacles**. Drag left to draw a rectangle and drag right to erase a rectangular area. Release to commit the preview. Switch back to **Soldiers** to paint the teams and click **Start painted battle**. Painted walls persist through Save and Load. See [DEPLOYMENT](../DEPLOYMENT/README.md) for clearance and edit limits.
+In **Edit painted deployment**, choose **Paint tool → Obstacles**. Drag left to draw a rectangle and drag right to erase a rectangular area. Release to commit the preview. Switch back to **Soldiers** to paint the teams and click **Start painted battle**. Painted walls persist through Save and Load. See [DEPLOYMENT](../GAMEPLAY/DEPLOYMENT/README.md) for clearance and edit limits.
 
 For a reproducible obstacle comparison, leave the layout, seed, and soldier count fixed and toggle **Test wall in preset** before spawning. The preset wall crosses the middle lanes. Movement and combat modes use it for routing and collision. Rendering Only shows the mesh with no route or LOS work. The overlay shows wall count, LOS checks and blocks, clipped movements, steering time per tick, route build time per rendered frame, cache activity, queue depth and max route wait in frames for the current sample.
 
@@ -144,7 +144,7 @@ All three are on by default. Toggle them during the same battle, or restart the 
 
 ## TERR1-A terrain preset
 
-Select **Test plateau** under **Preset terrain**, then reset. Opposing Lines puts Red near the raised top and Blue on the plain. Movement mode makes both sides traverse the shoulder. Compare with **Flat ground** using the same count and seed. The overlay reports terrain compilation, mesh setup, and grounding cost. Painted deployments use flat ground. See [Terrain](../TERRAIN/README.md).
+Select **Test plateau** under **Preset terrain**, then reset. Opposing Lines puts Red near the raised top and Blue on the plain. Movement mode makes both sides traverse the shoulder. Compare with **Flat ground** using the same count and seed. The overlay reports terrain compilation, mesh setup, and grounding cost. Painted deployments use flat ground. See [Terrain](../WORLD/TERRAIN/README.md).
 
 The left panel scrolls independently of the battlefield. Click a section header to fold it. **Live combat → Ranged target variety** is on by default. Approximately 80% of ranged soldiers prefer the closest target, 15% prefer the second, and 5% prefer the third, based on the battle seed and soldier ID. Alternate picks come from the existing bounded local query and must be visible for direct-fire weapons, within range, and within 10% plus 0.5 units of the nearest valid candidate. Toggle off to restore the original closest-target selection on subsequent refreshes.
 
@@ -154,7 +154,7 @@ The right overlay keeps the battle summary visible and folds CPU, obstacle, and 
 
 ## DEF1 — Static laser defense
 
-Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tower 001. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../BUILDINGS/README.md) for configuration and limits.
+Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tower 001. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../WORLD/BUILDINGS/README.md) for configuration and limits.
 
 ## SIM60 — Core and acquisition clocks
 
@@ -179,6 +179,6 @@ In **Edit painted deployment → Paint tools**, enter a **Preset name** and clic
 
 Open `BENCHMARK/RTS/CommandSandbox.tscn` in Godot and press **F6**. Left-click a Blue soldier or drag a selection box across any squad member to select all 20. Right-click the ground to move into a centered 5×4 formation. Hold and drag right-click to set the front line. Wider drags fit more columns, up to a single rank of 20. The faint circles show the destination slots, and the dimension arrows show the line length in world units. Release to issue the previewed order. Press Escape to clear selection.
 
-The sandbox uses the shared unit catalog, renderer and camera. Command input and preview live in `BENCHMARK/RTS/`, and the movement pass lives in `SIMULATION/COMMANDS/CommandMovement.cs`. Movement goes directly to assigned slots on flat ground. Obstacle routing, collision avoidance and combat orders are outside this first pass. The Auto-Battle Benchmark remains runnable from `BENCHMARK/BenchmarkArena.tscn`.
+The sandbox uses the shared unit catalog, renderer and camera. Command input and preview live in `BENCHMARK/RTS/`, and the movement pass lives in `GAMEPLAY/SIMULATION/COMMANDS/CommandMovement.cs`. Movement goes directly to assigned slots on flat ground. Obstacle routing, collision avoidance and combat orders are outside this first pass. The Auto-Battle Benchmark remains runnable from `BENCHMARK/BenchmarkArena.tscn`.
 
 Both benchmark scenes use `BENCHMARK/UI/BenchmarkSummary.cs` for the top-right FPS, frame times and unit counts. In the Command Sandbox the top-center bar tracks faction totals, and the bottom-left selection readout shows the squad composition and pooled health.

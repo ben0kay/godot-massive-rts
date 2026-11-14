@@ -40,7 +40,7 @@ A painted battle with 3,330 soldiers and six compiled wall rectangles showed abo
 
 Wall clipping can cancel lateral movement when a push has an inward component. A pinned soldier also cannot yield its full share of the correction. Claude proposed wall-aware weighting and projecting the remaining push along the wall tangent. These change crowd behavior. Validate them with a funnel using throughput, clipped moves, and penetration, alongside the exact same wall layout for comparison.
 
-The slide patch addressed one movement symptom. For the remaining stall, capture one stuck soldier’s target, next waypoint, route/cache outcome, and displacement before and after separation. This can distinguish a missing or unusable route from a usable route whose exit is crowded. Review `NAVIGATION/ObstacleNavigation.cs`, `OBSTACLES/ObstacleField.cs`, `SIMULATION/MovementSystem.cs`, `SIMULATION/SEPARATION/SeparationSystem.cs`, `SIMULATION/MeleeSteering.cs`, and `COMBAT/CombatSystem.cs`. Preserve the exact painted deployment for reproduction.
+The slide patch addressed one movement symptom. For the remaining stall, capture one stuck soldier’s target, next waypoint, route/cache outcome, and displacement before and after separation. This can distinguish a missing or unusable route from a usable route whose exit is crowded. Review `GAMEPLAY/NAVIGATION/ObstacleNavigation.cs`, `WORLD/OBSTACLES/ObstacleField.cs`, `GAMEPLAY/SIMULATION/MovementSystem.cs`, `GAMEPLAY/SIMULATION/SEPARATION/SeparationSystem.cs`, `GAMEPLAY/SIMULATION/MeleeSteering.cs`, and `GAMEPLAY/COMBAT/CombatSystem.cs`. Preserve the exact painted deployment for reproduction.
 
 ## Verification
 

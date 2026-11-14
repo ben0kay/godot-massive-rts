@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="BenchmarkConfig" format=3 uid="uid://04cliv7ysvdu"]
 
 [ext_resource type="Script" uid="uid://bla0umkvcxsh5" path="res://BENCHMARK/CONFIG/BenchmarkConfig.cs" id="1"]
-[ext_resource type="Script" uid="uid://dp8067i083ehe" path="res://FEEDBACK/UNIT_HITS/HitFeedbackSettings.cs" id="1_4bwoe"]
+[ext_resource type="Script" uid="uid://dp8067i083ehe" path="res://VISUALS/FEEDBACK/UNIT_HITS/HitFeedbackSettings.cs" id="1_4bwoe"]
 
 [sub_resource type="Resource" id="Resource_b3nnq"]
 script = ExtResource("1_4bwoe")

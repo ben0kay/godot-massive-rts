@@ -51,77 +51,62 @@ Do not copy another game's protected artwork, interface, audio or code. Build an
 - Keep simulation, rendering, formations, combat, UI and terrain modular, without overengineering a reusable engine before there is a need.
 - Future elevation must account for more than visuals: movement cost, melee reach, projectile trajectories and line-of-sight can be added in later milestones.
 
-### Folder structure — capitalized major systems
-
-**Required convention:** Keep major game systems in **UPPERCASE top-level folders**, matching the owner's other Godot projects. Organize related subsystems, scenes, scripts, resources and assets **inside the owning major folder**, not as dozens of unrelated root files or global `Scripts/`, `Scenes/` and `Resources/` dumps.
-
-Example **planned** ownership (create only folders needed by the authorized task):
+### Folder structure
 
 ```text
-BENCHMARK/
-    SCENES/           # BenchmarkArena.tscn and other benchmark scenes
-    SCENARIOS/        # Line, cluster and distributed test setups
-    UI/               # Benchmark controls and overlay
-    CONFIG/           # Benchmark settings and presets
-SIMULATION/
-    UNITS/            # Runtime unit arrays/state
-    MOVEMENT/         # Batched motion
-    SPATIAL/          # Local queries / spatial index
-RENDERING/
-    UNITS/            # Instanced soldier geometry
-    PROJECTILES/      # Batched projectile visuals
-COMBAT/
-    MELEE/
-    RANGED/
-UNITS/                # Unit archetypes, definitions and authored assets
-FORMATIONS/           # Deployment and orders
-TERRAIN/              # Terrain, height queries and future elevation
-CAMERA/               # Isometric camera controls
-UI/                   # Shared gameplay menus/HUD (not benchmark-specific UI)
-DEBUG/                # Shared instrumentation/debug tools
-NOTES/                # Plans and CodePreferences.md
-TESTS/                # Small automated checks, only when needed
+GAMEPLAY/
+    UNITS/ SIMULATION/ NAVIGATION/ COMBAT/ PROJECTILES/ DEPLOYMENT/
+WORLD/
+    TERRAIN/ OBSTACLES/ BUILDINGS/
+LEVELS/
+    FortressDefense/ PresetBattles/ Catalog/ Runtime/
+VISUALS/
+    RENDERING/ FEEDBACK/ CAMERA/
+UI/           # Menus and gameplay HUD
+SYSTEMS/      # Profiles, persistence and settings
+BENCHMARK/    # Standalone test scenes, presets and diagnostics
+addons/       # Godot editor plugins
 ```
 
-**BENCH0 specifically:** Place its arena, scenarios, controls and benchmark-only settings under `BENCHMARK/`. Reusable simulation, renderer and camera components belong under their own major system folders. Subfolders group related concerns; create them only when actual files exist. Avoid unnecessary nesting, empty folders and cross-system duplicates.
+Keep playable maps under `LEVELS/<Mode>/` and reusable map components under `WORLD/`. Simulation updates battle state, navigation supplies routes, and visuals display the result. Keep benchmark-specific code and scenes under `BENCHMARK/`.
 
 ## Soldier roster
 
 **UNIT0 is source implemented and awaiting owner validation.** Both factions can field Circle (basic melee), Square (stronger melee), Equilateral Triangle (ranged), Diamond (fast cavalry), Pentagon (large slow elite infantry), Hexagon (siege infantry with a radial stomp), and Chevron (heavy artillery). Their faceted meshes use faction tints and share instanced batches.
 
-Edit the seven resources under `UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the Inspector’s **Size Multiplier** into each type’s mesh dimensions, footprint and melee reach. Diamond Cavalry defaults to 1.25×. See the [catalogue guide](UNITS/README.md) and [starting roster](UNITS/DEFINITIONS/STARTING_ROSTER.md).
+Edit the seven resources under `GAMEPLAY/UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the Inspector’s **Size Multiplier** into each type’s mesh dimensions, footprint and melee reach. Diamond Cavalry defaults to 1.25×. See the [catalogue guide](GAMEPLAY/UNITS/README.md) and [starting roster](GAMEPLAY/UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
 ## ART1 — Heavy Artillery
 
-Heavy Artillery is available in the benchmark's deployment painter and the Unit Editor. Its chevron body is 20% wider and taller than Elite Infantry, with a projecting barrel. It fires over cover at 12–70 units. Its 7-unit blast shares the shockwave damage query and expanding ring. See [PROJECTILES](PROJECTILES/README.md) for flight and impact tuning. Source implemented, awaiting owner validation.
+Heavy Artillery is available in the benchmark's deployment painter and the Unit Editor. Its chevron body is 20% wider and taller than Elite Infantry, with a projecting barrel. It fires over cover at 12–70 units. Its 7-unit blast shares the shockwave damage query and expanding ring. See [PROJECTILES](GAMEPLAY/PROJECTILES/README.md) for flight and impact tuning. Source implemented, awaiting owner validation.
 
 ## SEP1 — Soldier Separation
 
-**Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. Standard contacts split corrections by effective footprint radius. In a Circle–Pentagon pair, the Circle takes about 69% of the correction. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
+**Source implemented and awaiting owner validation.** BENCH0 offers live **Off / Normal / Strong** controls. SEP1 applies bounded footprint corrections across both armies and reports CPU time and query caps. Standard contacts split corrections by effective footprint radius. In a Circle–Pentagon pair, the Circle takes about 69% of the correction. The practical test target is about 10,000 vs 10,000, and larger benchmark sizes remain available. See the [SEP1 plan](GAMEPLAY/SIMULATION/SEPARATION/SEP1_IMPLEMENTATION_PLAN.md).
 
 ## SEP2 — Allied crowd yielding
 
-**Source implemented and awaiting owner validation.** With Allied archer yielding enabled, advancing melee can use half clearance against stationary friendly ranged units. Both factions follow the same rule. Opposing pairs keep SEP1 clearance. See the [SEP2 plan](SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md).
+**Source implemented and awaiting owner validation.** With Allied archer yielding enabled, advancing melee can use half clearance against stationary friendly ranged units. Both factions follow the same rule. Opposing pairs keep SEP1 clearance. See the [SEP2 plan](GAMEPLAY/SIMULATION/SEPARATION/SEP2_IMPLEMENTATION_PLAN.md).
 
 ## FB0 — Soldier Hit Feedback
 
-**Source implemented and awaiting owner visual validation.** The [FEEDBACK](FEEDBACK/README.md) system owns the 0.12-second white damage flash and the grounded 6% visual pulse, which returns to normal over 0.18 seconds. Both effects use the existing MultiMesh instances.
+**Source implemented and awaiting owner visual validation.** The [FEEDBACK](VISUALS/FEEDBACK/README.md) system owns the 0.12-second white damage flash and the grounded 6% visual pulse, which returns to normal over 0.18 seconds. Both effects use the existing MultiMesh instances.
 
 ## UNIT1 — Soldier size scaling (planned)
 
-[UNIT1](UNITS/UNIT1_SIZE_SCALING_PLAN.md) proposes a per-type `SizeMultiplier` in existing soldier `.tres` definitions, compiling uniform visual size, gameplay footprint, melee/cleave reach and trample contact size once. The target is **1.25× Cavalry** with unchanged damage, movement speed and 2-second acceleration. **Plan only; not yet implemented.**
+[UNIT1](GAMEPLAY/UNITS/UNIT1_SIZE_SCALING_PLAN.md) proposes a per-type `SizeMultiplier` in existing soldier `.tres` definitions, compiling uniform visual size, gameplay footprint, melee/cleave reach and trample contact size once. The target is **1.25× Cavalry** with unchanged damage, movement speed and 2-second acceleration. **Plan only; not yet implemented.**
 
 ## OBST1 — Static obstacle navigation and line of sight
 
-**Source implemented. Awaiting owner validation.** Paint dark-gray rectangular walls in the deployment editor or enable **Test wall in preset** for a repeatable benchmark. Walls block ground movement and direct attacks. See [OBSTACLES](OBSTACLES/README.md) and [NAVIGATION](NAVIGATION/README.md).
+**Source implemented. Awaiting owner validation.** Paint dark-gray rectangular walls in the deployment editor or enable **Test wall in preset** for a repeatable benchmark. Walls block ground movement and direct attacks. See [OBSTACLES](WORLD/OBSTACLES/README.md) and [NAVIGATION](GAMEPLAY/NAVIGATION/README.md).
 
 ## Movement baseline
 
-Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](SIMULATION/CONFIG/DefaultSimulationSettings.tres) and restart the arena. The default is **0.8×**. The arena compiles soldier, charge and projectile speeds from their authored values. Set it to **1.0×** for authored speed. Attack timing, damage and range use their own settings. A future battle time control can use a separate setting.
+Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](GAMEPLAY/SIMULATION/CONFIG/DefaultSimulationSettings.tres) and restart the arena. The default is **0.8×**. The arena compiles soldier, charge and projectile speeds from their authored values. Set it to **1.0×** for authored speed. Attack timing, damage and range use their own settings. A future battle time control can use a separate setting.
 
 ## TERR1 — Painted and procedural elevation (planned)
 
-[TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md) designs a shared chunked heightfield with **two producers**: painted flat plateaus/smooth slopes for Army Painter and deterministic gentle procedural landscapes with protected flats for Open RTS. Both eventually share slope-aware movement, high-ground bonuses and terrain LOS. **Planning only; flat simulation remains unchanged.** Build in phases A (heightfield), B (painter), C (procedural) and D (combat/nav).
+[TERR1](WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md) designs a shared chunked heightfield with **two producers**: painted flat plateaus/smooth slopes for Army Painter and deterministic gentle procedural landscapes with protected flats for Open RTS. Both eventually share slope-aware movement, high-ground bonuses and terrain LOS. **Planning only; flat simulation remains unchanged.** Build in phases A (heightfield), B (painter), C (procedural) and D (combat/nav).
 
 ## FRONT0 — Profiles, main menu and campaign levels
 

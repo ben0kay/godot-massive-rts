@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" path="res://LEVELS/Catalog/CampaignCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="2"]
-[ext_resource type="Resource" path="res://LEVELS/Campaign001/Campaign001.tres" id="3"]
+[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Campaign001.tres" id="3"]
 
-[ext_resource type="Resource" path="res://LEVELS/OpenRTS/OpenRTS.tres" id="4"]
+[ext_resource type="Resource" path="res://LEVELS/FortressDefense/OpenRTS.tres" id="4"]
 
 [resource]
 script = ExtResource("1")

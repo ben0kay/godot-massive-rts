@@ -4,7 +4,7 @@
 **Branch:** main
 **Status:** Source implemented. Awaiting owner validation.
 
-**Implementation update:** The owner requested a blank `LEVELS/Level001/Level001.tscn` as the campaign destination. References below to the benchmark as the temporary Level 1 scene describe the original proposal. Campaign-only controls attach to the campaign-launched blank scene. The benchmark runs independently via F6. See [UI](README.md) and [LEVELS](../LEVELS/README.md) for the implemented layout.
+**Implementation update:** The owner requested a blank `LEVELS/PresetBattles/Level001/Level001.tscn` as the campaign destination. References below to the benchmark as the temporary Level 1 scene describe the original proposal. Campaign-only controls attach to the campaign-launched blank scene. The benchmark runs independently via F6. See [UI](README.md) and [LEVELS](../LEVELS/README.md) for the implemented layout.
 **Scope:** A thin and usable game shell in front of the existing Godot 4 C# 3D benchmark. ONE complete minimum vertical slice; do not implement the eventual full RTS game.
 
 ## 1. Owner intent and observed repo

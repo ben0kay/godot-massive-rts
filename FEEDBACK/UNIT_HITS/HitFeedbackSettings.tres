@@ -1,6 +1,0 @@
-[gd_resource type="Resource" script_class="HitFeedbackSettings" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://FEEDBACK/UNIT_HITS/HitFeedbackSettings.cs" id="1"]
-
-[resource]
-script = ExtResource("1")

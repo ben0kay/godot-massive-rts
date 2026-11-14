@@ -40,9 +40,9 @@ The goal is **careful implementation with minimal AI validation overhead**, foll
 
 ## Folder ownership, scenes and configuration
 
-**MANDATORY root-folder rule:** Major systems use **ALL-CAPS top-level folder names** (e.g. `BENCHMARK/`, `SIMULATION/`, `RENDERING/`, `COMBAT/`, `CAMERA/`, `UNITS/`, `FORMATIONS/`, `TERRAIN/`, `UI/`, `DEBUG/`, `NOTES/`, `TESTS/`). Keep each system's **subsystems within its parent folder**, with their own relevant scenes, C# scripts, resources and assets. Do not scatter feature files across the root or create generic top-level `Scripts/`, `Scenes/`, `Resources/` or `Managers/` dumping grounds. See the root README's folder example. The goal is fast human navigation and clear ownership, not deep architecture. Follow this structure for BENCH0 and later features.
+**MANDATORY root-folder rule:** Group battle mechanics under `GAMEPLAY/`, reusable map components under `WORLD/`, and rendering, feedback and cameras under `VISUALS/`. Keep playable scenes in root-level `LEVELS/`, grouped by game mode. Use `UI/` for menus and gameplay HUD, `SYSTEMS/` for shared services, `BENCHMARK/` for test scenes and diagnostics, and `addons/` for Godot editor plugins. Keep scripts, scenes, resources and assets with their owning feature.
 
-- **BENCH0 example:** `BENCHMARK/SCENES/`, `BENCHMARK/SCENARIOS/`, `BENCHMARK/UI/` and `BENCHMARK/CONFIG/`; shared batching/render logic under `RENDERING/`, shared soldier state and spatial logic under `SIMULATION/`, camera controls under `CAMERA/`. Organize by ownership; avoid duplicating the same system in multiple places.
+- **BENCH0 example:** `BENCHMARK/SCENES/`, `BENCHMARK/SCENARIOS/`, `BENCHMARK/UI/` and `BENCHMARK/CONFIG/`; shared batching/render logic under `VISUALS/RENDERING/`, shared soldier state and spatial logic under `GAMEPLAY/SIMULATION/`, camera controls under `VISUALS/CAMERA/`. Organize by ownership; avoid duplicating the same system in multiple places.
 - Only create subfolders that contain actual files. Small one-file subsystems can live directly inside their major folder. Avoid excessive nesting or boilerplate.
 
 - Document major implemented feature folders with a brief `README.md`: ownership, important files, data flow, configs and known limitations. Read existing docs first; update when behavior changes.
@@ -50,7 +50,7 @@ The goal is **careful implementation with minimal AI validation overhead**, foll
 - Keep systems modular and their lifecycles explicit. Plain `Node` containers are fine for scene organization, but container-only nodes don't need processing scripts. Avoid unnecessary autoloads and monolithic managers.
 - Prefer explicit signals, interfaces, callbacks or well-defined services over hard-coded scene-tree paths between features.
 - Keep **unit definitions** separate from **per-soldier runtime data**, and authoritative simulation outcomes separate from visual presentation.
-- Possible ownership: `BENCHMARK/` for reproducible scenarios, `SIMULATION/` for batched state/update scheduling, `UNITS/` for unit archetypes, `COMBAT/` for targeting/damage/projectiles, `RENDERING/` for MultiMesh/feedback, `FORMATIONS/` for deployment/orders, `TERRAIN/` for terrain and height, `UI/` for menus/HUD, `DEBUG/` for tooling, and `TESTS/` for bounded checks. **This list is guidance, not a mandate to create empty folders.**
+- Possible ownership: `BENCHMARK/` for reproducible scenarios, `GAMEPLAY/SIMULATION/` for batched state/update scheduling, `GAMEPLAY/UNITS/` for unit archetypes, `GAMEPLAY/COMBAT/` for targeting/damage/projectiles, `VISUALS/RENDERING/` for MultiMesh/feedback, `FORMATIONS/` for deployment/orders, `WORLD/TERRAIN/` for terrain and height, `UI/` for menus/HUD, `DEBUG/` for tooling, and `TESTS/` for bounded checks. **This list is guidance, not a mandate to create empty folders.**
 - Keep BENCH0 independently runnable and useful, even after real battle scenes exist. Don't couple foundational logic to one test arena, one archetype or one camera instance.
 - The separate sci-fi survival / tower-defense games are **reference projects only**; don't import their towers, economy, scene architecture or unrelated mechanics by default.
 

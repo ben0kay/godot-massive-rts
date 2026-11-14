@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://b5gkj5c5mcwjk"]
+
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "diamond_cavalry"
+DisplayName = "Cavalry"
+Role = "Fast close-range flanker"
+Shape = 3
+Width = 0.64
+Height = 0.3
+FootprintRadius = 0.63
+Health = 105.0
+Speed = 9.0
+AccelerationSecondsOverride = 3.0
+Damage = 14.0
+Interval = 0.8
+Reach = 1.9
+SizeMultiplier = 1.35
+TrampleEnabled = true
+TrampleDamageMultiplier = 1.0
+ChargeResistance = 0.35

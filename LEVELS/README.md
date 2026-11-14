@@ -4,10 +4,10 @@ Both Level 001 scenes start as a single editable `Node3D`:
 
 | Campaign mode | Stable campaign ID | Level 001 scene |
 | --- | --- | --- |
-| Open RTS | `OpenRTS` | `OpenRTS/Level001/Level001.tscn` |
-| Preset Battles | `Campaign001` | `Level001/Level001.tscn` |
+| Fortress Defense | `OpenRTS` | `FortressDefense/Level001/Level001.tscn` |
+| Preset Battles | `Campaign001` | `PresetBattles/Level001/Level001.tscn` |
 
-Open RTS Level 001 is reserved for manual terrain and object placement in Godot. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
+Fortress Defense Level 001 is reserved for manual terrain and object placement in Godot. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
 
 To add a level, author its scene and a `LevelDefinition` resource with a stable ID, display name, unique positive order, and scene path. Add the resource to the campaign's `Levels` array. Add modes as `CampaignDefinition` resources in `Catalog/DefaultCampaignCatalog.tres` in the order they should appear. The campaign menu orders levels by their authored order. The first level is unlocked, and each later level requires completion of its immediate predecessor.
 

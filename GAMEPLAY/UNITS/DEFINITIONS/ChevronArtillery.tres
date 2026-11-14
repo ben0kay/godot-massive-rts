@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/ArtilleryShell/ArtilleryShell.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+Id = "chevron_artillery"
+DisplayName = "Heavy Artillery"
+Role = "Long-range indirect explosive fire"
+Shape = 6
+Width = 1.92
+Height = 0.99
+Speed = 1.5
+Health = 350.0
+Armour = 0.15
+ChargeResistance = 1.2
+Style = 1
+Damage = 80.0
+Interval = 4.5
+Reach = 70.0
+Projectile = ExtResource("2")
+MinimumFireRange = 12.0
+RangedRecoilEnabled = true
+RangedRecoilDistance = 0.35
+RangedRecoilReturnSeconds = 0.4

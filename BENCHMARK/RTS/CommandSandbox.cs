@@ -36,7 +36,7 @@ public partial class CommandSandbox : Node3D
         });
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
-        var catalog = GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
+        var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
         units = new UnitState(CommandMovement.SquadSize, catalog) { Count = CommandMovement.SquadSize };
         movement = new CommandMovement(units);
         for (int i = 0; i < units.Count; i++)

@@ -109,7 +109,7 @@ At huge unit counts, production should eventually have sensible pacing/limits an
 **The owner's preference is to design the map by hand.** Open RTS **Level 001** must be a **separate Godot scene** that can be opened and edited directly in the editor. It should be safe to place/arrange terrain, obstacles, Carbon deposit nodes, Citadels, starting positions and future structures by editing scene data. These objects are planned content, not items to spawn or lock into a hard-coded layout today.
 
 - **Do not fill Level 001 with a random map**, a mandatory procedural seed, generic trees, or a copied benchmark arena. The scene can start intentionally empty.
-- Preset Battles keeps `LEVELS/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/OpenRTS/Level001/Level001.tscn`.
+- Preset Battles keeps `LEVELS/PresetBattles/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/FortressDefense/Level001/Level001.tscn`.
 - Gameplay controllers can be composed when those systems are authorized; future map props should preferably be normal editable Godot scenes/resources with exposed settings, not procedural coordinates buried in code.
 - Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with Preset Battles rather than duplicate a second engine.
 - **Important:** Recording this direction does not mean workers, Carbon extraction, buildings or actual RTS battle gameplay are implemented.
@@ -182,7 +182,7 @@ These are architectural constraints and experiments, **not a request to implemen
 
 ### Terrain source choices for the two modes
 
-Both modes share the same authoritative compiled heightfield, per [TERR1](TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Preset Battles (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
+Both modes share the same authoritative compiled heightfield, per [TERR1](WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Preset Battles (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
 
 ## 7. One simulation, separate optional mode systems
 
@@ -201,7 +201,7 @@ Both games should use the same core:
 
 Mode-only systems should be **uninitialized, disabled or otherwise genuinely dormant** when a mode does not use them—especially order queues, selection scans, economy ticks, production schedulers and UI refreshes. Do not scatter mode checks throughout every soldier's hot loop if a higher-level configuration can keep the common update path clean.
 
-Keep major systems in **UPPERCASE top-level folders** per `NOTES/CodePreferences.md`. `SIMULATION/`, `COMBAT/`, `RENDERING/`, `BENCHMARK/`, `DEPLOYMENT/` and `UNITS/` already provide relevant ownership. Future `FORMATIONS/`, `BUILDINGS/`, `ECONOMY/`, `GAME_MODES/` or selection-specific folders are only **possibilities**; create them when code actually belongs there, not to satisfy this document. Reuse established systems instead of duplicating them.
+Keep major systems in **UPPERCASE top-level folders** per `NOTES/CodePreferences.md`. `GAMEPLAY/SIMULATION/`, `GAMEPLAY/COMBAT/`, `VISUALS/RENDERING/`, `BENCHMARK/`, `GAMEPLAY/DEPLOYMENT/` and `GAMEPLAY/UNITS/` already provide relevant ownership. Future `FORMATIONS/`, `WORLD/BUILDINGS/`, `ECONOMY/`, `GAME_MODES/` or selection-specific folders are only **possibilities**; create them when code actually belongs there, not to satisfy this document. Reuse established systems instead of duplicating them.
 
 Small-count buildings may have scene nodes if appropriate; the prohibition is on **one full Godot object graph per soldier** at enormous scale.
 

@@ -67,7 +67,7 @@ public partial class BenchmarkArena : Node3D
     {
         var simulationSettings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         float movementScale = simulationSettings.EffectiveMovementSpeedMultiplier;
-        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile(movementScale);
+        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile(movementScale);
         // Keep the distance cap implied by the authored projectile lifetime.
         projectileLifetime = Config.ProjectileLifetime / movementScale;
         soldierMeshes = FacetedSoldierMeshes.Create(catalog);
@@ -107,7 +107,7 @@ public partial class BenchmarkArena : Node3D
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.29f, 0.30f, 0.32f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"));
+        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"));
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         // Keep the gameplay bar separate from BENCHMARK's developer panels.

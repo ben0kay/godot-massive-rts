@@ -11,8 +11,8 @@ public partial class UnitEditorPanel : VBoxContainer
 {
     internal sealed record Draft(string Path, string Hash, Resource Definition);
     private sealed record Entry(string Path, string Id, string Name, string Kind, bool Defense);
-    private const string CatalogPath = "res://UNITS/CATALOG/DefaultUnitCatalog.tres";
-    private const string DefenseCatalogPath = "res://BUILDINGS/CATALOG/DefaultBuildingCatalog.tres";
+    private const string CatalogPath = "res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres";
+    private const string DefenseCatalogPath = "res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres";
     private readonly OptionButton category = new();
     private bool showDefenses;
     private HFlowContainer overlays;
