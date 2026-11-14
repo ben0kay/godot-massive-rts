@@ -54,6 +54,7 @@ public partial class BenchmarkPanel : CanvasLayer
     public readonly OptionButton TerrainChoice = new();
     public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
     public readonly OptionButton BrushChoice = new();
+    public readonly OptionButton SoldierPaintType = new();
     public readonly OptionButton SoldierBrushSizeChoice = new();
     public readonly OptionButton FactionChoice = new();
     private VBoxContainer paintControls, paintSection;
@@ -214,10 +215,15 @@ public partial class BenchmarkPanel : CanvasLayer
         for (int type = 0; type < Catalog.Count; type++)
             BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
         Field(soldierControls, "Soldier type", BrushChoice);
+        SoldierPaintType.AddItem("Brush");
+        SoldierPaintType.AddItem("Filled rectangle");
+        SoldierPaintType.Select(0);
+        Field(soldierControls, "Paint type", SoldierPaintType);
         foreach (int size in new[] { 1, 3, 5, 10 })
             SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
         SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
-        Field(soldierControls, "Paint size", SoldierBrushSizeChoice);
+        var brushSizeRow = Field(soldierControls, "Paint size", SoldierBrushSizeChoice);
+        SoldierPaintType.ItemSelected += index => brushSizeRow.Visible = index == 0;
         var density = new HBoxContainer();
         var spreadLabel = new Label { Text = "1.0×" };
         density.AddChild(PaintSpread);

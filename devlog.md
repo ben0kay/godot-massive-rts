@@ -183,3 +183,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — BENCH Paint UI: Replaced the Paint tool dropdown with mutually exclusive radio-style buttons, moved Paint faction above Soldier type and removed the redundant soldier drag/erase help line. Painting behavior and deployment saves unchanged; awaiting owner UI check.
 
 - 2026-11-14 — DEATH1: Added bounded soldier shrink and puff feedback with a live toggle, plus footprint-aware painted soldier spacing and compatible deployment loading.
+
+- 2026-11-14 — BENCH0: Added a filled soldier rectangle tool using the obstacle drag interaction and footprint-aware paint density.

@@ -17,6 +17,14 @@ public partial class DeploymentPainter : Node3D
     public byte BrushType { get; set; }
     // Number of placement cells per side; defaults to the original 3×3 brush.
     public float SoldierBrushSpread { get; set; } = 1f;
+    private bool fillSoldierRectangle;
+
+    public void SetSoldierPaintType(long index)
+    {
+        CancelDrag();
+        fillSoldierRectangle = index == 1;
+    }
+
     public int SoldierBrushSize { get; set; } = 3;
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
@@ -100,7 +108,12 @@ public partial class DeploymentPainter : Node3D
         }
         if (paintTool == 1)
         {
-            HandleObstacleInput(input);
+            HandleRectangleInput(input, soldiers: false);
+            return;
+        }
+        if (fillSoldierRectangle)
+        {
+            HandleRectangleInput(input, soldiers: true);
             return;
         }
         Vector2 screen;
@@ -153,13 +166,7 @@ public partial class DeploymentPainter : Node3D
             for (int z = first; z < first + side; z++)
             for (int x = first; x < first + side; x++)
             {
-                var point = center + new Vector2I(x * stride, z * stride);
-                bool existed = Layout.TryGet(point, out SoldierPlacement previous);
-                var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
-                if (!Layout.TryPaint(placement, out _)) continue;
-                if (existed) previews[previous.Type].Remove(point);
-                previews[placement.Type].Add(placement);
-                changed = true;
+                changed |= PaintSoldier(center + new Vector2I(x * stride, z * stride));
             }
         }
         if (changed) Changed?.Invoke();
@@ -221,7 +228,7 @@ public partial class DeploymentPainter : Node3D
             Callable.From(() => { if (dragging && !Input.IsMouseButtonPressed(dragButton)) CancelDrag(); }).CallDeferred();
     }
 
-    private void HandleObstacleInput(InputEvent input)
+    private void HandleRectangleInput(InputEvent input, bool soldiers)
     {
         if (input is InputEventMouseButton button &&
             (button.ButtonIndex == MouseButton.Left || button.ButtonIndex == MouseButton.Right))
@@ -233,13 +240,20 @@ public partial class DeploymentPainter : Node3D
                 if (!first.IsValid) return;
                 dragging = true;
                 dragButton = button.ButtonIndex;
-                ShowRectangle(first);
+                ShowDragRectangle(first, soldiers);
             }
             else if (dragging && button.ButtonIndex == dragButton)
             {
                 CancelDrag();
                 if (!TryCell(button.Position, out Vector2I end)) return;
-                if (Layout.TryEditObstacles(DragArea(end), dragButton == MouseButton.Right, out string message))
+                var area = DragArea(end);
+                bool erase = dragButton == MouseButton.Right;
+                if (soldiers)
+                {
+                    EditSoldierRectangle(area, erase);
+                    return;
+                }
+                if (Layout.TryEditObstacles(area, erase, out string message))
                 {
                     RebuildWalls();
                     Changed?.Invoke();
@@ -248,13 +262,69 @@ public partial class DeploymentPainter : Node3D
             }
         }
         else if (dragging && input is InputEventMouseMotion motion && TryCell(motion.Position, out Vector2I hover))
-            ShowRectangle(DragArea(hover));
+            ShowDragRectangle(DragArea(hover), soldiers);
+    }
+
+    private void EditSoldierRectangle(ObstacleRectangle area, bool erase)
+    {
+        bool changed = false;
+        if (erase)
+        {
+            for (int i = Layout.Placements.Count - 1; i >= 0; i--)
+            {
+                SoldierPlacement previous = Layout.Placements[i];
+                Vector2 point = ObstacleField.Xz(previous.Position());
+                if (point.X < area.Min.X || point.Y < area.Min.Y || point.X >= area.Max.X || point.Y >= area.Max.Y) continue;
+                var key = new Vector2I(previous.X, previous.Z);
+                Layout.TryErase(key, out _);
+                previews[previous.Type].Remove(key);
+                changed = true;
+            }
+        }
+        else
+        {
+            int subdivisions = DeploymentLayout.SoldierSubdivisions;
+            int stride = Mathf.Max(Mathf.RoundToInt(SoldierBrushSpread * subdivisions),
+                Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / DeploymentLayout.SoldierStep));
+            int spanX = area.Width * subdivisions - subdivisions / 2;
+            int spanZ = area.Depth * subdivisions - subdivisions / 2;
+            long columns = (spanX + stride - 1) / stride;
+            long rows = (spanZ + stride - 1) / stride;
+            if (columns * rows > 100_000)
+            {
+                EditRejected?.Invoke("Rectangle exceeds 100,000 placement positions. Use a smaller area or wider spacing.");
+                return;
+            }
+            // Anchor the pattern to the first cell inside the rectangle, regardless of drag direction.
+            for (int z = area.Z * subdivisions; z < (area.Z + area.Depth) * subdivisions - subdivisions / 2; z += stride)
+            for (int x = area.X * subdivisions; x < (area.X + area.Width) * subdivisions - subdivisions / 2; x += stride)
+                changed |= PaintSoldier(new Vector2I(x, z));
+        }
+        if (changed) Changed?.Invoke();
+    }
+
+    private bool PaintSoldier(Vector2I point)
+    {
+        bool existed = Layout.TryGet(point, out SoldierPlacement previous);
+        var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
+        if (!Layout.TryPaint(placement, out _)) return false;
+        if (existed) previews[previous.Type].Remove(point);
+        previews[placement.Type].Add(placement);
+        return true;
+    }
+
+    private void ShowDragRectangle(ObstacleRectangle area, bool soldiers)
+    {
+        ShowRectangle(area);
+        if (!soldiers) return;
+        rectanglePreview.Scale = new Vector3(rectanglePreview.Scale.X, 0.02f, rectanglePreview.Scale.Z);
+        rectanglePreview.Position = new Vector3(rectanglePreview.Position.X, 0.055f, rectanglePreview.Position.Z);
     }
 
     private ObstacleRectangle DragArea(Vector2I end)
     {
-        end.X = Mathf.Clamp(end.X, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth);
-        end.Y = Mathf.Clamp(end.Y, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth);
+        end.X = Mathf.Clamp(end.X, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth - 1);
+        end.Y = Mathf.Clamp(end.Y, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth - 1);
         return new ObstacleRectangle(Mathf.Min(dragStart.X, end.X), Mathf.Min(dragStart.Y, end.Y),
             Mathf.Abs(dragStart.X - end.X) + 1, Mathf.Abs(dragStart.Y - end.Y) + 1);
     }
