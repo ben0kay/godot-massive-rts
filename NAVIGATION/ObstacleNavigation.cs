@@ -295,7 +295,7 @@ public sealed class ObstacleNavigation
 
         private void AddCorner(List<Vector2> corners, ObstacleField field, Vector2 point)
         {
-            float edge = DeploymentLayout.HalfWidth * DeploymentLayout.CellSize - Radius;
+            float edge = field.Boundary - Radius;
             if (Mathf.Abs(point.X) <= edge && Mathf.Abs(point.Y) <= edge && !field.IntersectsCircle(point, Radius))
                 corners.Add(point);
         }

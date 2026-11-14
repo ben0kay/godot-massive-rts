@@ -10,12 +10,14 @@ public readonly record struct ObstacleRectangle(
     [property: JsonRequired] int X, [property: JsonRequired] int Z,
     [property: JsonRequired] int Width, [property: JsonRequired] int Depth)
 {
-    [JsonIgnore] public Vector2 Min => new Vector2(X, Z) * DeploymentLayout.CellSize;
-    [JsonIgnore] public Vector2 Max => new Vector2(X + Width, Z + Depth) * DeploymentLayout.CellSize;
+    [JsonIgnore] public float GridSize { get; init; } = DeploymentLayout.CellSize;
+    [JsonIgnore] private int HalfWidth => DeploymentLayout.CellHalfWidth(GridSize);
+    [JsonIgnore] public Vector2 Min => new Vector2(X, Z) * GridSize;
+    [JsonIgnore] public Vector2 Max => new Vector2(X + Width, Z + Depth) * GridSize;
 
     [JsonIgnore] public bool IsValid => Width > 0 && Depth > 0 &&
-        X >= -DeploymentLayout.HalfWidth && Z >= -DeploymentLayout.HalfWidth &&
-        (long)X + Width <= DeploymentLayout.HalfWidth && (long)Z + Depth <= DeploymentLayout.HalfWidth;
+        X >= -HalfWidth && Z >= -HalfWidth &&
+        (long)X + Width <= HalfWidth && (long)Z + Depth <= HalfWidth;
 }
 
 public sealed class ObstacleLayout
@@ -23,12 +25,14 @@ public sealed class ObstacleLayout
     public const int MaxCells = 65536;
     public const int MaxRectangles = 64;
     private readonly HashSet<Vector2I> cells;
+    private readonly float gridSize;
     public ObstacleField Field { get; }
 
-    public ObstacleLayout() : this(new(), Array.Empty<ObstacleRectangle>()) { }
+    public ObstacleLayout(float gridSize = DeploymentLayout.CellSize) : this(new(), Array.Empty<ObstacleRectangle>(), gridSize) { }
 
-    private ObstacleLayout(HashSet<Vector2I> cells, ObstacleRectangle[] rectangles)
+    private ObstacleLayout(HashSet<Vector2I> cells, ObstacleRectangle[] rectangles, float gridSize)
     {
+        this.gridSize = gridSize;
         this.cells = cells;
         Field = rectangles.Length == 0 ? null : new ObstacleField(rectangles);
     }
@@ -46,25 +50,26 @@ public sealed class ObstacleLayout
             changed |= erase ? draft.Remove(cell) : draft.Add(cell);
             if (draft.Count > MaxCells) return false;
         }
-        return !changed || TryCompile(draft, out edited);
+        return !changed || TryCompile(draft, gridSize, out edited);
     }
 
-    public static bool TryLoad(ObstacleRectangle[] rectangles, out ObstacleLayout layout)
+    public static bool TryLoad(ObstacleRectangle[] rectangles, float gridSize, out ObstacleLayout layout)
     {
         layout = null;
         if (rectangles == null || rectangles.Length > MaxRectangles) return false;
         var draft = new HashSet<Vector2I>();
-        foreach (ObstacleRectangle rect in rectangles)
+        foreach (ObstacleRectangle saved in rectangles)
         {
+            var rect = saved with { GridSize = gridSize };
             if (!rect.IsValid || (long)rect.Width * rect.Depth > MaxCells - draft.Count) return false;
             for (int z = rect.Z; z < rect.Z + rect.Depth; z++)
             for (int x = rect.X; x < rect.X + rect.Width; x++)
                 if (!draft.Add(new Vector2I(x, z))) return false;
         }
-        return TryCompile(draft, out layout);
+        return TryCompile(draft, gridSize, out layout);
     }
 
-    private static bool TryCompile(HashSet<Vector2I> cells, out ObstacleLayout layout)
+    private static bool TryCompile(HashSet<Vector2I> cells, float gridSize, out ObstacleLayout layout)
     {
         layout = null;
         var remaining = new HashSet<Vector2I>(cells);
@@ -87,9 +92,9 @@ public sealed class ObstacleLayout
             for (int z = 0; z < depth; z++)
             for (int x = 0; x < width; x++)
                 remaining.Remove(first + new Vector2I(x, z));
-            rectangles.Add(new ObstacleRectangle(first.X, first.Y, width, depth));
+            rectangles.Add(new ObstacleRectangle(first.X, first.Y, width, depth) { GridSize = gridSize });
         }
-        layout = new ObstacleLayout(cells, rectangles.ToArray());
+        layout = new ObstacleLayout(cells, rectangles.ToArray(), gridSize);
         return true;
     }
 }

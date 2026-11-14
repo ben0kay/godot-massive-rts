@@ -567,7 +567,7 @@ public partial class BenchmarkArena : Node3D
 
     private bool ValidGroundPoint(Vector3 position, float radius)
     {
-        float edge = DeploymentLayout.HalfWidth * DeploymentLayout.CellSize;
+        float edge = obstacles.Boundary;
         return Mathf.Abs(position.X) + radius <= edge && Mathf.Abs(position.Z) + radius <= edge &&
             !obstacles.IntersectsCircle(ObstacleField.Xz(position), radius);
     }

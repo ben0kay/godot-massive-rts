@@ -49,7 +49,7 @@ public sealed class RuntimeBuildingCatalog
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
     float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers);
 
-public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type)
+public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type, float GridSize = DeploymentLayout.CellSize)
 {
-    public ObstacleRectangle Footprint(RuntimeBuildingCatalog catalog) => new(X, Z, catalog[Type].Width, catalog[Type].Depth);
+    public ObstacleRectangle Footprint(RuntimeBuildingCatalog catalog) => new ObstacleRectangle(X, Z, catalog[Type].Width, catalog[Type].Depth) { GridSize = this.GridSize };
 }

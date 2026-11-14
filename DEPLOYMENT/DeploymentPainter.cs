@@ -68,13 +68,13 @@ public partial class DeploymentPainter : Node3D
         previews = new DeploymentPreview[catalog.Count];
         for (int i = 0; i < previews.Length; i++)
             previews[i] = new DeploymentPreview(this, shapes[i], catalog[i].Height);
-        // Shader draws the same 2.1-unit boundaries used by TryCell and obstacle footprints.
+        // Shader draws the same cell boundaries used by TryCell and obstacle footprints.
         // One flat surface; no per-cell nodes, physics, or mesh rebuilds while panning.
         var gridMaterial = new ShaderMaterial
         {
             Shader = GD.Load<Shader>("res://DEPLOYMENT/PlacementGrid.gdshader")
         };
-        gridMaterial.SetShaderParameter("cell_size", DeploymentLayout.CellSize);
+        gridMaterial.SetShaderParameter("cell_size", Layout.GridSize);
         placementGrid = new MeshInstance3D
         {
             Name = "PlacementGrid",
@@ -143,9 +143,9 @@ public partial class DeploymentPainter : Node3D
         int subdivisions = DeploymentLayout.SoldierSubdivisions;
         float spread = Mathf.Clamp(SoldierBrushSpread, 0f, 3f);
         int stride = Mathf.Max(Mathf.RoundToInt(spread * subdivisions),
-            Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / DeploymentLayout.SoldierStep));
+            Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / Layout.SoldierStep));
         // Keep the original cell alignment at default spacing.
-        float xCell = ground.X / DeploymentLayout.CellSize, zCell = ground.Z / DeploymentLayout.CellSize;
+        float xCell = ground.X / Layout.GridSize, zCell = ground.Z / Layout.GridSize;
         Vector2I center = spread == 1f
             ? new Vector2I(Mathf.FloorToInt(xCell), Mathf.FloorToInt(zCell)) * subdivisions
             : new Vector2I(Mathf.RoundToInt((xCell - 0.5f) * subdivisions / stride),
@@ -182,7 +182,7 @@ public partial class DeploymentPainter : Node3D
         if ((uint)DefenseType >= (uint)buildings.Count) return;
         if (input is InputEventMouseMotion motion && TryCell(motion.Position, out var hover))
         {
-            var draft = new BuildingPlacement(hover.X, hover.Y, BrushFaction, DefenseType);
+            var draft = new BuildingPlacement(hover.X, hover.Y, BrushFaction, DefenseType, Layout.GridSize);
             if (Layout.CanPlaceDefense(draft)) ShowRectangle(draft.Footprint(buildings));
             else rectanglePreview.Hide();
             return;
@@ -193,7 +193,7 @@ public partial class DeploymentPainter : Node3D
         bool changed;
         if (button.ButtonIndex == MouseButton.Left)
         {
-            changed = Layout.TryPlaceDefense(new BuildingPlacement(cell.X, cell.Y, BrushFaction, DefenseType));
+            changed = Layout.TryPlaceDefense(new BuildingPlacement(cell.X, cell.Y, BrushFaction, DefenseType, Layout.GridSize));
             if (!changed) EditRejected?.Invoke("Defense overlaps a footprint, is outside the field, or the defense limit was reached.");
         }
         else if (button.ButtonIndex == MouseButton.Right) changed = Layout.TryEraseDefense(cell);
@@ -211,8 +211,8 @@ public partial class DeploymentPainter : Node3D
     {
         cell = default;
         if (!TryGround(screen, out Vector3 ground)) return false;
-        cell = new Vector2I(Mathf.FloorToInt(ground.X / DeploymentLayout.CellSize),
-            Mathf.FloorToInt(ground.Z / DeploymentLayout.CellSize));
+        cell = new Vector2I(Mathf.FloorToInt(ground.X / Layout.GridSize),
+            Mathf.FloorToInt(ground.Z / Layout.GridSize));
         return true;
     }
 
@@ -241,7 +241,7 @@ public partial class DeploymentPainter : Node3D
             if (button.Pressed)
             {
                 if (dragging || !TryCell(button.Position, out dragStart)) return;
-                var first = new ObstacleRectangle(dragStart.X, dragStart.Y, 1, 1);
+                var first = new ObstacleRectangle(dragStart.X, dragStart.Y, 1, 1) { GridSize = Layout.GridSize };
                 if (!first.IsValid) return;
                 dragging = true;
                 dragButton = button.ButtonIndex;
@@ -290,7 +290,7 @@ public partial class DeploymentPainter : Node3D
         {
             int subdivisions = DeploymentLayout.SoldierSubdivisions;
             int stride = Mathf.Max(Mathf.RoundToInt(SoldierBrushSpread * subdivisions),
-                Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / DeploymentLayout.SoldierStep));
+                Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / Layout.SoldierStep));
             int spanX = area.Width * subdivisions - subdivisions / 2;
             int spanZ = area.Depth * subdivisions - subdivisions / 2;
             long columns = (spanX + stride - 1) / stride;
@@ -311,7 +311,7 @@ public partial class DeploymentPainter : Node3D
     private bool PaintSoldier(Vector2I point)
     {
         bool existed = Layout.TryGet(point, out SoldierPlacement previous);
-        var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType);
+        var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType, Layout.GridSize);
         if (!Layout.TryPaint(placement, out _)) return false;
         if (existed) previews[previous.Type].Remove(point);
         previews[placement.Type].Add(placement);
@@ -329,10 +329,10 @@ public partial class DeploymentPainter : Node3D
 
     private ObstacleRectangle DragArea(Vector2I end)
     {
-        end.X = Mathf.Clamp(end.X, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth - 1);
-        end.Y = Mathf.Clamp(end.Y, -DeploymentLayout.HalfWidth, DeploymentLayout.HalfWidth - 1);
+        end.X = Mathf.Clamp(end.X, -Layout.HalfWidth, Layout.HalfWidth - 1);
+        end.Y = Mathf.Clamp(end.Y, -Layout.HalfWidth, Layout.HalfWidth - 1);
         return new ObstacleRectangle(Mathf.Min(dragStart.X, end.X), Mathf.Min(dragStart.Y, end.Y),
-            Mathf.Abs(dragStart.X - end.X) + 1, Mathf.Abs(dragStart.Y - end.Y) + 1);
+            Mathf.Abs(dragStart.X - end.X) + 1, Mathf.Abs(dragStart.Y - end.Y) + 1) { GridSize = Layout.GridSize };
     }
 
     private void ShowRectangle(ObstacleRectangle area)
@@ -348,7 +348,8 @@ public partial class DeploymentPainter : Node3D
     public void Clear()
     {
         CancelDrag();
-        Layout.Clear();
+        Layout = new DeploymentLayout(catalog, buildings);
+        ((ShaderMaterial)placementGrid.MaterialOverride).SetShaderParameter("cell_size", Layout.GridSize);
         RebuildWalls();
         RefreshDefenses();
         foreach (DeploymentPreview preview in previews) preview.Clear();
@@ -361,7 +362,7 @@ public partial class DeploymentPainter : Node3D
     private sealed record SavedDefense(int X, int Z, byte Faction, string BuildingId);
     public sealed record BattleSettings(int Seed, GuardOrder[] Orders, float GuardRadius);
     private sealed record SavedDeployment(int Version, SavedPlacement[] Placements, ObstacleRectangle[] Obstacles,
-        SavedDefense[] Defenses, BattleSettings Battle = null);
+        SavedDefense[] Defenses, BattleSettings Battle = null, float GridSize = DeploymentLayout.LegacyCellSize);
     private readonly record struct LegacyPlacement(int X, int Z, byte Faction, byte Kind);
 
     public string Save() => Save(SavePath, null);
@@ -382,8 +383,8 @@ public partial class DeploymentPainter : Node3D
             var building = Layout.Defenses[i];
             defenses[i] = new SavedDefense(building.X, building.Z, building.Faction, buildings[building.Type].Id);
         }
-        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(4, saved, Layout.Obstacles.Field == null
-            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses, battle)));
+        file.StoreString(JsonSerializer.Serialize(new SavedDeployment(5, saved, Layout.Obstacles.Field == null
+            ? System.Array.Empty<ObstacleRectangle>() : Layout.Obstacles.Field.Rectangles.ToArray(), defenses, battle, Layout.GridSize)));
         return file.GetError() == Error.Ok ? "Deployment saved." : "Could not write deployment.";
     }
 
@@ -393,6 +394,7 @@ public partial class DeploymentPainter : Node3D
         if (loaded == null) return message;
         CancelDrag();
         Layout = loaded;
+        ((ShaderMaterial)placementGrid.MaterialOverride).SetShaderParameter("cell_size", Layout.GridSize);
         RebuildWalls();
         RefreshDefenses();
         foreach (DeploymentPreview preview in previews) preview.Clear();
@@ -408,12 +410,13 @@ public partial class DeploymentPainter : Node3D
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         if (file == null) return "No readable saved deployment.";
 
-        var validated = new DeploymentLayout(catalog, buildings);
+        DeploymentLayout validated;
         try
         {
             using var document = JsonDocument.Parse(file.GetAsText());
             if (document.RootElement.ValueKind == JsonValueKind.Array)
             {
+                validated = new DeploymentLayout(catalog, buildings, DeploymentLayout.LegacyCellSize);
                 var legacy = document.RootElement.Deserialize<LegacyPlacement[]>();
                 foreach (LegacyPlacement placement in legacy)
                 {
@@ -430,10 +433,14 @@ public partial class DeploymentPainter : Node3D
             else
             {
                 var saved = document.RootElement.Deserialize<SavedDeployment>();
-                if (saved == null || saved.Version is not (1 or 2 or 3 or 4) || saved.Placements == null) return "Unsupported deployment format.";
+                if (saved == null || saved.Version is not (1 or 2 or 3 or 4 or 5) || saved.Placements == null) return "Unsupported deployment format.";
+                float gridSize = saved.Version < 5 ? DeploymentLayout.LegacyCellSize : saved.GridSize;
+                if (gridSize != DeploymentLayout.CellSize && gridSize != DeploymentLayout.LegacyCellSize)
+                    return "Unsupported deployment grid size.";
+                validated = new DeploymentLayout(catalog, buildings, gridSize);
                 if (saved.Version >= 2)
                 {
-                    if (!ObstacleLayout.TryLoad(saved.Obstacles, out ObstacleLayout obstacles))
+                    if (!ObstacleLayout.TryLoad(saved.Obstacles, gridSize, out ObstacleLayout obstacles))
                         return "Saved deployment contains invalid obstacle rectangles.";
                     validated.SetLoadedObstacles(obstacles);
                 }
@@ -443,7 +450,7 @@ public partial class DeploymentPainter : Node3D
                         return "Saved deployment contains invalid defenses.";
                     foreach (var defense in saved.Defenses)
                         if (defense == null || !buildings.TryResolve(defense.BuildingId, out int type) ||
-                            !validated.TryPlaceDefense(new BuildingPlacement(defense.X, defense.Z, defense.Faction, type)))
+                            !validated.TryPlaceDefense(new BuildingPlacement(defense.X, defense.Z, defense.Faction, type, gridSize)))
                             return "Saved deployment contains invalid defenses.";
                 }
                 if (saved.Battle != null)
@@ -458,7 +465,7 @@ public partial class DeploymentPainter : Node3D
                 foreach (SavedPlacement placement in saved.Placements)
                 {
                     if (placement == null || !catalog.TryResolve(placement.UnitId, out byte type) ||
-                        !TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type, saved.Version == 4))
+                        !TryLoadPlacement(validated, placement.X, placement.Z, placement.Faction, type, saved.Version >= 4))
                         return "Saved deployment contains invalid placements.";
                 }
             }
@@ -476,12 +483,12 @@ public partial class DeploymentPainter : Node3D
     {
         if (!fine)
         {
-            if (x < -DeploymentLayout.HalfWidth || x >= DeploymentLayout.HalfWidth ||
-                z < -DeploymentLayout.HalfWidth || z >= DeploymentLayout.HalfWidth) return false;
+            if (x < -draft.HalfWidth || x >= draft.HalfWidth ||
+                z < -draft.HalfWidth || z >= draft.HalfWidth) return false;
             x *= DeploymentLayout.SoldierSubdivisions;
             z *= DeploymentLayout.SoldierSubdivisions;
         }
         return !draft.TryGet(new Vector2I(x, z), out _) &&
-            draft.TryPaint(new SoldierPlacement(x, z, faction, type), out _);
+            draft.TryPaint(new SoldierPlacement(x, z, faction, type, draft.GridSize), out _);
     }
 }

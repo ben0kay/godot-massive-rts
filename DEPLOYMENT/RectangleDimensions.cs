@@ -17,15 +17,15 @@ public partial class RectangleDimensions : Node2D
         camera = view;
         min = area.Min;
         max = area.Max;
-        widthText = Format(area.Width);
-        lengthText = Format(area.Depth);
+        widthText = Format(area.Width, area.GridSize);
+        lengthText = Format(area.Depth, area.GridSize);
         Show();
         SetProcess(true);
         QueueRedraw();
     }
 
-    private static string Format(int cells) =>
-        (cells * DeploymentLayout.CellSize).ToString("0.##", CultureInfo.InvariantCulture) + " u";
+    private static string Format(int cells, float gridSize) =>
+        (cells * gridSize).ToString("0.##", CultureInfo.InvariantCulture) + " u";
 
     public void Clear()
     {

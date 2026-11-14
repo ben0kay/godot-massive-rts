@@ -193,3 +193,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — BENCH0: Added named local presets for replaying painted battles with their original placements, orders, guard radius, and seed.
 
 - 2026-11-14 — BENCH0: Added live width and length arrows to painted rectangle previews.
+
+- 2026-11-14 — BENCH0: New deployments use 2-world-unit cells. Version 5 saves retain each layout’s grid size and legacy battles keep their original geometry.

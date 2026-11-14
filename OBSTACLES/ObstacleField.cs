@@ -45,8 +45,12 @@ public sealed class ObstacleField
         sample.Timed++;
     }
 
+    public float Boundary { get; }
+
     public ObstacleField(ObstacleRectangle[] rectangles)
     {
+        float gridSize = rectangles.Length > 0 ? rectangles[0].GridSize : DeploymentLayout.CellSize;
+        Boundary = DeploymentLayout.CellHalfWidth(gridSize) * gridSize;
         this.rectangles = (ObstacleRectangle[])rectangles.Clone();
         var boxes = new Box[rectangles.Length];
         for (int i = 0; i < boxes.Length; i++) boxes[i] = new Box(rectangles[i].Min, rectangles[i].Max);
@@ -141,7 +145,7 @@ public sealed class ObstacleField
     private Vector2 ClipMoveCore(Vector2 from, Vector2 to, float radius)
     {
         if (from == to) return to;
-        float edge = DeploymentLayout.HalfWidth * DeploymentLayout.CellSize - radius;
+        float edge = Boundary - radius;
         Vector2 delta = to - from;
         float limit = Mathf.Min(BoundaryFraction(from.X, to.X, delta.X, edge),
             BoundaryFraction(from.Y, to.Y, delta.Y, edge));

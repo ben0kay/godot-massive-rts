@@ -4,20 +4,24 @@ using Godot;
 
 namespace MassiveRts;
 
-public readonly record struct SoldierPlacement(int X, int Z, byte Faction, byte Type)
+public readonly record struct SoldierPlacement(int X, int Z, byte Faction, byte Type, float GridSize = DeploymentLayout.CellSize)
 {
     public Vector3 Position() => new(
-        (X / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * DeploymentLayout.CellSize, 0,
-        (Z / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * DeploymentLayout.CellSize);
+        (X / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * GridSize, 0,
+        (Z / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * GridSize);
 }
 
 public sealed class DeploymentLayout
 {
-    public const float CellSize = 2.1f;
+    public const float CellSize = 2f;
+    public const float LegacyCellSize = 2.1f;
+    public const float WorldHalfWidth = 2500f;
+    public static int CellHalfWidth(float gridSize) => (int)(WorldHalfWidth / gridSize);
     public const int SoldierSubdivisions = 40;
-    public const float SoldierStep = CellSize / SoldierSubdivisions;
-    public const int HalfWidth = 1190; // 2.1-unit cells spanning the 5,000-unit battlefield.
-    private const int SoldierBoundary = HalfWidth * SoldierSubdivisions;
+    public float GridSize { get; }
+    public float SoldierStep => GridSize / SoldierSubdivisions;
+    public int HalfWidth => CellHalfWidth(GridSize);
+    private int SoldierBoundary => HalfWidth * SoldierSubdivisions;
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
     private readonly Dictionary<Vector2I, List<Vector2I>> soldierBuckets = new();
@@ -26,7 +30,7 @@ public sealed class DeploymentLayout
     private static Vector2I Bucket(Vector2I point) => new(
         Mathf.FloorToInt(point.X / (float)SoldierSubdivisions + 0.5f),
         Mathf.FloorToInt(point.Y / (float)SoldierSubdivisions + 0.5f));
-    public ObstacleLayout Obstacles { get; private set; } = new();
+    public ObstacleLayout Obstacles { get; private set; }
 
     public const int MaxBuildings = 64;
     private readonly RuntimeBuildingCatalog buildings;
@@ -34,8 +38,10 @@ public sealed class DeploymentLayout
     public IReadOnlyList<BuildingPlacement> Defenses => defenses;
     public ObstacleField CollisionField { get; private set; }
 
-    public DeploymentLayout(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings)
+    public DeploymentLayout(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, float gridSize = CellSize)
     {
+        GridSize = gridSize;
+        Obstacles = new ObstacleLayout(gridSize);
         this.catalog = catalog;
         this.buildings = buildings;
     }
@@ -65,7 +71,7 @@ public sealed class DeploymentLayout
         foreach (var defense in defenses)
             if (Overlaps(area, defense.Footprint(buildings))) return false;
 
-        int padding = Mathf.CeilToInt(catalog.MaxFootprint / CellSize);
+        int padding = Mathf.CeilToInt(catalog.MaxFootprint / GridSize);
         for (int z = area.Z - padding; z < area.Z + area.Depth + padding; z++)
         for (int x = area.X - padding; x < area.X + area.Width + padding; x++)
         {
@@ -93,7 +99,7 @@ public sealed class DeploymentLayout
     public bool TryEraseDefense(Vector2I cell)
     {
         int index = defenses.FindIndex(defense => Overlaps(defense.Footprint(buildings),
-            new ObstacleRectangle(cell.X, cell.Y, 1, 1)));
+            new ObstacleRectangle(cell.X, cell.Y, 1, 1) { GridSize = GridSize }));
         if (index < 0) return false;
         defenses.RemoveAt(index);
         RebuildCollision();
@@ -126,13 +132,13 @@ public sealed class DeploymentLayout
         var cell = new Vector2I(placement.X, placement.Z);
         float radius = catalog[placement.Type].Footprint;
         Vector3 position = placement.Position();
-        float edge = HalfWidth * CellSize;
+        float edge = HalfWidth * GridSize;
         if (Mathf.Abs(position.X) + radius > edge || Mathf.Abs(position.Z) + radius > edge) return false;
 
         if (CollisionField?.IntersectsCircle(ObstacleField.Xz(position), radius) == true) return false;
 
         Vector2I center = Bucket(cell);
-        int extent = Mathf.CeilToInt((radius + catalog.MaxFootprint) / CellSize);
+        int extent = Mathf.CeilToInt((radius + catalog.MaxFootprint) / GridSize);
         for (int z = center.Y - extent; z <= center.Y + extent; z++)
         for (int x = center.X - extent; x <= center.X + extent; x++)
         {
@@ -217,7 +223,7 @@ public sealed class DeploymentLayout
 
     public void Clear()
     {
-        Obstacles = new ObstacleLayout();
+        Obstacles = new ObstacleLayout(GridSize);
         CollisionField = null;
         defenses.Clear();
         placements.Clear();
