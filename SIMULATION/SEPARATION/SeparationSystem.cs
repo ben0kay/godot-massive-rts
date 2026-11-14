@@ -220,41 +220,40 @@ public sealed class SeparationSystem
                 if (total <= budget)
                 {
                     candidateTotal += total;
-                    for (int j = firstA; j < endA; j++)
-                    {
-                        float dx = xi - sx[j], dz = zi - sz[j];
-                        float limit = reach + sr[j];
-                        float d2 = dx * dx + dz * dz;
-                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
-                    }
-                    for (int j = startB; j < endB; j++)
-                    {
-                        float dx = xi - sx[j], dz = zi - sz[j];
-                        float limit = reach + sr[j];
-                        float d2 = dx * dx + dz * dz;
-                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
-                    }
+                    ScanRange(i, firstA, endA, xi, zi, reach);
+                    ScanRange(i, startB, endB, xi, zi, reach);
+                    continue;
                 }
-                else
+
+                // Keep the same cyclic window, but split it into contiguous ranges.
+                BudgetHits++;
+                candidateTotal += budget;
+                uint hash = unchecked((uint)slotId[i] * 2654435761u + (uint)salt * 40503u);
+                int index = (int)(hash % (uint)total);
+                int left = budget;
+                while (left > 0)
                 {
-                    // Over budget: test a cyclic window of `budget` candidates from a pseudo-random
-                    // start (deterministic per soldier and tick). The starting slot rotates within the
-                    // candidates owned by this soldier.
-                    BudgetHits++;
-                    candidateTotal += budget;
-                    uint hash = unchecked((uint)slotId[i] * 2654435761u + (uint)salt * 40503u);
-                    int index = (int)(hash % (uint)total);
-                    for (int k = 0; k < budget; k++)
-                    {
-                        int j = index < lenA ? firstA + index : startB + (index - lenA);
-                        float dx = xi - sx[j], dz = zi - sz[j];
-                        float limit = reach + sr[j];
-                        float d2 = dx * dx + dz * dz;
-                        if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
-                        if (++index == total) index = 0;
-                    }
+                    bool inFirstRange = index < lenA;
+                    int first = inFirstRange ? firstA + index : startB + index - lenA;
+                    int length = Math.Min(left, (inFirstRange ? lenA : total) - index);
+                    ScanRange(i, first, first + length, xi, zi, reach);
+                    left -= length;
+                    index += length;
+                    if (index == total) index = 0;
                 }
             }
+        }
+    }
+
+    private void ScanRange(int i, int first, int end, float xi, float zi, float reach)
+    {
+        float[] sx = slotX, sz = slotZ, sr = slotRadius;
+        for (int j = first; j < end; j++)
+        {
+            float dx = xi - sx[j], dz = zi - sz[j];
+            float limit = reach + sr[j];
+            float d2 = dx * dx + dz * dz;
+            if (limit > 0f && d2 < limit * limit) Resolve(i, j, dx, dz, d2, limit);
         }
     }
 

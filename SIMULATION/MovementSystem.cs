@@ -9,7 +9,7 @@ public static class MovementSystem
     // =========================================================
     public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
-        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, CrowdMovement crowd = default)
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null)
     {
         var catalog = units.Catalog;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
@@ -153,19 +153,6 @@ public static class MovementSystem
                 Vector2 from = ObstacleField.Xz(units.Position[i]);
                 Vector2 desired = ObstacleField.Xz(next);
                 Vector2 safe = obstacles.ClipMove(from, desired, type.Footprint);
-                if (safe != desired)
-                {
-                    travel = from.DistanceTo(safe);
-                    speed = travel / dt;
-                    next.X = safe.X;
-                    next.Z = safe.Y;
-                }
-            }
-            if (crowd.Enabled)
-            {
-                Vector2 from = ObstacleField.Xz(units.Position[i]);
-                Vector2 desired = ObstacleField.Xz(next);
-                Vector2 safe = crowd.Clip(units, i, from, desired, type.Footprint);
                 if (safe != desired)
                 {
                     travel = from.DistanceTo(safe);

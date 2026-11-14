@@ -57,7 +57,7 @@ public sealed class GuardGroup
         post.DistanceSquaredTo(ObstacleField.Xz(units.Position[target])) <= rangeSquared;
 
     public void Move(UnitState units, float dt, float separationGap, ObstacleField obstacles,
-        ObstacleNavigation navigation, byte[] movementFlags, CrowdMovement crowd = default)
+        ObstacleNavigation navigation, byte[] movementFlags)
     {
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
         for (int id = Start; id < End; id++)
@@ -111,7 +111,6 @@ public sealed class GuardGroup
             float currentRadiusSquared = anchor.DistanceSquaredTo(from);
             if (anchor.DistanceSquaredTo(next) > Mathf.Max(radiusSquared, currentRadiusSquared)) continue;
             if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);
-            if (crowd.Enabled) next = crowd.Clip(units, id, from, next, type.Footprint);
             if (next == from) continue;
             if (movementFlags != null) movementFlags[id] = 1;
             if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, turnStep);
