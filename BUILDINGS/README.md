@@ -13,3 +13,7 @@ Use **Entity Editor → Defenses** to edit registered towers with a footprint pr
 ## DEF1-A — Longer barrel and laser muzzle flash
 
 Laser Tower 001 now has a longer shared box barrel: its tip extends roughly 1.7 world units beyond the front edge of the default 2 × 2-cell base at its forward orientation. The beam starts at that exact tip. Each shot also emits a small white-core/cyan starburst at the muzzle, fading and shrinking over 0.11 seconds. Both the starburst and beam use fixed-capacity MultiMesh batches, with no per-shot nodes. The base footprint, combat targeting, damage, range, firing cadence and soldier obstruction are unchanged. Verify at your normal painter/battle zoom in Godot.
+
+## DEF1-B — Faceted tower silhouette
+
+The Laser Tower chassis now uses **one shared three-tier beveled square mesh**, with a dark outer plinth, inset upper platform and baked brighter top/darker side faces like the soldier meshes. Its rotating triangular turret head is roughly 45–50% wider and taller than before, with a dark mounting collar and beveled shoulders. The long barrel is slightly thicker and gains beveled side faces plus a brighter tip sleeve. These are baked shared meshes within the existing base/head/barrel **MultiMesh** batches. The faction tint, firing-muzzle position, laser/muzzle flash, combat behavior and collision footprint are unchanged. Source implemented; in-game visual acceptance pending.
