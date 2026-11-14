@@ -24,7 +24,9 @@ public readonly struct CrowdMovement
 
         float length = Mathf.Sqrt(lengthSquared);
         // Grid cells are from the start of the tick; positions include accepted moves.
-        var nearby = grid.GetNearbySoldiers(units.Position[id], length + footprint + units.MaxFootprint + maxStep);
+        Vector2 midpoint = (from + to) * 0.5f;
+        var nearby = grid.GetNearbySoldiers(new Vector3(midpoint.X, 0f, midpoint.Y),
+            length * 0.5f + footprint + units.MaxFootprint + maxStep);
         float fraction = 1f;
         while (nearby.MoveNext())
         {
