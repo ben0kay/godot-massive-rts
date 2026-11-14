@@ -17,3 +17,5 @@ During **Edit painted deployment**, a **Show placement grid** checkbox (on by de
 **Paint density**, below **Paint size**, adjusts spacing for new soldier stamps. The default is **1.0×** (2.1 units where footprints fit). **Touching** spaces units by their footprint diameter, rounded up to the fine grid. Maximum spread is **3.0×** (6.3 units, subject to the footprint minimum). The layout rejects overlapping footprints across stamps and teams. Version 4 saves fine-grid soldier coordinates. Older saves convert to their original world positions when loaded.
 
 **Paint type → Filled rectangle** uses the same cell-snapped drag preview as obstacles. Left-drag and release to fill the selected area with the current soldier and faction at the chosen density. Right-drag to erase soldiers in the rectangle. A single fill can attempt up to 100,000 positions. **Brush** shows the stamp size control.
+
+Soldier and obstacle rectangle drags show live width and length in world units alongside the snapped preview.

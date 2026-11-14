@@ -191,3 +191,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — DEATH1-B: Increased dark-red death blobs from 3 to 4 per soldier and enlarged their shared geometry scale for readability, retaining the 0.28-second lifetime and pooled MultiMesh rendering. Source implemented; awaiting owner visual validation.
 
 - 2026-11-14 — BENCH0: Added named local presets for replaying painted battles with their original placements, orders, guard radius, and seed.
+
+- 2026-11-14 — BENCH0: Added live width and length arrows to painted rectangle previews.

@@ -29,6 +29,7 @@ public partial class DeploymentPainter : Node3D
     public event System.Action Changed;
     public event System.Action<string> EditRejected;
     private MeshInstance3D walls, rectanglePreview, placementGrid;
+    private RectangleDimensions dimensions;
     private bool dragging;
     private long paintTool;
     private MouseButton dragButton;
@@ -46,6 +47,7 @@ public partial class DeploymentPainter : Node3D
     public void CancelDrag()
     {
         dragging = false;
+        dimensions?.Clear();
         rectanglePreview.Hide();
     }
 
@@ -96,6 +98,9 @@ public partial class DeploymentPainter : Node3D
             }
         };
         AddChild(rectanglePreview);
+        dimensions = new RectangleDimensions();
+        AddChild(dimensions);
+        dimensions.Clear();
     }
 
     public override void _UnhandledInput(InputEvent input)
@@ -316,6 +321,7 @@ public partial class DeploymentPainter : Node3D
     private void ShowDragRectangle(ObstacleRectangle area, bool soldiers)
     {
         ShowRectangle(area);
+        dimensions.Display(Camera, area);
         if (!soldiers) return;
         rectanglePreview.Scale = new Vector3(rectanglePreview.Scale.X, 0.02f, rectanglePreview.Scale.Z);
         rectanglePreview.Position = new Vector3(rectanglePreview.Position.X, 0.055f, rectanglePreview.Position.Z);
