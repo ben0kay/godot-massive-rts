@@ -163,3 +163,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-13 | Painted soldier brush sizes | Source implemented; owner validation pending.** Added a soldier-only dropdown for 1×1, 3×3 (default), 5×5 and 10×10 cell stamps. Left-click/drag paints and right-click/drag erases using the selected brush; obstacle rectangles, defense footprints and deployment save format remain unchanged.
 
 - 2026-11-13 — DEF1-B: Replaced flat laser tower parts with shared beveled layered chassis, a larger faceted triangular head and thicker beveled barrel with muzzle sleeve. Preserved MultiMesh batching, beam/flash endpoints and gameplay; owner visual validation pending.
+
+- 2026-11-13 — BENCH0: Melee guards now detect enemies at the full configured guard radius.

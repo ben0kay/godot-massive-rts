@@ -42,7 +42,7 @@ public sealed class GuardGroup
             {
                 units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
                     counterattack ? int.MaxValue : config.QueryCandidateLimit, tick,
-                    guardPost: post, guardRadius: engagementRadius * 0.5f);
+                    guardPost: post, guardRadius: type.Ranged ? engagementRadius * 0.5f : engagementRadius);
             }
             if (units.Target[id] >= 0) lastContact = tick;
         }
