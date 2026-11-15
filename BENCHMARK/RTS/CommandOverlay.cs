@@ -11,7 +11,8 @@ public partial class CommandOverlay : RectangleDimensions
     internal UnitState Units;
     internal readonly List<int> Selection = new();
     internal CommandStructure Building;
-    internal bool Selecting, Preview, AttackMove;
+    internal bool Selecting, Preview, AttackMove, FreeformPreview;
+    internal readonly FreeformFormation Freeform = new();
     internal float Spacing;
     internal float Radius(int id) => Units.Catalog[Units.Type[id]].Footprint;
     internal Vector2 Press, Pointer;
@@ -46,13 +47,28 @@ public partial class CommandOverlay : RectangleDimensions
         }
         if (!Preview) return;
 
-        for (int i = 0; i < Selection.Count; i++)
-            DrawFootprint(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing),
-                Radius(Selection[i]), GhostInk);
+        if (FreeformPreview)
+        {
+            for (int i = 0; i < Freeform.Slots.Count && i < Selection.Count; i++)
+                DrawFootprint(Freeform.Slots[i], Radius(Selection[i]), GhostInk);
+            for (int i = 1; i < Freeform.Points.Count; i++)
+                DrawLine(View.UnprojectPosition(Freeform.Points[i - 1]),
+                    View.UnprojectPosition(Freeform.Points[i]), GhostInk, 1.5f, true);
+        }
+        else
+        {
+            for (int i = 0; i < Selection.Count; i++)
+                DrawFootprint(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing),
+                    Radius(Selection[i]), GhostInk);
+        }
+
         Vector2 start = View.UnprojectPosition(LineStart);
         Vector2 end = View.UnprojectPosition(LineEnd);
-        DrawLine(start, end, GhostInk, 1.5f, true);
-        Vector2 interior = View.UnprojectPosition(LineStart + Right.Cross(Vector3.Up)) - start;
+        if (!FreeformPreview) DrawLine(start, end, GhostInk, 1.5f, true);
+        // The measurement remains the straight endpoint-to-endpoint distance.
+        Vector2 interior = FreeformPreview
+            ? new Vector2(-(end - start).Y, (end - start).X)
+            : View.UnprojectPosition(LineStart + Right.Cross(Vector3.Up)) - start;
         float width = LineStart.DistanceTo(LineEnd);
         DrawDimension(start, end, interior, width.ToString("0.##", CultureInfo.InvariantCulture) + " u");
     }

@@ -202,3 +202,10 @@ Wave units march toward the Citadel and engage defenders in their detection rang
 Right-click or right-drag issues a normal move order. Select soldiers, press **K**, then left-click the ground to attack-move toward a centered formation. Attack-moving soldiers interrupt their route to fight detected enemies and resume toward their original slots after losing their target. Escape cancels the armed command. Units with ordinary move orders can still attack within reach.
 
 The right-side performance panel stays visible. **Normal separation** uses the shared one-pass solver and defaults on. Toggle it off for an A/B comparison. Movement, separation, combat grid rebuilds and army render sync report average CPU milliseconds per physics tick over the latest HUD interval. Compare an idle selection, a stationary right-drag preview, and the same formation while moving. The FPS summary measures the whole frame.
+
+
+### Freeform move formations (Right Shift + right-drag)
+
+In the Command Sandbox, select Blue soldiers, then **hold Right Shift and right-drag** to draw a freeform line. The preview traces the cursor stroke and shows exactly where the selected soldier footprints will be ordered. On mouse release, soldiers receive move goals spaced along the stroke's arc length; extra ranks are offset behind the local path tangent. The measurement remains a **straight start-to-end distance** in world units, not the drawn stroke length. Regular right-click and straight right-drag, building rally, and K + left-click attack-move are unchanged.
+
+The stroke stores at most 512 sampled world points (thinning old samples if needed); destinations are cached on stroke edits and reuse ordinary map/obstacle order validity checks. No soldier nodes, expensive per-tick formation logic, or changes to combat. Very tight loops or self-intersections can crowd destination positions; collision resolving for complex drawn curves is outside this feature.

@@ -50,15 +50,24 @@ internal sealed class CommandMovement
     public void Issue(ReadOnlySpan<int> ids, Vector3 front, Vector3 right, int columns, float spacing, bool attack = false)
     {
         for (int i = 0; i < ids.Length; i++)
-        {
-            int id = ids[i];
-            var goal = Slot(front, right, columns, i, ids.Length, spacing);
-            float radius = units.Catalog[units.Type[id]].Footprint;
-            if (units.Health[id] <= 0 || !CommandBuildings.OnMap(goal, radius) || field?.IntersectsCircle(ObstacleField.Xz(goal), radius) == true) continue;
-            SetGoal(id, goal);
-            attackMove[id] = attack;
-            units.Target[id] = -1;
-        }
+            IssueOne(ids[i], Slot(front, right, columns, i, ids.Length, spacing), attack);
+    }
+
+    // Explicit freeform destinations use the existing move-order checks and state.
+    public void IssueSlots(ReadOnlySpan<int> ids, ReadOnlySpan<Vector3> goals, bool attack = false)
+    {
+        for (int i = 0; i < ids.Length && i < goals.Length; i++)
+            IssueOne(ids[i], goals[i], attack);
+    }
+
+    private void IssueOne(int id, Vector3 goal, bool attack)
+    {
+        float radius = units.Catalog[units.Type[id]].Footprint;
+        if (units.Health[id] <= 0 || !CommandBuildings.OnMap(goal, radius) ||
+            field?.IntersectsCircle(ObstacleField.Xz(goal), radius) == true) return;
+        SetGoal(id, goal);
+        attackMove[id] = attack;
+        units.Target[id] = -1;
     }
 
     public void SetGoal(int id, Vector3 goal, Vector3? exit = null)

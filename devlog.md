@@ -239,3 +239,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — PROJ-LASER2: Made Triangle laser bolts subtly follow the firing faction colour (blue/red/green) via opt-in per-projectile MultiMesh instance tint and one shared unshaded shader. Existing bolt dimensions, damage, speed, arc and collision unchanged; other projectile types remain untinted. Source reviewed; awaiting owner Godot visual validation.
 
 - 2026-11-15 — Command Sandbox: Added a visible border at the command bounds and editor-authored box walls that participate in routing and placement.
+
+- **2026-11-15 | RTS freeform formation line.** Added Right Shift + right-mouse drag to sketch curved formation lines; previews and commits cached destinations placed along arc length, with extra ranks behind local tangents. The measurement is still straight from start to finish. Reuses ordinary move-order goal validity and keeps right-drag, K attack-move, rally and command simulation intact. 512 bounded stroke samples; owner Godot visual validation pending.

@@ -10,6 +10,7 @@ public partial class SquadCommandInput : Node
     private CommandOverlay overlay;
     private MouseButton held;
     private Vector3 dragStart;
+    private bool rightShift, freeformDrag;
 
     private CommandMovement movement;
     private CommandBuildings buildings;
@@ -39,6 +40,12 @@ public partial class SquadCommandInput : Node
     // Observe combinations before GUI handling, without consuming CTRL or its shortcuts.
     public override void _Input(InputEvent input)
     {
+        // Only the physical right Shift activates freeform mode; left Shift is unchanged.
+        if (input is InputEventKey shift && shift.Keycode == Key.Shift)
+        {
+            if (shift.Location == KeyLocation.Right) rightShift = shift.Pressed;
+            return;
+        }
         if (input is InputEventKey key && key.Keycode == Key.Ctrl)
         {
             if (key.Echo) return;
@@ -138,12 +145,21 @@ public partial class SquadCommandInput : Node
                 held = button.ButtonIndex;
                 overlay.Press = overlay.Pointer = button.Position;
                 overlay.Selecting = held == MouseButton.Left;
+                freeformDrag = held == MouseButton.Right && rightShift;
+                overlay.FreeformPreview = freeformDrag;
+                if (freeformDrag) overlay.Freeform.Begin(dragStart);
             }
             else if (button.ButtonIndex == held)
             {
                 if (held == MouseButton.Left) Select(button.Position);
-                else if (UpdateFormation(button.Position))
-                    movement.Issue(CollectionsMarshal.AsSpan(overlay.Selection), overlay.Front, overlay.Right, overlay.Columns, overlay.Spacing);
+                else if (UpdateFormation(button.Position, finish: true))
+                {
+                    ReadOnlySpan<int> selected = CollectionsMarshal.AsSpan(overlay.Selection);
+                    if (freeformDrag && overlay.Preview)
+                        movement.IssueSlots(selected, CollectionsMarshal.AsSpan(overlay.Freeform.Slots));
+                    else
+                        movement.Issue(selected, overlay.Front, overlay.Right, overlay.Columns, overlay.Spacing);
+                }
                 CancelGesture();
             }
             else return;
@@ -183,6 +199,9 @@ public partial class SquadCommandInput : Node
     private void CancelGesture()
     {
         held = MouseButton.None;
+        freeformDrag = false;
+        overlay.FreeformPreview = false;
+        overlay.Freeform.Clear();
         overlay.Selecting = overlay.Preview = false;
         overlay.QueueRedraw();
     }
@@ -243,12 +262,25 @@ public partial class SquadCommandInput : Node
         return new Vector3(right.X, 0f, right.Z).Normalized();
     }
 
-    private bool UpdateFormation(Vector2 pointer)
+    private bool UpdateFormation(Vector2 pointer, bool finish = false)
     {
         if (!TryGround(pointer, out Vector3 end))
         {
             overlay.Preview = false;
             return false;
+        }
+        if (freeformDrag)
+        {
+            bool changed = overlay.Freeform.Add(end, final: finish);
+            if (!changed && !finish) return true;
+            overlay.LineStart = dragStart;
+            overlay.LineEnd = end;
+            // Arc length also supports a loop whose end lies next to its start.
+            overlay.Preview = overlay.Freeform.Length >= Mathf.Max(0.4f, overlay.Spacing * 0.5f);
+            if (overlay.Preview)
+                overlay.Freeform.BuildSlots(overlay.Selection.Count, overlay.Spacing);
+            else CenterFormation(end);
+            return true;
         }
         float radius = (overlay.Spacing - 0.3f) * 0.5f;
         Vector3 line = end - dragStart;
