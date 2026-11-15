@@ -231,3 +231,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — Benchmark Auto Attack now compares nearest enemy soldiers and attackable tower edges by distance for structure-capable units.
 
 - 2026-11-15 — Benchmark tower comparisons reuse the shared soldier acquisition result and its search budget.
+
+- 2026-11-15 — VIS2-B: Darkened soldier side faces by 25% and bevels by 12.5%, retaining bright tops, faction colors and batching. Shared building bevels are unchanged. Source reviewed; awaiting owner visual validation.

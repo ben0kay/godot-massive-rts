@@ -6,6 +6,8 @@ namespace MassiveRts;
 public static class FacetedSoldierMeshes
 {
     private const float TopInsetFraction = 0.11f;
+    // Extra contrast only for soldier mesh creation; shared building bevels stay unchanged.
+    private const float SoldierSideShade = 0.75f;
     private static readonly Color TopTint = Colors.White;
     private static readonly Color BottomTint = new(0.48f, 0.48f, 0.48f);
 
@@ -42,38 +44,39 @@ public static class FacetedSoldierMeshes
         {
             float x = outline.RadiusX, z = outline.RadiusZ;
             AppendBeveledRectangle(surface, new Vector3(0f, -height * 0.04f, 0f),
-                new Vector3(x * 1.38f, height * 0.86f, z * 0.46f), new Color(0.75f, 0.75f, 0.75f));
+                new Vector3(x * 1.38f, height * 0.86f, z * 0.46f), new Color(0.75f, 0.75f, 0.75f), SoldierSideShade);
             for (int side = -1; side <= 1; side += 2)
             {
                 AppendBeveledRectangle(surface, new Vector3(side * x * 0.67f, 0f, z * 0.05f),
-                    new Vector3(x * 0.66f, height, z * 1.58f), Colors.White);
+                    new Vector3(x * 0.66f, height, z * 1.58f), Colors.White, SoldierSideShade);
                 AppendBeveledRectangle(surface, new Vector3(side * x * 0.67f, 0f, -z * 0.84f),
-                    new Vector3(x * 0.66f, height * 0.90f, z * 0.32f), new Color(0.88f, 0.88f, 0.88f));
+                    new Vector3(x * 0.66f, height * 0.90f, z * 0.32f), new Color(0.88f, 0.88f, 0.88f), SoldierSideShade);
             }
             return surface.Commit();
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null);
+            Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null, sideShade: SoldierSideShade);
         if (outline.IsChevron)
         {
             float length = outline.BarrelFront - outline.BarrelBack;
             float midpoint = (outline.BarrelFront + outline.BarrelBack) * 0.5f;
             AppendBeveledRectangle(surface, new Vector3(0f, height * 0.32f, -midpoint),
-                new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f));
+                new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f), SoldierSideShade);
         }
         return surface.Commit();
     }
 
-    public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint)
+    public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint, float sideShade = 1f)
     {
         const float inverseSqrtTwo = 0.70710678f;
         AppendPrism(surface, 4, size.X * inverseSqrtTwo, size.Z * inverseSqrtTwo,
-            size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f);
+            size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f, sideShade: sideShade);
     }
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
-        float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f, UnitOutline? chevron = null)
+        float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
+        UnitOutline? chevron = null, float sideShade = 1f)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -116,10 +119,10 @@ public static class FacetedSoldierMeshes
             AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
-                outward, SideTint(outward) * tint);
+                outward, SideTint(outward) * tint * sideShade);
             Vector3 bevelNormal = (outward * bevelRise + Vector3.Up * insetDistance).Normalized();
             AddQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
-                bevelNormal, BevelTint(outward) * tint);
+                bevelNormal, BevelTint(outward) * tint * Mathf.Lerp(1f, sideShade, 0.5f));
         }
     }
 
