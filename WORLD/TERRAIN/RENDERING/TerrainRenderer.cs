@@ -8,7 +8,7 @@ public static class TerrainRenderer
     private static readonly Color Plain = new(0.29f, 0.30f, 0.32f);
     private static readonly Color High = new(0.41f, 0.43f, 0.45f);
 
-    public static Node3D Build(TerrainHeightField field, float rise, float mapHalfWidth)
+    public static Node3D Build(TerrainHeightField field, float rise, float mapHalfWidth, bool includeSurround = true)
     {
         var root = new Node3D { Name = "PlateauTerrain" };
         var material = new StandardMaterial3D
@@ -16,10 +16,8 @@ public static class TerrainRenderer
             VertexColorUseAsAlbedo = true,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
-        for (int z = field.FirstChunk.Y; z <= field.LastChunk.Y; z++)
-        for (int x = field.FirstChunk.X; x <= field.LastChunk.X; x++)
+        foreach (var chunk in field.Chunks)
         {
-            var chunk = new Vector2I(x, z);
             using var surface = new SurfaceTool();
             surface.Begin(Mesh.PrimitiveType.Triangles);
             surface.SetMaterial(material);
@@ -29,6 +27,8 @@ public static class TerrainRenderer
                     field.MeshVertex(chunk, col, row + 1), field.MeshVertex(chunk, col + 1, row + 1), rise);
             root.AddChild(new MeshInstance3D { Mesh = surface.Commit() });
         }
+
+        if (!includeSurround) return root;
 
         using var surround = new SurfaceTool();
         surround.Begin(Mesh.PrimitiveType.Triangles);

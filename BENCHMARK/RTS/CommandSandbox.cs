@@ -24,6 +24,7 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
+    [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
     [Export(PropertyHint.Range, "1,120,1")] public float BetweenWavesSeconds { get; set; } = 12f;
@@ -36,29 +37,31 @@ public partial class CommandSandbox : Node3D
         var camera = new IsometricCamera();
         AddChild(camera);
         camera.MakeCurrent();
+        var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         var cameraStart = GetNodeOrNull<Marker3D>("CameraStart");
-        camera.SetOpeningView(cameraStart?.GlobalPosition ?? Vector3.Zero, OpeningCameraSize,
+        Vector3 cameraFocus = cameraStart?.GlobalPosition ?? Vector3.Zero;
+        cameraFocus.Y += terrain?.At(cameraFocus.X, cameraFocus.Z) ?? 0f;
+        camera.SetOpeningView(cameraFocus, OpeningCameraSize,
             cameraStart == null ? 45f : Mathf.RadToDeg(cameraStart.GlobalRotation.Y));
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
-        units = new UnitState(UnitCapacity, catalog);
+        units = new UnitState(UnitCapacity, catalog, terrain: terrain);
         movement = new CommandMovement(units);
-        float spacing = 2f * catalog[RuntimeUnitCatalog.Circle].Footprint + 0.3f;
-        var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
-        Vector3 blueStart = blueSpawn?.GlobalPosition ?? Vector3.Back * -1.5f * spacing;
-        blueStart.Y = 0f;
-        Vector3 blueRight = blueSpawn == null ? Vector3.Right : Vector3.Right.Rotated(Vector3.Up, blueSpawn.GlobalRotation.Y);
-        for (int i = 0; i < CommandMovement.SquadSize; i++)
-        {
-            Vector3 position = CommandMovement.Slot(blueStart, blueRight,
-                CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
-            units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
-        }
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"));
+        if (SpawnDefaultBlueSquad)
+        {
+            var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
+            float spacing = 2f * catalog[RuntimeUnitCatalog.Circle].Footprint + 0.3f;
+            Vector3 start = blueSpawn?.GlobalPosition ?? Vector3.Back * -1.5f * spacing;
+            start.Y = 0f;
+            SpawnFormation(RuntimeUnitCatalog.Circle, Factions.Blue, start, blueSpawn?.GlobalRotation.Y ?? 0f,
+                CommandMovement.SquadSize);
+        }
 
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);
+        SpawnAuthoredUnits();
 
         army = new ArmyRenderer();
         AddChild(army);
@@ -126,6 +129,46 @@ public partial class CommandSandbox : Node3D
         RefreshSelection();
     }
 
+    private void SpawnAuthoredUnits()
+    {
+        if (GetNodeOrNull<Node3D>("StartingUnits") is not Node3D container) return;
+        long reserved = 0;
+        foreach (var wave in WaveDefinitions)
+            if (wave != null)
+                foreach (var entry in wave.Enemies)
+                    reserved += entry.Value;
+
+        foreach (Node child in container.GetChildren())
+        {
+            if (child is not CommandUnitPlacement placement) continue;
+            if (placement.Unit == null || !units.Catalog.TryResolve(placement.Unit.Id, out byte type))
+            {
+                GD.PushWarning($"Starting unit '{placement.Name}' needs a registered unit definition.");
+                continue;
+            }
+            int count = Mathf.Clamp(placement.Count, 1, 256);
+            if (count > UnitCapacity - units.Count - reserved)
+            {
+                GD.PushWarning($"Starting unit group '{placement.Name}' exceeds capacity after reserving wave slots.");
+                continue;
+            }
+            SpawnFormation(type, (byte)placement.Faction, placement.GlobalPosition, placement.GlobalRotation.Y, count);
+        }
+    }
+
+    private void SpawnFormation(byte type, byte faction, Vector3 start, float yaw, int count)
+    {
+        float spacing = 2f * units.Catalog[type].Footprint + 0.3f;
+        Vector3 right = Vector3.Right.Rotated(Vector3.Up, yaw);
+        int columns = Mathf.Min(count, CommandMovement.DefaultColumns);
+        for (int slot = 0; slot < count; slot++)
+        {
+            Vector3 point = CommandMovement.Slot(start, right, columns, slot, count, spacing);
+            if (buildings.IsSpawnClear(point, units.Catalog[type].Footprint)) units.TrySpawn(type, faction, point);
+            else GD.PushWarning($"Starting unit at X/Z {point.X:0.##}, {point.Z:0.##} is blocked.");
+        }
+    }
+
     // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
     private ObstacleRectangle[] ReadAuthoredWalls()
     {
@@ -158,6 +201,13 @@ public partial class CommandSandbox : Node3D
                 GD.PushWarning($"Command wall '{mesh.Name}' must fit on the {grid}-unit grid within the map.");
                 continue;
             }
+            Vector3 groundPosition = mesh.GlobalPosition;
+            var terrain = units.Grounding?.Field;
+            var bounds = mesh.GlobalTransform * mesh.GetAabb();
+            float relief = 0f;
+            groundPosition.Y += (terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f) - bounds.Position.Y;
+            if (relief > 0.5f) GD.PushWarning($"Command wall '{mesh.Name}' crosses uneven terrain.");
+            mesh.GlobalPosition = groundPosition;
             walls.Add(wall);
         }
         return walls.ToArray();

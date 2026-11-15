@@ -9,3 +9,7 @@ The arena builds static 32×32-cell chunks at 2.1-unit sample spacing. The mesh 
 The visual stomp ring remains level at its source, so part of it can intersect a slope. TERR1-A uses the current combat distance rules. Terrain editing and persistence (TERR1-B), seeded generation (TERR1-C), and terrain-aware slope routing, LOS, projectile contact and high-ground bonuses (TERR1-D) remain planned. Future routing should build on the existing OBST1 system.
 
 See the [TERR1 implementation plan](TERR1_IMPLEMENTATION_PLAN.md).
+
+## Command-level authoring
+
+Command levels compile only the chunks around authored hills. The shared surface drives the visible terrain, pointer projection, troop grounding and building placement. [Level setup instructions](../../LEVELS/README.md) cover hill and unit placement scenes. Hills use radius and rise controls in this first pass. The command map still uses XZ obstacle routing on slopes.

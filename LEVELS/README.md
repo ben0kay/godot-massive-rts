@@ -29,3 +29,9 @@ The inherited scene exposes the opening layout in the 3D viewport:
 - **CameraStart** sets the point the camera looks at and its Y rotation sets the opening yaw. Set Opening Camera Size on the level root to change the opening zoom.
 - **BlueSpawn** marks the middle of the starting squad's front row. Its Y rotation turns the formation. Set **Enemy Spawn Edge** on the level root or in the Wave Editor panel to choose the single boundary where waves enter.
 - **Citadel** is an instance of `WORLD/BUILDINGS/CITADEL/Citadel.tscn`. Move it in X/Z and keep the default scale and rotation. The 10 × 10 footprint snaps to the two-unit grid on play, with centers on odd X/Z coordinates. Its new position is also the objective for enemy waves.
+
+### Starting units and elevation
+
+- Drag `GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn` under **StartingUnits**. Set **Unit**, **Faction**, and **Count** on each placement. Use count 1 for a single soldier. Larger counts form ranks behind the marker, and its Y rotation controls their direction. The editor shows one representative model and a count. Red placements are present at load and join the attack when Wave 1 starts. Disable **Spawn Default Blue Squad** on the level root to use just your own placements.
+- Drag `WORLD/TERRAIN/AUTHORING/TerrainHill.tscn` under **Terrain**. Move it in X/Z and set **Radius** and **Rise**. The editor previews the sampled surface. Commands, starting units, waves, moving troops and prop bases use that same surface. Leave Terrain empty for a flat map.
+- Place upright props on level sites. The Fabricator rejects sites that vary by more than 0.5 world units across its footprint. Authored walls and Citadels warn about uneven sites and preview at the highest sampled point.

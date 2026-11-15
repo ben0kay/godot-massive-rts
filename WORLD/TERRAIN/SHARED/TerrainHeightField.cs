@@ -19,20 +19,35 @@ public sealed class TerrainHeightField
     public Vector2 Min => Vertex(FirstChunk, 0, 0);
     public Vector2 Max => Vertex(LastChunk, ChunkCells, ChunkCells);
 
+    public IEnumerable<Vector2I> Chunks => chunks.Keys;
+
     public TerrainHeightField(Vector2 min, Vector2 max, Func<Vector2, float> sample)
+        : this(new[] { new Rect2(min, max - min) }, sample) { }
+
+    public TerrainHeightField(IReadOnlyList<Rect2> regions, Func<Vector2, float> sample)
     {
-        FirstChunk = ChunkAt(min);
-        LastChunk = ChunkAt(max);
-        for (int z = FirstChunk.Y; z <= LastChunk.Y; z++)
-        for (int x = FirstChunk.X; x <= LastChunk.X; x++)
+        if (regions.Count == 0) throw new ArgumentException("Terrain requires at least one region.");
+        var first = ChunkAt(regions[0].Position);
+        var last = ChunkAt(regions[0].End);
+        foreach (var region in regions)
         {
-            var key = new Vector2I(x, z);
-            var heights = new float[Stride * Stride];
-            for (int row = 0; row < Stride; row++)
-            for (int col = 0; col < Stride; col++)
-                heights[row * Stride + col] = sample(Vertex(key, col, row));
-            chunks.Add(key, heights);
+            Vector2I start = ChunkAt(region.Position), end = ChunkAt(region.End);
+            first = new Vector2I(Math.Min(first.X, start.X), Math.Min(first.Y, start.Y));
+            last = new Vector2I(Math.Max(last.X, end.X), Math.Max(last.Y, end.Y));
+            for (int z = start.Y; z <= end.Y; z++)
+            for (int x = start.X; x <= end.X; x++)
+            {
+                var key = new Vector2I(x, z);
+                if (chunks.ContainsKey(key)) continue;
+                var heights = new float[Stride * Stride];
+                for (int row = 0; row < Stride; row++)
+                for (int col = 0; col < Stride; col++)
+                    heights[row * Stride + col] = sample(Vertex(key, col, row));
+                chunks.Add(key, heights);
+            }
         }
+        FirstChunk = first;
+        LastChunk = last;
     }
 
     private static Vector2I ChunkAt(Vector2 point) =>
@@ -81,6 +96,23 @@ public sealed class TerrainHeightField
         float scaled = position / Spacing;
         float boundary = delta > 0f ? Mathf.Floor(scaled) + 1f : Mathf.Ceil(scaled) - 1f;
         return Mathf.Max(0f, (boundary * Spacing - position) / delta);
+    }
+
+    public float FootprintHeight(Vector2 min, Vector2 max, out float relief)
+    {
+        int columns = Mathf.Max(1, Mathf.CeilToInt((max.X - min.X) / Spacing));
+        int rows = Mathf.Max(1, Mathf.CeilToInt((max.Y - min.Y) / Spacing));
+        float low = float.PositiveInfinity, high = float.NegativeInfinity;
+        for (int row = 0; row <= rows; row++)
+        for (int column = 0; column <= columns; column++)
+        {
+            float height = At(Mathf.Lerp(min.X, max.X, column / (float)columns),
+                Mathf.Lerp(min.Y, max.Y, row / (float)rows));
+            low = Mathf.Min(low, height);
+            high = Mathf.Max(high, height);
+        }
+        relief = high - low;
+        return high;
     }
 
     public float At(float x, float z)

@@ -72,7 +72,7 @@ internal sealed class FortressWaves
         }
         if (waves.Length == 0) throw new System.InvalidOperationException("Author at least one Fortress Defense wave.");
         buildings.ReservedWaveSlots = reserved;
-        enemies = new int[maxWave];
+        enemies = new int[maxWave + units.FactionAlive[Factions.Red]];
         grid = new SpatialGrid(units.Position.Length, combat.CellSize);
         separation = new SeparationSystem(units.Position.Length);
         Projectiles = new ProjectileSystem(2048, units.Catalog.Projectiles, combat.ProjectileLifetime);
@@ -87,6 +87,9 @@ internal sealed class FortressWaves
     {
         WaveNumber++;
         nextSpawn = enemyCount = 0;
+        if (WaveNumber == 1)
+            for (int id = 0; id < units.Count; id++)
+                if (units.Faction[id] == Factions.Red && units.Health[id] > 0f) enemies[enemyCount++] = id;
         spawnClock = Countdown = 0;
     }
 
@@ -108,13 +111,16 @@ internal sealed class FortressWaves
         long start = Stopwatch.GetTimestamp();
         bool moved = movement.Step(delta);
         MovementMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
-        if (!NormalSeparation || units.Alive < 2) return moved;
-
-        start = Stopwatch.GetTimestamp();
-        separation.Step(units, 1, SeparationGap, combat.SeparationNeighbourBudget, SeparationPadding,
-            tick, obstacles: buildings.Obstacles);
-        SeparationMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
-        return moved || separation.MovedSoldiers;
+        if (NormalSeparation && units.Alive >= 2)
+        {
+            start = Stopwatch.GetTimestamp();
+            separation.Step(units, 1, SeparationGap, combat.SeparationNeighbourBudget, SeparationPadding,
+                tick, obstacles: buildings.Obstacles);
+            SeparationMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            moved |= separation.MovedSoldiers;
+        }
+        units.Grounding?.Apply(units);
+        return moved;
     }
 
     public bool Step(float delta)
@@ -424,5 +430,5 @@ internal sealed class FortressWaves
             units.Cooldown[id] = type.Interval;
     }
 
-    private static Vector3 Ground(Vector2 point) => new(point.X, 0, point.Y);
+    private Vector3 Ground(Vector2 point) => units.OnTerrain(new Vector3(point.X, 0f, point.Y));
 }

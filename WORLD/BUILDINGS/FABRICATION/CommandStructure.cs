@@ -31,11 +31,11 @@ internal sealed class CommandStructure : StructureHealth
     public readonly System.Func<byte, bool> Release;
 
     public CommandStructure(ObstacleRectangle area, float health, byte faction,
-        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null, Node3D citadelView = null)
+        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null, Node3D citadelView = null, float groundHeight = 0f)
         : base(area, faction, health, rules, rules.ArmourClass(definition.ArmourClass), definition.Armour)
     {
         Vector2 center = (area.Min + area.Max) * 0.5f;
-        Center = new Vector3(center.X, 0, center.Y);
+        Center = new Vector3(center.X, groundHeight, center.Y);
         if (citadelView != null)
         {
             View = citadelView;

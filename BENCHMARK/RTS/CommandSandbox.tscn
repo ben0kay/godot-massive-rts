@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
 [ext_resource type="Script" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2"]
@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" path="res://WORLD/BUILDINGS/CITADEL/Citadel.tscn" id="3"]
 
 [ext_resource type="Shader" path="res://BENCHMARK/RTS/CommandGround.gdshader" id="4"]
+
+[ext_resource type="Script" path="res://WORLD/TERRAIN/AUTHORING/CommandTerrain.cs" id="5"]
 
 [sub_resource type="ShaderMaterial" id="GroundMaterial"]
 shader = ExtResource("4")
@@ -42,6 +44,11 @@ WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wa
 position = Vector3(0, -0.025, 0)
 cast_shadow = 0
 mesh = SubResource("GroundMesh")
+
+[node name="Terrain" type="Node3D" parent="."]
+script = ExtResource("5")
+
+[node name="StartingUnits" type="Node3D" parent="."]
 
 [node name="CameraStart" type="Marker3D" parent="."]
 rotation = Vector3(0, 0.7853982, 0)

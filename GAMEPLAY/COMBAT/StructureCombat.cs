@@ -126,7 +126,7 @@ internal sealed class StructureCombat
 
         if (type.Ranged)
         {
-            if (!projectiles.FireAtStructure(id, units, Ground(edge) + Vector3.Up * 1.5f, target)) return false;
+            if (!projectiles.FireAtStructure(id, units, units.OnTerrain(Ground(edge)) + Vector3.Up * 1.5f, target)) return false;
         }
         else target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
         units.Cooldown[id] = type.Interval;

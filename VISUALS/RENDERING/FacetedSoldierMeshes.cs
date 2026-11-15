@@ -34,6 +34,14 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // A narrow inset top ring creates a single, lightly shaded bevel around every silhouette.
     // The shoulders retain the original outer footprint, and the bottoms remain at -height/2.
+    internal static Mesh CreatePlacementPreview(UnitDefinition unit, Color tint)
+    {
+        float size = UnitOutline.EffectiveSize(unit);
+        return CreateUnitMesh(UnitOutline.FromDefinition(unit, size), Mathf.Max(0.01f, unit.Height) * size,
+            new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded });
+    }
+
     private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material)
     {
         using var surface = new SurfaceTool();

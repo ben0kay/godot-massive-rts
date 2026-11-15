@@ -73,7 +73,7 @@ internal sealed class CommandMovement
     public void SetGoal(int id, Vector3 goal, Vector3? exit = null)
     {
         pursuing[id] = attackMove[id] = engaged[id] = false;
-        units.Goal[id] = goal;
+        units.Goal[id] = units.OnTerrain(goal);
         hasExit[id] = exit.HasValue;
         exits[id] = exit.GetValueOrDefault();
         if (ordered[id]) return;
@@ -124,13 +124,16 @@ internal sealed class CommandMovement
             int id = active[i];
             Vector3 previous = units.Position[id];
             Vector3 goal = hasExit[id] ? exits[id] : engaged[id] ? engagementGoals[id] : units.Goal[id];
-            if (units.Health[id] <= 0 || previous == goal && !hasExit[id] && !engaged[id])
+            Vector2 start = ObstacleField.Xz(previous);
+            Vector2 waypoint = ObstacleField.Xz(goal);
+            bool arrived = start.IsEqualApprox(waypoint);
+            if (units.Health[id] <= 0 || arrived && !hasExit[id] && !engaged[id])
             {
                 ordered[id] = pursuing[id] = attackMove[id] = engaged[id] = false;
                 active[i] = active[--activeCount];
                 continue;
             }
-            if (previous == goal)
+            if (arrived)
             {
                 hasExit[id] = false;
                 continue;
@@ -138,8 +141,6 @@ internal sealed class CommandMovement
 
             byte type = units.Type[id];
             ref readonly var stats = ref units.Catalog[type];
-            Vector2 start = ObstacleField.Xz(previous);
-            Vector2 waypoint = ObstacleField.Xz(goal);
             if (field?.BlocksCorridor(start, waypoint, stats.Footprint) == true)
             {
                 navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
@@ -149,7 +150,8 @@ internal sealed class CommandMovement
             Vector2 next = start.MoveToward(waypoint, speed * delta);
             if (field != null) next = field.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;
-            units.Position[id] = new Vector3(next.X, 0, next.Y);
+            units.Position[id] = new Vector3(next.X, previous.Y, next.Y);
+            units.Grounding?.MarkMoved(id);
             Vector2 direction = (next - start).Normalized();
             if (stats.TurnDegreesPerSecond > 0f)
                 SoldierFacing.Turn(units, id, direction, SoldierFacing.TurnStep(delta, stats.TurnDegreesPerSecond));

@@ -37,12 +37,18 @@ public sealed class UnitState
         int id = Count++;
         Type[id] = type;
         Faction[id] = faction;
-        Position[id] = Goal[id] = position;
+        Position[id] = Goal[id] = OnTerrain(position);
         Health[id] = Catalog[type].Health;
         Target[id] = -1;
         Dirty[id] = true;
         RegisterSpawn(faction, type);
         return id;
+    }
+
+    public Vector3 OnTerrain(Vector3 point)
+    {
+        if (Grounding != null) point.Y = Grounding.Field.At(point.X, point.Z);
+        return point;
     }
 
     public void RegisterSpawn(byte faction, byte type)

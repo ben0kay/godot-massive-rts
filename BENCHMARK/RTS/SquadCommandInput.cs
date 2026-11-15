@@ -190,7 +190,7 @@ public partial class SquadCommandInput : Node
             if (ghost.Visible)
             {
                 var area = CommandBuildings.Snap(point);
-                ghost.Position = CommandBuildings.Center(area);
+                ghost.Position = buildings.Center(area);
                 ((StandardMaterial3D)ghost.MaterialOverride).AlbedoColor = buildings.CanPlace(area)
                     ? new Color(0.2f, 0.92f, 1f, 0.38f) : new Color(1f, 0.22f, 0.24f, 0.40f);
             }
@@ -287,6 +287,7 @@ public partial class SquadCommandInput : Node
         }
         float radius = (overlay.Spacing - 0.3f) * 0.5f;
         Vector3 line = end - dragStart;
+        line.Y = 0f;
         overlay.Preview = pointer.DistanceTo(overlay.Press) >= DragThreshold && line.LengthSquared() > 0.0001f;
         if (overlay.Preview)
         {
@@ -311,5 +312,5 @@ public partial class SquadCommandInput : Node
     }
 
     private bool TryGround(Vector2 point, out Vector3 ground) =>
-        CommandBuildings.TryGround(overlay.View, point, out ground) && CommandBuildings.OnMap(ground);
+        buildings.TryGround(overlay.View, point, out ground) && CommandBuildings.OnMap(ground);
 }

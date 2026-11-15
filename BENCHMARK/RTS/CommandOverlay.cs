@@ -50,7 +50,7 @@ public partial class CommandOverlay : RectangleDimensions
         if (FreeformPreview)
         {
             for (int i = 0; i < Freeform.Slots.Count && i < Selection.Count; i++)
-                DrawFootprint(Freeform.Slots[i], Radius(Selection[i]), GhostInk);
+                DrawFootprint(Units.OnTerrain(Freeform.Slots[i]), Radius(Selection[i]), GhostInk);
             for (int i = 1; i < Freeform.Points.Count; i++)
                 DrawLine(View.UnprojectPosition(Freeform.Points[i - 1]),
                     View.UnprojectPosition(Freeform.Points[i]), GhostInk, 1.5f, true);
@@ -58,7 +58,7 @@ public partial class CommandOverlay : RectangleDimensions
         else
         {
             for (int i = 0; i < Selection.Count; i++)
-                DrawFootprint(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing),
+                DrawFootprint(Units.OnTerrain(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing)),
                     Radius(Selection[i]), GhostInk);
         }
 

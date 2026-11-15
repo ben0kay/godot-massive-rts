@@ -47,8 +47,10 @@ internal sealed class CommandBuildings
         }
         else citadelView = GD.Load<PackedScene>("res://WORLD/BUILDINGS/CITADEL/Citadel.tscn").Instantiate<Node3D>();
 
+        float citadelHeightOnTerrain = FoundationHeight(footprint, out float citadelRelief);
+        if (citadelRelief > 0.5f) GD.PushWarning("Citadel footprint crosses uneven terrain. Use a flatter site.");
         Citadel = new CommandStructure(footprint, citadelHealth > 0f ? citadelHealth : citadelDefinition.Health,
-            Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView);
+            Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView, groundHeight: citadelHeightOnTerrain);
         Add(Citadel);
         citadelView.GlobalPosition = Citadel.Center;
     }
@@ -65,10 +67,19 @@ internal sealed class CommandBuildings
             Mathf.RoundToInt(point.Z / grid - cells * 0.5f), cells, cells);
     }
 
-    public static Vector3 Center(ObstacleRectangle area)
+    public Vector3 Center(ObstacleRectangle area)
     {
         Vector2 center = (area.Min + area.Max) * 0.5f;
-        return new Vector3(center.X, 0, center.Y);
+        return new Vector3(center.X, FoundationHeight(area, out _), center.Y);
+    }
+
+    // Sample vertices inside the footprint as well as its boundary, using the gameplay surface.
+    public float FoundationHeight(ObstacleRectangle area, out float relief)
+    {
+        relief = 0f;
+        var terrain = units.Grounding?.Field;
+        if (terrain == null) return 0f;
+        return terrain.FootprintHeight(area.Min, area.Max, out relief);
     }
 
     public bool CanPlace(ObstacleRectangle area)
@@ -76,6 +87,8 @@ internal sealed class CommandBuildings
         if (!area.IsValid || structures.Count >= FabricatorLimit + 1 || Carbon.Amount < CommandStructure.FabricatorCost)
             return false;
 
+        FoundationHeight(area, out float relief);
+        if (relief > 0.5f) return false;
         Vector2 min = area.Min, max = area.Max;
         foreach (var wall in authoredWalls)
             if (Overlaps(min, max, wall)) return false;
@@ -104,13 +117,16 @@ internal sealed class CommandBuildings
     public bool Place(ObstacleRectangle area)
     {
         if (!CanPlace(area) || !Carbon.TrySpend(CommandStructure.FabricatorCost)) return false;
-        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
+        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release, groundHeight: FoundationHeight(area, out _)));
         return true;
     }
 
     public void AddHostileFabricator(Vector3 point)
     {
-        Add(new CommandStructure(Snap(point), fabricatorDefinition.Health, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
+        var area = Snap(point);
+        if (!area.IsValid) return;
+        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Red, fabricatorDefinition,
+            units.Catalog.DamageRules, groundHeight: FoundationHeight(area, out _)));
     }
 
     private void Add(CommandStructure building)
@@ -199,7 +215,7 @@ internal sealed class CommandBuildings
         {
             if (units.Health[id] <= 0) continue;
             float clearance = radius + units.Catalog[units.Type[id]].Footprint + 0.08f;
-            if (units.Position[id].DistanceSquaredTo(spawn) < clearance * clearance) return false;
+            if (ObstacleField.Xz(units.Position[id] - spawn).LengthSquared() < clearance * clearance) return false;
         }
         return true;
     }
@@ -216,20 +232,23 @@ internal sealed class CommandBuildings
             if (units.Health[id] <= 0) continue;
             float clearance = radius + units.Catalog[units.Type[id]].Footprint + 0.08f;
             float squared = clearance * clearance;
-            if (point.DistanceSquaredTo(units.Position[id]) < squared ||
-                checkGoals && point.DistanceSquaredTo(units.Goal[id]) < squared) return false;
+            if (ObstacleField.Xz(point - units.Position[id]).LengthSquared() < squared ||
+                checkGoals && ObstacleField.Xz(point - units.Goal[id]).LengthSquared() < squared) return false;
         }
         return true;
     }
 
-    public static bool TryGround(Camera3D camera, Vector2 point, out Vector3 ground, float height = 0f)
+    public bool TryGround(Camera3D camera, Vector2 point, out Vector3 ground)
     {
         Vector3 origin = camera.ProjectRayOrigin(point);
         Vector3 ray = camera.ProjectRayNormal(point);
         ground = default;
-        if (ray.Y >= -0.00001f || origin.Y < height) return false;
-        ground = origin + ray * ((height - origin.Y) / ray.Y);
-        ground.Y = height;
+        if (ray.Y >= -0.00001f || origin.Y < 0f) return false;
+        Vector3 toFlat = ray * (-origin.Y / ray.Y);
+        var terrain = units.Grounding?.Field;
+        float hit = terrain?.SurfaceHit(origin, toFlat, 1f) ?? 1f;
+        ground = origin + toFlat * Mathf.Min(1f, hit);
+        ground = units.OnTerrain(ground);
         return true;
     }
 
@@ -246,7 +265,7 @@ internal sealed class CommandBuildings
             Vector2 min = building.Area.Min, max = building.Area.Max;
             float start = 0f, end = nearest;
             if (!ClipRay(origin.X, ray.X, min.X, max.X, ref start, ref end) ||
-                !ClipRay(origin.Y, ray.Y, 0f, height, ref start, ref end) ||
+                !ClipRay(origin.Y, ray.Y, building.Center.Y, building.Center.Y + height, ref start, ref end) ||
                 !ClipRay(origin.Z, ray.Z, min.Y, max.Y, ref start, ref end)) continue;
             nearest = start;
             picked = building;
