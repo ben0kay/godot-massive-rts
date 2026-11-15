@@ -28,4 +28,4 @@ script = ExtResource("1")
 WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wave2"), SubResource("Wave3")])
 
 [node name="EnemySpawn" type="Marker3D" parent="."]
-position = Vector3(4, 0, 24)
+position = Vector3(4, 0, 120)
