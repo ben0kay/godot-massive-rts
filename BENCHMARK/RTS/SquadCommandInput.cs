@@ -175,7 +175,7 @@ public partial class SquadCommandInput : Node
         for (int i = 0; i < overlay.Units.Count; i++)
         {
             Vector3 position = overlay.Units.Position[i];
-            if (overlay.Units.Health[i] <= 0 || overlay.View.IsPositionBehind(position)) continue;
+            if (overlay.Units.Faction[i] != Factions.Blue || overlay.Units.Health[i] <= 0 || overlay.View.IsPositionBehind(position)) continue;
             Vector2 center = overlay.View.UnprojectPosition(position);
             float pixels = center.DistanceTo(overlay.View.UnprojectPosition(position + right * overlay.Radius(i)));
             if (boxSelect)

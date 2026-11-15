@@ -14,6 +14,8 @@ internal sealed class CommandStructure
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true
     };
     private static Mesh fabricatorMesh, citadelMesh;
+    private static QuadMesh productionBarMesh;
+    private static Shader productionBarShader;
     public readonly ObstacleRectangle Area;
     public readonly Vector3 Center;
     public readonly float MaxHealth;
@@ -28,6 +30,8 @@ internal sealed class CommandStructure
     private readonly MeshInstance3D solid, hologram;
     private readonly StandardMaterial3D ghostMaterial;
     private readonly Label3D progress;
+    private readonly MeshInstance3D productionBar;
+    private readonly ShaderMaterial productionBarMaterial;
     public readonly System.Func<byte, bool> Release;
 
     public CommandStructure(ObstacleRectangle area, float health, bool citadel, System.Func<CommandStructure, byte, bool> release)
@@ -55,6 +59,19 @@ internal sealed class CommandStructure
         View.AddChild(solid);
         View.AddChild(hologram);
         View.AddChild(progress);
+        if (!citadel)
+        {
+            productionBarMesh ??= new QuadMesh { Size = new Vector2(3.0f, 0.30f) };
+            productionBarShader ??= GD.Load<Shader>("res://WORLD/BUILDINGS/FABRICATION/ProductionBar.gdshader");
+            productionBarMaterial = new ShaderMaterial { Shader = productionBarShader };
+            productionBar = new MeshInstance3D
+            {
+                Mesh = productionBarMesh, MaterialOverride = productionBarMaterial, Position = Vector3.Up * 2.65f,
+                Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 2f
+            };
+            View.AddChild(productionBar);
+        }
+
     }
 
     public void Damage(float amount)
@@ -77,6 +94,16 @@ internal sealed class CommandStructure
             string percent = $"{Built:P0}";
             if (progress.Text != percent) progress.Text = percent;
         }
+    }
+
+    public void RefreshProductionBar()
+    {
+        if (!Ready || Destroyed || Production == null) return;
+        bool blocked = Production.Status == "Exit Blocked";
+        productionBar.Visible = Production.Status is "Producing" or "Releasing" || blocked;
+        if (!productionBar.Visible) return;
+        productionBarMaterial.SetShaderParameter("progress", blocked || Production.Status == "Releasing" ? 1f : Production.Progress);
+        productionBarMaterial.SetShaderParameter("blocked", blocked);
     }
 
     public static MeshInstance3D MakePreview() => new()

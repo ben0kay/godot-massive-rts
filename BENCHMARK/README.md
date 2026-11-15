@@ -190,3 +190,9 @@ Open `BENCHMARK/RTS/CommandSandbox.tscn` with F6. The sandbox starts with 10,000
 After five seconds of construction, select the Fabricator, choose a unit type, and watch the paid batch release through the front gate. Right-click terrain with a completed Fabricator selected to set its rally point. Clear it from the bottom panel to use the nearby holding area. The initial 20 remain one squad, and box selection can mix that squad with individual produced units.
 
 The sandbox supports 2,048 soldier IDs and up to 32 Fabricators. A blocked exit, full holding area or soldier cap retains the paid batch. Units route around buildings, and the normal command movement still allows soldiers to cross paths outside release clearance. FAB1 runs on the sandbox's flat map. The playable Fortress Defense level remains separate.
+
+### Fortress Defense waves
+
+In the Command Sandbox, build up and press **Start Wave 1**. Three editable waves release from the scene's `EnemySpawn` marker. The HUD shows Citadel health and enemies still alive or waiting to spawn. Once the wave is resolved, the next wave begins after a 12-second countdown. Clear the final wave to win, or lose if the Citadel is destroyed.
+
+Wave units march toward the Citadel and engage defenders in their detection range until the Citadel footprint enters that range. Melee units strike the Citadel once on contact and die. Ranged units fire from their normal range. Ordered defenders can fire or strike at enemies within reach while following player movement orders.

@@ -1,6 +1,31 @@
-[gd_scene format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
+[ext_resource type="Script" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2"]
+
+[sub_resource type="Resource" id="Wave1"]
+script = ExtResource("2")
+Enemies = Dictionary[String, int]({
+"circle_infantry": 28
+})
+
+[sub_resource type="Resource" id="Wave2"]
+script = ExtResource("2")
+Enemies = Dictionary[String, int]({
+"circle_infantry": 32,
+"triangle_archer": 8
+})
+
+[sub_resource type="Resource" id="Wave3"]
+script = ExtResource("2")
+Enemies = Dictionary[String, int]({
+"square_infantry": 30,
+"triangle_archer": 18
+})
 
 [node name="CommandSandbox" type="Node3D"]
 script = ExtResource("1")
+WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wave2"), SubResource("Wave3")])
+
+[node name="EnemySpawn" type="Marker3D" parent="."]
+position = Vector3(4, 0, 24)

@@ -15,6 +15,9 @@ internal sealed class CommandBuildings
     private readonly BatchRecipe[] recipes;
     private ObstacleField field;
     public readonly CarbonBalance Carbon = new();
+    public CommandStructure Citadel { get; }
+    public ObstacleField Obstacles => field;
+    public int ReservedWaveSlots { get; set; }
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
 
@@ -24,7 +27,8 @@ internal sealed class CommandBuildings
         this.units = units;
         this.movement = movement;
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
-        Add(new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth, true, null));
+        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth, true, null);
+        Add(Citadel);
     }
 
     public static bool OnMap(Vector3 point, float radius = 0) =>
@@ -120,7 +124,7 @@ internal sealed class CommandBuildings
 
     private bool Release(CommandStructure building, byte type)
     {
-        building.UnitCapBlocked = units.Count >= units.Position.Length;
+        building.UnitCapBlocked = units.Count >= units.Position.Length - ReservedWaveSlots;
         if (building.UnitCapBlocked) return false;
         float radius = units.Catalog[type].Footprint;
         float front = (building.Area.Max.Y - building.Area.Min.Y) * 0.5f;
@@ -163,7 +167,11 @@ internal sealed class CommandBuildings
         return true;
     }
 
-    private bool FreeGoal(Vector3 point, float radius)
+    public bool IsSpawnClear(Vector3 point, float radius) => FreePosition(point, radius, false);
+
+    private bool FreeGoal(Vector3 point, float radius) => FreePosition(point, radius, true);
+
+    private bool FreePosition(Vector3 point, float radius, bool checkGoals)
     {
         if (!OnMap(point, radius) || field?.IntersectsCircle(ObstacleField.Xz(point), radius) == true) return false;
         for (int id = 0; id < units.Count; id++)
@@ -172,7 +180,7 @@ internal sealed class CommandBuildings
             float clearance = radius + units.Catalog[units.Type[id]].Footprint + 0.08f;
             float squared = clearance * clearance;
             if (point.DistanceSquaredTo(units.Position[id]) < squared ||
-                point.DistanceSquaredTo(units.Goal[id]) < squared) return false;
+                checkGoals && point.DistanceSquaredTo(units.Goal[id]) < squared) return false;
         }
         return true;
     }

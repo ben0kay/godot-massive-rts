@@ -1,0 +1,267 @@
+// Runs authored waves and applies Fortress Defense target priority using the shared soldier systems.
+using Godot;
+
+namespace MassiveRts;
+
+internal sealed class FortressWaves
+{
+    private const float SpawnInterval = 0.16f;
+    private const int AcquisitionInterval = 6;
+    private const float ContactTolerance = 0.02f;
+    private readonly UnitState units;
+    private readonly CommandBuildings buildings;
+    private readonly CommandMovement movement;
+    private readonly Vector3 spawn;
+    private readonly Vector2 citadelMin, citadelMax;
+    private readonly byte[][] waves;
+    private readonly float intermission;
+    private readonly BenchmarkConfig combat = new();
+    private readonly SpatialGrid grid;
+    private readonly int[] enemies;
+    private int enemyCount, nextSpawn, tick;
+    private float spawnClock;
+    public readonly ProjectileSystem Projectiles;
+    public int WaveNumber { get; private set; }
+    public float Countdown { get; private set; }
+    public bool Defeat => buildings.Citadel.Destroyed;
+    public bool Victory { get; private set; }
+    public bool WaitingToStart => WaveNumber == 0 && !Defeat;
+    public int Remaining => WaveNumber == 0 ? 0 : units.FactionAlive[Factions.Red] + waves[WaveNumber - 1].Length - nextSpawn;
+
+    public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, Vector3 spawn,
+        Godot.Collections.Array<WaveDefinition> definitions, float intermission)
+    {
+        this.units = units;
+        this.buildings = buildings;
+        this.movement = movement;
+        this.spawn = spawn;
+        this.intermission = intermission;
+        citadelMin = buildings.Citadel.Area.Min;
+        citadelMax = buildings.Citadel.Area.Max;
+        waves = new byte[definitions.Count][];
+        int reserved = 0, maxWave = 0;
+        for (int i = 0; i < waves.Length; i++)
+        {
+            waves[i] = definitions[i].Compile(units.Catalog, units.Position.Length - units.Count - reserved);
+            reserved += waves[i].Length;
+            maxWave = Mathf.Max(maxWave, waves[i].Length);
+        }
+        if (waves.Length == 0) throw new System.InvalidOperationException("Author at least one Fortress Defense wave.");
+        buildings.ReservedWaveSlots = reserved;
+        enemies = new int[maxWave];
+        grid = new SpatialGrid(units.Position.Length, combat.CellSize);
+        Projectiles = new ProjectileSystem(2048, units.Catalog.Projectiles, combat.ProjectileLifetime);
+    }
+
+    public void Start()
+    {
+        if (WaitingToStart) BeginNext();
+    }
+
+    private void BeginNext()
+    {
+        WaveNumber++;
+        nextSpawn = enemyCount = 0;
+        spawnClock = Countdown = 0;
+    }
+
+    public bool Step(float delta)
+    {
+        if (Defeat || Victory) return false;
+        if (WaitingToStart || Countdown > 0)
+        {
+            if (Countdown > 0)
+            {
+                if (Projectiles.Count > 0)
+                {
+                    grid.Rebuild(units);
+                    Projectiles.Step(units, grid, combat, delta, 0, buildings.Obstacles);
+                }
+                if (Defeat) return true;
+                Countdown = Mathf.Max(0, Countdown - delta);
+                if (Countdown == 0) BeginNext();
+            }
+            return movement.Step(delta);
+        }
+
+        int previousCount = units.Count, previousAlive = units.Alive;
+        TryRelease(delta);
+        var field = buildings.Obstacles;
+        grid.Rebuild(units);
+        tick++;
+        AcquireDefenderTargets(field);
+        for (int i = 0; i < enemyCount; i++)
+        {
+            int id = enemies[i];
+            if (units.Health[id] > 0) OrderEnemy(id, field);
+        }
+        bool moved = movement.Step(delta);
+        if (moved) grid.Rebuild(units);
+        // Crossing into Citadel detection range suppresses defender attacks on this same tick.
+        for (int i = 0; i < enemyCount; i++)
+        {
+            int id = enemies[i];
+            if (units.Health[id] <= 0 || units.Target[id] < 0) continue;
+            Vector2 position = ObstacleField.Xz(units.Position[id]);
+            float radius = Detection(units.Catalog[units.Type[id]]);
+            int target = units.Target[id];
+            if (position.DistanceSquaredTo(ClosestEdge(position)) <= radius * radius ||
+                units.Health[target] <= 0 ||
+                units.Position[id].DistanceSquaredTo(units.Position[target]) > radius * radius)
+                units.Target[id] = -1;
+        }
+        CombatSystem.Step(units, grid, Projectiles, 1f, delta, 0f, 0f, obstacles: field);
+
+        for (int i = 0; i < enemyCount && !Defeat; i++)
+        {
+            int id = enemies[i];
+            if (units.Health[id] > 0 && units.Target[id] < 0) AttackCitadel(id, field);
+        }
+        Projectiles.Step(units, grid, combat, delta, 0, field);
+        if (!Defeat && Remaining == 0)
+        {
+            if (WaveNumber == waves.Length) Victory = Projectiles.Count == 0;
+            else Countdown = intermission;
+        }
+
+        // Shared combat can turn a soldier even when no one moves or dies.
+        return moved || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
+    }
+
+    private void TryRelease(float delta)
+    {
+        byte[] wave = waves[WaveNumber - 1];
+        if (nextSpawn == wave.Length) return;
+        spawnClock -= delta;
+        if (spawnClock > 0) return;
+        spawnClock = SpawnInterval;
+        byte type = wave[nextSpawn];
+        float radius = units.Catalog[type].Footprint;
+        float spacing = radius * 2 + 0.5f;
+        for (int i = 0; i < 17; i++)
+        {
+            int lane = (i + 1) / 2 * (i % 2 == 0 ? -1 : 1);
+            Vector3 position = spawn + Vector3.Right * (lane * spacing);
+            if (!buildings.IsSpawnClear(position, radius)) continue;
+            int id = units.TrySpawn(type, Factions.Red, position);
+            if (id < 0) return;
+            buildings.ReservedWaveSlots--;
+            enemies[enemyCount++] = id;
+            nextSpawn++;
+            return;
+        }
+    }
+
+    private float Detection(in UnitStats type) =>
+        type.Ranged ? type.Reach : Mathf.Max(combat.CellSize * 2f, type.Reach + units.MaxFootprint);
+
+    private ObstacleField Sight(in UnitStats type, ObstacleField field) =>
+        !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
+            ObstacleFireMode.RequiresDirectLineOfSight ? field : null;
+
+    private void AcquireDefenderTargets(ObstacleField field)
+    {
+        for (int id = tick % AcquisitionInterval; id < units.Count; id += AcquisitionInterval)
+        {
+            if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
+            ref readonly var type = ref units.Catalog[units.Type[id]];
+            float range = type.Ranged ? type.Reach : type.Footprint + units.MaxFootprint + 0.08f;
+            units.Target[id] = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, Sight(type, field),
+                minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged ? -1f : 0.08f);
+        }
+    }
+
+    private Vector2 ClosestEdge(Vector2 position) => position.Max(citadelMin).Min(citadelMax);
+
+    private void OrderEnemy(int id, ObstacleField field)
+    {
+        ref readonly var type = ref units.Catalog[units.Type[id]];
+        Vector2 p = ObstacleField.Xz(units.Position[id]);
+        Vector2 edge = ClosestEdge(p);
+        float detect = Detection(type);
+        int target = units.Target[id];
+        if (p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
+        else
+        {
+            if (target >= 0 && (units.Health[target] <= 0 ||
+                units.Position[id].DistanceSquaredTo(units.Position[target]) > detect * detect)) target = -1;
+            if (target < 0 && id % AcquisitionInterval == tick % AcquisitionInterval)
+                target = grid.FindEnemy(units, id, detect, combat.QueryCandidateLimit, tick, Sight(type, field));
+        }
+
+        units.Target[id] = target;
+        if (target >= 0)
+        {
+            Vector2 defender = ObstacleField.Xz(units.Position[target]);
+            float range = type.Ranged ? type.Reach * 0.94f :
+                type.Footprint + units.Catalog[units.Type[target]].Footprint;
+            Vector2 offset = p - defender;
+            float distance = offset.Length();
+            if (distance <= range && distance >= type.MinimumFireRange)
+                movement.SetGoal(id, units.Position[id]);
+            else
+                movement.SetGoal(id, Ground(defender + (offset == Vector2.Zero ? Vector2.Down : offset / distance) *
+                    Mathf.Max(range, type.MinimumFireRange + 0.05f)));
+            return;
+        }
+
+        float standOff = type.Ranged ? Mathf.Max(type.MinimumFireRange + 0.05f, type.Reach * 0.94f) :
+            type.Footprint + ContactTolerance * 0.5f;
+        float edgeDistance = p.DistanceTo(edge);
+        bool clearShot = type.Ranged && edgeDistance <= type.Reach &&
+            Sight(type, field)?.BlocksSightExcept(Ground(p), Ground(edge), buildings.Citadel.Area) != true;
+        if (clearShot && edgeDistance <= type.Reach && edgeDistance >= type.MinimumFireRange)
+        {
+            movement.SetGoal(id, units.Position[id]);
+            return;
+        }
+        // Use a point on an exposed face so large footprints can reach contact at corners.
+        Vector2 normal = p - edge;
+        if (Mathf.Abs(normal.X) >= Mathf.Abs(normal.Y))
+        {
+            float sign = normal.X != 0 ? Mathf.Sign(normal.X) : 1f;
+            edge = new Vector2(sign > 0 ? citadelMax.X : citadelMin.X,
+                Mathf.Clamp(edge.Y, citadelMin.Y + 0.05f, citadelMax.Y - 0.05f));
+            normal = Vector2.Right * sign;
+        }
+        else
+        {
+            edge = new Vector2(Mathf.Clamp(edge.X, citadelMin.X + 0.05f, citadelMax.X - 0.05f),
+                normal.Y > 0 ? citadelMax.Y : citadelMin.Y);
+            normal = Vector2.Down * Mathf.Sign(normal.Y);
+        }
+        if (type.Ranged && !clearShot && edgeDistance <= type.Reach)
+        {
+            // Close along the original approach when cover blocks the firing position.
+            standOff = Mathf.Max(type.Footprint + 0.05f, type.MinimumFireRange + 0.05f);
+        }
+        movement.SetGoal(id, Ground(edge + normal * standOff));
+    }
+
+    private void AttackCitadel(int id, ObstacleField field)
+    {
+        ref readonly var type = ref units.Catalog[units.Type[id]];
+        Vector2 from = ObstacleField.Xz(units.Position[id]);
+        Vector2 edge = ClosestEdge(from);
+        float distance = from.DistanceTo(edge);
+        if (distance > Detection(type)) return;
+        if (!type.Ranged)
+        {
+            if (distance > type.Footprint + ContactTolerance) return;
+            buildings.Citadel.Damage(type.Damage);
+            units.Kill(id);
+            return;
+        }
+
+        if (units.Cooldown[id] > 0 || distance > type.Reach || distance < type.MinimumFireRange ||
+            Sight(type, field)?.BlocksSightExcept(Ground(from), Ground(edge), buildings.Citadel.Area) == true) return;
+        var heading = (edge - from).Normalized();
+        units.Facing[id] = heading;
+        units.Dirty[id] = true;
+        Vector3 aim = Ground(edge) + Vector3.Up * 1.5f;
+        if (Projectiles.FireAtStructure(id, units, aim, buildings.Citadel))
+            units.Cooldown[id] = type.Interval;
+    }
+
+    private static Vector3 Ground(Vector2 point) => new(point.X, 0, point.Y);
+}

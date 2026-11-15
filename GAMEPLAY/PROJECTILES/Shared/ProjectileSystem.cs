@@ -10,6 +10,7 @@ public sealed class ProjectileSystem
     private readonly Vector3[] origin, displacement;
     private readonly float[] elapsed, duration, arc, damage;
     private readonly byte[] sourceFaction;
+    private CommandStructure[] structureTargets;
     private readonly ProjectileCatalog catalog;
     private readonly float lifetime;
     public int Count { get; private set; }
@@ -28,8 +29,25 @@ public sealed class ProjectileSystem
 
     public void Fire(int shooter, int victim, UnitState units)
     {
-        if (Count == Position.Length) { Dropped++; return; }
+        ref readonly UnitStats target = ref units.Catalog[units.Type[victim]];
         ref readonly UnitStats type = ref units.Catalog[units.Type[shooter]];
+        Vector3 aim = units.Position[victim];
+        if (catalog.Flight(type.ProjectileType).ExplosionRadius <= 0f) aim.Y += target.Height * 0.5f;
+        Launch(shooter, units, aim, type);
+    }
+
+    internal bool FireAtStructure(int shooter, UnitState units, Vector3 aim, CommandStructure target)
+    {
+        int index = Count;
+        if (!Launch(shooter, units, aim, units.Catalog[units.Type[shooter]])) return false;
+        structureTargets ??= new CommandStructure[Position.Length];
+        structureTargets[index] = target;
+        return true;
+    }
+
+    private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type)
+    {
+        if (Count == Position.Length) { Dropped++; return false; }
         ProjectileFlight flight = catalog.Flight(type.ProjectileType);
         int i = Count++;
         origin[i] = Position[i] = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
@@ -39,8 +57,6 @@ public sealed class ProjectileSystem
             origin[i] = Position[i] = units.Position[shooter] +
                 new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
         }
-        Vector3 aim = units.Position[victim];
-        if (flight.ExplosionRadius <= 0f) aim.Y += units.Catalog[units.Type[victim]].Height * 0.5f;
         Vector3 path = aim - origin[i];
         displacement[i] = path;
         float distance = path.Length();
@@ -53,6 +69,7 @@ public sealed class ProjectileSystem
         Type[i] = type.ProjectileType;
         sourceFaction[i] = units.Faction[shooter];
         Dirty = true;
+        return true;
     }
 
     public void Step(UnitState units, SpatialGrid grid, BenchmarkConfig config, float dt, float separationPadding, ObstacleField obstacles = null, ShockwaveRenderer rings = null)
@@ -68,7 +85,17 @@ public sealed class ProjectileSystem
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
             ProjectileFlight flight = catalog.Flight(Type[i]);
-            if (flight.ExplosionRadius > 0f)
+            if (structureTargets?[i] is CommandStructure structure)
+            {
+                if (structure.Destroyed || (flight.BlocksOnObstacles &&
+                    obstacles?.BlocksSightExcept(Position[i], next, structure.Area) == true))
+                {
+                    Remove(i);
+                    continue;
+                }
+                if (elapsed[i] >= duration[i]) structure.Damage(damage[i]);
+            }
+            else if (flight.ExplosionRadius > 0f)
             {
                 if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment))
                 {
@@ -131,6 +158,11 @@ public sealed class ProjectileSystem
     private void Remove(int index)
     {
         int last = --Count;
+        if (structureTargets != null)
+        {
+            structureTargets[index] = structureTargets[last];
+            structureTargets[last] = null;
+        }
         if (index == last) return;
         Position[index] = Position[last]; Direction[index] = Direction[last];
         origin[index] = origin[last]; displacement[index] = displacement[last];

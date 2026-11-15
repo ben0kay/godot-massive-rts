@@ -17,6 +17,11 @@ public partial class CommandSandbox : Node3D
     [Export(PropertyHint.Range, "1,50000,1")] public float CitadelHealth { get; set; } = 5000f;
     private CommandBuildings buildings;
     private FabricationHud fabrication;
+    private FortressWaves waves;
+    private WaveHud waveHud;
+    private ProjectileRenderer projectileRenderer;
+    [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
+    [Export(PropertyHint.Range, "1,120,1")] public float BetweenWavesSeconds { get; set; } = 12f;
     private const string SummaryTitle = "Fortress Defense · Command Sandbox";
     private double hudClock;
     private double selectionClock;
@@ -26,8 +31,8 @@ public partial class CommandSandbox : Node3D
         var camera = new IsometricCamera();
         AddChild(camera);
         camera.MakeCurrent();
-        camera.Frame(30f);
-        camera.Size = 30f;
+        camera.Frame(42f);
+        camera.Size = 42f;
         AddChild(new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = new Vector2(5000f, 5000f) },
@@ -54,6 +59,12 @@ public partial class CommandSandbox : Node3D
         army = new ArmyRenderer();
         AddChild(army);
         army.Initialize(units, FacetedSoldierMeshes.Create(catalog), null, false);
+
+        waves = new FortressWaves(units, buildings, movement, GetNode<Marker3D>("EnemySpawn").GlobalPosition,
+            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds));
+        projectileRenderer = new ProjectileRenderer();
+        AddChild(projectileRenderer);
+        projectileRenderer.Initialize(2048, catalog.Projectiles);
 
         var hud = new CanvasLayer();
         AddChild(hud);
@@ -91,6 +102,14 @@ public partial class CommandSandbox : Node3D
         hud.AddChild(fabrication);
         fabrication.Initialize(catalog);
         fabrication.Refresh(buildings, null);
+        waveHud = new WaveHud
+        {
+            AnchorLeft = 0.5f, AnchorRight = 0.5f, OffsetLeft = -145f, OffsetRight = 145f,
+            OffsetTop = 40f, GrowVertical = Control.GrowDirection.End
+        };
+        hud.AddChild(waveHud);
+        waveHud.Initialize(waves.Start);
+        waveHud.Refresh(waves, buildings.Citadel);
         AddChild(input);
         input.Initialize(overlay, movement, buildings, fabrication);
         RefreshSelection();
@@ -107,11 +126,14 @@ public partial class CommandSandbox : Node3D
             RefreshSelection();
             fabrication.Refresh(buildings, overlay.Building);
         }
-        if (hudClock < 0.3) return;
+        if (hudClock < 1.0 / 3.0) return;
 
         hudClock = 0;
-        summary.Refresh(SummaryTitle, units);
+        summary.Refresh(SummaryTitle, units, waves.Projectiles.Count);
         armyBalance.RefreshCounts();
+        waveHud.Refresh(waves, buildings.Citadel);
+        if (!waves.Defeat && !waves.Victory)
+            foreach (var structure in buildings.Structures) structure.RefreshProductionBar();
     }
 
     private void RefreshSelection()
@@ -122,8 +144,10 @@ public partial class CommandSandbox : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
+        if (waves.Defeat || waves.Victory) return;
         int previousCount = units.Count;
         buildings.Step((float)delta);
-        if (movement.Step((float)delta) || previousCount != units.Count) army.Sync();
+        if (waves.Step((float)delta) || previousCount != units.Count) army.Sync();
+        projectileRenderer.Sync(waves.Projectiles);
     }
 }

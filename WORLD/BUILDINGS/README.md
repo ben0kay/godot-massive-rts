@@ -21,3 +21,5 @@ The Laser Tower chassis now uses **one shared three-tier beveled square mesh**, 
 ## FAB1 command structures
 
 `FABRICATION/CommandStructure.cs` supplies shared beveled geometry and health/construction state for the Citadel and Fabricator001. The Command Sandbox exposes starting Citadel HP in the scene Inspector. `CommandBuildings.cs` reserves grid footprints at placement, updates the shared obstacle field, and checks the gate and holding/rally slots before release. Future combat can call the structure's `Damage` method to change health and remove a destroyed structure.
+
+Completed Fabricators show a world-space production bar while making or dispensing a batch. The sandbox samples the bar about three times per second. Orange means output is blocked. The construction percentage label remains separate.
