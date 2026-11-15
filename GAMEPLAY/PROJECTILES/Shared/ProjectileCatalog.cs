@@ -11,6 +11,7 @@ public sealed class ProjectileCatalog
     private readonly Dictionary<ProjectileDefinition, int> indices = new();
     private readonly List<ProjectileFlight> flights = new();
     private readonly List<Mesh> meshes = new();
+    private readonly List<bool> factionTints = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private Mesh sharedArrowMesh;
@@ -21,6 +22,7 @@ public sealed class ProjectileCatalog
     public int Count => flights.Count;
     public ProjectileFlight Flight(int index) => flights[index];
     public Mesh Mesh(int index) => meshes[index];
+    public bool TintsByFaction(int index) => factionTints[index];
 
     public int Register(ProjectileDefinition definition)
     {
@@ -42,6 +44,7 @@ public sealed class ProjectileCatalog
                 : 0f,
             float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
         meshes.Add(mesh);
+        factionTints.Add(definition.TintByFaction);
         return index;
     }
 }

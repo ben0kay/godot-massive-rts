@@ -2,20 +2,20 @@
 
 [ext_resource type="Script" path="res://GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
 
-[sub_resource type="StandardMaterial3D" id="1"]
-shading_mode = 0
-albedo_color = Color(0.72, 0.94, 1, 1)
-emission_enabled = true
-emission = Color(0.44, 0.82, 1, 1)
-emission_energy_multiplier = 1.25
+[sub_resource type="Shader" id="1"]
+code = "shader_type spatial;\nrender_mode unshaded, cull_disabled;\nvarying vec3 faction_tint;\nvoid vertex() { faction_tint = COLOR.rgb; }\nvoid fragment() {\n    // Mostly bright neutral energy with a subtle tint from the firing faction.\n    vec3 bolt = mix(vec3(0.91, 0.95, 1.0), faction_tint, 0.40);\n    ALBEDO = bolt;\n    EMISSION = bolt * 0.20;\n}\n"
 
-[sub_resource type="BoxMesh" id="2"]
-material = SubResource("1")
+[sub_resource type="ShaderMaterial" id="2"]
+shader = SubResource("1")
+
+[sub_resource type="BoxMesh" id="3"]
+material = SubResource("2")
 size = Vector3(0.09, 0.09, 0.68)
 
 [resource]
 script = ExtResource("1")
-VisualMesh = SubResource("2")
+VisualMesh = SubResource("3")
+TintByFaction = true
 Speed = 45.0
 ArcHeight = 0.65
 ArcHeightPerDistance = 0.08

@@ -17,6 +17,8 @@ public sealed class ProjectileSystem
     public int Count { get; private set; }
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
+    // Visuals read the source team without exposing mutable projectile pool arrays.
+    public byte FactionAt(int index) => sourceFaction[index];
 
     public ProjectileSystem(int capacity, ProjectileCatalog catalog, float lifetime)
     {

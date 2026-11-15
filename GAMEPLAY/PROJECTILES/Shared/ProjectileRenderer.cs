@@ -8,6 +8,7 @@ public partial class ProjectileRenderer : Node3D
 {
     private MultiMesh[] batches;
     private int[] counts;
+    private bool[] tintByFaction;
     private int capacity;
 
     public void Initialize(int maximum, ProjectileCatalog catalog)
@@ -15,9 +16,16 @@ public partial class ProjectileRenderer : Node3D
         capacity = maximum;
         batches = new MultiMesh[catalog.Count];
         counts = new int[catalog.Count];
+        tintByFaction = new bool[catalog.Count];
         for (int i = 0; i < batches.Length; i++)
         {
-            var mesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = catalog.Mesh(i) };
+            tintByFaction[i] = catalog.TintsByFaction(i);
+            // Colors are enabled only for definitions that use them (such as Laser Bolt).
+            var mesh = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = tintByFaction[i], Mesh = catalog.Mesh(i)
+            };
             batches[i] = mesh;
             AddChild(new MultiMeshInstance3D
             {
@@ -51,7 +59,10 @@ public partial class ProjectileRenderer : Node3D
                 Vector3 up = Mathf.Abs(direction.Y) > 0.99f ? Vector3.Right : Vector3.Up;
                 basis = Basis.LookingAt(direction, up);
             }
-            batches[type].SetInstanceTransform(counts[type]++, new Transform3D(basis, projectiles.Position[i]));
+            int slot = counts[type]++;
+            batches[type].SetInstanceTransform(slot, new Transform3D(basis, projectiles.Position[i]));
+            if (tintByFaction[type])
+                batches[type].SetInstanceColor(slot, ArmyRenderer.FactionColor(projectiles.FactionAt(i)));
         }
         projectiles.Dirty = false;
     }
