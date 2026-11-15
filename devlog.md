@@ -251,3 +251,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Fortress waves enter from one configurable map edge. Added an optional Wave Editor panel for level wave composition, delay and edge.
 
 - 2026-11-15 — Added the missing span namespace to squad input and migrated Wave Editor to the current editor dock API.
+
+- 2026-11-15 — Command Wall prefab grounds its base on the flat terrain when placed or moved in the 3D editor.
