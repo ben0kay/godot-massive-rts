@@ -207,3 +207,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | FAB1 exit tuning | Source implemented; awaiting owner validation.** Halved the Fabricator release interval to 0.075 seconds, applied a 1.5× move-speed boost only along the gate-to-exit leg, and allowed follow-on releases once the hatch itself is clear. Kept blocked-spawn retries and normal movement speed after exit.
 
 - **2026-11-14 | Fortress Defense waves.** Added three editable waves, Citadel-priority combat, countdown and end states, and a world-space Fabricator production bar in the Command Sandbox. Awaiting Godot playtesting.
+
+- **2026-11-14 | Fortress Defense melee interception.** Idle Blue melee soldiers now detect and close on Red attackers before contact. Player movement and Fabricator exit orders retain priority.

@@ -7,6 +7,7 @@ internal sealed class FortressWaves
 {
     private const float SpawnInterval = 0.16f;
     private const int AcquisitionInterval = 6;
+    private const float DefenderMeleeDetectionMultiplier = 2f;
     private const float ContactTolerance = 0.02f;
     private readonly UnitState units;
     private readonly CommandBuildings buildings;
@@ -120,6 +121,8 @@ internal sealed class FortressWaves
         Projectiles.Step(units, grid, combat, delta, 0, field);
         if (!Defeat && Remaining == 0)
         {
+            for (int id = 0; id < units.Count; id++)
+                if (units.Faction[id] == Factions.Blue) movement.EndPursuit(id);
             if (WaveNumber == waves.Length) Victory = Projectiles.Count == 0;
             else Countdown = intermission;
         }
@@ -161,13 +164,34 @@ internal sealed class FortressWaves
 
     private void AcquireDefenderTargets(ObstacleField field)
     {
-        for (int id = tick % AcquisitionInterval; id < units.Count; id += AcquisitionInterval)
+        for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
-            float range = type.Ranged ? type.Reach : type.Footprint + units.MaxFootprint + 0.08f;
-            units.Target[id] = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, Sight(type, field),
-                minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged ? -1f : 0.08f);
+            bool canPursue = !type.Ranged && !movement.HasCommand(id);
+            float range = type.Ranged ? type.Reach : canPursue ? Detection(type) * DefenderMeleeDetectionMultiplier :
+                type.Footprint + units.MaxFootprint + 0.08f;
+            int target = units.Target[id];
+            if (id % AcquisitionInterval == tick % AcquisitionInterval)
+            {
+                target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, Sight(type, field),
+                    minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged || canPursue ? -1f : 0.08f);
+                units.Target[id] = target;
+            }
+            if (!canPursue) continue;
+            Vector3 position = units.Position[id];
+            if (target < 0 || units.Health[target] <= 0 ||
+                position.DistanceSquaredTo(units.Position[target]) > range * range)
+            {
+                movement.EndPursuit(id);
+                continue;
+            }
+
+            Vector3 enemy = units.Position[target];
+            float contact = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, 0f);
+            Vector3 offset = position - enemy;
+            movement.SetPursuitGoal(id, offset.LengthSquared() <= contact * contact
+                ? position : enemy + offset.Normalized() * contact);
         }
     }
 

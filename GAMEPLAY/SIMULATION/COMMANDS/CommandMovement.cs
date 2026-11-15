@@ -12,7 +12,7 @@ internal sealed class CommandMovement
     public const int DefaultColumns = 5;
     private readonly UnitState units;
     private readonly int[] active;
-    private readonly bool[] ordered, hasExit;
+    private readonly bool[] ordered, hasExit, pursuing;
     private readonly Vector3[] exits;
     private int activeCount;
     private ObstacleField field;
@@ -25,6 +25,7 @@ internal sealed class CommandMovement
         active = new int[capacity];
         ordered = new bool[capacity];
         hasExit = new bool[capacity];
+        pursuing = new bool[capacity];
         exits = new Vector3[capacity];
     }
 
@@ -56,12 +57,27 @@ internal sealed class CommandMovement
 
     public void SetGoal(int id, Vector3 goal, Vector3? exit = null)
     {
+        pursuing[id] = false;
         units.Goal[id] = goal;
         hasExit[id] = exit.HasValue;
         exits[id] = exit.GetValueOrDefault();
         if (ordered[id]) return;
         ordered[id] = true;
         active[activeCount++] = id;
+    }
+
+    public bool HasCommand(int id) => ordered[id] && !pursuing[id];
+
+    public void SetPursuitGoal(int id, Vector3 goal)
+    {
+        if (HasCommand(id)) return;
+        SetGoal(id, goal);
+        pursuing[id] = true;
+    }
+
+    public void EndPursuit(int id)
+    {
+        if (pursuing[id]) SetGoal(id, units.Position[id]);
     }
 
     public bool Step(float delta)
@@ -77,7 +93,7 @@ internal sealed class CommandMovement
             Vector3 goal = hasExit[id] ? exits[id] : units.Goal[id];
             if (units.Health[id] <= 0 || previous == goal && !hasExit[id])
             {
-                ordered[id] = false;
+                ordered[id] = pursuing[id] = false;
                 active[i] = active[--activeCount];
                 continue;
             }
