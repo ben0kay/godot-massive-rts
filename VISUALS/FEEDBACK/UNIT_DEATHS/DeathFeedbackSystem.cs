@@ -8,7 +8,7 @@ public sealed class DeathFeedbackSystem
     public const int Capacity = 512;
     public const int BlobsPerDeath = 4;
     public const float ShrinkSeconds = 0.20f;
-    public const float BlobSeconds = 0.28f;
+    public const float BlobSeconds = 0.42f;
     public const float SplatSeconds = 3.0f;
     public const float SplatFadeSeconds = 1.2f;
     // Visual-only cap independent of the shorter-lived body/puff capacity.

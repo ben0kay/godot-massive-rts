@@ -115,7 +115,8 @@ void fragment() { ALBEDO = tint.rgb; ALPHA = tint.a; }"
             for (int j = 0; j < DeathFeedbackSystem.BlobsPerDeath; j++)
             {
                 float variation = ((effect.Seed >> (8 + j * 4)) & 15u) / 15f;
-                float distance = (0.22f + 0.28f * variation) * outward;
+                // A slightly wider spread; normalized lifetime also slows travel to the edge.
+                float distance = (0.25f + 0.32f * variation) * outward;
                 float height = 0.035f + 0.16f * time * (1f - time);
                 Vector3 point = effect.Ground + rotation * PuffDirections[j] * distance + Vector3.Up * height;
                 // Preserve the larger DEATH1-B puffs, now in the defeated unit's team color.
