@@ -227,3 +227,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — DEATH1-D: Lengthened faction-colored death-blob lifetime from 0.28s to 0.42s, slowing the existing outward motion and fade; increased travel distance about 14%. Four-blob batching and 3s residual ground splats unchanged; awaiting owner visual validation.
 
 - 2026-11-14 — Fixed painted benchmark Auto Attack pursuit so structure-capable units can reach hostile towers outside local detection range when their soldier target is gone.
+
+- 2026-11-14 — Benchmark Auto Attack now compares nearest enemy soldiers and attackable tower edges by distance for structure-capable units.

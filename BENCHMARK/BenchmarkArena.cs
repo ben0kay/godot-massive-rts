@@ -604,7 +604,7 @@ public partial class BenchmarkArena : Node3D
         if (promoted) trample = TrampleSystem.Create(units, autoAttackCount, autoAttackIds, trample);
     }
 
-    private void AcquireDefenseTargets(int step, float gap)
+    private void AcquireDefenseTargets(int step)
     {
         if (defenseCombat == null || !units.HasStructureAttackers) return;
         const int interval = 6;
@@ -614,26 +614,20 @@ public partial class BenchmarkArena : Node3D
             if (units.Health[id] <= 0f) continue;
             ref readonly var type = ref catalog[units.Type[id]];
             if (!type.TargetsStructures) continue;
-            int soldier = units.Target[id];
-            bool liveSoldier = soldier >= 0 && units.Health[soldier] > 0f;
-            // The authored radius controls switching away from soldier combat. Auto Attack
-            // still needs a pursuit destination when towers are the only targets left.
-            float range = liveSoldier ? type.StructureDetectionRange : float.PositiveInfinity;
+
+            // Compare the closest live soldier with the closest attackable tower edge.
+            int previous = units.Target[id];
+            if (previous >= 0 && units.Health[previous] <= 0f) previous = -1;
+            int soldier = grid.FindPursuitEnemy(units, id, previous, PursuitReason.LiveRefresh);
+            units.Target[id] = soldier;
+            Vector3 position = units.Position[id];
+            float soldierDistance = soldier >= 0 ? position.DistanceTo(units.Position[soldier]) : float.PositiveInfinity;
             var sight = StructureCombat.Sight(type, units, obstacles);
-            var building = defenseCombat.Acquire(id, type, range, true, true, obstacles, sight);
-            if (building == null) continue;
-            if (liveSoldier)
-            {
-                float reach = type.Ranged ? type.Reach : CombatSystem.MeleeContact(type.Footprint,
-                    catalog[units.Type[soldier]].Footprint, gap) + 0.08f;
-                if (type.PreferredTarget == TargetPreference.Units ||
-                    (!defenseCombat.CanHit(id, type, building, sight) &&
-                     units.Position[id].DistanceSquaredTo(units.Position[soldier]) <= reach * reach))
-                {
-                    defenseCombat.SetTarget(id, null);
-                    continue;
-                }
-            }
+            var building = defenseCombat.Acquire(id, type, soldierDistance, true, true, obstacles, sight);
+            Vector2 ground = ObstacleField.Xz(position);
+            if (building != null && soldier >= 0 &&
+                ground.DistanceSquaredTo(StructureCombat.Edge(building.Area, ground)) >= soldierDistance * soldierDistance)
+                defenseCombat.SetTarget(id, null);
         }
     }
 
@@ -668,7 +662,7 @@ public partial class BenchmarkArena : Node3D
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
                     panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds);
                 if (guards != null) AcquireGuards(acquisitionStep);
-                AcquireDefenseTargets(acquisitionStep, panel.Separation == SeparationMode.Off ? 0f : Config.SeparationGap);
+                AcquireDefenseTargets(acquisitionStep);
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
