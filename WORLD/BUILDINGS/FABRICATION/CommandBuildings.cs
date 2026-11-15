@@ -24,7 +24,7 @@ internal sealed class CommandBuildings
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
 
-    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, CitadelView citadelView)
+    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView)
     {
         this.root = root;
         this.units = units;
@@ -45,7 +45,7 @@ internal sealed class CommandBuildings
                 footprint = new ObstacleRectangle(-4, -9, 5, 5);
             }
         }
-        else citadelView = GD.Load<PackedScene>("res://WORLD/BUILDINGS/CITADEL/Citadel.tscn").Instantiate<CitadelView>();
+        else citadelView = GD.Load<PackedScene>("res://WORLD/BUILDINGS/CITADEL/Citadel.tscn").Instantiate<Node3D>();
 
         Citadel = new CommandStructure(footprint, citadelHealth > 0f ? citadelHealth : citadelDefinition.Health,
             Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView);

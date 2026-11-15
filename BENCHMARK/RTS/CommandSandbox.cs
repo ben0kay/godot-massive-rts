@@ -38,17 +38,6 @@ public partial class CommandSandbox : Node3D
         var cameraStart = GetNodeOrNull<Marker3D>("CameraStart");
         camera.SetOpeningView(cameraStart?.GlobalPosition ?? Vector3.Zero, OpeningCameraSize,
             cameraStart == null ? 45f : Mathf.RadToDeg(cameraStart.GlobalRotation.Y));
-        float halfWidth = DeploymentLayout.WorldHalfWidth;
-        var groundMaterial = new ShaderMaterial
-        {
-            Shader = GD.Load<Shader>("res://BENCHMARK/RTS/CommandGround.gdshader")
-        };
-        groundMaterial.SetShaderParameter("map_half_width", halfWidth);
-        AddChild(new MeshInstance3D
-        {
-            Mesh = new PlaneMesh { Size = Vector2.One * (halfWidth * 3f) },
-            MaterialOverride = groundMaterial
-        });
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
@@ -65,7 +54,7 @@ public partial class CommandSandbox : Node3D
                 CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
             units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
         }
-        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<CitadelView>("Citadel"));
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"));
 
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);

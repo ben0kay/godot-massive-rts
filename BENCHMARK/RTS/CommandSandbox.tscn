@@ -1,9 +1,18 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
 [ext_resource type="Script" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2"]
 
 [ext_resource type="PackedScene" path="res://WORLD/BUILDINGS/CITADEL/Citadel.tscn" id="3"]
+
+[ext_resource type="Shader" path="res://BENCHMARK/RTS/CommandGround.gdshader" id="4"]
+
+[sub_resource type="ShaderMaterial" id="GroundMaterial"]
+shader = ExtResource("4")
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+material = SubResource("GroundMaterial")
+size = Vector2(7500, 7500)
 
 [sub_resource type="Resource" id="Wave1"]
 script = ExtResource("2")
@@ -28,6 +37,11 @@ Enemies = Dictionary[String, int]({
 [node name="CommandSandbox" type="Node3D"]
 script = ExtResource("1")
 WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wave2"), SubResource("Wave3")])
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.025, 0)
+cast_shadow = 0
+mesh = SubResource("GroundMesh")
 
 [node name="CameraStart" type="Marker3D" parent="."]
 rotation = Vector3(0, 0.7853982, 0)

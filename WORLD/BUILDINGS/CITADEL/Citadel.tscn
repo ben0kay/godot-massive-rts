@@ -1,6 +1,59 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=10 format=3]
 
-[ext_resource type="Script" path="res://WORLD/BUILDINGS/CITADEL/CitadelView.cs" id="1"]
+[sub_resource type="StandardMaterial3D" id="Material_Dark"]
+shading_mode = 0
+albedo_color = Color(0.152941, 0.211765, 0.266667, 1)
 
-[node name="Citadel" type="MeshInstance3D"]
-script = ExtResource("1")
+[sub_resource type="StandardMaterial3D" id="Material_Steel"]
+shading_mode = 0
+albedo_color = Color(0.274510, 0.356863, 0.427451, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_Blue"]
+shading_mode = 0
+albedo_color = Color(0.149020, 0.474510, 0.960784, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_Core"]
+shading_mode = 0
+albedo_color = Color(0.250980, 0.898039, 1.000000, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_Base"]
+material = SubResource("Material_Dark")
+size = Vector3(9.7, 0.72, 9.7)
+
+[sub_resource type="BoxMesh" id="Mesh_Plinth"]
+material = SubResource("Material_Steel")
+size = Vector3(7.8, 1.1, 7.8)
+
+[sub_resource type="BoxMesh" id="Mesh_BlueBand"]
+material = SubResource("Material_Blue")
+size = Vector3(6.4, 0.8, 6.4)
+
+[sub_resource type="BoxMesh" id="Mesh_UpperDeck"]
+material = SubResource("Material_Dark")
+size = Vector3(4.6, 1.4, 4.6)
+
+[sub_resource type="BoxMesh" id="Mesh_Core"]
+material = SubResource("Material_Core")
+size = Vector3(2.8, 0.6, 2.8)
+
+[node name="Citadel" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.36, 0)
+mesh = SubResource("Mesh_Base")
+
+[node name="Plinth" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.15, 0)
+mesh = SubResource("Mesh_Plinth")
+
+[node name="BlueBand" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.1, 0)
+mesh = SubResource("Mesh_BlueBand")
+
+[node name="UpperDeck" type="MeshInstance3D" parent="."]
+position = Vector3(0, 3.1, 0)
+mesh = SubResource("Mesh_UpperDeck")
+
+[node name="Core" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.0, 0)
+mesh = SubResource("Mesh_Core")

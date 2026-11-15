@@ -17,7 +17,7 @@ For exports that use a selected-resource filter, include the menu scenes, UI con
 
 ## Authoring playable command maps
 
-The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
+The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. The Ground node is a saved flat plane visible in the editor. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
 
 1. For a playable map, create a new Godot scene inherited from `BENCHMARK/RTS/CommandSandbox.tscn` and save it in your level folder. The current Fortress Defense Level 001 is an empty template. Use the inherited scene as its replacement when you want the command game to run there.
 2. Drag `WORLD/OBSTACLES/CommandWall.tscn` into the scene as a child of `Obstacles`. Move or scale the wall in the editor with no rotation. Both X/Z edges must land on the 2-unit grid. The default 4 × 4 footprint fits when its center is on an even X and Z coordinate.
