@@ -50,7 +50,7 @@ In the CPU overlay, **Scheduled acquisition causes** splits global searches by w
 
 Budget and nearby-result counts cover the current HUD sample. An exhausted step used all 128 extra replacement queries. Deferred replacements count eligible attempts blocked by the cap, so a soldier can count again on a later step. Nearby results measure distance only. A local search can still reject those enemies due to cover, minimum range, or its candidate limit.
 
-**Live combat** has two independent comparison toggles, both off by default. **Delay distant melee retargeting** skips scheduled and extra pursuit for about 0.4 simulation seconds after a melee soldier first observes the target loss. Local acquisition continues, and getting within local search range of the old waypoint makes pursuit eligible early. **Cap long-range searches (512/step)** shares 512 queries across all live pursuit reasons per acquisition step (normally 30 Hz), with a rotating starting unit ID. The 128-query extra replacement cap still applies. Skipped searches retry on existing slots. The CPU overlay reports deferred attempts for each toggle over its current sample.
+**Live combat** has two independent comparison toggles, both **on by default**. **Delay distant melee retargeting** skips scheduled and extra pursuit for about 0.4 simulation seconds after a melee soldier first observes the target loss. Local acquisition continues, and getting within local search range of the old waypoint makes pursuit eligible early. **Cap long-range searches (512/step)** shares 512 queries across all live pursuit reasons per acquisition step (normally 30 Hz), with a rotating starting unit ID. The 128-query extra replacement cap still applies. Skipped searches retry on existing slots. The CPU overlay reports deferred attempts for each toggle over its current sample.
 
 ## Configuration and ownership
 
@@ -168,7 +168,7 @@ Under **CPU and separation**, the pursuit breakdown shows live refresh, schedule
 
 **F1** hides or restores the left controls and right performance details while keeping the compact battle summary visible. **F4** controls the right-hand details independently.
 
-**Reuse route waypoints** (off by default) keeps the current waypoint while the soldier stays inside its verified corridor. Waypoint arrival, leaving that corridor or losing the route restores normal waypoint selection. Wall clipping still runs on each movement step. Compare **Route waypoints reused**, corridor calls and movement time in the same obstacle layout.
+**Reuse route waypoints** (on by default) keeps the current waypoint while the soldier stays inside its verified corridor. Waypoint arrival, leaving that corridor or losing the route restores normal waypoint selection. Wall clipping still runs on each movement step. Compare **Route waypoints reused**, corridor calls and movement time in the same obstacle layout.
 
 ### Named painted battles
 

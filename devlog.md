@@ -215,3 +215,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | Command Sandbox.** Added one-pass Normal separation with toggle and timing stats, plus K + left-click attack-move with destination resumption.
 
 - 2026-11-14 — DMG1: Added the configurable damage matrix, H Breacher, and footprint-based Citadel and Fabricator combat in the Command Sandbox. Benchmark towers use typed outgoing damage. Source implemented, awaiting owner gameplay and performance validation.
+
+- **2026-11-14 | BENCH0 default toggles.** Enabled **Delay distant melee retargeting**, **Cap long-range searches (512/step)**, and **Reuse route waypoints** by default in the benchmark controls. All three remain independently toggleable; their algorithms, caps, and saved benchmark workloads were not changed. Source-only review; awaiting owner Godot validation.

@@ -37,8 +37,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	private readonly CheckButton rangedTargetVariety = new() { Text = "Ranged target variety", ButtonPressed = true };
 	private readonly CheckButton slowPursuitRefresh = new() { Text = "Slower long-range retargeting", ButtonPressed = true };
 	public bool SlowPursuitRefresh => slowPursuitRefresh.ButtonPressed;
-	private readonly CheckButton delayFarMeleeRetarget = new() { Text = "Delay distant melee retargeting" };
-	private readonly CheckButton limitPursuitQueries = new() { Text = "Cap long-range searches (512/step)" };
+	private readonly CheckButton delayFarMeleeRetarget = new() { Text = "Delay distant melee retargeting", ButtonPressed = true };
+	private readonly CheckButton limitPursuitQueries = new() { Text = "Cap long-range searches (512/step)", ButtonPressed = true };
 	public bool DelayFarMeleeRetarget => delayFarMeleeRetarget.ButtonPressed;
 	public bool LimitPursuitQueries => limitPursuitQueries.ButtonPressed;
 	private readonly CheckButton prunePursuitCells = new() { Text = "Prune pursuit cells", ButtonPressed = true };
@@ -81,7 +81,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public bool ProfileMovement => profileMovement.ButtonPressed;
 	private readonly CheckButton profileObstacles = new() { Text = "Sample obstacle queries" };
 	private readonly CheckButton reuseCorridors = new() { Text = "Reuse corridor checks", ButtonPressed = true };
-	private readonly CheckButton reuseWaypoints = new() { Text = "Reuse route waypoints" };
+	private readonly CheckButton reuseWaypoints = new() { Text = "Reuse route waypoints", ButtonPressed = true };
 	public bool ReuseWaypoints => reuseWaypoints.ButtonPressed;
 	public bool ReuseCorridors => reuseCorridors.ButtonPressed;
 	public bool ProfileObstacles => profileObstacles.ButtonPressed;
