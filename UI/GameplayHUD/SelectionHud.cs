@@ -44,7 +44,12 @@ public partial class SelectionHud : PanelContainer
             typeCounts = new int[infoCatalog.Count];
             combatInfo = new string[infoCatalog.Count];
             for (int i = 0; i < combatInfo.Length; i++)
-                combatInfo[i] = infoCatalog.DamageRules.Describe(infoCatalog[i].DamageType, infoCatalog[i].ArmourClass);
+            {
+                ref readonly var stats = ref infoCatalog[i];
+                combatInfo[i] = stats.UnitDamagePercent >= 0f && stats.StructureDamagePercent >= 0f
+                    ? $"{infoCatalog.DamageRules.ArmourName(stats.ArmourClass)} armour · {stats.AgainstUnits(stats.Damage):0.##} damage vs units · {stats.AgainstStructures(stats.Damage):0.##} vs structures"
+                    : infoCatalog.DamageRules.Describe(stats.DamageType, stats.ArmourClass);
+            }
         }
         Array.Clear(typeCounts);
         int living = 0;

@@ -31,7 +31,7 @@ internal sealed class CommandBuildings
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
         citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
-        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth, true,
+        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth > 0f ? citadelHealth : citadelDefinition.Health, true,
             Factions.Blue, citadelDefinition, units.Catalog.DamageRules);
         Add(Citadel);
     }
@@ -81,13 +81,13 @@ internal sealed class CommandBuildings
     public bool Place(ObstacleRectangle area)
     {
         if (!CanPlace(area) || !Carbon.TrySpend(CommandStructure.FabricatorCost)) return false;
-        Add(new CommandStructure(area, 1200f, false, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
+        Add(new CommandStructure(area, fabricatorDefinition.Health, false, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
         return true;
     }
 
     public void AddHostileFabricator(Vector3 point)
     {
-        Add(new CommandStructure(Snap(point), 1200f, false, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
+        Add(new CommandStructure(Snap(point), fabricatorDefinition.Health, false, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
     }
 
     private void Add(CommandStructure building)

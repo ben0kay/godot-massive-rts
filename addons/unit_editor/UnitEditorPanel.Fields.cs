@@ -68,6 +68,10 @@ public partial class UnitEditorPanel
 
         Section("Primary attack");
         TextField(nameof(Unit.DamageType), "Damage type", Unit.DamageType, value => Unit.DamageType = value);
+        Number(nameof(Unit.UnitDamagePercent), "Damage vs units", () => Unit.UnitDamagePercent,
+            v => Unit.UnitDamagePercent = v, -1, 1000, 1, "%", tooltip: "−1 uses the damage matrix. Otherwise this is the percentage of base damage.");
+        Number(nameof(Unit.StructureDamagePercent), "Damage vs structures", () => Unit.StructureDamagePercent,
+            v => Unit.StructureDamagePercent = v, -1, 1000, 1, "%", tooltip: "−1 uses the damage matrix. Otherwise this is the percentage of base damage.");
         EnumField(nameof(Unit.AllowedTargets), "Allowed targets", Unit.AllowedTargets, value => Unit.AllowedTargets = value);
         EnumField(nameof(Unit.PreferredTarget), "Preferred target", Unit.PreferredTarget, value => Unit.PreferredTarget = value);
         Number(nameof(Unit.StructureDetectionRange), "Structure detection", () => Unit.StructureDetectionRange,
@@ -184,6 +188,9 @@ public partial class UnitEditorPanel
         Section("Identity");
         Row("Stable ID", new LineEdit { Text = defense.Id, Editable = false }, "Used by deployment saves.");
         TextField(nameof(defense.DisplayName), "Display name", defense.DisplayName, value => defense.DisplayName = value);
+
+        Number(nameof(defense.Health), "Health", () => defense.Health, value => defense.Health = value,
+            1, 50000, 1, " HP", unbounded: true);
 
         Section("Footprint");
         Number(nameof(defense.Width), "Width", () => defense.Width, value => defense.Width = (int)value, 1, 16, 1, " cells");

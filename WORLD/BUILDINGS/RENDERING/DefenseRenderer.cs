@@ -206,6 +206,14 @@ public partial class DefenseRenderer : Node3D
         return new Vector3(center.X, height + 0.25f, center.Y);
     }
 
+    internal void HideTower(int index)
+    {
+        var hidden = new Transform3D(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
+        bases.SetInstanceTransform(index, hidden);
+        heads.SetInstanceTransform(index, hidden);
+        barrels.SetInstanceTransform(index, hidden);
+    }
+
     public void Aim(int index, Vector3 pivot, float yaw)
     {
         Basis basis = new Basis(Vector3.Up, yaw);

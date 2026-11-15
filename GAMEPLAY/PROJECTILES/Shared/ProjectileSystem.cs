@@ -11,7 +11,7 @@ public sealed class ProjectileSystem
     private readonly float[] elapsed, duration, arc, damage;
     private readonly byte[] sourceFaction;
     private readonly int[] damageTypes;
-    private CommandStructure[] structureTargets;
+    private StructureHealth[] structureTargets;
     private readonly ProjectileCatalog catalog;
     private readonly float lifetime;
     public int Count { get; private set; }
@@ -38,12 +38,15 @@ public sealed class ProjectileSystem
         Launch(shooter, units, aim, type);
     }
 
-    internal bool FireAtStructure(int shooter, UnitState units, Vector3 aim, CommandStructure target)
+    internal bool FireAtStructure(int shooter, UnitState units, Vector3 aim, StructureHealth target)
     {
         int index = Count;
         if (!Launch(shooter, units, aim, units.Catalog[units.Type[shooter]])) return false;
-        structureTargets ??= new CommandStructure[Position.Length];
+        structureTargets ??= new StructureHealth[Position.Length];
         structureTargets[index] = target;
+        ref readonly var type = ref units.Catalog[units.Type[shooter]];
+        damage[index] = type.AgainstStructures(type.Damage);
+        damageTypes[index] = type.StructureDamageType;
         return true;
     }
 
@@ -67,8 +70,8 @@ public sealed class ProjectileSystem
         duration[i] = Mathf.Max(0.0001f, distance / flight.Speed);
         elapsed[i] = 0;
         Direction[i] = path + Vector3.Up * (4f * arc[i]);
-        damage[i] = type.Damage;
-        damageTypes[i] = type.DamageType;
+        damage[i] = type.AgainstUnits(type.Damage);
+        damageTypes[i] = type.UnitDamageType;
         Type[i] = type.ProjectileType;
         sourceFaction[i] = units.Faction[shooter];
         Dirty = true;
@@ -88,7 +91,7 @@ public sealed class ProjectileSystem
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
             ProjectileFlight flight = catalog.Flight(Type[i]);
-            if (structureTargets?[i] is CommandStructure structure)
+            if (structureTargets?[i] is StructureHealth structure)
             {
                 if (structure.Destroyed || (flight.BlocksOnObstacles &&
                     obstacles?.BlocksSightExcept(Position[i], next, structure.Area) == true))

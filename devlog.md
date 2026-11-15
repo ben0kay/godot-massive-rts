@@ -221,3 +221,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — DMG1 balance: Set percentage armour to 0% across the shipped roster and kept the damage-type matchup classes.
 
 - 2026-11-14 — DEATH1-C: Recolored soldier death puffs to the defeated faction and added small, pooled/batched ground splats fading after 3 seconds, with an independent 1,024-mark cap. Combat, damage and lifetimes of existing puffs unchanged; awaiting owner visual validation.
+
+- 2026-11-14 — DMG1 balance: H Breacher deals 20 damage to structures and 50% to units through editable category modifiers. Citadels, Fabricators and benchmark towers default to 1,000 HP and are removed on destruction.

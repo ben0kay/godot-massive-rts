@@ -231,7 +231,7 @@ internal sealed class FortressWaves
         }
     }
 
-    private bool ChooseStructure(int id, in UnitStats type, int unitTarget, CommandStructure target, ObstacleField sight)
+    private bool ChooseStructure(int id, in UnitStats type, int unitTarget, StructureHealth target, ObstacleField sight)
     {
         if (target == null) return false;
         if (unitTarget < 0 || units.Health[unitTarget] <= 0) return true;
@@ -273,7 +273,7 @@ internal sealed class FortressWaves
                 bool canApproach = !movement.HasCommand(id) || attackMove;
                 float structureRange = canApproach ? type.StructureDetectionRange :
                     Mathf.Min(type.StructureDetectionRange, StructureCombat.Reach(type));
-                CommandStructure structure = structures.Acquire(id, type, structureRange, refresh, canApproach, field, sight);
+                StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, field, sight);
                 if (ChooseStructure(id, type, target, structure, sight))
                 {
                     units.Target[id] = -1;
@@ -328,7 +328,7 @@ internal sealed class FortressWaves
         if (type.TargetsStructures)
         {
             var sight = Sight(type, field);
-            CommandStructure structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, field, sight);
+            StructureHealth structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, field, sight);
             if (ChooseStructure(id, type, target, structure, sight))
             {
                 units.Target[id] = -1;
@@ -396,7 +396,7 @@ internal sealed class FortressWaves
         if (!type.Ranged)
         {
             if (distance > type.Footprint + ContactTolerance) return;
-            buildings.Citadel.Damage(type.Damage, type.DamageType);
+            buildings.Citadel.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
             units.Kill(id);
             return;
         }

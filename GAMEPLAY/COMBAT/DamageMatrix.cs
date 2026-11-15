@@ -18,6 +18,7 @@ public partial class DamageMatrix : Resource
 
 public sealed class DamageRules
 {
+    public const int NeutralType = -1;
     private readonly string[] damageNames, armourNames;
     private readonly Dictionary<string, int> damageIds, armourIds;
     private readonly float[] multipliers;
@@ -51,7 +52,7 @@ public sealed class DamageRules
     public int ArmourClass(string name) => armourIds.TryGetValue(name ?? "", out int index) ? index : 0;
     public string ArmourName(int armour) => armourNames[armour];
     public float Resolve(float damage, int type, int armour, float damageTaken) =>
-        Mathf.Max(0f, damage * Effectiveness(type, armour) * damageTaken);
+        Mathf.Max(0f, damage * (type == NeutralType ? 1f : Effectiveness(type, armour)) * damageTaken);
 
     private float Effectiveness(int type, int armour) => multipliers[type * armourNames.Length + armour];
 

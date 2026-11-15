@@ -3,7 +3,7 @@ using Godot;
 
 namespace MassiveRts;
 
-internal sealed class CommandStructure
+internal sealed class CommandStructure : StructureHealth
 {
     public const int FabricatorCells = 3;
     public const int FabricatorCost = 500;
@@ -16,15 +16,7 @@ internal sealed class CommandStructure
     private static Mesh fabricatorMesh, citadelMesh;
     private static QuadMesh productionBarMesh;
     private static Shader productionBarShader;
-    private readonly DamageRules rules;
-    private readonly float damageTaken;
-    public readonly byte Faction;
-    public readonly int ArmourClass;
-    public readonly ObstacleRectangle Area;
     public readonly Vector3 Center;
-    public readonly float MaxHealth;
-    public float Health { get; private set; }
-    public bool Destroyed => Health <= 0;
     public bool Ready => Built >= 1f;
     public float Built { get; private set; }
     public readonly FabricatorProduction Production;
@@ -40,16 +32,11 @@ internal sealed class CommandStructure
 
     public CommandStructure(ObstacleRectangle area, float health, bool citadel, byte faction,
         BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null)
+        : base(area, faction, health, rules, rules.ArmourClass(definition.ArmourClass), definition.Armour)
     {
-        Area = area;
-        Faction = faction;
-        this.rules = rules;
-        ArmourClass = rules.ArmourClass(definition.ArmourClass);
-        damageTaken = 1f - (float.IsFinite(definition.Armour) ? Mathf.Clamp(definition.Armour, 0f, 1f) : 0f);
         Vector2 center = (area.Min + area.Max) * 0.5f;
         Center = new Vector3(center.X, 0, center.Y);
         View.Position = Center;
-        Health = MaxHealth = health;
         Built = citadel ? 1f : 0;
         if (!citadel)
         {
@@ -89,12 +76,7 @@ internal sealed class CommandStructure
 
     }
 
-    public void Damage(float amount, int damageType)
-    {
-        if (!float.IsFinite(amount) || amount <= 0) return;
-        Health = Mathf.Max(0, Health - rules.Resolve(amount, damageType, ArmourClass, damageTaken));
-        if (Destroyed) View.Hide();
-    }
+    protected override void OnDestroyed() => View.Hide();
 
     public void Construct(float delta)
     {

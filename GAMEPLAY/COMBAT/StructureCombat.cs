@@ -1,4 +1,4 @@
-// Shared command-mode targeting, footprint approach and attacks for destructible structures.
+// Shared targeting, footprint approach and attacks for destructible structures.
 using System.Collections.Generic;
 using Godot;
 
@@ -7,24 +7,24 @@ namespace MassiveRts;
 internal sealed class StructureCombat
 {
     private readonly UnitState units;
-    private readonly IReadOnlyList<CommandStructure> structures;
-    private readonly CommandStructure[] targets;
+    private readonly IReadOnlyList<StructureHealth> structures;
+    private readonly StructureHealth[] targets;
     private readonly Vector3[] approachGoals;
 
-    public StructureCombat(UnitState units, IReadOnlyList<CommandStructure> structures)
+    public StructureCombat(UnitState units, IReadOnlyList<StructureHealth> structures)
     {
         this.units = units;
         this.structures = structures;
-        targets = new CommandStructure[units.Position.Length];
+        targets = new StructureHealth[units.Position.Length];
         approachGoals = new Vector3[targets.Length];
     }
 
-    public CommandStructure Acquire(int id, in UnitStats type, float range, bool refresh,
+    public StructureHealth Acquire(int id, in UnitStats type, float range, bool refresh,
         bool canApproach, ObstacleField field, ObstacleField sight)
     {
         Vector2 position = ObstacleField.Xz(units.Position[id]);
         float best = range * range;
-        CommandStructure target = targets[id];
+        StructureHealth target = targets[id];
         if (target?.Destroyed != false || position.DistanceSquaredTo(Edge(target.Area, position)) > best)
             target = null;
         if (refresh)
@@ -46,19 +46,23 @@ internal sealed class StructureCombat
         return targets[id] = target;
     }
 
-    public void SetTarget(int id, CommandStructure target) => targets[id] = target;
-    public CommandStructure Target(int id) => targets[id];
+    public void SetTarget(int id, StructureHealth target) => targets[id] = target;
+    public StructureHealth Target(int id) => targets[id];
     public Vector3 ApproachGoal(int id) => approachGoals[id];
+
+    public static ObstacleField Sight(in UnitStats type, UnitState units, ObstacleField field) =>
+        !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
+            ObstacleFireMode.RequiresDirectLineOfSight ? field : null;
 
     public static Vector2 Edge(ObstacleRectangle area, Vector2 position) => position.Max(area.Min).Min(area.Max);
 
     public static float Reach(in UnitStats type) =>
         type.Ranged ? type.Reach : Mathf.Max(type.Reach, type.Footprint + 0.08f);
 
-    public bool CanHit(int id, in UnitStats type, CommandStructure target, ObstacleField sight) =>
+    public bool CanHit(int id, in UnitStats type, StructureHealth target, ObstacleField sight) =>
         CanHit(units.Position[id], type, target, sight);
 
-    private static bool CanHit(Vector3 position, in UnitStats type, CommandStructure target, ObstacleField sight)
+    private static bool CanHit(Vector3 position, in UnitStats type, StructureHealth target, ObstacleField sight)
     {
         Vector2 from = ObstacleField.Xz(position);
         Vector2 edge = Edge(target.Area, from);
@@ -68,7 +72,7 @@ internal sealed class StructureCombat
             sight?.BlocksSightExcept(position, Ground(edge), target.Area) != true;
     }
 
-    private bool TryApproach(int id, in UnitStats type, CommandStructure target, ObstacleField field, ObstacleField sight, out Vector3 goal)
+    private bool TryApproach(int id, in UnitStats type, StructureHealth target, ObstacleField field, ObstacleField sight, out Vector3 goal)
     {
         Vector3 position = units.Position[id];
 
@@ -107,7 +111,7 @@ internal sealed class StructureCombat
 
     public bool Attack(int id, ProjectileSystem projectiles, float dt, ObstacleField sight)
     {
-        CommandStructure target = targets[id];
+        StructureHealth target = targets[id];
         if (target?.Destroyed != false || units.Health[id] <= 0f || units.Cooldown[id] > 0f) return false;
         ref readonly var type = ref units.Catalog[units.Type[id]];
         if (!CanHit(id, type, target, sight)) return false;
@@ -124,7 +128,7 @@ internal sealed class StructureCombat
         {
             if (!projectiles.FireAtStructure(id, units, Ground(edge) + Vector3.Up * 1.5f, target)) return false;
         }
-        else target.Damage(type.Damage, type.DamageType);
+        else target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
         units.Cooldown[id] = type.Interval;
         return units.Dirty[id] = true;
     }

@@ -74,8 +74,12 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     float DamageTaken, bool Ranged, int ProjectileType, float MinimumFireRange,
     bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
-    float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance)
+    float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent)
 {
+    public float AgainstUnits(float amount) => UnitDamagePercent < 0f ? amount : amount * (UnitDamagePercent * 0.01f);
+    public float AgainstStructures(float amount) => StructureDamagePercent < 0f ? amount : amount * (StructureDamagePercent * 0.01f);
+    public int UnitDamageType => UnitDamagePercent < 0f ? DamageType : DamageRules.NeutralType;
+    public int StructureDamageType => StructureDamagePercent < 0f ? DamageType : DamageRules.NeutralType;
     public bool TargetsUnits => (AllowedTargets & TargetCategory.Units) != 0;
     public bool TargetsStructures => (AllowedTargets & TargetCategory.Structures) != 0;
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
@@ -185,7 +189,8 @@ public sealed class RuntimeUnitCatalog
                 accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave, recoil,
                 DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), d.AllowedTargets, d.PreferredTarget,
                 ClampStat(d.StructureDetectionRange, 0f, 100f, 12f), ClampStat(d.TurnDegreesPerSecond, 0f, 720f, 0f),
-                ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f));
+                ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
+                ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f));
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

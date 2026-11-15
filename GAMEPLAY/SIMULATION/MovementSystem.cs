@@ -7,9 +7,9 @@ public static class MovementSystem
 {
     private const float RangedStandOffBuffer = 0.25f;
     // =========================================================
-    public static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
+    internal static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
-        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null)
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, StructureCombat structureCombat = null)
     {
         var catalog = units.Catalog;
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
@@ -28,10 +28,12 @@ public static class MovementSystem
                 continue;
             }
             int target = units.Target[i];
-            bool hasTarget = target >= 0 && units.Health[target] > 0;
+            var structure = structureCombat?.Target(i);
+            bool hasStructure = structure?.Destroyed == false;
+            bool hasTarget = !hasStructure && target >= 0 && units.Health[target] > 0;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
                 units.Alive > units.FactionAlive[units.Faction[i]];
-            if (!hasTarget && !movementMode && !followingLastPosition)
+            if (!hasTarget && !movementMode && !followingLastPosition && !hasStructure)
             {
                 units.MoveSpeed[i] = 0f;
                 continue;
@@ -41,10 +43,16 @@ public static class MovementSystem
             bool steerMelee = melee != null && !movementMode && !type.Ranged && hasTarget;
             if (!hasTarget) melee?.Reset(i);
             // Hold the firing line until there is a living target worth moving toward.
-            if (rangedCombat && !hasTarget && units.MoveSpeed[i] == 0f) continue;
-            Vector3 destination = movementMode ? units.Goal[i] : units.Position[target];
+            if (rangedCombat && !hasTarget && !hasStructure && units.MoveSpeed[i] == 0f) continue;
+            Vector3 destination = movementMode ? units.Goal[i] : hasStructure
+                ? structureCombat.ApproachGoal(i) : units.Position[target];
+            if (hasStructure && structureCombat.CanHit(i, type, structure, StructureCombat.Sight(type, units, obstacles)))
+            {
+                units.MoveSpeed[i] = 0f;
+                continue;
+            }
             Vector3 offset = destination - units.Position[i];
-            float stop = 0.2f;
+            float stop = hasStructure ? 0f : 0.2f;
             bool hasClearShot = false;
             if (hasTarget)
             {

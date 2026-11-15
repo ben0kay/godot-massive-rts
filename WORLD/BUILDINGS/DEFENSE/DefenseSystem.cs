@@ -18,19 +18,54 @@ internal sealed class DefenseSystem
 
     private readonly Tower[] towers;
     private readonly DefenseRenderer renderer;
+    private readonly StructureHealth[] structures;
+    private readonly ObstacleField staticWalls;
+    private readonly bool[] removed;
+    public IReadOnlyList<StructureHealth> Structures => structures;
 
     public DefenseSystem(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog,
-        float height, DefenseRenderer renderer)
+        float height, DefenseRenderer renderer, DamageRules rules, ObstacleField staticWalls)
     {
         this.renderer = renderer;
+        this.staticWalls = staticWalls;
+        structures = new StructureHealth[placements.Count];
+        removed = new bool[placements.Count];
         towers = new Tower[placements.Count];
         for (int i = 0; i < towers.Length; i++)
         {
             var placement = placements[i];
             var area = placement.Footprint(catalog);
-            towers[i] = new Tower { Stats = catalog[placement.Type], Faction = placement.Faction,
+            var stats = catalog[placement.Type];
+            structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour);
+            towers[i] = new Tower { Stats = stats, Faction = placement.Faction,
                 Pivot = DefenseRenderer.Pivot(area, height), Footprint = area, Target = -1 };
         }
+    }
+
+    public bool RemoveDestroyed(out ObstacleField field)
+    {
+        field = null;
+        bool changed = false;
+        int alive = 0;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            if (!structures[i].Destroyed) { alive++; continue; }
+            if (removed[i]) continue;
+            removed[i] = true;
+            renderer.HideTower(i);
+            changed = true;
+        }
+        if (!changed) return false;
+        field = staticWalls;
+        if (alive == 0) return true;
+
+        int wallCount = staticWalls?.RectangleCount ?? 0;
+        var rectangles = new ObstacleRectangle[wallCount + alive];
+        if (staticWalls != null) staticWalls.Rectangles.CopyTo(rectangles);
+        foreach (var structure in structures)
+            if (!structure.Destroyed) rectangles[wallCount++] = structure.Area;
+        field = new ObstacleField(rectangles);
+        return true;
     }
 
     // =========================================================
@@ -41,7 +76,7 @@ internal sealed class DefenseSystem
         for (int i = 0; i < towers.Length; i++)
         {
             ref Tower tower = ref towers[i];
-            if (!tower.Stats.AttacksSoldiers) continue;
+            if (structures[i].Destroyed || !tower.Stats.AttacksSoldiers) continue;
             tower.Cooldown = tower.Cooldown > 0f ? tower.Cooldown - dt : 0f;
             int target = tower.Target;
             if (target < 0 || !Valid(in tower, units, target, obstacles))

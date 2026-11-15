@@ -10,7 +10,7 @@ public static class AreaDamage
         in UnitStats type, Vector2 direction, float separationGap, float tolerance, float movementPadding, ObstacleField obstacles = null)
     {
         Vector3 origin = units.Position[attacker];
-        units.Damage(primary, type.Damage, type.DamageType);
+        units.Damage(primary, type.AgainstUnits(type.Damage), type.UnitDamageType);
         int limit = type.CleaveMaxAdditionalTargets;
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f || limit == 0) return;
 
@@ -49,7 +49,7 @@ public static class AreaDamage
         }
 
         float secondaryDamage = type.Damage * type.CleaveSecondaryFraction;
-        for (int index = 0; index < count; index++) units.Damage(victims[index], secondaryDamage, type.DamageType);
+        for (int index = 0; index < count; index++) units.Damage(victims[index], type.AgainstUnits(secondaryDamage), type.UnitDamageType);
     }
 
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.

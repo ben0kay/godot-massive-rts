@@ -38,7 +38,8 @@ public sealed class RuntimeBuildingCatalog
                 Clamp(definition.Damage, 0f, 100000f, 12f),
                 1f / Clamp(definition.ShotsPerSecond, 0.05f, 60f, 2f),
                 Mathf.DegToRad(Clamp(definition.TurretDegreesPerSecond, 1f, 3600f, 360f)),
-                Clamp(definition.BeamSeconds, 0.01f, 2f, 0.08f), definition.RequiresLineOfSight, definition.AttacksSoldiers, rules.DamageType(definition.DamageType)));
+                Clamp(definition.BeamSeconds, 0.01f, 2f, 0.08f), definition.RequiresLineOfSight, definition.AttacksSoldiers, rules.DamageType(definition.DamageType),
+                Clamp(definition.Health, 1f, 1000000f, 1000f), rules.ArmourClass(definition.ArmourClass), definition.Armour));
         }
     }
 
@@ -47,7 +48,7 @@ public sealed class RuntimeBuildingCatalog
 }
 
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
-    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType);
+    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour);
 
 public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type, float GridSize = DeploymentLayout.CellSize)
 {

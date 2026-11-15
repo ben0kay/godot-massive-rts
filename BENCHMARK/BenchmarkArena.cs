@@ -35,6 +35,7 @@ public partial class BenchmarkArena : Node3D
     private DeploymentPainter painter;
     private RuntimeBuildingCatalog buildings;
     private DefenseSystem defenseSystem;
+    private StructureCombat defenseCombat;
     private DefenseRenderer defenseRenderer;
     private ObstacleField obstacles;
     private ObstacleNavigation navigation;
@@ -179,6 +180,7 @@ public partial class BenchmarkArena : Node3D
         deathFeedback.Clear();
         deathRenderer.Sync(deathFeedback);
         defenseSystem = null;
+        defenseCombat = null;
         if (defenseRenderer != null)
         {
             RemoveChild(defenseRenderer);
@@ -430,9 +432,10 @@ public partial class BenchmarkArena : Node3D
             defenseRenderer = new DefenseRenderer();
             AddChild(defenseRenderer);
             defenseRenderer.Initialize(layout.Defenses, buildings, Config.ObstacleHeight, battle: true);
-            defenseSystem = new DefenseSystem(layout.Defenses, buildings, Config.ObstacleHeight, defenseRenderer);
+            defenseSystem = new DefenseSystem(layout.Defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field);
         }
         units = CreateUnitState((uint)settings.Seed);
+        if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
         grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(snapshot, (ulong)settings.Seed);
@@ -601,6 +604,46 @@ public partial class BenchmarkArena : Node3D
         if (promoted) trample = TrampleSystem.Create(units, autoAttackCount, autoAttackIds, trample);
     }
 
+    private void AcquireDefenseTargets(int step, float gap)
+    {
+        if (defenseCombat == null || !units.HasStructureAttackers) return;
+        const int interval = 6;
+        for (int slot = step % interval; slot < autoAttackCount; slot += interval)
+        {
+            int id = autoAttackIds == null ? slot : autoAttackIds[slot];
+            if (units.Health[id] <= 0f) continue;
+            ref readonly var type = ref catalog[units.Type[id]];
+            if (!type.TargetsStructures) continue;
+            int soldier = units.Target[id];
+            var sight = StructureCombat.Sight(type, units, obstacles);
+            var building = defenseCombat.Acquire(id, type, type.StructureDetectionRange, true, true, obstacles, sight);
+            if (building == null) continue;
+            if (soldier >= 0 && units.Health[soldier] > 0f)
+            {
+                float reach = type.Ranged ? type.Reach : CombatSystem.MeleeContact(type.Footprint,
+                    catalog[units.Type[soldier]].Footprint, gap) + 0.08f;
+                if (type.PreferredTarget == TargetPreference.Units ||
+                    (!defenseCombat.CanHit(id, type, building, sight) &&
+                     units.Position[id].DistanceSquaredTo(units.Position[soldier]) <= reach * reach))
+                {
+                    defenseCombat.SetTarget(id, null);
+                    continue;
+                }
+            }
+        }
+    }
+
+    private void AttackDefenses(float dt)
+    {
+        if (defenseCombat == null || !units.HasStructureAttackers) return;
+        for (int slot = 0; slot < autoAttackCount; slot++)
+        {
+            int id = autoAttackIds == null ? slot : autoAttackIds[slot];
+            if (defenseCombat.Target(id)?.Destroyed != false || trample?.OverridesAttack(id) == true) continue;
+            defenseCombat.Attack(id, projectiles, dt, StructureCombat.Sight(catalog[units.Type[id]], units, obstacles));
+        }
+    }
+
     private void Step(float dt)
     {
         long total = Stamp(), start;
@@ -621,6 +664,7 @@ public partial class BenchmarkArena : Node3D
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
                     panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds);
                 if (guards != null) AcquireGuards(acquisitionStep);
+                AcquireDefenseTargets(acquisitionStep, panel.Separation == SeparationMode.Off ? 0f : Config.SeparationGap);
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
@@ -643,7 +687,7 @@ public partial class BenchmarkArena : Node3D
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds);
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, units.HasStructureAttackers ? defenseCombat : null);
         if (guards != null)
             foreach (GuardGroup group in guards)
                 group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
@@ -687,8 +731,16 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, trample, obstacles, shockwaves); combatMs += Elapsed(start);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, trample, obstacles, shockwaves, units.HasStructureAttackers ? defenseCombat : null);
+            AttackDefenses(dt);
+            combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, obstacles, shockwaves); projectileMs += Elapsed(start); }
+        }
+        if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
+        {
+            SetBattleObstacles(remainingObstacles, battleWalls.Mesh);
+            navigation = obstacles == null ? null : new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
+                Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
         }
         tick++;
         double tickMs = Elapsed(total);

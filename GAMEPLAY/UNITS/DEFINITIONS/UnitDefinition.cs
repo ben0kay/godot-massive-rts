@@ -38,6 +38,9 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "0.01,4,0.05")] public float ChargeResistance { get; set; } = 0.30f;
 
     [ExportGroup("Primary attack")]
+    // -1 uses the damage-type matchup, 0–1000 replaces it for this target category.
+    [Export(PropertyHint.Range, "-1,1000,1")] public float UnitDamagePercent { get; set; } = -1f;
+    [Export(PropertyHint.Range, "-1,1000,1")] public float StructureDamagePercent { get; set; } = -1f;
     [Export] public string DamageType { get; set; } = "Standard";
     [Export] public TargetCategory AllowedTargets { get; set; } = TargetCategory.Units;
     [Export] public TargetPreference PreferredTarget { get; set; }

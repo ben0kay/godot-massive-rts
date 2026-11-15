@@ -16,7 +16,7 @@ public partial class CommandSandbox : Node3D
     private ArmyBalanceHud armyBalance;
     private SelectionHud selection;
     private const int UnitCapacity = 2048;
-    [Export(PropertyHint.Range, "1,50000,1")] public float CitadelHealth { get; set; } = 5000f;
+    [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     private CommandBuildings buildings;
     private FabricationHud fabrication;
     private FortressWaves waves;
@@ -56,7 +56,7 @@ public partial class CommandSandbox : Node3D
                 CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
             units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
         }
-        buildings = new CommandBuildings(this, units, movement, Mathf.Max(1, CitadelHealth));
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth);
 
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);

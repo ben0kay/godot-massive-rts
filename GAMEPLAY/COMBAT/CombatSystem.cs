@@ -149,8 +149,8 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
-        ShockwaveRenderer shockwaves = null)
+    internal static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
+        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null)
     {
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
         bool lungeChanged = false;
@@ -165,7 +165,7 @@ public static class CombatSystem
                 if (animation.MeleeLungeDistance > 0f && animation.Interval - beforeCooldown < MeleeLungeSeconds)
                     lungeChanged = units.Dirty[i] = true;
             }
-            if (trample?.OverridesAttack(i) == true) continue;
+            if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
@@ -223,13 +223,13 @@ public static class CombatSystem
             {
                 ShockwaveStats stomp = type.Shockwave;
                 Vector3 impact = units.Position[i];
-                AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, stomp.Damage, stomp.EdgeDamageFraction,
-                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.DamageType);
+                AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, type.AgainstUnits(stomp.Damage), stomp.EdgeDamageFraction,
+                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.UnitDamageType);
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
                 AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
-            else units.Damage(target, type.Damage, type.DamageType);
+            else units.Damage(target, type.AgainstUnits(type.Damage), type.UnitDamageType);
             if (type.MeleeLungeDistance > 0f) lungeChanged = units.Dirty[i] = true;
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }
