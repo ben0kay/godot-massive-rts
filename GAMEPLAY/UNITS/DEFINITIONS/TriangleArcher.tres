@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
-[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/BasicArrow/BasicArrow.tres" id="2"]
+[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/LaserBolt/LaserBolt.tres" id="2"]
 
 [resource]
 script = ExtResource("1")

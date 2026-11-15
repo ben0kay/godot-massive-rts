@@ -233,3 +233,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Benchmark tower comparisons reuse the shared soldier acquisition result and its search budget.
 
 - 2026-11-15 — VIS2-B: Darkened soldier side faces by 25% and bevels by 12.5%, retaining bright tops, faction colors and batching. Shared building bevels are unchanged. Source reviewed; awaiting owner visual validation.
+
+- 2026-11-15 — PROJ-LASER1: Replaced Triangle Archer's arrow visual with a thin, short pale-cyan unshaded/emissive laser-bolt BoxMesh via its dedicated projectile resource. Preserved projectile damage, speed, shallow arc, collision and MultiMesh batching; retained BasicArrow for other use. Source reviewed; awaiting owner visual validation.
