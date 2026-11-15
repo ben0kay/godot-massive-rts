@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/LongLaserBolt/LongLaserBolt.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+Id = "long_triangle_marksman"
+DisplayName = "Long Triangle • Marksman"
+Role = "Slow, durable long-range laser infantry"
+Shape = 8
+Width = 0.8
+Height = 0.4125
+Health = 65.0
+Speed = 3.2
+Damage = 13.0
+Interval = 1.7
+Reach = 48.0
+Armour = 0.0
+Style = 1
+RangedRecoilEnabled = true
+RangedRecoilDistance = 0.12
+RangedRecoilReturnSeconds = 0.18
+Projectile = ExtResource("2")
+ChargeResistance = 0.18

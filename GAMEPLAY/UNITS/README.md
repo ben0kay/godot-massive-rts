@@ -20,6 +20,7 @@ UNITS/
     CircleInfantry.tres
     SquareInfantry.tres
     TriangleArcher.tres
+    LongTriangleMarksman.tres
     DiamondCavalry.tres
     PentagonElite.tres
     HexagonSiege.tres
@@ -30,11 +31,11 @@ UNITS/
     DefaultUnitCatalog.tres
 ```
 
-The arena loads the catalogue once and builds a shared stat lookup and mesh set. Runtime byte indices are explicitly Circle 0, Square 1, Triangle 2, Diamond 3, Pentagon 4, Hexagon 5, Chevron 6 and H Breacher 7. Deployment saves use version 1 and stable textual IDs. Legacy arrays map kind 0 to Circle and kind 1 to Triangle.
+The arena loads the catalogue once and builds a shared stat lookup and mesh set. Runtime byte indices are explicitly Circle 0, Square 1, Triangle 2, Diamond 3, Pentagon 4, Hexagon 5, Chevron 6, H Breacher 7 and Long Triangle Marksman 8. Deployment saves use version 1 and stable textual IDs. Legacy arrays map kind 0 to Circle and kind 1 to Triangle.
 
 Open a definition resource to tune its silhouette, dimensions, speed, health, armour, reach, damage or attack interval. The arena reads changes on restart. Both factions use the same definitions. Normal melee attacks require body contact based on both footprints. Authored melee reach still feeds acquisition and trample launch distance. Armour multiplies damage by the fraction left after reduction for both melee and projectiles.
 
-**Size Multiplier** in each definition scales width, length, height, footprint radius and melee reach. At 1.25, each linear dimension is 25% larger. Diamond Cavalry defaults to 1.35, Pentagon Elite to 0.9, Hexagon Siege Infantry to 2.0, and the other five types to 1.0. Positive values are clamped to 0.5–3.0. Zero, negative and nonfinite values fall back to 1.0. Restart the arena after changing a definition so the catalogue and meshes rebuild together.
+**Size Multiplier** in each definition scales width, length, height, footprint radius and melee reach. At 1.25, each linear dimension is 25% larger. Diamond Cavalry defaults to 1.35, Pentagon Elite to 0.9, Hexagon Siege Infantry to 2.0, and all other types to 1.0. Positive values are clamped to 0.5–3.0. Zero, negative and nonfinite values fall back to 1.0. Restart the arena after changing a definition so the catalogue and meshes rebuild together.
 
 The catalogue fits each circular collision footprint around the scaled mesh outline. Polygon faces may sit inside that circle. The legacy Diamond `FootprintRadius` property only controls the length of its silhouette. The painter checks the resulting circular clearance against neighbours and battlefield edges. SEP1/SEP2 use the same compiled footprints. Saved layouts still use stable type IDs and the existing format. Loading a layout after increasing a type’s size can reject placements that no longer fit.
 
@@ -45,3 +46,7 @@ Edit the existing definition in the Inspector or enable the [full-screen Entity 
 Heavy Artillery uses a 1.92-unit-wide, 0.99-unit-high chevron body, 20% larger in both dimensions than the default Pentagon Elite. Its barrel extends the circular footprint to 1.152 units. The unit resource sets the 12-unit minimum range, 70-unit maximum range, 80 centre damage, and recoil. The shared Artillery Shell resource sets the arc, blast radius, and edge damage fraction. Existing benchmark preset rosters stay fixed for comparisons. Use the deployment painter to add Heavy Artillery.
 
 DMG1 adds `h_breacher`, a slow 110-HP melee unit with Medium armour class and a twin-ram lunge. It deals 20 per strike to structures and 10 to units with the shipped zero percentage armour. The target percentages are editable under Primary attack in Entity Editor. It prefers hostile structures within 12 units while retaining soldier combat. Paint it through the benchmark unit picker, or select it in a Fabricator. The stock benchmark preset compositions retain their existing rosters.
+
+## UNIT4 — Long Triangle Marksman
+
+The new `long_triangle_marksman` (`LongTriangleMarksman.tres`) uses the same 0.8-unit rear-edge width as the basic Triangle, but a new, *twice as long* isosceles triangular outline pointing forward. Its circular clearance footprint follows the longer nose, while the soldier rendering and dynamic picker/Entity Editor use the existing catalogue pipeline. Stats: **65 HP, speed 3.2, 13 damage, 1.7s interval, 48-unit reach**, versus basic Triangle's 25 HP, 4.5 speed, 9 damage, 1.25s interval and 32-unit reach. It shoots its own longer faction-tinted laser bolt and has a Fabricator recipe of 8 for 210 Carbon in 14 seconds. Existing benchmark preset troop compositions were deliberately left unchanged; paint it or produce it from the Fabricator.

@@ -255,3 +255,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Command Wall prefab grounds its base on the flat terrain when placed or moved in the 3D editor.
 
 - 2026-11-15 — Added authored command hills and starting unit placements, sharing terrain height across preview, commands, troop movement and structure placement.
+
+- 2026-11-15 — UNIT4 / PROJ-LASER3: Reduced Triangle laser-bolt dimensions by 25% and added Long Triangle Marksman (2× length isosceles silhouette, 65 HP/3.2 speed/13 damage/1.7s rate/48 range) with longer faction-tinted bolt, stable catalogue entry and Fabricator recipe. Existing unit indices, gameplay systems and benchmark preset rosters preserved. Source reviewed; awaiting owner Godot validation.

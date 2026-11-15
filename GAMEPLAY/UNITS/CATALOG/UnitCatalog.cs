@@ -59,6 +59,8 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Circle => new(16, halfWidth, halfWidth, 0f),
             UnitShape.Square => new(4, squareRadius, squareRadius, Mathf.Pi * 0.25f),
             UnitShape.Triangle => new(3, triangleRadius, triangleRadius, -Mathf.Pi * 0.5f),
+            // Same short rear edge as Triangle, but twice the nose-to-tail length.
+            UnitShape.LongTriangle => new(3, triangleRadius, triangleRadius * 2f, -Mathf.Pi * 0.5f),
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
@@ -97,10 +99,11 @@ public partial class UnitCatalog : Resource
 public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
-        DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher";
+        DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
+        LongTriangleId = "long_triangle_marksman";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
@@ -143,6 +146,12 @@ public sealed class RuntimeUnitCatalog
         {
             var breacher = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/HBreacher.tres");
             if (breacher != null) byId.Add(BreacherId, breacher);
+        }
+        // Pre-marksman saved/custom catalogues can continue loading unchanged.
+        if (byId.Count == LongTriangle && !byId.ContainsKey(LongTriangleId))
+        {
+            var marksman = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres");
+            if (marksman != null) byId.Add(LongTriangleId, marksman);
         }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;

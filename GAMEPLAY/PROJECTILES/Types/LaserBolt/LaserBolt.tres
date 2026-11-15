@@ -10,7 +10,7 @@ shader = SubResource("1")
 
 [sub_resource type="BoxMesh" id="3"]
 material = SubResource("2")
-size = Vector3(0.09, 0.09, 0.68)
+size = Vector3(0.0675, 0.0675, 0.51)
 
 [resource]
 script = ExtResource("1")
