@@ -229,3 +229,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-14 — Fixed painted benchmark Auto Attack pursuit so structure-capable units can reach hostile towers outside local detection range when their soldier target is gone.
 
 - 2026-11-14 — Benchmark Auto Attack now compares nearest enemy soldiers and attackable tower edges by distance for structure-capable units.
+
+- 2026-11-15 — Benchmark tower comparisons reuse the shared soldier acquisition result and its search budget.

@@ -615,11 +615,9 @@ public partial class BenchmarkArena : Node3D
             ref readonly var type = ref catalog[units.Type[id]];
             if (!type.TargetsStructures) continue;
 
-            // Compare the closest live soldier with the closest attackable tower edge.
-            int previous = units.Target[id];
-            if (previous >= 0 && units.Health[previous] <= 0f) previous = -1;
-            int soldier = grid.FindPursuitEnemy(units, id, previous, PursuitReason.LiveRefresh);
-            units.Target[id] = soldier;
+            // Reuse the shared soldier acquisition result and its normal search budget.
+            int soldier = units.Target[id];
+            if (soldier >= 0 && units.Health[soldier] <= 0f) soldier = -1;
             Vector3 position = units.Position[id];
             float soldierDistance = soldier >= 0 ? position.DistanceTo(units.Position[soldier]) : float.PositiveInfinity;
             var sight = StructureCombat.Sight(type, units, obstacles);
