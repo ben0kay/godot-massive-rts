@@ -27,5 +27,5 @@ The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the orig
 The inherited scene exposes the opening layout in the 3D viewport:
 
 - **CameraStart** sets the point the camera looks at and its Y rotation sets the opening yaw. Set Opening Camera Size on the level root to change the opening zoom.
-- **BlueSpawn** marks the middle of the starting squad's front row. Its Y rotation turns the formation. **EnemySpawn** sets the wave entry point.
+- **BlueSpawn** marks the middle of the starting squad's front row. Its Y rotation turns the formation. Set **Enemy Spawn Edge** on the level root or in the Wave Editor panel to choose the single boundary where waves enter.
 - **Citadel** is an instance of `WORLD/BUILDINGS/CITADEL/Citadel.tscn`. Move it in X/Z and keep the default scale and rotation. The 10 × 10 footprint snaps to the two-unit grid on play, with centers on odd X/Z coordinates. Its new position is also the objective for enemy waves.

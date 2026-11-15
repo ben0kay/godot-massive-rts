@@ -13,7 +13,8 @@ internal sealed class FortressWaves
     private readonly UnitState units;
     private readonly CommandBuildings buildings;
     private readonly CommandMovement movement;
-    private readonly Vector3 spawn;
+    private readonly Vector3 inward, sideways;
+    private readonly float citadelAlongEdge;
     private readonly Vector2 citadelMin, citadelMax;
     private readonly byte[][] waves;
     private readonly float intermission;
@@ -42,14 +43,22 @@ internal sealed class FortressWaves
     public bool WaitingToStart => WaveNumber == 0 && !Defeat;
     public int Remaining => WaveNumber == 0 ? 0 : units.FactionAlive[Factions.Red] + waves[WaveNumber - 1].Length - nextSpawn;
 
-    public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, Vector3 spawn,
+    public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, WaveSpawnEdge edge,
         Godot.Collections.Array<WaveDefinition> definitions, float intermission)
     {
         this.units = units;
         this.buildings = buildings;
         this.movement = movement;
         structures = new StructureCombat(units, buildings.Structures);
-        this.spawn = spawn;
+        inward = edge switch
+        {
+            WaveSpawnEdge.North => Vector3.Back,
+            WaveSpawnEdge.East => Vector3.Left,
+            WaveSpawnEdge.West => Vector3.Right,
+            _ => Vector3.Forward
+        };
+        sideways = inward.Cross(Vector3.Up);
+        citadelAlongEdge = buildings.Citadel.Center.Dot(sideways);
         this.intermission = intermission;
         citadelMin = buildings.Citadel.Area.Min;
         citadelMax = buildings.Citadel.Area.Max;
@@ -200,13 +209,17 @@ internal sealed class FortressWaves
         spawnClock = SpawnInterval;
         byte type = wave[nextSpawn];
         float radius = units.Catalog[type].Footprint;
-        float spacing = radius * 2 + 0.5f;
-        for (int i = 0; i < 17; i++)
+        const int lanesPerSide = 8;
+        float spacing = radius * 2f + 0.5f;
+        float sideLimit = DeploymentLayout.WorldHalfWidth - radius - 0.1f - lanesPerSide * spacing;
+        float along = Mathf.Clamp(citadelAlongEdge, -sideLimit, sideLimit);
+        Vector3 entryCenter = sideways * along - inward * (DeploymentLayout.WorldHalfWidth - radius - 0.1f);
+        for (int i = 0; i <= lanesPerSide * 2; i++)
         {
             int lane = (i + 1) / 2 * (i % 2 == 0 ? -1 : 1);
-            Vector3 position = spawn + Vector3.Right * (lane * spacing);
-            if (!buildings.IsSpawnClear(position, radius)) continue;
-            int id = units.TrySpawn(type, Factions.Red, position);
+            Vector3 entry = entryCenter + sideways * (lane * spacing);
+            if (!buildings.IsSpawnClear(entry, radius)) continue;
+            int id = units.TrySpawn(type, Factions.Red, entry);
             if (id < 0) return;
             buildings.ReservedWaveSlots--;
             enemies[enemyCount++] = id;

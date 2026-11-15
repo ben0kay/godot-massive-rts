@@ -193,7 +193,7 @@ The sandbox supports 2,048 soldier IDs and up to 32 Fabricators. A blocked exit,
 
 ### Fortress Defense waves
 
-In the Command Sandbox, build up and press **Start Wave 1**. Three editable waves release from the scene's `EnemySpawn` marker. The HUD shows Citadel health and enemies still alive or waiting to spawn. Once the wave is resolved, the next wave begins after a 12-second countdown. Clear the final wave to win, or lose if the Citadel is destroyed.
+In the Command Sandbox, build up and press **Start Wave 1**. Three editable waves release from the selected map edge, South by default. See the [wave editor instructions](../GAMEPLAY/WAVES/README.md). The HUD shows Citadel health and enemies still alive or waiting to spawn. Once the wave is resolved, the next wave begins after a 12-second countdown. Clear the final wave to win, or lose if the Citadel is destroyed.
 
 Wave units march toward the Citadel and engage defenders in their detection range until the Citadel footprint enters that range. Melee units strike the Citadel once on contact and die. Ranged units fire from their normal range. Idle melee defenders detect enemies at twice the wave melee detection range and move to intercept. Defenders with active move orders can attack within reach while following those orders.
 

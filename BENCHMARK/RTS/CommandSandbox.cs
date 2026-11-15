@@ -16,7 +16,7 @@ public partial class CommandSandbox : Node3D
     private CommandPerformanceHud performance;
     private ArmyBalanceHud armyBalance;
     private SelectionHud selection;
-    private const int UnitCapacity = 2048;
+    internal const int UnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
     private CommandBuildings buildings;
@@ -24,6 +24,7 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
+    [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
     [Export(PropertyHint.Range, "1,120,1")] public float BetweenWavesSeconds { get; set; } = 12f;
     private const string SummaryTitle = "Fortress Defense · Command Sandbox";
@@ -63,7 +64,7 @@ public partial class CommandSandbox : Node3D
         AddChild(army);
         army.Initialize(units, FacetedSoldierMeshes.Create(catalog), null, false);
 
-        waves = new FortressWaves(units, buildings, movement, GetNode<Marker3D>("EnemySpawn").GlobalPosition,
+        waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
             WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds));
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);

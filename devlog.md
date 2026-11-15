@@ -247,3 +247,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-15 | RTS attack-move formation drag.** K + left-click retains the centered attack-move order but now issues on mouse release, allowing K + left-drag to preview and commit the existing straight formation geometry (columns, ghost footprints and distance measurement) with attack-move enabled. Normal left selection, right move drag, Right Shift freeform move and K one-shot arming remain unchanged. Source-only review; awaiting owner Godot validation.
 
 - 2026-11-15 — Saved the Citadel model and flat command ground as scene meshes visible in the 3D editor.
+
+- 2026-11-15 — Fortress waves enter from one configurable map edge. Added an optional Wave Editor panel for level wave composition, delay and edge.

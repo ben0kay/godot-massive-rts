@@ -3,6 +3,7 @@ using Godot;
 
 namespace MassiveRts;
 
+[Tool]
 public partial class WaveDefinition : Resource
 {
     [Export] public Godot.Collections.Dictionary<string, int> Enemies { get; set; } = new();
