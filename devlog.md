@@ -219,3 +219,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | BENCH0 default toggles.** Enabled **Delay distant melee retargeting**, **Cap long-range searches (512/step)**, and **Reuse route waypoints** by default in the benchmark controls. All three remain independently toggleable; their algorithms, caps, and saved benchmark workloads were not changed. Source-only review; awaiting owner Godot validation.
 
 - 2026-11-14 — DMG1 balance: Set percentage armour to 0% across the shipped roster and kept the damage-type matchup classes.
+
+- 2026-11-14 — DEATH1-C: Recolored soldier death puffs to the defeated faction and added small, pooled/batched ground splats fading after 3 seconds, with an independent 1,024-mark cap. Combat, damage and lifetimes of existing puffs unchanged; awaiting owner visual validation.

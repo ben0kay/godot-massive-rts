@@ -31,4 +31,4 @@ The shared `UNIT_HITS/HitFeedbackSettings.tres` is assigned in the default bench
 
 ## Soldier deaths
 
-[UNIT_DEATHS](UNIT_DEATHS/README.md) captures the final grounded pose on lethal damage and batches the short-lived shrink and puff effects separately from the living army.
+[UNIT_DEATHS](UNIT_DEATHS/README.md) captures the final grounded pose on lethal damage and batches short-lived shrink/faction-colored puff effects alongside small fading faction-colored ground splats, separately from the living army.
