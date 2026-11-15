@@ -7,7 +7,7 @@ namespace MassiveRts;
 
 public sealed class ProjectileCatalog
 {
-    private const string BasicArrowPath = "res://GAMEPLAY/PROJECTILES/Types/BasicArrow/BasicArrow.tres";
+    internal const string BasicArrowPath = "res://GAMEPLAY/PROJECTILES/Types/BasicArrow/BasicArrow.tres";
     private readonly Dictionary<ProjectileDefinition, int> indices = new();
     private readonly List<ProjectileFlight> flights = new();
     private readonly List<Mesh> meshes = new();

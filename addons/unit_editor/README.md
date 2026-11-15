@@ -15,3 +15,7 @@ Optional ability panels (**Melee cleave**, **Shockwave**, **Trample**) are colla
 For Heavy Artillery, set minimum range in **Ranged**, maximum range and centre damage in **Primary attack**, and recoil in **Ranged recoil**. Open the assigned projectile in the Inspector to edit its arc, explosion radius, and outer damage fraction. The explosion settings appear when **Explodes on Impact** is enabled.
 
 **Defenses** exposes Laser Tower 001 and other registered building definitions. Edit footprint, minimum and maximum range, damage, fire rate, turret speed, beam duration and line of sight. Disabling the attack hides its settings and retains their values. The preview shows a top-down footprint and turret. Restart the benchmark scene after saving so it recompiles the building catalogue.
+
+## Projectile settings
+
+Select **Projectiles** in the roster, or use **Ranged → Edit projectile settings** on a unit such as Heavy Artillery. Tune flight speed, arc, obstacle behavior, faction tint and explosion radius or edge damage. **Save entity** writes the shared projectile resource. Every unit that uses it gets the updated settings. Set the base damage on the firing unit.

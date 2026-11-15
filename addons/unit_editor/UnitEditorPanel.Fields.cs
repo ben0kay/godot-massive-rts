@@ -34,6 +34,11 @@ public partial class UnitEditorPanel
             BuildDefenseForm();
             return;
         }
+        if (draft.Definition is ProjectileDefinition)
+        {
+            BuildProjectileForm();
+            return;
+        }
         lastShockwaveCadence = Unit.ShockwaveEveryAttacks > 0 ? Unit.ShockwaveEveryAttacks : 5;
 
         Section("Identity");
@@ -138,7 +143,7 @@ public partial class UnitEditorPanel
             ? null : "Minimum range cannot exceed maximum firing range.");
         represented.Add(nameof(Unit.Projectile));
         var picker = new EditorResourcePicker { BaseType = nameof(ProjectileDefinition), EditedResource = Unit.Projectile };
-        Row("Projectile", picker, "Open the resource to edit flight, impact and explosion settings. Clear to use the default arrow.");
+        Row("Projectile", picker, "Choose a projectile resource. Clear to use the default projectile.");
         picker.ResourceChanged += value =>
         {
             if (value != null && (value is not ProjectileDefinition || string.IsNullOrEmpty(value.ResourcePath) ||
@@ -156,7 +161,19 @@ public partial class UnitEditorPanel
         {
             if (value != null) EditorInterface.Singleton.EditResource(value);
         };
-        refreshFields.Add(() => picker.Editable = !IsMelee);
+        var editProjectile = new Button { Text = "Edit projectile settings" };
+        card.AddChild(editProjectile);
+        editProjectile.Pressed += () =>
+        {
+            string path = Unit.Projectile?.ResourcePath ?? ProjectileCatalog.BasicArrowPath;
+            Callable.From(() => RequestSwitch(() => LoadEntity(path))).CallDeferred();
+        };
+        refreshFields.Add(() =>
+        {
+            picker.Editable = !IsMelee;
+            editProjectile.Disabled = IsMelee || Unit.Projectile is not null &&
+                !Unit.Projectile.ResourcePath.EndsWith(".tres", StringComparison.OrdinalIgnoreCase);
+        });
 
         var recoilSection = AbilitySection("Ranged recoil", nameof(Unit.RangedRecoilEnabled), Unit.RangedRecoilEnabled,
             v => Unit.RangedRecoilEnabled = v, () => !IsMelee, () => !IsMelee && Unit.RangedRecoilEnabled);
@@ -209,6 +226,34 @@ public partial class UnitEditorPanel
         Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 2, 0.01, " s");
         Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
             value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
+    }
+
+    private void BuildProjectileForm()
+    {
+        var projectile = Projectile;
+        Section("Flight");
+        EnumField(nameof(projectile.ObstacleFire), "Obstacle fire", projectile.ObstacleFire, v => projectile.ObstacleFire = v);
+        Flag(nameof(projectile.BlocksOnObstacles), "Stops at obstacles", projectile.BlocksOnObstacles,
+            v => projectile.BlocksOnObstacles = v, () => true);
+        Number(nameof(projectile.Speed), "Speed", () => projectile.Speed, v => projectile.Speed = v, 1, 200, 0.1, " u/s", unbounded: true);
+        Number(nameof(projectile.ArcHeight), "Maximum arc height", () => projectile.ArcHeight, v => projectile.ArcHeight = v,
+            0, 80, 0.05, " u", unbounded: true);
+        Number(nameof(projectile.ArcHeightPerDistance), "Arc per unit", () => projectile.ArcHeightPerDistance,
+            v => projectile.ArcHeightPerDistance = v, 0, 1, 0.01, "");
+        Flag(nameof(projectile.TintByFaction), "Tint by faction", projectile.TintByFaction,
+            v => projectile.TintByFaction = v, () => true);
+
+        AbilitySection("Explosion", nameof(projectile.ExplodesOnImpact), projectile.ExplodesOnImpact,
+            v => projectile.ExplodesOnImpact = v, () => true, () => projectile.ExplodesOnImpact);
+        Number(nameof(projectile.ExplosionRadius), "Blast radius", () => projectile.ExplosionRadius,
+            v => projectile.ExplosionRadius = v, 0.1, 64, 0.1, " u");
+        // Keep the authored fraction as-is, including values such as 31.25%.
+        Number(nameof(projectile.ExplosionEdgeFraction), "Damage at edge", () => projectile.ExplosionEdgeFraction * 100f,
+            v => projectile.ExplosionEdgeFraction = v / 100f, 0, 100, 0.01, "%", tooltip: "Percentage of the firing unit's center damage.");
+        card.AddChild(new Label { Text = "Base damage is set on the unit." });
+        Section("Shared resource");
+        card.AddChild(new Label { Text = "Saving updates every unit using this projectile.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart });
     }
 
     private PanelContainer Section(string title)

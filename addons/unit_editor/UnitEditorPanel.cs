@@ -10,11 +10,12 @@ namespace MassiveRts;
 public partial class UnitEditorPanel : VBoxContainer
 {
     internal sealed record Draft(string Path, string Hash, Resource Definition);
-    private sealed record Entry(string Path, string Id, string Name, string Kind, bool Defense);
+    private enum EntityCategory { Units, Defenses, Projectiles }
+    private sealed record Entry(string Path, string Id, string Name, string Kind, EntityCategory Category);
     private const string CatalogPath = "res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres";
     private const string DefenseCatalogPath = "res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres";
     private readonly OptionButton category = new();
-    private bool showDefenses;
+    private EntityCategory activeCategory;
     private HFlowContainer overlays;
     private readonly List<Entry> entries = new();
     private readonly List<Entry> visibleEntries = new();
@@ -44,6 +45,7 @@ public partial class UnitEditorPanel : VBoxContainer
     internal Draft PendingDraft => dirty ? draft : null;
     private UnitDefinition Unit => (UnitDefinition)draft.Definition;
     private BuildingDefinition Defense => (BuildingDefinition)draft.Definition;
+    private ProjectileDefinition Projectile => (ProjectileDefinition)draft.Definition;
 
     internal void Initialize(Draft suspended)
     {
@@ -58,16 +60,15 @@ public partial class UnitEditorPanel : VBoxContainer
         AddChild(split);
         var roster = new VBoxContainer { CustomMinimumSize = new Vector2(215, 0) };
         split.AddChild(roster);
-        category.AddItem("Units");
-        category.AddItem("Defenses");
+        foreach (var item in Enum.GetValues<EntityCategory>()) category.AddItem(item.ToString());
         roster.AddChild(category);
         roster.AddChild(search);
         category.ItemSelected += index =>
         {
-            bool defense = index == 1;
-            category.Select(showDefenses ? 1 : 0);
-            if (defense != showDefenses)
-                Callable.From(() => RequestSwitch(() => ShowCategory(defense))).CallDeferred();
+            var requested = (EntityCategory)index;
+            category.Select((int)activeCategory);
+            if (requested != activeCategory)
+                Callable.From(() => RequestSwitch(() => ShowCategory(requested))).CallDeferred();
         };
         roster.AddChild(list);
 
@@ -125,8 +126,8 @@ public partial class UnitEditorPanel : VBoxContainer
         {
             draft = suspended;
             dirty = true;
-            showDefenses = draft.Definition is BuildingDefinition;
-            category.Select(showDefenses ? 1 : 0);
+            activeCategory = CategoryOf(draft.Definition);
+            category.Select((int)activeCategory);
             BuildForm();
         }
         RefreshCatalogue();
@@ -143,7 +144,7 @@ public partial class UnitEditorPanel : VBoxContainer
         speedScale = ResourceLoader.Load<SimulationSettings>(SimulationSettings.DefaultPath,
             cacheMode: ResourceLoader.CacheMode.Ignore)?.EffectiveMovementSpeedMultiplier ?? 0.8f;
         var paths = new HashSet<string>(StringComparer.Ordinal);
-        var ids = new HashSet<(bool Defense, string Id)>();
+        var ids = new HashSet<(EntityCategory Category, string Id)>();
         int invalid = 0;
 
         void Register(Entry entry)
@@ -152,7 +153,7 @@ public partial class UnitEditorPanel : VBoxContainer
                 string.IsNullOrEmpty(entry.Path) || !entry.Path.StartsWith("res://", StringComparison.Ordinal) ||
                 !entry.Path.EndsWith(".tres", StringComparison.Ordinal) ||
                 entry.Path.Contains("::", StringComparison.Ordinal) || !FileAccess.FileExists(entry.Path) ||
-                paths.Contains(entry.Path) || !ids.Add((entry.Defense, entry.Id)))
+                paths.Contains(entry.Path) || !ids.Add((entry.Category, entry.Id)))
             {
                 invalid++;
                 return;
@@ -161,12 +162,25 @@ public partial class UnitEditorPanel : VBoxContainer
             entries.Add(entry);
         }
 
+        var projectilePaths = new HashSet<string>(StringComparer.Ordinal);
+        void RegisterProjectile(ProjectileDefinition projectile)
+        {
+            if (projectile != null && projectilePaths.Add(projectile.ResourcePath))
+                Register(Describe(projectile));
+        }
+
         if (catalog?.Definitions != null)
-            foreach (var unit in catalog.Definitions) Register(Describe(unit));
+            foreach (var unit in catalog.Definitions)
+            {
+                Register(Describe(unit));
+                RegisterProjectile(unit?.Projectile);
+            }
+        RegisterProjectile(ResourceLoader.Load<ProjectileDefinition>(ProjectileCatalog.BasicArrowPath,
+            cacheMode: ResourceLoader.CacheMode.Ignore));
         if (defenses?.Definitions != null)
             foreach (var defense in defenses.Definitions) Register(Describe(defense));
 
-        if (!dirty) ShowCategory(showDefenses);
+        if (!dirty) ShowCategory(activeCategory);
         else
         {
             PopulateList();
@@ -178,18 +192,29 @@ public partial class UnitEditorPanel : VBoxContainer
     private static Entry Describe(Resource definition) => definition switch
     {
         UnitDefinition unit when Enum.IsDefined(unit.Shape) =>
-            new Entry(unit.ResourcePath, unit.Id, DisplayName(unit.DisplayName, unit.Id), unit.Shape.ToString(), false),
+            new Entry(unit.ResourcePath, unit.Id, DisplayName(unit.DisplayName, unit.Id), unit.Shape.ToString(), EntityCategory.Units),
         BuildingDefinition defense =>
-            new Entry(defense.ResourcePath, defense.Id, DisplayName(defense.DisplayName, defense.Id), "Static defense", true),
+            new Entry(defense.ResourcePath, defense.Id, DisplayName(defense.DisplayName, defense.Id), "Static defense", EntityCategory.Defenses),
+        ProjectileDefinition projectile =>
+            new Entry(projectile.ResourcePath, projectile.ResourcePath,
+                DisplayName(projectile.ResourceName, projectile.ResourcePath.GetFile().GetBaseName()),
+                "Projectile", EntityCategory.Projectiles),
         _ => null
     };
 
     private static string DisplayName(string name, string id) => string.IsNullOrWhiteSpace(name) ? id : name;
 
-    private void ShowCategory(bool defense)
+    private static EntityCategory CategoryOf(Resource definition) => definition switch
     {
-        var entry = entries.Find(item => item.Defense == defense && item.Path == draft?.Path)
-            ?? entries.Find(item => item.Defense == defense);
+        BuildingDefinition => EntityCategory.Defenses,
+        ProjectileDefinition => EntityCategory.Projectiles,
+        _ => EntityCategory.Units
+    };
+
+    private void ShowCategory(EntityCategory requested)
+    {
+        var entry = entries.Find(item => item.Category == requested && item.Path == draft?.Path)
+            ?? entries.Find(item => item.Category == requested);
         if (entry != null)
         {
             LoadEntity(entry.Path);
@@ -198,8 +223,8 @@ public partial class UnitEditorPanel : VBoxContainer
 
         draft = null;
         dirty = false;
-        showDefenses = defense;
-        category.Select(defense ? 1 : 0);
+        activeCategory = requested;
+        category.Select((int)activeCategory);
         PopulateList();
         BuildForm();
         UpdateView();
@@ -213,11 +238,11 @@ public partial class UnitEditorPanel : VBoxContainer
         string filter = search.Text.Trim();
         foreach (Entry entry in entries)
         {
-            if (entry.Defense != showDefenses) continue;
+            if (entry.Category != activeCategory) continue;
             if (!entry.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
                 !entry.Id.Contains(filter, StringComparison.OrdinalIgnoreCase) &&
                 !entry.Kind.Contains(filter, StringComparison.OrdinalIgnoreCase)) continue;
-            list.AddItem(entry.Defense ? entry.Name : $"{entry.Kind}  ·  {entry.Name}");
+            list.AddItem(entry.Category == EntityCategory.Units ? $"{entry.Kind}  ·  {entry.Name}" : entry.Name);
             visibleEntries.Add(entry);
         }
         SelectActive();
@@ -283,9 +308,10 @@ public partial class UnitEditorPanel : VBoxContainer
         status.Text = "";
         int index = entries.FindIndex(entry => entry.Path == path);
         if (index >= 0) entries[index] = updated with { Path = path };
-        if (updated.Defense != showDefenses) search.Text = "";
-        showDefenses = updated.Defense;
-        category.Select(showDefenses ? 1 : 0);
+        if (updated.Category != activeCategory) search.Text = "";
+        activeCategory = updated.Category;
+        category.Select((int)activeCategory);
+        if (index < 0 && updated.Category == EntityCategory.Projectiles) entries.Add(updated with { Path = path });
         PopulateList();
         BuildForm();
         UpdateView();
@@ -318,7 +344,7 @@ public partial class UnitEditorPanel : VBoxContainer
         ResourceLoader.Load(path, cacheMode: ResourceLoader.CacheMode.Replace);
         EditorInterface.Singleton.GetResourceFilesystem().UpdateFile(path);
         LoadEntity(path);
-        status.Text = "Entity saved. Restart the benchmark scene to apply the values.";
+        status.Text = "Entity saved. Restart the running battle to apply the values.";
         UpdateView();
     }
 
@@ -337,6 +363,7 @@ public partial class UnitEditorPanel : VBoxContainer
         pathLabel.Text = draft == null ? "Entity Editor" : $"{draft.Path.GetFile()}   ·   {(dirty ? "Unsaved changes" : "Saved")}";
         pathLabel.TooltipText = draft?.Path ?? "";
         overlays.Visible = draft?.Definition is UnitDefinition;
+        preview.Visible = draft?.Definition is UnitDefinition or BuildingDefinition;
         preview.SetEntity(draft?.Definition);
         if (draft == null)
         {
@@ -344,7 +371,14 @@ public partial class UnitEditorPanel : VBoxContainer
             return;
         }
         foreach (var update in refreshFields) update();
-        if (showDefenses)
+        if (draft.Definition is ProjectileDefinition)
+        {
+            summary.Text = $"Effective speed {Projectile.Speed * speedScale:0.##} u/s";
+            if (Projectile.ExplodesOnImpact)
+                summary.Text += $"\n{Projectile.ExplosionRadius:0.##} u blast radius · {Projectile.ExplosionEdgeFraction:P1} damage at the edge";
+            return;
+        }
+        if (draft.Definition is BuildingDefinition)
         {
             summary.Text = $"{Defense.Width} × {Defense.Depth} cells";
             if (Defense.AttacksSoldiers)
