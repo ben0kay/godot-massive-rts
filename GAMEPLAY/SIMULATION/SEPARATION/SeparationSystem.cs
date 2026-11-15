@@ -38,6 +38,7 @@ public sealed class SeparationSystem
     public int YieldPushed { get; private set; }
     public int ExitCapped { get; private set; }
     public int OverlapPairs { get; private set; }
+    internal bool MovedSoldiers { get; private set; }
     public int BudgetHits { get; private set; }
     public float MaxPenetration { get; private set; }
     // Average overlap depth (world units) of pairs found this tick, measured before correction.
@@ -60,6 +61,7 @@ public sealed class SeparationSystem
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
     public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true)
     {
+        MovedSoldiers = false;
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
         yieldEnabled = voluntaryMovement != null;
         weighted = weightedSeparation;
@@ -373,6 +375,7 @@ public sealed class SeparationSystem
                 position.X = safe.X;
                 position.Z = safe.Y;
             }
+            MovedSoldiers |= position != units.Position[id];
             units.Position[id] = position;
             units.Grounding?.MarkMoved(id);
             units.Dirty[id] = true;

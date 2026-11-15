@@ -30,6 +30,7 @@ public partial class SquadCommandInput : Node
         hud.PlaceRequested = () =>
         {
             CancelGesture();
+            overlay.AttackMove = false;
             placing = true;
             hud.MenuOpen = false;
         };
@@ -88,6 +89,30 @@ public partial class SquadCommandInput : Node
             return;
         }
 
+        if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.K } &&
+            overlay.Selection.Count > 0 && held == MouseButton.None)
+        {
+            overlay.AttackMove = !overlay.AttackMove;
+            overlay.QueueRedraw();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (overlay.AttackMove && input is InputEventMouseButton { Pressed: true } order)
+        {
+            if (order.ButtonIndex == MouseButton.Left && TryGround(order.Position, out Vector3 point))
+            {
+                CenterFormation(point);
+                movement.Issue(CollectionsMarshal.AsSpan(overlay.Selection), overlay.Front, overlay.Right,
+                    overlay.Columns, overlay.Spacing, attack: true);
+                overlay.AttackMove = false;
+                overlay.QueueRedraw();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+            if (order.ButtonIndex == MouseButton.Right) overlay.AttackMove = false;
+        }
+
         if (overlay.Building?.Production != null && overlay.Building.Ready &&
             input is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } rallyClick)
         {
@@ -127,7 +152,12 @@ public partial class SquadCommandInput : Node
         else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             CancelGesture();
-            ClearSelection();
+            if (overlay.AttackMove)
+            {
+                overlay.AttackMove = false;
+                overlay.QueueRedraw();
+            }
+            else ClearSelection();
         }
     }
 
@@ -201,6 +231,7 @@ public partial class SquadCommandInput : Node
 
     private void ClearSelection()
     {
+        overlay.AttackMove = false;
         overlay.Selection.Clear();
         overlay.Building = null;
         overlay.QueueRedraw();
@@ -232,14 +263,16 @@ public partial class SquadCommandInput : Node
             overlay.Front = (dragStart + end) * 0.5f +
                 overlay.Right.Cross(Vector3.Up) * radius;
         }
-        else
-        {
-            overlay.Right = CameraRight();
-            overlay.Columns = Mathf.CeilToInt(Mathf.Sqrt(overlay.Selection.Count));
-            int lastRow = (overlay.Selection.Count - 1) / overlay.Columns;
-            overlay.Front = end - overlay.Right.Cross(Vector3.Up) * (lastRow * 0.5f * overlay.Spacing);
-        }
+        else CenterFormation(end);
         return true;
+    }
+
+    private void CenterFormation(Vector3 end)
+    {
+        overlay.Right = CameraRight();
+        overlay.Columns = Mathf.CeilToInt(Mathf.Sqrt(overlay.Selection.Count));
+        int lastRow = (overlay.Selection.Count - 1) / overlay.Columns;
+        overlay.Front = end - overlay.Right.Cross(Vector3.Up) * (lastRow * 0.5f * overlay.Spacing);
     }
 
     private bool TryGround(Vector2 point, out Vector3 ground) =>

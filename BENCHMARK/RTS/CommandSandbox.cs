@@ -1,5 +1,6 @@
 // Standalone flat-ground scene for testing Fortress Defense squad commands.
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using Godot;
 
 namespace MassiveRts;
@@ -11,6 +12,7 @@ public partial class CommandSandbox : Node3D
     private UnitState units;
     private CommandOverlay overlay;
     private BenchmarkSummary summary;
+    private CommandPerformanceHud performance;
     private ArmyBalanceHud armyBalance;
     private SelectionHud selection;
     private const int UnitCapacity = 2048;
@@ -76,15 +78,22 @@ public partial class CommandSandbox : Node3D
         {
             Position = new Vector2(20f, 48f),
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click to move · Right-drag formation\nWASD or arrows to pan · Wheel to zoom"
+            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click to move · Right-drag formation\nK + left-click: Attack-move\nWASD or arrows to pan · Wheel to zoom"
         });
-        summary = new BenchmarkSummary
+        var rightHud = new VBoxContainer
         {
             AnchorLeft = 1, AnchorRight = 1,
             OffsetLeft = -296, OffsetRight = -12, OffsetTop = 12,
-            GrowVertical = Control.GrowDirection.End
+            GrowVertical = Control.GrowDirection.End,
+            MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        hud.AddChild(summary);
+        hud.AddChild(rightHud);
+        summary = new BenchmarkSummary();
+        rightHud.AddChild(summary);
+        performance = new CommandPerformanceHud();
+        rightHud.AddChild(performance);
+        performance.Initialize(waves);
+        performance.Refresh(waves, 0, 0);
         summary.Refresh(SummaryTitle, units);
 
         armyBalance = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
@@ -132,6 +141,7 @@ public partial class CommandSandbox : Node3D
         summary.Refresh(SummaryTitle, units, waves.Projectiles.Count);
         armyBalance.RefreshCounts();
         waveHud.Refresh(waves, buildings.Citadel);
+        performance.Refresh(waves, movement.ActiveCount, overlay.Selection.Count);
         if (!waves.Defeat && !waves.Victory)
             foreach (var structure in buildings.Structures) structure.RefreshProductionBar();
     }
@@ -147,7 +157,12 @@ public partial class CommandSandbox : Node3D
         if (waves.Defeat || waves.Victory) return;
         int previousCount = units.Count;
         buildings.Step((float)delta);
-        if (waves.Step((float)delta) || previousCount != units.Count) army.Sync();
+        if (waves.Step((float)delta) || previousCount != units.Count)
+        {
+            long start = Stopwatch.GetTimestamp();
+            army.Sync();
+            performance.RecordSync(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+        }
         projectileRenderer.Sync(waves.Projectiles);
     }
 }

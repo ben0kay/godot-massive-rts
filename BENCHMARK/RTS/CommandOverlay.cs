@@ -11,7 +11,7 @@ public partial class CommandOverlay : RectangleDimensions
     internal UnitState Units;
     internal readonly List<int> Selection = new();
     internal CommandStructure Building;
-    internal bool Selecting, Preview;
+    internal bool Selecting, Preview, AttackMove;
     internal float Spacing;
     internal float Radius(int id) => Units.Catalog[Units.Type[id]].Footprint;
     internal Vector2 Press, Pointer;
@@ -36,6 +36,13 @@ public partial class CommandOverlay : RectangleDimensions
             var box = new Rect2(Press, Pointer - Press).Abs();
             DrawRect(box, new Color(0.25f, 0.65f, 1f, 0.12f));
             DrawRect(box, SelectionInk, false, 1f);
+        }
+        if (AttackMove)
+        {
+            Vector2 cursor = GetGlobalMousePosition();
+            var ink = new Color(1f, 0.67f, 0.27f);
+            DrawArc(cursor, 11f, 0f, Mathf.Tau, 24, ink, 2f, true);
+            DrawString(ThemeDB.FallbackFont, cursor + new Vector2(16f, -12f), "Attack-move", fontSize: 14, modulate: ink);
         }
         if (!Preview) return;
 

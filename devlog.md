@@ -211,3 +211,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | Fortress Defense melee interception.** Idle Blue melee soldiers now detect and close on Red attackers before contact. Player movement and Fabricator exit orders retain priority.
 
 - **2026-11-14 | Fortress Defense.** Moved the Red spawn marker from Z=24 to Z=120 for a longer opening approach.
+
+- **2026-11-14 | Command Sandbox.** Added one-pass Normal separation with toggle and timing stats, plus K + left-click attack-move with destination resumption.

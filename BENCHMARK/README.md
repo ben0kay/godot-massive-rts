@@ -196,3 +196,9 @@ The sandbox supports 2,048 soldier IDs and up to 32 Fabricators. A blocked exit,
 In the Command Sandbox, build up and press **Start Wave 1**. Three editable waves release from the scene's `EnemySpawn` marker. The HUD shows Citadel health and enemies still alive or waiting to spawn. Once the wave is resolved, the next wave begins after a 12-second countdown. Clear the final wave to win, or lose if the Citadel is destroyed.
 
 Wave units march toward the Citadel and engage defenders in their detection range until the Citadel footprint enters that range. Melee units strike the Citadel once on contact and die. Ranged units fire from their normal range. Idle melee defenders detect enemies at twice the wave melee detection range and move to intercept. Defenders with active move orders can attack within reach while following those orders.
+
+### Command Sandbox orders and profiling
+
+Right-click or right-drag issues a normal move order. Select soldiers, press **K**, then left-click the ground to attack-move toward a centered formation. Attack-moving soldiers interrupt their route to fight detected enemies and resume toward their original slots after losing their target. Escape cancels the armed command. Units with ordinary move orders can still attack within reach.
+
+The right-side performance panel stays visible. **Normal separation** uses the shared one-pass solver and defaults on. Toggle it off for an A/B comparison. Movement, separation, combat grid rebuilds and army render sync report average CPU milliseconds per physics tick over the latest HUD interval. Compare an idle selection, a stationary right-drag preview, and the same formation while moving. The FPS summary measures the whole frame.

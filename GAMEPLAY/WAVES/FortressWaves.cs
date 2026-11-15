@@ -1,5 +1,6 @@
 // Runs authored waves and applies Fortress Defense target priority using the shared soldier systems.
 using Godot;
+using System.Diagnostics;
 
 namespace MassiveRts;
 
@@ -18,6 +19,16 @@ internal sealed class FortressWaves
     private readonly float intermission;
     private readonly BenchmarkConfig combat = new();
     private readonly SpatialGrid grid;
+    private readonly SeparationSystem separation;
+    public bool NormalSeparation { get; set; } = true;
+    public int SampleTicks { get; private set; }
+    public double MovementMs { get; private set; }
+    public double SeparationMs { get; private set; }
+    public double GridMs { get; private set; }
+    public int OverlapPairs => NormalSeparation ? separation.OverlapPairs : 0;
+    public int NeighbourBudgetHits => NormalSeparation ? separation.BudgetHits : 0;
+    private float SeparationGap => NormalSeparation ? combat.SeparationGap : 0f;
+    private float SeparationPadding => NormalSeparation ? combat.SeparationMaxPushPerTick : 0f;
     private readonly int[] enemies;
     private int enemyCount, nextSpawn, tick;
     private float spawnClock;
@@ -51,6 +62,7 @@ internal sealed class FortressWaves
         buildings.ReservedWaveSlots = reserved;
         enemies = new int[maxWave];
         grid = new SpatialGrid(units.Position.Length, combat.CellSize);
+        separation = new SeparationSystem(units.Position.Length);
         Projectiles = new ProjectileSystem(2048, units.Catalog.Projectiles, combat.ProjectileLifetime);
     }
 
@@ -66,38 +78,69 @@ internal sealed class FortressWaves
         spawnClock = Countdown = 0;
     }
 
+    public void ResetTimings()
+    {
+        SampleTicks = 0;
+        MovementMs = SeparationMs = GridMs = 0;
+    }
+
+    private void RebuildGrid()
+    {
+        long start = Stopwatch.GetTimestamp();
+        grid.Rebuild(units);
+        GridMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+    }
+
+    private bool MoveAndSeparate(float delta)
+    {
+        long start = Stopwatch.GetTimestamp();
+        bool moved = movement.Step(delta);
+        MovementMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+        if (!NormalSeparation || units.Alive < 2) return moved;
+
+        start = Stopwatch.GetTimestamp();
+        separation.Step(units, 1, SeparationGap, combat.SeparationNeighbourBudget, SeparationPadding,
+            tick, obstacles: buildings.Obstacles);
+        SeparationMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+        return moved || separation.MovedSoldiers;
+    }
+
     public bool Step(float delta)
     {
         if (Defeat || Victory) return false;
+        SampleTicks++;
+        tick++;
         if (WaitingToStart || Countdown > 0)
         {
+            bool movedOrDied = false;
             if (Countdown > 0)
             {
                 if (Projectiles.Count > 0)
                 {
-                    grid.Rebuild(units);
-                    Projectiles.Step(units, grid, combat, delta, 0, buildings.Obstacles);
+                    RebuildGrid();
+                    int previousAliveBetweenWaves = units.Alive;
+                    Projectiles.Step(units, grid, combat, delta, SeparationPadding, buildings.Obstacles);
+                    movedOrDied = units.Alive != previousAliveBetweenWaves;
                 }
                 if (Defeat) return true;
                 Countdown = Mathf.Max(0, Countdown - delta);
                 if (Countdown == 0) BeginNext();
             }
-            return movement.Step(delta);
+            return MoveAndSeparate(delta) || movedOrDied;
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
         TryRelease(delta);
         var field = buildings.Obstacles;
-        grid.Rebuild(units);
-        tick++;
+        RebuildGrid();
         AcquireDefenderTargets(field);
         for (int i = 0; i < enemyCount; i++)
         {
             int id = enemies[i];
             if (units.Health[id] > 0) OrderEnemy(id, field);
         }
-        bool moved = movement.Step(delta);
-        if (moved) grid.Rebuild(units);
+        bool moved = MoveAndSeparate(delta);
+        if (moved) RebuildGrid();
         // Crossing into Citadel detection range suppresses defender attacks on this same tick.
         for (int i = 0; i < enemyCount; i++)
         {
@@ -111,18 +154,18 @@ internal sealed class FortressWaves
                 units.Position[id].DistanceSquaredTo(units.Position[target]) > radius * radius)
                 units.Target[id] = -1;
         }
-        CombatSystem.Step(units, grid, Projectiles, 1f, delta, 0f, 0f, obstacles: field);
+        CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: field);
 
         for (int i = 0; i < enemyCount && !Defeat; i++)
         {
             int id = enemies[i];
             if (units.Health[id] > 0 && units.Target[id] < 0) AttackCitadel(id, field);
         }
-        Projectiles.Step(units, grid, combat, delta, 0, field);
+        Projectiles.Step(units, grid, combat, delta, SeparationPadding, field);
         if (!Defeat && Remaining == 0)
         {
             for (int id = 0; id < units.Count; id++)
-                if (units.Faction[id] == Factions.Blue) movement.EndPursuit(id);
+                if (units.Faction[id] == Factions.Blue) movement.Disengage(id);
             if (WaveNumber == waves.Length) Victory = Projectiles.Count == 0;
             else Countdown = intermission;
         }
@@ -168,29 +211,42 @@ internal sealed class FortressWaves
         {
             if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
-            bool canPursue = !type.Ranged && !movement.HasCommand(id);
+            bool attackMove = movement.IsAttackMove(id);
+            bool canPursue = !type.Ranged && (!movement.HasCommand(id) || attackMove);
             float range = type.Ranged ? type.Reach : canPursue ? Detection(type) * DefenderMeleeDetectionMultiplier :
-                type.Footprint + units.MaxFootprint + 0.08f;
+                type.Footprint + units.MaxFootprint + SeparationGap + 0.08f;
             int target = units.Target[id];
-            if (id % AcquisitionInterval == tick % AcquisitionInterval)
-            {
-                target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, Sight(type, field),
-                    minimumRange: type.MinimumFireRange, meleeReachPadding: type.Ranged || canPursue ? -1f : 0.08f);
-                units.Target[id] = target;
-            }
-            if (!canPursue) continue;
             Vector3 position = units.Position[id];
+            var sight = Sight(type, field);
+            if (attackMove && target >= 0 &&
+                (units.Health[target] <= 0 || position.DistanceSquaredTo(units.Position[target]) > range * range ||
+                 position.DistanceSquaredTo(units.Position[target]) < type.MinimumFireRange * type.MinimumFireRange ||
+                 sight?.BlocksSight(position, units.Position[target]) == true))
+                target = -1;
+
+            if ((!attackMove || target < 0) && id % AcquisitionInterval == tick % AcquisitionInterval)
+                target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, sight,
+                    minimumRange: type.MinimumFireRange,
+                    meleeReachPadding: type.Ranged || canPursue ? -1f : SeparationGap + 0.08f);
+            units.Target[id] = target;
+            if (!canPursue && !attackMove) continue;
             if (target < 0 || units.Health[target] <= 0 ||
                 position.DistanceSquaredTo(units.Position[target]) > range * range)
             {
-                movement.EndPursuit(id);
+                movement.Disengage(id);
+                continue;
+            }
+
+            if (type.Ranged)
+            {
+                movement.Engage(id, position);
                 continue;
             }
 
             Vector3 enemy = units.Position[target];
-            float contact = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, 0f);
+            float contact = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector3 offset = position - enemy;
-            movement.SetPursuitGoal(id, offset.LengthSquared() <= contact * contact
+            movement.Engage(id, offset.LengthSquared() <= contact * contact
                 ? position : enemy + offset.Normalized() * contact);
         }
     }
@@ -218,7 +274,7 @@ internal sealed class FortressWaves
         {
             Vector2 defender = ObstacleField.Xz(units.Position[target]);
             float range = type.Ranged ? type.Reach * 0.94f :
-                type.Footprint + units.Catalog[units.Type[target]].Footprint;
+                CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector2 offset = p - defender;
             float distance = offset.Length();
             if (distance <= range && distance >= type.MinimumFireRange)

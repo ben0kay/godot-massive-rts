@@ -12,9 +12,10 @@ internal sealed class CommandMovement
     public const int DefaultColumns = 5;
     private readonly UnitState units;
     private readonly int[] active;
-    private readonly bool[] ordered, hasExit, pursuing;
-    private readonly Vector3[] exits;
+    private readonly bool[] ordered, hasExit, pursuing, attackMove, engaged;
+    private readonly Vector3[] exits, engagementGoals;
     private int activeCount;
+    public int ActiveCount => activeCount;
     private ObstacleField field;
     private ObstacleNavigation navigation;
 
@@ -26,6 +27,9 @@ internal sealed class CommandMovement
         ordered = new bool[capacity];
         hasExit = new bool[capacity];
         pursuing = new bool[capacity];
+        attackMove = new bool[capacity];
+        engaged = new bool[capacity];
+        engagementGoals = new Vector3[capacity];
         exits = new Vector3[capacity];
     }
 
@@ -43,7 +47,7 @@ internal sealed class CommandMovement
             + right.Cross(Vector3.Up) * (row * spacing);
     }
 
-    public void Issue(ReadOnlySpan<int> ids, Vector3 front, Vector3 right, int columns, float spacing)
+    public void Issue(ReadOnlySpan<int> ids, Vector3 front, Vector3 right, int columns, float spacing, bool attack = false)
     {
         for (int i = 0; i < ids.Length; i++)
         {
@@ -52,12 +56,14 @@ internal sealed class CommandMovement
             float radius = units.Catalog[units.Type[id]].Footprint;
             if (units.Health[id] <= 0 || !CommandBuildings.OnMap(goal, radius) || field?.IntersectsCircle(ObstacleField.Xz(goal), radius) == true) continue;
             SetGoal(id, goal);
+            attackMove[id] = attack;
+            units.Target[id] = -1;
         }
     }
 
     public void SetGoal(int id, Vector3 goal, Vector3? exit = null)
     {
-        pursuing[id] = false;
+        pursuing[id] = attackMove[id] = engaged[id] = false;
         units.Goal[id] = goal;
         hasExit[id] = exit.HasValue;
         exits[id] = exit.GetValueOrDefault();
@@ -67,6 +73,24 @@ internal sealed class CommandMovement
     }
 
     public bool HasCommand(int id) => ordered[id] && !pursuing[id];
+
+    public bool IsAttackMove(int id) => ordered[id] && attackMove[id];
+
+    public void Engage(int id, Vector3 goal)
+    {
+        if (IsAttackMove(id))
+        {
+            engagementGoals[id] = goal;
+            engaged[id] = true;
+        }
+        else SetPursuitGoal(id, goal);
+    }
+
+    public void Disengage(int id)
+    {
+        engaged[id] = false;
+        EndPursuit(id);
+    }
 
     public void SetPursuitGoal(int id, Vector3 goal)
     {
@@ -90,10 +114,10 @@ internal sealed class CommandMovement
         {
             int id = active[i];
             Vector3 previous = units.Position[id];
-            Vector3 goal = hasExit[id] ? exits[id] : units.Goal[id];
-            if (units.Health[id] <= 0 || previous == goal && !hasExit[id])
+            Vector3 goal = hasExit[id] ? exits[id] : engaged[id] ? engagementGoals[id] : units.Goal[id];
+            if (units.Health[id] <= 0 || previous == goal && !hasExit[id] && !engaged[id])
             {
-                ordered[id] = pursuing[id] = false;
+                ordered[id] = pursuing[id] = attackMove[id] = engaged[id] = false;
                 active[i] = active[--activeCount];
                 continue;
             }
