@@ -38,6 +38,21 @@ public static class FacetedSoldierMeshes
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
 
+        if (outline.IsHFrame)
+        {
+            float x = outline.RadiusX, z = outline.RadiusZ;
+            AppendBeveledRectangle(surface, new Vector3(0f, -height * 0.04f, 0f),
+                new Vector3(x * 1.38f, height * 0.86f, z * 0.46f), new Color(0.75f, 0.75f, 0.75f));
+            for (int side = -1; side <= 1; side += 2)
+            {
+                AppendBeveledRectangle(surface, new Vector3(side * x * 0.67f, 0f, z * 0.05f),
+                    new Vector3(x * 0.66f, height, z * 1.58f), Colors.White);
+                AppendBeveledRectangle(surface, new Vector3(side * x * 0.67f, 0f, -z * 0.84f),
+                    new Vector3(x * 0.66f, height * 0.90f, z * 0.32f), new Color(0.88f, 0.88f, 0.88f));
+            }
+            return surface.Commit();
+        }
+
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
             Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null);
         if (outline.IsChevron)

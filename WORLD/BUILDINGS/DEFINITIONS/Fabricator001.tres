@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFINITIONS/BuildingDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "fabricator_001"
+DisplayName = "Fabricator"
+ArmourClass = "Fortified"
+AttacksSoldiers = false

@@ -10,6 +10,7 @@ public sealed class ProjectileSystem
     private readonly Vector3[] origin, displacement;
     private readonly float[] elapsed, duration, arc, damage;
     private readonly byte[] sourceFaction;
+    private readonly int[] damageTypes;
     private CommandStructure[] structureTargets;
     private readonly ProjectileCatalog catalog;
     private readonly float lifetime;
@@ -24,6 +25,7 @@ public sealed class ProjectileSystem
         Position = new Vector3[capacity]; Direction = new Vector3[capacity];
         origin = new Vector3[capacity]; displacement = new Vector3[capacity];
         elapsed = new float[capacity]; duration = new float[capacity]; arc = new float[capacity];
+        damageTypes = new int[capacity];
         damage = new float[capacity]; Type = new int[capacity]; sourceFaction = new byte[capacity];
     }
 
@@ -66,6 +68,7 @@ public sealed class ProjectileSystem
         elapsed[i] = 0;
         Direction[i] = path + Vector3.Up * (4f * arc[i]);
         damage[i] = type.Damage;
+        damageTypes[i] = type.DamageType;
         Type[i] = type.ProjectileType;
         sourceFaction[i] = units.Faction[shooter];
         Dirty = true;
@@ -93,7 +96,7 @@ public sealed class ProjectileSystem
                     Remove(i);
                     continue;
                 }
-                if (elapsed[i] >= duration[i]) structure.Damage(damage[i]);
+                if (elapsed[i] >= duration[i]) structure.Damage(damage[i], damageTypes[i]);
             }
             else if (flight.ExplosionRadius > 0f)
             {
@@ -113,7 +116,7 @@ public sealed class ProjectileSystem
                     : -1;
                 if (victim >= 0 || blocked)
                 {
-                    if (victim >= 0) units.Damage(victim, damage[i]);
+                    if (victim >= 0) units.Damage(victim, damage[i], damageTypes[i]);
                     Remove(i);
                     continue;
                 }
@@ -149,7 +152,7 @@ public sealed class ProjectileSystem
         if (hit > 1f && elapsed[index] < duration[index]) return false;
         Vector3 impact = from + segment * Mathf.Min(hit, 1f);
         AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
-            damage[index], flight.ExplosionEdgeFraction, movementPadding);
+            damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index]);
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
         rings?.Emit(impact, flight.ExplosionRadius);
         return true;
@@ -167,6 +170,7 @@ public sealed class ProjectileSystem
         Position[index] = Position[last]; Direction[index] = Direction[last];
         origin[index] = origin[last]; displacement[index] = displacement[last];
         elapsed[index] = elapsed[last]; duration[index] = duration[last]; arc[index] = arc[last];
+        damageTypes[index] = damageTypes[last];
         damage[index] = damage[last]; Type[index] = Type[last]; sourceFaction[index] = sourceFaction[last];
     }
 }

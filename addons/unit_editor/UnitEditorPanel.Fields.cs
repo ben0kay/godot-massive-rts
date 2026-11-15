@@ -56,13 +56,24 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.AccelerationSecondsOverride), "Acceleration override", () => Unit.AccelerationSecondsOverride,
             v => Unit.AccelerationSecondsOverride = v, 0, 5, 0.05, " s", tooltip: "Zero uses the shared acceleration setting.");
 
+        Number(nameof(Unit.TurnDegreesPerSecond), "Turn rate override", () => Unit.TurnDegreesPerSecond,
+            v => Unit.TurnDegreesPerSecond = v, 0, 720, 1, "°/s", tooltip: "Zero uses the shared turn rate.");
+
         Section("Defense");
+        TextField(nameof(Unit.ArmourClass), "Armour class", Unit.ArmourClass, value => Unit.ArmourClass = value);
         Number(nameof(Unit.Health), "Health", () => Unit.Health, v => Unit.Health = v, 0.001, 1000, 0.001, " HP", unbounded: true);
         Number(nameof(Unit.Armour), "Armour", () => Unit.Armour * 100f, v => Unit.Armour = v / 100f, 0, 100, 0.1, "%");
         Number(nameof(Unit.ChargeResistance), "Charge resistance", () => Unit.ChargeResistance, v => Unit.ChargeResistance = v,
             0.01, 4, 0.01, "", tooltip: "Momentum consumed when this unit is struck by a charge.");
 
         Section("Primary attack");
+        TextField(nameof(Unit.DamageType), "Damage type", Unit.DamageType, value => Unit.DamageType = value);
+        EnumField(nameof(Unit.AllowedTargets), "Allowed targets", Unit.AllowedTargets, value => Unit.AllowedTargets = value);
+        EnumField(nameof(Unit.PreferredTarget), "Preferred target", Unit.PreferredTarget, value => Unit.PreferredTarget = value);
+        Number(nameof(Unit.StructureDetectionRange), "Structure detection", () => Unit.StructureDetectionRange,
+            v => Unit.StructureDetectionRange = v, 0, 100, 0.1, " u", () => (Unit.AllowedTargets & TargetCategory.Structures) != 0);
+        Number(nameof(Unit.MeleeLungeDistance), "Melee lunge", () => Unit.MeleeLungeDistance,
+            v => Unit.MeleeLungeDistance = v, 0, 1, 0.01, " u", () => IsMelee);
         EnumField(nameof(Unit.Style), "Attack style", Unit.Style, value => Unit.Style = value);
         Number(nameof(Unit.Damage), "Damage", () => Unit.Damage, v => Unit.Damage = v, 0.001, 1000, 0.001, "", unbounded: true);
         Number(nameof(Unit.Interval), "Attack interval", () => Unit.Interval, v => Unit.Interval = v, 0.001, 10, 0.001, " s", unbounded: true);
@@ -183,6 +194,7 @@ public partial class UnitEditorPanel
         Number(nameof(defense.MinimumRange), "Minimum range", () => defense.MinimumRange, value => defense.MinimumRange = value, 0, 100, 0.1, " u");
         Number(nameof(defense.MaximumRange), "Maximum range", () => defense.MaximumRange, value => defense.MaximumRange = value, 0.1, 100, 0.1, " u");
         checks.Add(() => defense.MinimumRange <= defense.MaximumRange ? null : "Minimum range cannot exceed maximum range.");
+        TextField(nameof(defense.DamageType), "Damage type", defense.DamageType, value => defense.DamageType = value);
         Number(nameof(defense.Damage), "Damage", () => defense.Damage, value => defense.Damage = value, 0, 100000, 0.1, "");
         Number(nameof(defense.ShotsPerSecond), "Fire rate", () => defense.ShotsPerSecond, value => defense.ShotsPerSecond = value, 0.05, 60, 0.05, " shots/s");
         Number(nameof(defense.TurretDegreesPerSecond), "Turret turn rate", () => defense.TurretDegreesPerSecond,

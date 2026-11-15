@@ -107,7 +107,7 @@ public partial class BenchmarkArena : Node3D
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.29f, 0.30f, 0.32f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"));
+        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"), catalog.DamageRules);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         // Keep the gameplay bar separate from BENCHMARK's developer panels.

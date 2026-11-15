@@ -141,7 +141,10 @@ internal sealed class CommandMovement
             if (field != null) next = field.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;
             units.Position[id] = new Vector3(next.X, 0, next.Y);
-            units.Facing[id] = (next - start).Normalized();
+            Vector2 direction = (next - start).Normalized();
+            if (stats.TurnDegreesPerSecond > 0f)
+                SoldierFacing.Turn(units, id, direction, SoldierFacing.TurnStep(delta, stats.TurnDegreesPerSecond));
+            else units.Facing[id] = direction;
             units.Dirty[id] = true;
             changed = true;
         }

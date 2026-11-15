@@ -19,6 +19,8 @@ internal sealed class FortressWaves
     private readonly float intermission;
     private readonly BenchmarkConfig combat = new();
     private readonly SpatialGrid grid;
+    private readonly StructureCombat structures;
+    private bool structureVisualChanged;
     private readonly SeparationSystem separation;
     public bool NormalSeparation { get; set; } = true;
     public int SampleTicks { get; private set; }
@@ -46,6 +48,7 @@ internal sealed class FortressWaves
         this.units = units;
         this.buildings = buildings;
         this.movement = movement;
+        structures = new StructureCombat(units, buildings.Structures);
         this.spawn = spawn;
         this.intermission = intermission;
         citadelMin = buildings.Citadel.Area.Min;
@@ -110,23 +113,32 @@ internal sealed class FortressWaves
         if (Defeat || Victory) return false;
         SampleTicks++;
         tick++;
+        structureVisualChanged = false;
         if (WaitingToStart || Countdown > 0)
         {
-            bool movedOrDied = false;
-            if (Countdown > 0)
+            // Allow structure engagements and in-flight shots even between waves.
+            var idleField = buildings.Obstacles;
+            bool engageStructures = units.HasStructureAttackers;
+            if (engageStructures) AcquireDefenderTargets(idleField, structuresOnly: true);
+            bool idleMoved = MoveAndSeparate(delta);
+            bool lungeChanged = false;
+            int before = units.Alive;
+            if (engageStructures)
             {
-                if (Projectiles.Count > 0)
-                {
-                    RebuildGrid();
-                    int previousAliveBetweenWaves = units.Alive;
-                    Projectiles.Step(units, grid, combat, delta, SeparationPadding, buildings.Obstacles);
-                    movedOrDied = units.Alive != previousAliveBetweenWaves;
-                }
-                if (Defeat) return true;
+                lungeChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: idleField);
+                AttackStructures(delta, idleField, Factions.Blue);
+            }
+            if (Projectiles.Count > 0)
+            {
+                RebuildGrid();
+                Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField);
+            }
+            if (Countdown > 0 && !Defeat)
+            {
                 Countdown = Mathf.Max(0, Countdown - delta);
                 if (Countdown == 0) BeginNext();
             }
-            return MoveAndSeparate(delta) || movedOrDied;
+            return idleMoved || lungeChanged || structureVisualChanged || units.Alive != before;
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
@@ -145,7 +157,8 @@ internal sealed class FortressWaves
         for (int i = 0; i < enemyCount; i++)
         {
             int id = enemies[i];
-            if (units.Health[id] <= 0 || units.Target[id] < 0) continue;
+            if (units.Health[id] <= 0 || units.Target[id] < 0 ||
+                units.Catalog[units.Type[id]].TargetsStructures) continue;
             Vector2 position = ObstacleField.Xz(units.Position[id]);
             float radius = Detection(units.Catalog[units.Type[id]]);
             int target = units.Target[id];
@@ -156,10 +169,14 @@ internal sealed class FortressWaves
         }
         CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: field);
 
+        if (units.HasStructureAttackers) AttackStructures(delta, field, Factions.Blue);
         for (int i = 0; i < enemyCount && !Defeat; i++)
         {
             int id = enemies[i];
-            if (units.Health[id] > 0 && units.Target[id] < 0) AttackCitadel(id, field);
+            if (units.Health[id] <= 0 || units.Target[id] >= 0) continue;
+            ref readonly var type = ref units.Catalog[units.Type[id]];
+            if (type.TargetsStructures) structures.Attack(id, Projectiles, delta, Sight(type, field));
+            else if (type.TargetsUnits) AttackCitadel(id, field);
         }
         Projectiles.Step(units, grid, combat, delta, SeparationPadding, field);
         if (!Defeat && Remaining == 0)
@@ -205,17 +222,39 @@ internal sealed class FortressWaves
         !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
             ObstacleFireMode.RequiresDirectLineOfSight ? field : null;
 
-    private void AcquireDefenderTargets(ObstacleField field)
+    private void AttackStructures(float delta, ObstacleField field, byte faction)
+    {
+        for (int id = 0; id < units.Count; id++)
+        {
+            if (units.Faction[id] != faction || structures.Target(id) == null) continue;
+            structureVisualChanged |= structures.Attack(id, Projectiles, delta, Sight(units.Catalog[units.Type[id]], field));
+        }
+    }
+
+    private bool ChooseStructure(int id, in UnitStats type, int unitTarget, CommandStructure target, ObstacleField sight)
+    {
+        if (target == null) return false;
+        if (unitTarget < 0 || units.Health[unitTarget] <= 0) return true;
+        if (type.PreferredTarget == TargetPreference.Units) return false;
+        // Keep fighting an immediate threat when the preferred structure still needs an approach.
+        float reach = type.Ranged ? type.Reach :
+            CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[unitTarget]].Footprint, SeparationGap) + 0.08f;
+        return structures.CanHit(id, type, target, sight) ||
+            units.Position[id].DistanceSquaredTo(units.Position[unitTarget]) > reach * reach;
+    }
+
+    private void AcquireDefenderTargets(ObstacleField field, bool structuresOnly = false)
     {
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
+            if (structuresOnly && !type.TargetsStructures) continue;
             bool attackMove = movement.IsAttackMove(id);
             bool canPursue = !type.Ranged && (!movement.HasCommand(id) || attackMove);
             float range = type.Ranged ? type.Reach : canPursue ? Detection(type) * DefenderMeleeDetectionMultiplier :
                 type.Footprint + units.MaxFootprint + SeparationGap + 0.08f;
-            int target = units.Target[id];
+            int target = structuresOnly ? -1 : units.Target[id];
             Vector3 position = units.Position[id];
             var sight = Sight(type, field);
             if (attackMove && target >= 0 &&
@@ -224,10 +263,26 @@ internal sealed class FortressWaves
                  sight?.BlocksSight(position, units.Position[target]) == true))
                 target = -1;
 
-            if ((!attackMove || target < 0) && id % AcquisitionInterval == tick % AcquisitionInterval)
+            bool refresh = id % AcquisitionInterval == tick % AcquisitionInterval;
+            if (!structuresOnly && (!attackMove || target < 0) && refresh)
                 target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, sight,
                     minimumRange: type.MinimumFireRange,
                     meleeReachPadding: type.Ranged || canPursue ? -1f : SeparationGap + 0.08f);
+            if (type.TargetsStructures)
+            {
+                bool canApproach = !movement.HasCommand(id) || attackMove;
+                float structureRange = canApproach ? type.StructureDetectionRange :
+                    Mathf.Min(type.StructureDetectionRange, StructureCombat.Reach(type));
+                CommandStructure structure = structures.Acquire(id, type, structureRange, refresh, canApproach, field, sight);
+                if (ChooseStructure(id, type, target, structure, sight))
+                {
+                    units.Target[id] = -1;
+                    if (canApproach)
+                        movement.Engage(id, structures.CanHit(id, type, structure, sight) ? position : structures.ApproachGoal(id));
+                    continue;
+                }
+                structures.SetTarget(id, null);
+            }
             units.Target[id] = target;
             if (!canPursue && !attackMove) continue;
             if (target < 0 || units.Health[target] <= 0 ||
@@ -260,15 +315,28 @@ internal sealed class FortressWaves
         Vector2 edge = ClosestEdge(p);
         float detect = Detection(type);
         int target = units.Target[id];
-        if (p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
+        bool refresh = id % AcquisitionInterval == tick % AcquisitionInterval;
+        if (!type.TargetsStructures && p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
         else
         {
             if (target >= 0 && (units.Health[target] <= 0 ||
                 units.Position[id].DistanceSquaredTo(units.Position[target]) > detect * detect)) target = -1;
-            if (target < 0 && id % AcquisitionInterval == tick % AcquisitionInterval)
+            if (target < 0 && refresh)
                 target = grid.FindEnemy(units, id, detect, combat.QueryCandidateLimit, tick, Sight(type, field));
         }
 
+        if (type.TargetsStructures)
+        {
+            var sight = Sight(type, field);
+            CommandStructure structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, field, sight);
+            if (ChooseStructure(id, type, target, structure, sight))
+            {
+                units.Target[id] = -1;
+                movement.SetGoal(id, structures.CanHit(id, type, structure, sight) ? units.Position[id] : structures.ApproachGoal(id));
+                return;
+            }
+            structures.SetTarget(id, null);
+        }
         units.Target[id] = target;
         if (target >= 0)
         {
@@ -328,7 +396,7 @@ internal sealed class FortressWaves
         if (!type.Ranged)
         {
             if (distance > type.Footprint + ContactTolerance) return;
-            buildings.Citadel.Damage(type.Damage);
+            buildings.Citadel.Damage(type.Damage, type.DamageType);
             units.Kill(id);
             return;
         }

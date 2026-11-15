@@ -13,10 +13,12 @@ internal sealed class CommandBuildings
     private readonly CommandMovement movement;
     private readonly List<CommandStructure> structures = new();
     private readonly BatchRecipe[] recipes;
+    private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
     private ObstacleField field;
     public readonly CarbonBalance Carbon = new();
     public CommandStructure Citadel { get; }
     public ObstacleField Obstacles => field;
+    public string ArmourName(CommandStructure building) => units.Catalog.DamageRules.ArmourName(building.ArmourClass);
     public int ReservedWaveSlots { get; set; }
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
@@ -27,7 +29,10 @@ internal sealed class CommandBuildings
         this.units = units;
         this.movement = movement;
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
-        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth, true, null);
+        citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
+        fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
+        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth, true,
+            Factions.Blue, citadelDefinition, units.Catalog.DamageRules);
         Add(Citadel);
     }
 
@@ -76,8 +81,13 @@ internal sealed class CommandBuildings
     public bool Place(ObstacleRectangle area)
     {
         if (!CanPlace(area) || !Carbon.TrySpend(CommandStructure.FabricatorCost)) return false;
-        Add(new CommandStructure(area, 1200f, false, Release));
+        Add(new CommandStructure(area, 1200f, false, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
         return true;
+    }
+
+    public void AddHostileFabricator(Vector3 point)
+    {
+        Add(new CommandStructure(Snap(point), 1200f, false, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
     }
 
     private void Add(CommandStructure building)
@@ -96,7 +106,7 @@ internal sealed class CommandBuildings
         movement.SetObstacles(field);
     }
 
-    public void Step(float delta)
+    public void RemoveDestroyed()
     {
         bool removed = false;
         foreach (var building in structures)
@@ -110,11 +120,14 @@ internal sealed class CommandBuildings
             structures.RemoveAll(building => building.Destroyed);
             RebuildObstacles();
         }
+    }
 
+    public void Step(float delta)
+    {
         foreach (var building in structures)
         {
             building.Construct(delta);
-            if (building.Ready) building.Production?.Step(delta, recipes, Carbon, building.Release);
+            if (!building.Destroyed && building.Ready && building.Release != null) building.Production?.Step(delta, recipes, Carbon, building.Release);
         }
     }
 

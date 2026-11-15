@@ -10,7 +10,7 @@ public static class AreaDamage
         in UnitStats type, Vector2 direction, float separationGap, float tolerance, float movementPadding, ObstacleField obstacles = null)
     {
         Vector3 origin = units.Position[attacker];
-        units.Damage(primary, type.Damage);
+        units.Damage(primary, type.Damage, type.DamageType);
         int limit = type.CleaveMaxAdditionalTargets;
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f || limit == 0) return;
 
@@ -49,12 +49,12 @@ public static class AreaDamage
         }
 
         float secondaryDamage = type.Damage * type.CleaveSecondaryFraction;
-        for (int index = 0; index < count; index++) units.Damage(victims[index], secondaryDamage);
+        for (int index = 0; index < count; index++) units.Damage(victims[index], secondaryDamage, type.DamageType);
     }
 
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.
     public static void Radial(UnitState units, SpatialGrid grid, int sourceFaction, Vector3 impact,
-        float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null)
+        float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null, int damageType = 0)
     {
         if (!float.IsFinite(radius) || radius <= 0f || damage <= 0f) return;
         float edge = Mathf.Clamp(edgeDamageFraction, 0f, 1f);
@@ -68,7 +68,7 @@ public static class AreaDamage
             float distanceSquared = offset.X * offset.X + offset.Z * offset.Z;
             if (distanceSquared > radiusSquared || cover?.BlocksSight(impact, units.Position[id]) == true) continue;
             float fraction = Mathf.Sqrt(distanceSquared) / radius;
-            units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction));
+            units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType);
         }
     }
 }

@@ -113,7 +113,7 @@ public sealed class GuardGroup
             if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);
             if (next == from) continue;
             if (movementFlags != null) movementFlags[id] = 1;
-            if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, turnStep);
+            if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
             units.Position[id] = new Vector3(next.X, position.Y, next.Y);
             units.Grounding?.MarkMoved(id);
             units.Dirty[id] = true;

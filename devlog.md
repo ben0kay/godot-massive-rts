@@ -213,3 +213,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-14 | Fortress Defense.** Moved the Red spawn marker from Z=24 to Z=120 for a longer opening approach.
 
 - **2026-11-14 | Command Sandbox.** Added one-pass Normal separation with toggle and timing stats, plus K + left-click attack-move with destination resumption.
+
+- 2026-11-14 — DMG1: Added the configurable damage matrix, H Breacher, and footprint-based Citadel and Fabricator combat in the Command Sandbox. Benchmark towers use typed outgoing damage. Source implemented, awaiting owner gameplay and performance validation.

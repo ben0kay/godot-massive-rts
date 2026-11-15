@@ -58,6 +58,9 @@ public partial class CommandSandbox : Node3D
         }
         buildings = new CommandBuildings(this, units, movement, Mathf.Max(1, CitadelHealth));
 
+        if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
+            buildings.AddHostileFabricator(hostile.GlobalPosition);
+
         army = new ArmyRenderer();
         AddChild(army);
         army.Initialize(units, FacetedSoldierMeshes.Create(catalog), null, false);
@@ -157,7 +160,9 @@ public partial class CommandSandbox : Node3D
         if (waves.Defeat || waves.Victory) return;
         int previousCount = units.Count;
         buildings.Step((float)delta);
-        if (waves.Step((float)delta) || previousCount != units.Count)
+        bool changed = waves.Step((float)delta);
+        buildings.RemoveDestroyed();
+        if (changed || previousCount != units.Count)
         {
             long start = Stopwatch.GetTimestamp();
             army.Sync();

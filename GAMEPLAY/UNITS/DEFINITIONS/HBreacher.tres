@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "h_breacher"
+DisplayName = "H Breacher"
+Role = "Twin-ram melee siege"
+Shape = 7
+Width = 0.91
+Height = 0.44
+Speed = 2.8
+AccelerationSecondsOverride = 0.7
+TurnDegreesPerSecond = 105.0
+Health = 110.0
+Armour = 0.2
+ArmourClass = "Medium"
+ChargeResistance = 0.55
+Damage = 10.0
+DamageType = "Impact"
+Interval = 1.5
+Reach = 0.82
+MeleeFacingAngleDegrees = 55.0
+AllowedTargets = 3
+PreferredTarget = 1
+StructureDetectionRange = 12.0
+MeleeLungeDistance = 0.24

@@ -16,6 +16,10 @@ internal sealed class CommandStructure
     private static Mesh fabricatorMesh, citadelMesh;
     private static QuadMesh productionBarMesh;
     private static Shader productionBarShader;
+    private readonly DamageRules rules;
+    private readonly float damageTaken;
+    public readonly byte Faction;
+    public readonly int ArmourClass;
     public readonly ObstacleRectangle Area;
     public readonly Vector3 Center;
     public readonly float MaxHealth;
@@ -34,9 +38,14 @@ internal sealed class CommandStructure
     private readonly ShaderMaterial productionBarMaterial;
     public readonly System.Func<byte, bool> Release;
 
-    public CommandStructure(ObstacleRectangle area, float health, bool citadel, System.Func<CommandStructure, byte, bool> release)
+    public CommandStructure(ObstacleRectangle area, float health, bool citadel, byte faction,
+        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null)
     {
         Area = area;
+        Faction = faction;
+        this.rules = rules;
+        ArmourClass = rules.ArmourClass(definition.ArmourClass);
+        damageTaken = 1f - (float.IsFinite(definition.Armour) ? Mathf.Clamp(definition.Armour, 0f, 1f) : 0f);
         Vector2 center = (area.Min + area.Max) * 0.5f;
         Center = new Vector3(center.X, 0, center.Y);
         View.Position = Center;
@@ -45,10 +54,16 @@ internal sealed class CommandStructure
         if (!citadel)
         {
             Production = new FabricatorProduction();
-            Release = type => release(this, type);
+            if (release != null) Release = type => release(this, type);
         }
         Mesh mesh = citadel ? (citadelMesh ??= MakeMesh(true)) : (fabricatorMesh ??= MakeMesh(false));
         solid = new MeshInstance3D { Mesh = mesh, Visible = citadel };
+        if (faction == Factions.Red)
+        {
+            var material = (StandardMaterial3D)SolidMaterial.Duplicate();
+            material.AlbedoColor = new Color(1f, 0.52f, 0.45f);
+            solid.MaterialOverride = material;
+        }
         ghostMaterial = GhostMaterial();
         hologram = new MeshInstance3D { Mesh = mesh, MaterialOverride = ghostMaterial, Visible = !citadel };
         progress = new Label3D
@@ -74,10 +89,10 @@ internal sealed class CommandStructure
 
     }
 
-    public void Damage(float amount)
+    public void Damage(float amount, int damageType)
     {
         if (!float.IsFinite(amount) || amount <= 0) return;
-        Health = Mathf.Max(0, Health - amount);
+        Health = Mathf.Max(0, Health - rules.Resolve(amount, damageType, ArmourClass, damageTaken));
         if (Destroyed) View.Hide();
     }
 

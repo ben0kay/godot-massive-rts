@@ -11,5 +11,6 @@ Batches = Dictionary[String, Vector3i]({
 "diamond_cavalry": Vector3i(8, 200, 12),
 "pentagon_elite": Vector3i(4, 220, 14),
 "hexagon_siege": Vector3i(2, 250, 18),
-"chevron_artillery": Vector3i(3, 280, 18)
+"chevron_artillery": Vector3i(3, 280, 18),
+"h_breacher": Vector3i(6, 165, 12)
 })

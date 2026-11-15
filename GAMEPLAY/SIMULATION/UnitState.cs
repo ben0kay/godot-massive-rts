@@ -27,6 +27,8 @@ public sealed class UnitState
     public int Count;
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
+    internal bool HasStructureAttackers { get; private set; }
+    internal bool HasMeleeLunge { get; private set; }
 
     // Appends a stable soldier ID when the preallocated state has room.
     public int TrySpawn(byte type, byte faction, Vector3 position)
@@ -47,7 +49,10 @@ public sealed class UnitState
     {
         FactionAlive[faction]++;
         Alive++;
-        MaxFootprint = Mathf.Max(MaxFootprint, Catalog[type].Footprint);
+        ref readonly var stats = ref Catalog[type];
+        HasStructureAttackers |= stats.TargetsStructures;
+        HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
+        MaxFootprint = Mathf.Max(MaxFootprint, stats.Footprint);
     }
     public RuntimeUnitCatalog Catalog { get; }
     public HitFeedbackSystem HitFeedback { get; }
@@ -76,11 +81,12 @@ public sealed class UnitState
 
     public DeathFeedbackSystem DeathFeedback { get; set; }
 
-    public void Damage(int id, float damage)
+    public void Damage(int id, float damage, int damageType = 0)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
         float previous = Health[id];
-        Health[id] = Mathf.Max(0, previous - Mathf.Max(0, damage * Catalog[Type[id]].DamageTaken));
+        ref readonly var defender = ref Catalog[Type[id]];
+        Health[id] = Mathf.Max(0, previous - Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken));
         if (Health[id] == 0) RecordDeath(id);
         else if (Health[id] < previous && HitFeedback != null)
         {

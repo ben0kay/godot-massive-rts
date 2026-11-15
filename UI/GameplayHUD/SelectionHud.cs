@@ -15,6 +15,8 @@ public partial class SelectionHud : PanelContainer
         CustomMinimumSize = new Vector2(0, 6), ShowPercentage = false, MouseFilter = MouseFilterEnum.Ignore
     };
     private readonly StringBuilder description = new();
+    private RuntimeUnitCatalog infoCatalog;
+    private string[] combatInfo;
     private int[] typeCounts = Array.Empty<int>();
 
     public override void _Ready()
@@ -36,7 +38,14 @@ public partial class SelectionHud : PanelContainer
 
     public void Refresh(UnitState units, ReadOnlySpan<int> selected)
     {
-        if (typeCounts.Length != units.Catalog.Count) typeCounts = new int[units.Catalog.Count];
+        if (infoCatalog != units.Catalog)
+        {
+            infoCatalog = units.Catalog;
+            typeCounts = new int[infoCatalog.Count];
+            combatInfo = new string[infoCatalog.Count];
+            for (int i = 0; i < combatInfo.Length; i++)
+                combatInfo[i] = infoCatalog.DamageRules.Describe(infoCatalog[i].DamageType, infoCatalog[i].ArmourClass);
+        }
         Array.Clear(typeCounts);
         int living = 0;
         double current = 0, maximum = 0;
@@ -62,12 +71,15 @@ public partial class SelectionHud : PanelContainer
         heading.Text = $"{living:N0} selected   ·   {percentage:0.#}% HP";
         health.Value = percentage;
         description.Clear();
+        int onlyType = -1;
         for (int type = 0; type < typeCounts.Length; type++)
         {
             if (typeCounts[type] == 0) continue;
+            onlyType = onlyType == -1 ? type : -2;
             if (description.Length > 0) description.Append("   ·   ");
             description.Append(typeCounts[type]).Append(" × ").Append(units.Catalog[type].Name);
         }
+        if (onlyType >= 0) description.Append('\n').Append(combatInfo[onlyType]);
         counts.Text = description.ToString();
     }
 }

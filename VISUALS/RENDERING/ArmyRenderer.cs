@@ -233,6 +233,18 @@ public partial class ArmyRenderer : Node3D
             position.X += kick.X;
             position.Z += kick.Y;
         }
+        ref readonly var stats = ref units.Catalog[type];
+        float cooldown = units.Cooldown[id];
+        if (stats.MeleeLungeDistance > 0f && cooldown > 0f)
+        {
+            float progress = (stats.Interval - cooldown) / CombatSystem.MeleeLungeSeconds;
+            if (progress < 1f)
+            {
+                Vector2 stroke = units.Facing[id] * (stats.MeleeLungeDistance * (1f - Mathf.Max(0f, progress)));
+                position.X += stroke.X;
+                position.Z += stroke.Y;
+            }
+        }
         // A circle looks identical from every direction: keep its transform unrotated,
         // but still interpolate position and apply the normal hit-feedback scale.
         float cosine = 1f, sine = 0f;

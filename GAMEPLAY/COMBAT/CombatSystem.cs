@@ -7,6 +7,7 @@ public static class CombatSystem
     private const int ExtraPursuitQueriesPerAcquisitionStep = 128;
     private const int PursuitQueriesPerAcquisitionStep = 512;
     private const float FarMeleeRetargetDelaySeconds = 0.4f;
+    internal const float MeleeLungeSeconds = 0.16f;
     private const float MeleeContactTolerance = 0.08f;
 
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
@@ -148,18 +149,27 @@ public static class CombatSystem
     }
 
     // =========================================================
-    public static void Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
+    public static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
         ShockwaveRenderer shockwaves = null)
     {
         Vector2 turnStep = SoldierFacing.TurnStep(dt);
+        bool lungeChanged = false;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
-            units.Cooldown[i] = Mathf.Max(0, units.Cooldown[i] - dt);
+            float beforeCooldown = units.Cooldown[i];
+            units.Cooldown[i] = Mathf.Max(0, beforeCooldown - dt);
+            if (units.HasMeleeLunge && beforeCooldown > 0f)
+            {
+                ref readonly var animation = ref units.Catalog[units.Type[i]];
+                if (animation.MeleeLungeDistance > 0f && animation.Interval - beforeCooldown < MeleeLungeSeconds)
+                    lungeChanged = units.Dirty[i] = true;
+            }
             if (trample?.OverridesAttack(i) == true) continue;
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
+            if (!type.TargetsUnits) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? type.Reach :
                 MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
@@ -184,7 +194,8 @@ public static class CombatSystem
                     float cone = type.CleaveEnabled ? type.CleaveCosineSquared : type.MeleeFacingCosineSquared;
                     if (facing == Vector2.Zero || forward < 0f || forward * forward < aimSquared * cone)
                     {
-                        SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared), turnStep);
+                        SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared),
+                            type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
                         units.Dirty[i] = true;
                         continue;
                     }
@@ -213,13 +224,15 @@ public static class CombatSystem
                 ShockwaveStats stomp = type.Shockwave;
                 Vector3 impact = units.Position[i];
                 AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, stomp.Damage, stomp.EdgeDamageFraction,
-                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null);
+                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.DamageType);
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
                 AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
-            else units.Damage(target, type.Damage);
+            else units.Damage(target, type.Damage, type.DamageType);
+            if (type.MeleeLungeDistance > 0f) lungeChanged = units.Dirty[i] = true;
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }
+        return lungeChanged;
     }
 }

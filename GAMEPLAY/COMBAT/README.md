@@ -11,3 +11,11 @@ Normal melee approaches to body contact. A swing requires both footprints plus t
 [Trample](TRAMPLE/README.md) is an opt-in charge ability. It runs after ordinary movement and before separation. Only successfully penetrated enemy pairs bypass separation for the charge tick. The later area and projectile queries pad for the maximum trample shove as well as normal separation.
 
 UNIT2 exposes the ordinary melee facing angle, cleave secondary target cap (0–50), and direct shockwave outer damage in the unit definition. Older resources using a shockwave edge fraction still load.
+
+## DMG1
+
+Edit `DefaultDamageMatrix.tres` to tune damage types, armour classes and their effectiveness. Entries are row-major, with one row per damage type and one column per armour class. Keep Standard and Light first so old definitions have their default IDs. When changing the column list, update each row to the new width. Missing values default to 1×. Definition names resolve to integer indices when the arena starts. A blank or unknown name uses the first entry. Reload the arena after editing resources.
+
+All hits use base damage × matrix effectiveness × (1 − defender percentage armour). Primary attacks, cleave, shockwave, trample, projectiles and tower beams use the attacker's configured damage type. Existing weapons default to Standard, which ships with a neutral row. Single-type selections show the attack and armour classes and derived matchup multipliers.
+
+Structure targeting is a separate setting. In the command sandbox, eligible attackers refresh structure candidates on the staggered acquisition phase and route to a clear footprint edge through the command mover. A reachable soldier in melee contact can interrupt the approach to a preferred structure. Move orders allow swings within reach and attack-move can pursue. The legacy wave Citadel assault remains a scenario rule for the original roster. Benchmark tower footprints remain static obstacles.

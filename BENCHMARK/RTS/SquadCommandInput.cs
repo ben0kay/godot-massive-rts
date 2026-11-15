@@ -113,7 +113,7 @@ public partial class SquadCommandInput : Node
             if (order.ButtonIndex == MouseButton.Right) overlay.AttackMove = false;
         }
 
-        if (overlay.Building?.Production != null && overlay.Building.Ready &&
+        if (overlay.Building?.Release != null && overlay.Building.Ready &&
             input is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } rallyClick)
         {
             if (TryGround(rallyClick.Position, out Vector3 point) && buildings.CanRally(point))

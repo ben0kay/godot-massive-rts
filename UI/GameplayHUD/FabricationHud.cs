@@ -75,10 +75,11 @@ public partial class FabricationHud : Control
         if (building == null) return;
 
         var production = building.Production;
-        controls.Visible = production != null && building.Ready;
+        controls.Visible = building.Release != null && building.Ready;
         title.Text = production == null ? $"Citadel   ·   {building.Health:N0} / {building.MaxHealth:N0} HP" :
             !building.Ready ? $"Fabricator   ·   Constructing {building.Built:P0}" :
             $"Fabricator   ·   {building.Health:N0} / {building.MaxHealth:N0} HP";
+        title.Text += $"   ·   {buildings.ArmourName(building)} armour";
         if (!controls.Visible) return;
         if (changed)
         {

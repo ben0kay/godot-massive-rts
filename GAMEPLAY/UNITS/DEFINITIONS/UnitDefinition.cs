@@ -2,7 +2,10 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame }
+[System.Flags]
+public enum TargetCategory { Units = 1, Structures = 2, Both = Units | Structures }
+public enum TargetPreference { Units, Structures }
 public enum AttackStyle { Melee, Ranged }
 
 [Tool]
@@ -26,12 +29,20 @@ public partial class UnitDefinition : Resource
     [Export] public float Speed { get; set; } = 5f;
     [Export(PropertyHint.Range, "0,5,0.05,suffix:s")] public float AccelerationSecondsOverride { get; set; }
 
+    [Export(PropertyHint.Range, "0,720,1,degrees")] public float TurnDegreesPerSecond { get; set; }
+
     [ExportGroup("Defense")]
+    [Export] public string ArmourClass { get; set; } = "Light";
     [Export] public float Health { get; set; } = 100f;
     [Export(PropertyHint.Range, "0,1,0.01")] public float Armour { get; set; }
     [Export(PropertyHint.Range, "0.01,4,0.05")] public float ChargeResistance { get; set; } = 0.30f;
 
     [ExportGroup("Primary attack")]
+    [Export] public string DamageType { get; set; } = "Standard";
+    [Export] public TargetCategory AllowedTargets { get; set; } = TargetCategory.Units;
+    [Export] public TargetPreference PreferredTarget { get; set; }
+    [Export(PropertyHint.Range, "0,100,0.1,suffix:u")] public float StructureDetectionRange { get; set; } = 12f;
+    [Export(PropertyHint.Range, "0,1,0.01,suffix:u")] public float MeleeLungeDistance { get; set; }
     [Export] public AttackStyle Style { get; set; }
     [Export] public float Damage { get; set; } = 20f;
     [Export(PropertyHint.Range, "0.001,10,0.001,or_greater,suffix:s")] public float Interval { get; set; } = 0.9f;

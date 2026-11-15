@@ -166,7 +166,7 @@ public static class MovementSystem
                 voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.
             if (travel > 0.00001f && type.Shape != UnitShape.Circle)
-                SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnStep);
+                SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);
             units.Dirty[i] = true;

@@ -7,9 +7,10 @@ public static class SoldierFacing
 {
     private const float TurnRadiansPerSecond = 300f * (Mathf.Pi / 180f);
 
-    public static Vector2 TurnStep(float dt)
+    public static Vector2 TurnStep(float dt, float degreesPerSecond = 0f)
     {
-        float angle = Mathf.Min(TurnRadiansPerSecond * dt, Mathf.Pi);
+        float speed = degreesPerSecond > 0f ? Mathf.DegToRad(degreesPerSecond) : TurnRadiansPerSecond;
+        float angle = Mathf.Min(speed * dt, Mathf.Pi);
         return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
     }
 

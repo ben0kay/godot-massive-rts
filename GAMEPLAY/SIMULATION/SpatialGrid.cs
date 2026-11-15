@@ -135,6 +135,7 @@ public sealed class SpatialGrid
     // =========================================================
     public int FindEnemy(UnitState units, int id, float radius, int budget, int tick, ObstacleField clearSight = null, int rank = 1, int incumbent = -1, float minimumRange = 0f, float meleeReachPadding = -1f, Vector3? guardPost = null, float guardRadius = 0f)
     {
+        if (!units.Catalog[units.Type[id]].TargetsUnits) return -1;
         if (!profileTargeting) return SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding, guardPost, guardRadius);
         long start = Stopwatch.GetTimestamp();
         int found = SearchLocal(units, id, radius, budget, tick, clearSight, rank, incumbent, minimumRange, meleeReachPadding, guardPost, guardRadius);
@@ -249,6 +250,7 @@ public sealed class SpatialGrid
     public int FindPursuitEnemy(UnitState units, int id, int previous, PursuitReason reason,
         int retainedTarget = -1, float localRadius = 0f, bool searchedLocally = false)
     {
+        if (!units.Catalog[units.Type[id]].TargetsUnits) return -1;
         int enemies = EnemiesOf(units.Faction[id]);
         if (enemies == 0) return -1;
         bool measure = profileTargeting && reason != PursuitReason.Preparation;
