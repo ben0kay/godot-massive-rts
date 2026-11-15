@@ -12,7 +12,7 @@ public partial class WaveEditorPlugin : EditorPlugin
     private const string WavesProperty = nameof(CommandSandbox.WaveDefinitions);
     private const string EdgeProperty = nameof(CommandSandbox.EnemySpawnEdge);
     private const string DelayProperty = nameof(CommandSandbox.BetweenWavesSeconds);
-    private Control panel;
+    private EditorDock dock;
     private VBoxContainer form;
     private UnitDefinition[] roster;
     private int selected;
@@ -26,21 +26,30 @@ public partial class WaveEditorPlugin : EditorPlugin
             if (definition != null) definitions.Add(definition);
         roster = definitions.ToArray();
 
-        panel = new ScrollContainer { CustomMinimumSize = new Vector2(0, 215) };
+        dock = new EditorDock
+        {
+            Title = "Wave Editor",
+            LayoutKey = "MassiveRtsWaveEditor",
+            DefaultSlot = EditorDock.DockSlot.Bottom,
+            AvailableLayouts = EditorDock.DockLayout.Horizontal
+        };
+        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(0, 215) };
         form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        panel.AddChild(form);
-        AddControlToBottomPanel(panel, "Wave Editor");
+        scroll.AddChild(form);
+        dock.AddChild(scroll);
+        AddDock(dock);
         SceneChanged += OnSceneChanged;
-        panel.VisibilityChanged += Refresh;
+        dock.VisibilityChanged += Refresh;
         Refresh();
     }
 
     public override void _ExitTree()
     {
         SceneChanged -= OnSceneChanged;
-        panel.VisibilityChanged -= Refresh;
-        RemoveControlFromBottomPanel(panel);
-        panel.QueueFree();
+        dock.VisibilityChanged -= Refresh;
+        RemoveDock(dock);
+        dock.QueueFree();
+        form = null;
     }
 
     private void OnSceneChanged(Node scene)

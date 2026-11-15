@@ -1,6 +1,7 @@
 // Converts click, box select and right-drag gestures into squad orders.
-using Godot;
+using System;
 using System.Runtime.InteropServices;
+using Godot;
 
 namespace MassiveRts;
 
