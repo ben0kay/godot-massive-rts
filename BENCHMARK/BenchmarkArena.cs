@@ -615,10 +615,14 @@ public partial class BenchmarkArena : Node3D
             ref readonly var type = ref catalog[units.Type[id]];
             if (!type.TargetsStructures) continue;
             int soldier = units.Target[id];
+            bool liveSoldier = soldier >= 0 && units.Health[soldier] > 0f;
+            // The authored radius controls switching away from soldier combat. Auto Attack
+            // still needs a pursuit destination when towers are the only targets left.
+            float range = liveSoldier ? type.StructureDetectionRange : float.PositiveInfinity;
             var sight = StructureCombat.Sight(type, units, obstacles);
-            var building = defenseCombat.Acquire(id, type, type.StructureDetectionRange, true, true, obstacles, sight);
+            var building = defenseCombat.Acquire(id, type, range, true, true, obstacles, sight);
             if (building == null) continue;
-            if (soldier >= 0 && units.Health[soldier] > 0f)
+            if (liveSoldier)
             {
                 float reach = type.Ranged ? type.Reach : CombatSystem.MeleeContact(type.Footprint,
                     catalog[units.Type[soldier]].Footprint, gap) + 0.08f;
