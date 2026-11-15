@@ -10,7 +10,7 @@ public partial class SquadCommandInput : Node
     private CommandOverlay overlay;
     private MouseButton held;
     private Vector3 dragStart;
-    private bool rightShift, freeformDrag;
+    private bool rightShift, freeformDrag, attackFormationDrag;
 
     private CommandMovement movement;
     private CommandBuildings buildings;
@@ -105,19 +105,13 @@ public partial class SquadCommandInput : Node
             return;
         }
 
-        if (overlay.AttackMove && input is InputEventMouseButton { Pressed: true } order)
+        // K arms attack-move. Its left-click now shares the existing drag/release
+        // lifecycle so a tap keeps the centered attack-move and a drag defines the front.
+        if (overlay.AttackMove && input is InputEventMouseButton
+            { Pressed: true, ButtonIndex: MouseButton.Right })
         {
-            if (order.ButtonIndex == MouseButton.Left && TryGround(order.Position, out Vector3 point))
-            {
-                CenterFormation(point);
-                movement.Issue(CollectionsMarshal.AsSpan(overlay.Selection), overlay.Front, overlay.Right,
-                    overlay.Columns, overlay.Spacing, attack: true);
-                overlay.AttackMove = false;
-                overlay.QueueRedraw();
-                GetViewport().SetInputAsHandled();
-                return;
-            }
-            if (order.ButtonIndex == MouseButton.Right) overlay.AttackMove = false;
+            overlay.AttackMove = false;
+            overlay.QueueRedraw();
         }
 
         if (overlay.Building?.Release != null && overlay.Building.Ready &&
@@ -132,7 +126,7 @@ public partial class SquadCommandInput : Node
         if (input is InputEventMouseMotion motion && held != MouseButton.None)
         {
             overlay.Pointer = motion.Position;
-            if (held == MouseButton.Right) UpdateFormation(motion.Position);
+            if (held == MouseButton.Right || attackFormationDrag) UpdateFormation(motion.Position);
             GetViewport().SetInputAsHandled();
         }
         else if (input is InputEventMouseButton button &&
@@ -142,24 +136,32 @@ public partial class SquadCommandInput : Node
             {
                 if (held != MouseButton.None) return;
                 if (button.ButtonIndex == MouseButton.Right && (overlay.Selection.Count == 0 || !TryGround(button.Position, out dragStart))) return;
+                if (button.ButtonIndex == MouseButton.Left && overlay.AttackMove)
+                {
+                    if (overlay.Selection.Count == 0 || !TryGround(button.Position, out dragStart)) return;
+                    attackFormationDrag = true;
+                }
                 held = button.ButtonIndex;
                 overlay.Press = overlay.Pointer = button.Position;
-                overlay.Selecting = held == MouseButton.Left;
+                // K + left-drag is an order preview, not a selection box.
+                overlay.Selecting = held == MouseButton.Left && !attackFormationDrag;
                 freeformDrag = held == MouseButton.Right && rightShift;
                 overlay.FreeformPreview = freeformDrag;
                 if (freeformDrag) overlay.Freeform.Begin(dragStart);
             }
             else if (button.ButtonIndex == held)
             {
-                if (held == MouseButton.Left) Select(button.Position);
+                if (held == MouseButton.Left && !attackFormationDrag) Select(button.Position);
                 else if (UpdateFormation(button.Position, finish: true))
                 {
                     ReadOnlySpan<int> selected = CollectionsMarshal.AsSpan(overlay.Selection);
                     if (freeformDrag && overlay.Preview)
                         movement.IssueSlots(selected, CollectionsMarshal.AsSpan(overlay.Freeform.Slots));
                     else
-                        movement.Issue(selected, overlay.Front, overlay.Right, overlay.Columns, overlay.Spacing);
+                        movement.Issue(selected, overlay.Front, overlay.Right, overlay.Columns, overlay.Spacing,
+                            attack: attackFormationDrag);
                 }
+                if (attackFormationDrag) overlay.AttackMove = false;
                 CancelGesture();
             }
             else return;
@@ -180,7 +182,7 @@ public partial class SquadCommandInput : Node
     public override void _Process(double delta)
     {
         if (held != MouseButton.None && !Input.IsMouseButtonPressed(held)) CancelGesture();
-        if (held == MouseButton.Right) UpdateFormation(overlay.Pointer);
+        if (held == MouseButton.Right || attackFormationDrag) UpdateFormation(overlay.Pointer);
         if (placing)
         {
             ghost.Visible = TryGround(GetViewport().GetMousePosition(), out Vector3 point);
@@ -199,7 +201,7 @@ public partial class SquadCommandInput : Node
     private void CancelGesture()
     {
         held = MouseButton.None;
-        freeformDrag = false;
+        freeformDrag = attackFormationDrag = false;
         overlay.FreeformPreview = false;
         overlay.Freeform.Clear();
         overlay.Selecting = overlay.Preview = false;

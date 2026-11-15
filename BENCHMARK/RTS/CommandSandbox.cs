@@ -90,7 +90,7 @@ public partial class CommandSandbox : Node3D
         {
             Position = new Vector2(20f, 48f),
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click: move · Right-drag: straight formation\nRight Shift + Right-drag: freeform formation\nK + left-click: Attack-move\nWASD or arrows to pan · Wheel to zoom"
+            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click: move · Right-drag: straight formation\nRight Shift + Right-drag: freeform formation\nK + left-click: Attack-move · Hold K + left-drag: attack formation\nWASD or arrows to pan · Wheel to zoom"
         });
         var rightHud = new VBoxContainer
         {

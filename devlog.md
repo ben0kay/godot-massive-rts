@@ -243,3 +243,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-15 | RTS freeform formation line.** Added Right Shift + right-mouse drag to sketch curved formation lines; previews and commits cached destinations placed along arc length, with extra ranks behind local tangents. The measurement is still straight from start to finish. Reuses ordinary move-order goal validity and keeps right-drag, K attack-move, rally and command simulation intact. 512 bounded stroke samples; owner Godot visual validation pending.
 
 - 2026-11-15 — Command maps can author the opening camera, troop spawn markers and a placeable Citadel scene in the 3D editor.
+
+- **2026-11-15 | RTS attack-move formation drag.** K + left-click retains the centered attack-move order but now issues on mouse release, allowing K + left-drag to preview and commit the existing straight formation geometry (columns, ghost footprints and distance measurement) with attack-move enabled. Normal left selection, right move drag, Right Shift freeform move and K one-shot arming remain unchanged. Source-only review; awaiting owner Godot validation.
