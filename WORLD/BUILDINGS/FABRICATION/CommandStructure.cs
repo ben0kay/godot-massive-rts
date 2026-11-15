@@ -13,14 +13,14 @@ internal sealed class CommandStructure : StructureHealth
     {
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true
     };
-    private static Mesh fabricatorMesh, citadelMesh;
+    private static Mesh fabricatorMesh;
     private static QuadMesh productionBarMesh;
     private static Shader productionBarShader;
     public readonly Vector3 Center;
     public bool Ready => Built >= 1f;
     public float Built { get; private set; }
     public readonly FabricatorProduction Production;
-    public readonly Node3D View = new();
+    public readonly Node3D View;
     public Vector3? Rally;
     public bool UnitCapBlocked;
     private readonly MeshInstance3D solid, hologram;
@@ -30,21 +30,24 @@ internal sealed class CommandStructure : StructureHealth
     private readonly ShaderMaterial productionBarMaterial;
     public readonly System.Func<byte, bool> Release;
 
-    public CommandStructure(ObstacleRectangle area, float health, bool citadel, byte faction,
-        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null)
+    public CommandStructure(ObstacleRectangle area, float health, byte faction,
+        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null, CitadelView citadelView = null)
         : base(area, faction, health, rules, rules.ArmourClass(definition.ArmourClass), definition.Armour)
     {
         Vector2 center = (area.Min + area.Max) * 0.5f;
         Center = new Vector3(center.X, 0, center.Y);
-        View.Position = Center;
-        Built = citadel ? 1f : 0;
-        if (!citadel)
+        if (citadelView != null)
         {
-            Production = new FabricatorProduction();
-            if (release != null) Release = type => release(this, type);
+            View = citadelView;
+            Built = 1f;
+            return;
         }
-        Mesh mesh = citadel ? (citadelMesh ??= MakeMesh(true)) : (fabricatorMesh ??= MakeMesh(false));
-        solid = new MeshInstance3D { Mesh = mesh, Visible = citadel };
+
+        View = new Node3D { Position = Center };
+        Production = new FabricatorProduction();
+        if (release != null) Release = type => release(this, type);
+        Mesh mesh = fabricatorMesh ??= MakeMesh();
+        solid = new MeshInstance3D { Mesh = mesh, Visible = false };
         if (faction == Factions.Red)
         {
             var material = (StandardMaterial3D)SolidMaterial.Duplicate();
@@ -52,28 +55,24 @@ internal sealed class CommandStructure : StructureHealth
             solid.MaterialOverride = material;
         }
         ghostMaterial = GhostMaterial();
-        hologram = new MeshInstance3D { Mesh = mesh, MaterialOverride = ghostMaterial, Visible = !citadel };
+        hologram = new MeshInstance3D { Mesh = mesh, MaterialOverride = ghostMaterial };
         progress = new Label3D
         {
             Position = Vector3.Up * 3f, Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FontSize = 32, PixelSize = 0.025f, Text = "0%", Visible = !citadel
+            FontSize = 32, PixelSize = 0.025f, Text = "0%"
         };
         View.AddChild(solid);
         View.AddChild(hologram);
         View.AddChild(progress);
-        if (!citadel)
+        productionBarMesh ??= new QuadMesh { Size = new Vector2(3.0f, 0.30f) };
+        productionBarShader ??= GD.Load<Shader>("res://WORLD/BUILDINGS/FABRICATION/ProductionBar.gdshader");
+        productionBarMaterial = new ShaderMaterial { Shader = productionBarShader };
+        productionBar = new MeshInstance3D
         {
-            productionBarMesh ??= new QuadMesh { Size = new Vector2(3.0f, 0.30f) };
-            productionBarShader ??= GD.Load<Shader>("res://WORLD/BUILDINGS/FABRICATION/ProductionBar.gdshader");
-            productionBarMaterial = new ShaderMaterial { Shader = productionBarShader };
-            productionBar = new MeshInstance3D
-            {
-                Mesh = productionBarMesh, MaterialOverride = productionBarMaterial, Position = Vector3.Up * 2.65f,
-                Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 2f
-            };
-            View.AddChild(productionBar);
-        }
-
+            Mesh = productionBarMesh, MaterialOverride = productionBarMaterial, Position = Vector3.Up * 2.65f,
+            Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 2f
+        };
+        View.AddChild(productionBar);
     }
 
     protected override void OnDestroyed() => View.Hide();
@@ -105,7 +104,7 @@ internal sealed class CommandStructure : StructureHealth
 
     public static MeshInstance3D MakePreview() => new()
     {
-        Mesh = fabricatorMesh ??= MakeMesh(false), MaterialOverride = GhostMaterial(), Visible = false
+        Mesh = fabricatorMesh ??= MakeMesh(), MaterialOverride = GhostMaterial(), Visible = false
     };
 
     private static StandardMaterial3D GhostMaterial() => new()
@@ -115,7 +114,7 @@ internal sealed class CommandStructure : StructureHealth
         AlbedoColor = new Color(0.18f, 0.8f, 1f, 0.33f)
     };
 
-    private static Mesh MakeMesh(bool citadel)
+    private static Mesh MakeMesh()
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -125,25 +124,14 @@ internal sealed class CommandStructure : StructureHealth
         void Part(float x, float y, float z, float w, float h, float d, Color color) =>
             FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(x, y, z), new Vector3(w, h, d), color);
 
-        if (citadel)
-        {
-            Part(0, 0.36f, 0, 9.7f, 0.72f, 9.7f, dark);
-            Part(0, 1.15f, 0, 7.8f, 1.1f, 7.8f, steel);
-            Part(0, 2.1f, 0, 6.4f, 0.8f, 6.4f, new Color("#2679f5"));
-            Part(0, 3.1f, 0, 4.6f, 1.4f, 4.6f, dark);
-            Part(0, 4.0f, 0, 2.8f, 0.6f, 2.8f, Cyan);
-        }
-        else
-        {
-            Part(0, 0.24f, 0, 5.9f, 0.48f, 5.9f, dark);
-            Part(0, 0.94f, -0.8f, 5.4f, 1.1f, 3.9f, steel);
-            Part(0, 1.65f, -0.6f, 3.1f, 0.55f, 2.8f, Cyan);
-            Part(-2, 0.95f, 1.65f, 1.15f, 1.6f, 2.3f, dark);
-            Part(2, 0.95f, 1.65f, 1.15f, 1.6f, 2.3f, dark);
-            Part(0, 1.75f, 2.1f, 4.7f, 0.40f, 1.1f, steel);
-            Part(0, 1.55f, 2.68f, 2.9f, 0.18f, 0.16f, Cyan);
-            Part(0, 0.46f, 2.55f, 2.6f, 0.10f, 0.7f, new Color("#317ea2"));
-        }
+        Part(0, 0.24f, 0, 5.9f, 0.48f, 5.9f, dark);
+        Part(0, 0.94f, -0.8f, 5.4f, 1.1f, 3.9f, steel);
+        Part(0, 1.65f, -0.6f, 3.1f, 0.55f, 2.8f, Cyan);
+        Part(-2, 0.95f, 1.65f, 1.15f, 1.6f, 2.3f, dark);
+        Part(2, 0.95f, 1.65f, 1.15f, 1.6f, 2.3f, dark);
+        Part(0, 1.75f, 2.1f, 4.7f, 0.40f, 1.1f, steel);
+        Part(0, 1.55f, 2.68f, 2.9f, 0.18f, 0.16f, Cyan);
+        Part(0, 0.46f, 2.55f, 2.6f, 0.10f, 0.7f, new Color("#317ea2"));
         return surface.Commit();
     }
 }

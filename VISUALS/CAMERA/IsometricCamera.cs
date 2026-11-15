@@ -33,6 +33,14 @@ public partial class IsometricCamera : Camera3D
     }
     // =========================================================
     public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, 1800); }
+    public void SetOpeningView(Vector3 center, float zoom, float yaw)
+    {
+        focus = center;
+        Frame(zoom);
+        Size = targetSize;
+        SetYawDegrees(yaw);
+    }
+
     public override void _UnhandledInput(InputEvent input)
     {
         if (input is InputEventMouseButton mouse && mouse.Pressed)

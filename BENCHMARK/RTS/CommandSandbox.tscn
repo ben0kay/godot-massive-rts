@@ -1,7 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
 [ext_resource type="Script" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2"]
+
+[ext_resource type="PackedScene" path="res://WORLD/BUILDINGS/CITADEL/Citadel.tscn" id="3"]
 
 [sub_resource type="Resource" id="Wave1"]
 script = ExtResource("2")
@@ -26,6 +28,15 @@ Enemies = Dictionary[String, int]({
 [node name="CommandSandbox" type="Node3D"]
 script = ExtResource("1")
 WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wave2"), SubResource("Wave3")])
+
+[node name="CameraStart" type="Marker3D" parent="."]
+rotation = Vector3(0, 0.7853982, 0)
+
+[node name="BlueSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 0, -1.65)
+
+[node name="Citadel" parent="." instance=ExtResource("3")]
+position = Vector3(-3, 0, -13)
 
 [node name="EnemySpawn" type="Marker3D" parent="."]
 position = Vector3(4, 0, 120)

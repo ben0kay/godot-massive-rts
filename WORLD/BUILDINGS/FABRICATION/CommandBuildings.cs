@@ -24,7 +24,7 @@ internal sealed class CommandBuildings
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
 
-    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls)
+    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, CitadelView citadelView)
     {
         this.root = root;
         this.units = units;
@@ -33,9 +33,24 @@ internal sealed class CommandBuildings
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
         citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
-        Citadel = new CommandStructure(new ObstacleRectangle(-4, -9, 5, 5), citadelHealth > 0f ? citadelHealth : citadelDefinition.Health, true,
-            Factions.Blue, citadelDefinition, units.Catalog.DamageRules);
+        var footprint = new ObstacleRectangle(-4, -9, 5, 5);
+        if (citadelView != null)
+        {
+            Vector3 position = citadelView.GlobalPosition;
+            footprint = new ObstacleRectangle(Mathf.RoundToInt(position.X / DeploymentLayout.CellSize - 2.5f),
+                Mathf.RoundToInt(position.Z / DeploymentLayout.CellSize - 2.5f), 5, 5);
+            if (!footprint.IsValid)
+            {
+                GD.PushWarning("Citadel must fit inside the map. Using the default position.");
+                footprint = new ObstacleRectangle(-4, -9, 5, 5);
+            }
+        }
+        else citadelView = GD.Load<PackedScene>("res://WORLD/BUILDINGS/CITADEL/Citadel.tscn").Instantiate<CitadelView>();
+
+        Citadel = new CommandStructure(footprint, citadelHealth > 0f ? citadelHealth : citadelDefinition.Health,
+            Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView);
         Add(Citadel);
+        citadelView.GlobalPosition = Citadel.Center;
     }
 
     public static bool OnMap(Vector3 point, float radius = 0) =>
@@ -89,19 +104,19 @@ internal sealed class CommandBuildings
     public bool Place(ObstacleRectangle area)
     {
         if (!CanPlace(area) || !Carbon.TrySpend(CommandStructure.FabricatorCost)) return false;
-        Add(new CommandStructure(area, fabricatorDefinition.Health, false, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
+        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release));
         return true;
     }
 
     public void AddHostileFabricator(Vector3 point)
     {
-        Add(new CommandStructure(Snap(point), fabricatorDefinition.Health, false, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
+        Add(new CommandStructure(Snap(point), fabricatorDefinition.Health, Factions.Red, fabricatorDefinition, units.Catalog.DamageRules));
     }
 
     private void Add(CommandStructure building)
     {
         structures.Add(building);
-        root.AddChild(building.View);
+        if (building.View.GetParent() == null) root.AddChild(building.View);
         RebuildObstacles();
     }
 

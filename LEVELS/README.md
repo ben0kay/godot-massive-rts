@@ -23,3 +23,9 @@ The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the orig
 2. Drag `WORLD/OBSTACLES/CommandWall.tscn` into the scene as a child of `Obstacles`. Move or scale the wall in the editor with no rotation. Both X/Z edges must land on the 2-unit grid. The default 4 × 4 footprint fits when its center is on an even X and Z coordinate.
 3. Keep walls clear of the starting squad, the Citadel and the spawn markers. Press **F6** with your level open to test unit routing and Fabricator placement. Walls are registered once at startup.
 4. Set the level resource's `ScenePath` to your new scene. For Level 002 or 003, add each new level resource to `FortressDefense/OpenRTS.tres` with its own ID and order.
+
+The inherited scene exposes the opening layout in the 3D viewport:
+
+- **CameraStart** sets the point the camera looks at and its Y rotation sets the opening yaw. Set Opening Camera Size on the level root to change the opening zoom.
+- **BlueSpawn** marks the middle of the starting squad's front row. Its Y rotation turns the formation. **EnemySpawn** sets the wave entry point.
+- **Citadel** is an instance of `WORLD/BUILDINGS/CITADEL/Citadel.tscn`. Move it in X/Z and keep the default scale and rotation. The 10 × 10 footprint snaps to the two-unit grid on play, with centers on odd X/Z coordinates. Its new position is also the objective for enemy waves.

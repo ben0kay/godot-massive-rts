@@ -18,6 +18,7 @@ public partial class CommandSandbox : Node3D
     private SelectionHud selection;
     private const int UnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
+    [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
     private CommandBuildings buildings;
     private FabricationHud fabrication;
     private FortressWaves waves;
@@ -34,8 +35,9 @@ public partial class CommandSandbox : Node3D
         var camera = new IsometricCamera();
         AddChild(camera);
         camera.MakeCurrent();
-        camera.Frame(42f);
-        camera.Size = 42f;
+        var cameraStart = GetNodeOrNull<Marker3D>("CameraStart");
+        camera.SetOpeningView(cameraStart?.GlobalPosition ?? Vector3.Zero, OpeningCameraSize,
+            cameraStart == null ? 45f : Mathf.RadToDeg(cameraStart.GlobalRotation.Y));
         float halfWidth = DeploymentLayout.WorldHalfWidth;
         var groundMaterial = new ShaderMaterial
         {
@@ -53,13 +55,17 @@ public partial class CommandSandbox : Node3D
         units = new UnitState(UnitCapacity, catalog);
         movement = new CommandMovement(units);
         float spacing = 2f * catalog[RuntimeUnitCatalog.Circle].Footprint + 0.3f;
+        var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
+        Vector3 blueStart = blueSpawn?.GlobalPosition ?? Vector3.Back * -1.5f * spacing;
+        blueStart.Y = 0f;
+        Vector3 blueRight = blueSpawn == null ? Vector3.Right : Vector3.Right.Rotated(Vector3.Up, blueSpawn.GlobalRotation.Y);
         for (int i = 0; i < CommandMovement.SquadSize; i++)
         {
-            Vector3 position = CommandMovement.Slot(Vector3.Back * -1.5f * spacing, Vector3.Right,
+            Vector3 position = CommandMovement.Slot(blueStart, blueRight,
                 CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
             units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
         }
-        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls());
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<CitadelView>("Citadel"));
 
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);
