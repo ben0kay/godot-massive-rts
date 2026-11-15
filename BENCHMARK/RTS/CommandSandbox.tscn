@@ -32,3 +32,5 @@ position = Vector3(4, 0, 120)
 
 [node name="HostileFabricator" type="Marker3D" parent="."]
 position = Vector3(27, 0, 14)
+
+[node name="Obstacles" type="Node3D" parent="."]

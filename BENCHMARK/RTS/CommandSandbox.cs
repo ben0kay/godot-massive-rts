@@ -1,4 +1,5 @@
 // Standalone flat-ground scene for testing Fortress Defense squad commands.
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Godot;
@@ -35,14 +36,16 @@ public partial class CommandSandbox : Node3D
         camera.MakeCurrent();
         camera.Frame(42f);
         camera.Size = 42f;
+        float halfWidth = DeploymentLayout.WorldHalfWidth;
+        var groundMaterial = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://BENCHMARK/RTS/CommandGround.gdshader")
+        };
+        groundMaterial.SetShaderParameter("map_half_width", halfWidth);
         AddChild(new MeshInstance3D
         {
-            Mesh = new PlaneMesh { Size = new Vector2(5000f, 5000f) },
-            MaterialOverride = new StandardMaterial3D
-            {
-                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                AlbedoColor = new Color(0.25f, 0.26f, 0.29f)
-            }
+            Mesh = new PlaneMesh { Size = Vector2.One * (halfWidth * 3f) },
+            MaterialOverride = groundMaterial
         });
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
@@ -56,7 +59,7 @@ public partial class CommandSandbox : Node3D
                 CommandMovement.DefaultColumns, i, CommandMovement.SquadSize, spacing);
             units.TrySpawn(RuntimeUnitCatalog.Circle, Factions.Blue, position);
         }
-        buildings = new CommandBuildings(this, units, movement, CitadelHealth);
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls());
 
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);
@@ -125,6 +128,43 @@ public partial class CommandSandbox : Node3D
         AddChild(input);
         input.Initialize(overlay, movement, buildings, fabrication);
         RefreshSelection();
+    }
+
+    // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
+    private ObstacleRectangle[] ReadAuthoredWalls()
+    {
+        var walls = new List<ObstacleRectangle>();
+        if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();
+
+        const float grid = DeploymentLayout.CellSize;
+        foreach (Node child in authored.GetChildren())
+        {
+            if (child is not MeshInstance3D mesh || mesh.Mesh is not BoxMesh box) continue;
+            var basis = mesh.GlobalTransform.Basis;
+            if (!Mathf.IsZeroApprox(basis.X.Y) || !Mathf.IsZeroApprox(basis.X.Z) ||
+                !Mathf.IsZeroApprox(basis.Y.X) || !Mathf.IsZeroApprox(basis.Y.Z) ||
+                !Mathf.IsZeroApprox(basis.Z.X) || !Mathf.IsZeroApprox(basis.Z.Y))
+            {
+                GD.PushWarning($"Command wall '{mesh.Name}' must be axis-aligned.");
+                continue;
+            }
+
+            Vector3 center = mesh.GlobalPosition;
+            Vector2 halfSize = new Vector2(Mathf.Abs(basis.X.X) * box.Size.X, Mathf.Abs(basis.Z.Z) * box.Size.Z) * 0.5f;
+            Vector2 min = (new Vector2(center.X, center.Z) - halfSize) / grid;
+            Vector2 max = (new Vector2(center.X, center.Z) + halfSize) / grid;
+            Vector2I start = new(Mathf.RoundToInt(min.X), Mathf.RoundToInt(min.Y));
+            Vector2I end = new(Mathf.RoundToInt(max.X), Mathf.RoundToInt(max.Y));
+            var wall = new ObstacleRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y);
+            if (!wall.IsValid || !min.IsEqualApprox(new Vector2(start.X, start.Y)) ||
+                !max.IsEqualApprox(new Vector2(end.X, end.Y)))
+            {
+                GD.PushWarning($"Command wall '{mesh.Name}' must fit on the {grid}-unit grid within the map.");
+                continue;
+            }
+            walls.Add(wall);
+        }
+        return walls.ToArray();
     }
 
     public override void _Process(double delta)

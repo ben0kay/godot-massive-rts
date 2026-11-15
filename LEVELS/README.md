@@ -14,3 +14,12 @@ To add a level, author its scene and a `LevelDefinition` resource with a stable 
 `Runtime/LevelLauncher.cs` validates the launch and attaches the level session controls. **Return to Campaign** and Escape return to the current mode’s level list and leave progress as-is. **Mark Test Level Complete (Dev)** records completion for the active profile and returns to the campaign. This control requires both a debug build and `AllowDevelopmentCompletion` on the catalog. Actual battle objectives and victory rules are future work.
 
 For exports that use a selected-resource filter, include the menu scenes, UI config, campaign catalog and the level scenes referenced by path.
+
+## Authoring playable command maps
+
+The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
+
+1. For a playable map, create a new Godot scene inherited from `BENCHMARK/RTS/CommandSandbox.tscn` and save it in your level folder. The current Fortress Defense Level 001 is an empty template. Use the inherited scene as its replacement when you want the command game to run there.
+2. Drag `WORLD/OBSTACLES/CommandWall.tscn` into the scene as a child of `Obstacles`. Move or scale the wall in the editor with no rotation. Both X/Z edges must land on the 2-unit grid. The default 4 × 4 footprint fits when its center is on an even X and Z coordinate.
+3. Keep walls clear of the starting squad, the Citadel and the spawn markers. Press **F6** with your level open to test unit routing and Fabricator placement. Walls are registered once at startup.
+4. Set the level resource's `ScenePath` to your new scene. For Level 002 or 003, add each new level resource to `FortressDefense/OpenRTS.tres` with its own ID and order.

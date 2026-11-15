@@ -13,6 +13,7 @@ internal sealed class CommandBuildings
     private readonly CommandMovement movement;
     private readonly List<CommandStructure> structures = new();
     private readonly BatchRecipe[] recipes;
+    private readonly ObstacleRectangle[] authoredWalls;
     private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
     private ObstacleField field;
     public readonly CarbonBalance Carbon = new();
@@ -23,11 +24,12 @@ internal sealed class CommandBuildings
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
 
-    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth)
+    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls)
     {
         this.root = root;
         this.units = units;
         this.movement = movement;
+        this.authoredWalls = authoredWalls;
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
         citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
@@ -60,12 +62,12 @@ internal sealed class CommandBuildings
             return false;
 
         Vector2 min = area.Min, max = area.Max;
+        foreach (var wall in authoredWalls)
+            if (Overlaps(min, max, wall)) return false;
         foreach (var building in structures)
         {
             if (building.Destroyed) continue;
-            Vector2 otherMin = building.Area.Min, otherMax = building.Area.Max;
-            if (min.X < otherMax.X && max.X > otherMin.X && min.Y < otherMax.Y && max.Y > otherMin.Y)
-                return false;
+            if (Overlaps(min, max, building.Area)) return false;
         }
         for (int id = 0; id < units.Count; id++)
         {
@@ -76,6 +78,12 @@ internal sealed class CommandBuildings
             if (p.DistanceSquaredTo(closest) <= radius * radius) return false;
         }
         return true;
+    }
+
+    private static bool Overlaps(Vector2 min, Vector2 max, ObstacleRectangle other)
+    {
+        Vector2 otherMin = other.Min, otherMax = other.Max;
+        return min.X < otherMax.X && max.X > otherMin.X && min.Y < otherMax.Y && max.Y > otherMin.Y;
     }
 
     public bool Place(ObstacleRectangle area)
@@ -99,7 +107,8 @@ internal sealed class CommandBuildings
 
     private void RebuildObstacles()
     {
-        var areas = new List<ObstacleRectangle>(structures.Count);
+        var areas = new List<ObstacleRectangle>(authoredWalls.Length + structures.Count);
+        areas.AddRange(authoredWalls);
         foreach (var structure in structures)
             if (!structure.Destroyed) areas.Add(structure.Area);
         field = areas.Count == 0 ? null : new ObstacleField(areas.ToArray());

@@ -237,3 +237,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — PROJ-LASER1: Replaced Triangle Archer's arrow visual with a thin, short pale-cyan unshaded/emissive laser-bolt BoxMesh via its dedicated projectile resource. Preserved projectile damage, speed, shallow arc, collision and MultiMesh batching; retained BasicArrow for other use. Source reviewed; awaiting owner visual validation.
 
 - 2026-11-15 — PROJ-LASER2: Made Triangle laser bolts subtly follow the firing faction colour (blue/red/green) via opt-in per-projectile MultiMesh instance tint and one shared unshaded shader. Existing bolt dimensions, damage, speed, arc and collision unchanged; other projectile types remain untinted. Source reviewed; awaiting owner Godot visual validation.
+
+- 2026-11-15 — Command Sandbox: Added a visible border at the command bounds and editor-authored box walls that participate in routing and placement.
