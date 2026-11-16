@@ -22,8 +22,8 @@ public partial class CommandUnitPlacement : Marker3D
         model = new MeshInstance3D();
         label = new Label3D { Position = Vector3.Up * 1.8f, Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             PixelSize = 0.015f, FontSize = 24 };
-        AddChild(model, internalMode: InternalMode.Back);
-        AddChild(label, internalMode: InternalMode.Back);
+        AddChild(model, false, InternalMode.Back);
+        AddChild(label, false, InternalMode.Back);
     }
 
     public override void _Process(double delta)

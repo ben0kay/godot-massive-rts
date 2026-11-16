@@ -259,3 +259,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — UNIT4 / PROJ-LASER3: Reduced Triangle laser-bolt dimensions by 25% and added Long Triangle Marksman (2× length isosceles silhouette, 65 HP/3.2 speed/13 damage/1.7s rate/48 range) with longer faction-tinted bolt, stable catalogue entry and Fabricator recipe. Existing unit indices, gameplay systems and benchmark preset rosters preserved. Source reviewed; awaiting owner Godot validation.
 
 - 2026-11-15 — Entity Editor now edits shared projectile flight and explosion settings, with a shortcut from ranged units.
+
+- 2026-11-15 — Fixed Godot C# AddChild calls for internal terrain and unit previews.

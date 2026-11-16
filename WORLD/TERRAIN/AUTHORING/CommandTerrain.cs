@@ -86,7 +86,7 @@ public partial class CommandTerrain : Node3D
             return height;
         });
         preview = TerrainRenderer.Build(Field, highest, DeploymentLayout.WorldHalfWidth, includeSurround: false);
-        AddChild(preview, internalMode: InternalMode.Back);
+        AddChild(preview, false, InternalMode.Back);
         // Chunks are stored in world coordinates, independent of the authoring node.
         preview.TopLevel = true;
         preview.GlobalTransform = Transform3D.Identity;
