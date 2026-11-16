@@ -279,3 +279,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Removed the campaign gameplay overlay and kept campaign exit available through Escape.
 
 - 2026-11-15 — Allocated wave IDs separately from starting and produced troops, removed the raised Level 001 ground override, and enabled shared soldier shadows in command levels.
+
+- 2026-11-15 — CARBON1 / WORKER1 / HUD1: Added authored Carbon deposits and a paid Citadel Worker queue, and unified command selection and build controls in one bottom HUD.

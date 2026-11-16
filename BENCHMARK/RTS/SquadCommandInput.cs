@@ -15,13 +15,13 @@ public partial class SquadCommandInput : Node
 
     private CommandMovement movement;
     private CommandBuildings buildings;
-    private FabricationHud hud;
+    private CommandBottomHud hud;
     private MeshInstance3D ghost;
     private bool placing;
     private bool ctrlCandidate;
     private bool leftControl, rightControl;
 
-    internal void Initialize(CommandOverlay display, CommandMovement orders, CommandBuildings world, FabricationHud fabrication)
+    internal void Initialize(CommandOverlay display, CommandMovement orders, CommandBuildings world, CommandBottomHud fabrication)
     {
         overlay = display;
         movement = orders;
@@ -171,7 +171,7 @@ public partial class SquadCommandInput : Node
         else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape, ShiftPressed: false })
         {
             bool consumed = held != MouseButton.None || overlay.AttackMove || overlay.Selection.Count > 0 ||
-                overlay.Building != null || hud.MenuOpen;
+                overlay.Building != null || GodotObject.IsInstanceValid(overlay.Deposit) || hud.MenuOpen;
             CancelGesture();
             if (hud.MenuOpen) hud.MenuOpen = false;
             else if (overlay.AttackMove)
@@ -199,7 +199,8 @@ public partial class SquadCommandInput : Node
                     ? new Color(0.2f, 0.92f, 1f, 0.38f) : new Color(1f, 0.22f, 0.24f, 0.40f);
             }
         }
-        if (overlay.Building?.Destroyed == true) ClearSelection();
+        if (overlay.Building?.Destroyed == true ||
+            overlay.Deposit != null && !GodotObject.IsInstanceValid(overlay.Deposit)) ClearSelection();
         if (overlay.Selection.Count > 0 || overlay.Building != null || held != MouseButton.None) overlay.QueueRedraw();
     }
 
@@ -220,8 +221,8 @@ public partial class SquadCommandInput : Node
         ClearSelection();
         if (!boxSelect)
         {
-            overlay.Building = buildings.Pick(overlay.View, point);
-            if (overlay.Building != null) return;
+            overlay.Building = buildings.Pick(overlay.View, point, out overlay.Deposit);
+            if (overlay.Building != null || overlay.Deposit != null) return;
         }
 
         int nearest = -1;
@@ -255,6 +256,7 @@ public partial class SquadCommandInput : Node
         overlay.AttackMove = false;
         overlay.Selection.Clear();
         overlay.Building = null;
+        overlay.Deposit = null;
         overlay.QueueRedraw();
     }
 

@@ -16,13 +16,12 @@ public partial class CommandSandbox : Node3D
     private BenchmarkSummary summary;
     private CommandPerformanceHud performance;
     private ArmyBalanceHud armyBalance;
-    private SelectionHud selection;
     internal const int NonWaveUnitCapacity = 2048;
     internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
     private CommandBuildings buildings;
-    private FabricationHud fabrication;
+    private CommandBottomHud bottomHud;
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
@@ -48,6 +47,7 @@ public partial class CommandSandbox : Node3D
             mapSize = size;
         }
     }
+    [Export] public CitadelWorkerSettings WorkerProductionSettings { get; set; }
     [Export] public bool ShowGroundShadows { get; set; } = true;
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
@@ -129,7 +129,8 @@ public partial class CommandSandbox : Node3D
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
         units = new UnitState(NonWaveUnitCapacity + CountWaveSlots(), catalog, terrain: terrain);
         movement = new CommandMovement(units, halfWidth);
-        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"));
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"),
+            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"));
         if (SpawnDefaultBlueSquad)
         {
             var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
@@ -186,17 +187,9 @@ public partial class CommandSandbox : Node3D
         hud.AddChild(armyBalance);
         armyBalance.BeginBattle(units);
 
-        selection = new SelectionHud
-        {
-            AnchorRight = 1, AnchorTop = 1, AnchorBottom = 1,
-            OffsetLeft = 12, OffsetRight = -12, OffsetTop = -96, OffsetBottom = -12,
-            GrowVertical = Control.GrowDirection.Begin
-        };
-        hud.AddChild(selection);
-        fabrication = new FabricationHud();
-        hud.AddChild(fabrication);
-        fabrication.Initialize(catalog);
-        fabrication.Refresh(buildings, null);
+        bottomHud = new CommandBottomHud();
+        hud.AddChild(bottomHud);
+        bottomHud.Initialize(catalog, buildings);
         waveHud = new WaveHud
         {
             AnchorLeft = 0.5f, AnchorRight = 0.5f, OffsetLeft = -145f, OffsetRight = 145f,
@@ -206,7 +199,7 @@ public partial class CommandSandbox : Node3D
         waveHud.Initialize(waves.Start);
         waveHud.Refresh(waves, buildings.Citadel);
         AddChild(input);
-        input.Initialize(overlay, movement, buildings, fabrication);
+        input.Initialize(overlay, movement, buildings, bottomHud);
         RefreshSelection();
     }
 
@@ -316,7 +309,6 @@ public partial class CommandSandbox : Node3D
         {
             selectionClock = 0;
             RefreshSelection();
-            fabrication.Refresh(buildings, overlay.Building);
         }
         if (hudClock < 1.0 / 3.0) return;
 
@@ -331,8 +323,7 @@ public partial class CommandSandbox : Node3D
 
     private void RefreshSelection()
     {
-        selection.Visible = overlay.Building == null;
-        if (selection.Visible) selection.Refresh(units, CollectionsMarshal.AsSpan(overlay.Selection));
+        bottomHud.Refresh(buildings, units, CollectionsMarshal.AsSpan(overlay.Selection), overlay.Building, overlay.Deposit);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -341,6 +332,7 @@ public partial class CommandSandbox : Node3D
         int previousCount = units.Count;
         buildings.Step((float)delta);
         bool changed = waves.Step((float)delta);
+        if (waves.Defeat || waves.Victory) buildings.WorkerProductionOpen = false;
         buildings.RemoveDestroyed();
         if (changed || previousCount != units.Count)
         {

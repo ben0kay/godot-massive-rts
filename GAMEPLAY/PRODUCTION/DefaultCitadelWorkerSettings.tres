@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="CitadelWorkerSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/PRODUCTION/CitadelWorkerSettings.cs" id="1"]
+
+[resource]
+script = ExtResource("1")

@@ -8,7 +8,7 @@ internal sealed class CarbonBalance
     public int Amount { get; private set; } = 10000;
     public bool TrySpend(int cost)
     {
-        if (Amount < cost) return false;
+        if (cost < 0 || Amount < cost) return false;
         Amount -= cost;
         return true;
     }

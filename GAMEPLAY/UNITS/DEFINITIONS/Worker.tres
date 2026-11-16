@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "worker"
+DisplayName = "Worker"
+Role = "Noncombat utility drone"
+Shape = 3
+Width = 0.7
+Height = 0.35
+FootprintRadius = 0.43
+SizeMultiplier = 0.8
+Health = 40.0
+Speed = 4.0
+TurnDegreesPerSecond = 270.0
+Damage = 0.0
+AllowedTargets = 0

@@ -7,3 +7,5 @@ Each Fabricator uses the player's shared Carbon balance and snapshots one paid r
 The H Breacher recipe produces six units for 165 Carbon in 12 seconds, followed by the normal release sequence.
 
 The Long Triangle Marksman (`long_triangle_marksman`) can also be produced from the same catalogue-fed unit picker: 8 units for 210 Carbon in 14 seconds. Its stats are controlled by `GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres`.
+
+The Citadel queues one Worker per paid order using the shared Carbon balance. Tune cost, time and queue length in `DefaultCitadelWorkerSettings.tres`, or assign a level override via **Worker Production Settings**. A finished Worker waits for an open exit and available troop slot. Worker orders are manual.

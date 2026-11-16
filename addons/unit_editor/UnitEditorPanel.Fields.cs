@@ -85,7 +85,9 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.MeleeLungeDistance), "Melee lunge", () => Unit.MeleeLungeDistance,
             v => Unit.MeleeLungeDistance = v, 0, 1, 0.01, " u", () => IsMelee);
         EnumField(nameof(Unit.Style), "Attack style", Unit.Style, value => Unit.Style = value);
-        Number(nameof(Unit.Damage), "Damage", () => Unit.Damage, v => Unit.Damage = v, 0.001, 1000, 0.001, "", unbounded: true);
+        Number(nameof(Unit.Damage), "Damage", () => Unit.Damage, v => Unit.Damage = v, 0, 1000, 0.001, "", unbounded: true);
+        checks.Add(() => Unit.AllowedTargets == TargetCategory.None || Unit.Damage > 0f
+            ? null : "Combat units require positive base damage.");
         Number(nameof(Unit.Interval), "Attack interval", () => Unit.Interval, v => Unit.Interval = v, 0.001, 10, 0.001, " s", unbounded: true);
         Number(nameof(Unit.Reach), "Authored reach", () => Unit.Reach, v => Unit.Reach = v, 0.001, 100, 0.001, " u",
             tooltip: "Ranged firing distance. Melee uses this for acquisition and charge approach. Normal swings require body contact.", unbounded: true);

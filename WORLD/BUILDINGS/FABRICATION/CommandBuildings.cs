@@ -14,6 +14,9 @@ internal sealed class CommandBuildings
     private readonly List<CommandStructure> structures = new();
     private readonly BatchRecipe[] recipes;
     private readonly ObstacleRectangle[] authoredWalls;
+    private readonly List<CarbonDeposit> deposits = new();
+    private readonly Func<byte, bool> releaseWorker;
+    public CitadelWorkerProduction Workers { get; }
     private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
     private ObstacleField field;
     public readonly CarbonBalance Carbon = new();
@@ -23,8 +26,11 @@ internal sealed class CommandBuildings
     public int ReservedWaveSlots { get; set; }
     public IReadOnlyList<CommandStructure> Structures => structures;
     public BatchRecipe Recipe(int id) => recipes[id];
+    public bool WorkerProductionOpen { get; set; } = true;
+    public bool CanOperateCitadel => WorkerProductionOpen && !Citadel.Destroyed && Citadel.Ready;
+    public bool QueueWorker() => Workers.Enqueue(CanOperateCitadel);
 
-    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView)
+    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView, CitadelWorkerSettings workerSettings)
     {
         this.root = root;
         this.units = units;
@@ -53,6 +59,28 @@ internal sealed class CommandBuildings
             Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView, groundHeight: citadelHeightOnTerrain);
         Add(Citadel);
         citadelView.GlobalPosition = Citadel.Center;
+        Workers = new CitadelWorkerProduction(workerSettings, units.Catalog, Carbon);
+        releaseWorker = type => Release(Citadel, type);
+        RegisterDeposits(root);
+        if (root.GetNodeOrNull<Node3D>("Resources") is Node3D resources) RegisterDeposits(resources);
+        if (deposits.Count > 0) RebuildObstacles();
+    }
+
+    private void RegisterDeposits(Node container)
+    {
+        foreach (Node child in container.GetChildren())
+        {
+            if (child is not CarbonDeposit deposit) continue;
+            ObstacleRectangle area = deposit.Footprint();
+            if (!FitsMap(area))
+            {
+                GD.PushWarning($"Carbon deposit '{deposit.Name}' is outside the command map.");
+                deposit.Hide();
+                continue;
+            }
+            deposit.PlaceOnMap(area, Center(area), root.GetPathTo(deposit).ToString());
+            deposits.Add(deposit);
+        }
     }
 
     public float MapHalfWidth => movement.MapHalfWidth;
@@ -93,6 +121,8 @@ internal sealed class CommandBuildings
         FoundationHeight(area, out float relief);
         if (relief > 0.5f) return false;
         Vector2 min = area.Min, max = area.Max;
+        foreach (var deposit in deposits)
+            if (Overlaps(min, max, deposit.Area)) return false;
         foreach (var wall in authoredWalls)
             if (Overlaps(min, max, wall)) return false;
         foreach (var building in structures)
@@ -141,8 +171,9 @@ internal sealed class CommandBuildings
 
     private void RebuildObstacles()
     {
-        var areas = new List<ObstacleRectangle>(authoredWalls.Length + structures.Count);
+        var areas = new List<ObstacleRectangle>(authoredWalls.Length + structures.Count + deposits.Count);
         areas.AddRange(authoredWalls);
+        foreach (var deposit in deposits) areas.Add(deposit.Area);
         foreach (var structure in structures)
             if (!structure.Destroyed) areas.Add(structure.Area);
         field = areas.Count == 0 ? null : new ObstacleField(areas.ToArray());
@@ -167,6 +198,7 @@ internal sealed class CommandBuildings
 
     public void Step(float delta)
     {
+        if (CanOperateCitadel) Workers.Step(delta, releaseWorker);
         foreach (var building in structures)
         {
             building.Construct(delta);
@@ -255,8 +287,9 @@ internal sealed class CommandBuildings
         return true;
     }
 
-    public CommandStructure Pick(Camera3D camera, Vector2 pointer)
+    public CommandStructure Pick(Camera3D camera, Vector2 pointer, out CarbonDeposit deposit)
     {
+        deposit = null;
         CommandStructure picked = null;
         float nearest = float.PositiveInfinity;
         Vector3 origin = camera.ProjectRayOrigin(pointer);
@@ -272,6 +305,20 @@ internal sealed class CommandBuildings
                 !ClipRay(origin.Z, ray.Z, min.Y, max.Y, ref start, ref end)) continue;
             nearest = start;
             picked = building;
+        }
+        // Static resource checks are only made on a click.
+        foreach (var resource in deposits)
+        {
+            if (!GodotObject.IsInstanceValid(resource)) continue;
+            Vector2 min = resource.Area.Min, max = resource.Area.Max;
+            float start = 0f, end = nearest;
+            float y = resource.GlobalPosition.Y;
+            if (!ClipRay(origin.X, ray.X, min.X, max.X, ref start, ref end) ||
+                !ClipRay(origin.Y, ray.Y, y, y + resource.PickHeight, ref start, ref end) ||
+                !ClipRay(origin.Z, ray.Z, min.Y, max.Y, ref start, ref end) || start >= nearest) continue;
+            nearest = start;
+            picked = null;
+            deposit = resource;
         }
         return picked;
     }

@@ -100,10 +100,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
@@ -153,6 +153,11 @@ public sealed class RuntimeUnitCatalog
             var marksman = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres");
             if (marksman != null) byId.Add(LongTriangleId, marksman);
         }
+        if (byId.Count == Worker && !byId.ContainsKey(WorkerId))
+        {
+            var worker = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Worker.tres");
+            if (worker != null) byId.Add(WorkerId, worker);
+        }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
@@ -163,14 +168,15 @@ public sealed class RuntimeUnitCatalog
             float size = UnitOutline.EffectiveSize(d);
             UnitOutline outline = UnitOutline.FromDefinition(d, size);
             float footprint = outline.Footprint;
-            bool ranged = d.Style == AttackStyle.Ranged;
+            bool combat = d.AllowedTargets != TargetCategory.None;
+            bool ranged = combat && d.Style == AttackStyle.Ranged;
             float reach = Positive(d.Reach, 1.6f);
             if (!ranged) reach *= size;
             float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
             float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
             float facingCosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(ClampStat(d.MeleeFacingAngleDegrees, 1f, 180f, 100f) * 0.5f)));
             float secondary = float.IsFinite(d.CleaveSecondaryFraction) ? Mathf.Clamp(d.CleaveSecondaryFraction, 0f, 1f) : 0.65f;
-            var trample = new TrampleStats(d.TrampleEnabled && d.Style == AttackStyle.Melee,
+            var trample = new TrampleStats(d.TrampleEnabled && combat && d.Style == AttackStyle.Melee,
                 ClampStat(d.TrampleRunUp, 0.5f, 10f, 2f),
                 ClampStat(d.TrampleDistance, 0.5f, 12f, 5.5f),
                 ClampStat(d.TrampleEfficiency, 0.1f, 4f, 1f),
@@ -178,7 +184,7 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.ChargeResistance, 0.01f, 4f, 0.30f),
                 Mathf.Clamp(d.TrampleMaxHits, 1, 6));
             float accelerationSeconds = ClampStat(d.AccelerationSecondsOverride, 0f, 5f, 0f);
-            int shockwaveCadence = ranged ? 0 : Mathf.Clamp(d.ShockwaveEveryAttacks, 0, byte.MaxValue);
+            int shockwaveCadence = !combat || ranged ? 0 : Mathf.Clamp(d.ShockwaveEveryAttacks, 0, byte.MaxValue);
             float shockwaveDamage = Positive(d.ShockwaveDamage, 50f);
             var recoil = new RangedRecoilStats(ranged && d.RangedRecoilEnabled
                     ? ClampStat(d.RangedRecoilDistance, 0f, 4f, 0.12f) : 0f,
@@ -189,7 +195,7 @@ public sealed class RuntimeUnitCatalog
                 shockwaveDamage, d.EffectiveShockwaveOuterDamage(shockwaveDamage) / shockwaveDamage, d.ShockwaveRespectsCover);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 outline, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
-                Positive(d.Damage, 20f), Positive(d.Interval, 0.9f), reach,
+                combat ? Positive(d.Damage, 20f) : 0f, Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,
                 ranged ? ClampStat(d.MinimumFireRange, 0f, reach, 0f) : 0f,

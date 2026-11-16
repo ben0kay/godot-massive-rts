@@ -26,3 +26,5 @@ The Command Sandbox uses this army balance bar and adds `SelectionHud.cs` along 
 ## FAB1 controls
 
 `FabricationHud.cs` adds Carbon at the top left, a Ctrl-toggled build menu, and a bottom panel for selected structures. Fabricator controls show the next recipe, current batch progress, automatic production and rally status. The existing unit selection panel returns when selecting soldiers.
+
+**CommandBottomHud** owns one viewport-anchored bottom frame for army selection, structures and Carbon deposits. Ctrl toggles the build tray beside the active context. The Fabricator roster scrolls within its fixed list area. The Citadel context shows the Worker queue, progress and any block reason.

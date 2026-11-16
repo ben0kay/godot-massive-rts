@@ -11,6 +11,7 @@ public partial class CommandOverlay : RectangleDimensions
     internal UnitState Units;
     internal readonly List<int> Selection = new();
     internal CommandStructure Building;
+    internal CarbonDeposit Deposit;
     internal bool Selecting, Preview, AttackMove, FreeformPreview;
     internal readonly FreeformFormation Freeform = new();
     internal float Spacing;

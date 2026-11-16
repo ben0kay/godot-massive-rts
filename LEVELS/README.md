@@ -37,3 +37,7 @@ The inherited scene exposes the opening layout in the 3D viewport:
 - Place upright props on level sites. The Fabricator rejects sites that vary by more than 0.5 world units across its footprint. Authored walls and Citadels warn about uneven sites and preview at the highest sampled point.
 
 **Map Size** on the command level root is the playable width and depth in world units. Fortress Defense Level 001 uses 1,000 × 1,000. Change Map Size in the level root Inspector and save the scene. Reducing the size shows a warning on the root. Authored nodes stay in the scene even if they fall outside the new playable bounds. Press **Home** in a running command level to center the camera and zoom out to the map overview. The selected wave edge follows the playable boundary.
+
+### Carbon deposits
+
+Drag `WORLD/RESOURCES/CARBON/CarbonDeposit.tscn` under **Resources**, move or duplicate it, and set **Initial Carbon** in the Inspector. The deposit reserves its grid footprint when played. Select the Citadel in-game to queue Workers using the shared Carbon balance.

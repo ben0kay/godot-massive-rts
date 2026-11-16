@@ -1,0 +1,104 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://WORLD/RESOURCES/CARBON/CarbonDeposit.cs" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="Graphite"]
+shading_mode = 0
+albedo_color = Color(0.09, 0.11, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="Slate"]
+shading_mode = 0
+albedo_color = Color(0.23, 0.28, 0.34, 1)
+
+[sub_resource type="StandardMaterial3D" id="Cyan"]
+shading_mode = 0
+albedo_color = Color(0.11, 0.62, 0.72, 1)
+
+[sub_resource type="CylinderMesh" id="Chunk"]
+material = SubResource("Graphite")
+top_radius = 0.65
+bottom_radius = 1.12
+height = 1.4
+radial_segments = 5
+rings = 0
+
+[sub_resource type="CylinderMesh" id="Crown"]
+material = SubResource("Slate")
+top_radius = 0.28
+bottom_radius = 0.65
+height = 0.36
+radial_segments = 5
+rings = 0
+
+[sub_resource type="CylinderMesh" id="Vein"]
+material = SubResource("Cyan")
+top_radius = 0.12
+bottom_radius = 0.22
+height = 0.18
+radial_segments = 5
+rings = 0
+
+[node name="CarbonDeposit" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Chunk0" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.875, -0.35)
+rotation = Vector3(0, 0.3, 0)
+scale = Vector3(1.25, 1.25, 1.25)
+mesh = SubResource("Chunk")
+
+[node name="Crown0" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.975, -0.35)
+rotation = Vector3(0, 0.3, 0)
+scale = Vector3(1.25, 1.25, 1.25)
+mesh = SubResource("Crown")
+
+[node name="Vein0" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 2.288, -0.35)
+rotation = Vector3(0, 0.3, 0)
+scale = Vector3(1.25, 1.25, 1.25)
+mesh = SubResource("Vein")
+
+[node name="Chunk1" type="MeshInstance3D" parent="Model"]
+position = Vector3(-1.0, 0.490, 0.45)
+rotation = Vector3(0, -0.3, 0)
+scale = Vector3(0.7, 0.7, 0.7)
+mesh = SubResource("Chunk")
+
+[node name="Crown1" type="MeshInstance3D" parent="Model"]
+position = Vector3(-1.0, 1.106, 0.45)
+rotation = Vector3(0, -0.3, 0)
+scale = Vector3(0.7, 0.7, 0.7)
+mesh = SubResource("Crown")
+
+[node name="Vein1" type="MeshInstance3D" parent="Model"]
+position = Vector3(-1.0, 1.281, 0.45)
+rotation = Vector3(0, -0.3, 0)
+scale = Vector3(0.7, 0.7, 0.7)
+mesh = SubResource("Vein")
+
+[node name="Chunk2" type="MeshInstance3D" parent="Model"]
+position = Vector3(1.0, 0.574, 0.38)
+rotation = Vector3(0, 0.55, 0)
+scale = Vector3(0.82, 0.82, 0.82)
+mesh = SubResource("Chunk")
+
+[node name="Crown2" type="MeshInstance3D" parent="Model"]
+position = Vector3(1.0, 1.296, 0.38)
+rotation = Vector3(0, 0.55, 0)
+scale = Vector3(0.82, 0.82, 0.82)
+mesh = SubResource("Crown")
+
+[node name="Chunk3" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.16, 0.364, 1.02)
+rotation = Vector3(0, 0.1, 0)
+scale = Vector3(0.52, 0.52, 0.52)
+mesh = SubResource("Chunk")
+
+[node name="Crown3" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.16, 0.822, 1.02)
+rotation = Vector3(0, 0.1, 0)
+scale = Vector3(0.52, 0.52, 0.52)
+mesh = SubResource("Crown")

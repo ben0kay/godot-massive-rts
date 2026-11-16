@@ -1,11 +1,11 @@
-// Bottom gameplay bar showing unit types and pooled health for the current selection.
+// Selection content showing unit types and pooled health for the current selection.
 using System;
 using System.Text;
 using Godot;
 
 namespace MassiveRts;
 
-public partial class SelectionHud : PanelContainer
+public partial class SelectionHud : VBoxContainer
 {
     private readonly Label counts = new() { MouseFilter = MouseFilterEnum.Ignore,
         AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -22,17 +22,9 @@ public partial class SelectionHud : PanelContainer
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color("#17212d"),
-            ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 10, ContentMarginBottom = 10 });
-        var column = new VBoxContainer { CustomMinimumSize = new Vector2(270, 58),
-            SizeFlagsHorizontal = SizeFlags.ShrinkBegin, MouseFilter = MouseFilterEnum.Ignore };
-        // Keep selection details on the left, leaving the rest of the bar available.
-        var left = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        AddChild(left);
-        left.AddChild(column);
-        column.AddChild(heading);
-        column.AddChild(health);
-        column.AddChild(counts);
+        AddChild(heading);
+        AddChild(health);
+        AddChild(counts);
         health.AddThemeStyleboxOverride("fill", new StyleBoxFlat { BgColor = new Color("#60b891") });
     }
 
@@ -46,7 +38,8 @@ public partial class SelectionHud : PanelContainer
             for (int i = 0; i < combatInfo.Length; i++)
             {
                 ref readonly var stats = ref infoCatalog[i];
-                combatInfo[i] = stats.UnitDamagePercent >= 0f && stats.StructureDamagePercent >= 0f
+                combatInfo[i] = stats.AllowedTargets == TargetCategory.None ? "Noncombat · " + infoCatalog.DamageRules.ArmourName(stats.ArmourClass) + " armour" :
+                    stats.UnitDamagePercent >= 0f && stats.StructureDamagePercent >= 0f
                     ? $"{infoCatalog.DamageRules.ArmourName(stats.ArmourClass)} armour · {stats.AgainstUnits(stats.Damage):0.##} damage vs units · {stats.AgainstStructures(stats.Damage):0.##} vs structures"
                     : infoCatalog.DamageRules.Describe(stats.DamageType, stats.ArmourClass);
             }
