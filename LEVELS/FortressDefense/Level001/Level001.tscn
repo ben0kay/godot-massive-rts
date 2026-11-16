@@ -7,6 +7,7 @@
 
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
 MapSize = 1000.0
+EnemySpawnPattern = 1
 SpawnDefaultBlueSquad = false
 
 [node name="Ground" parent="." index="0"]

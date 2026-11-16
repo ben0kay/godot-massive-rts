@@ -7,3 +7,7 @@ Enable **Wave Editor** in **Project Settings → Plugins** after building the C#
 A centered Citadel is roughly 2,500 world units from an edge. On the current sandbox that means several minutes of travel before contact. EnemySpawn markers from older scenes are obsolete.
 
 `FortressWaves` advances the wave state, uses the shared spatial grid for local soldier detection, issues movement through `CommandMovement`, and reuses soldier combat and projectile flight. Citadel-targeted shots resolve against the building and can be blocked by cover. They do not retarget to soldiers in flight. Legacy wave units attack soldiers and fall back to their scripted Citadel assault. Units configured to target structures instead use the shared footprint-based acquisition and attack logic, including attacks on player Fabricators. The sandbox includes a red practice Fabricator for blue structure-capable units. Enemy IDs are reserved up front so fabricating units cannot exhaust wave capacity.
+
+### Spawn patterns
+
+**Stream** uses the first free lane starting at the middle, one soldier every 0.16 seconds. **Scatter** picks a seeded random lane for each arrival and uses Lane spacing to spread the entries along one map edge. **Rows** releases a row together, then waits for Row delay before starting the next. Set Units per row and Lane spacing in the Wave Editor or level root Inspector. Blocked lanes are skipped or retried. After spawning, troops advance independently toward the Citadel. Fortress Defense Level 001 uses Scatter.

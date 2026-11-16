@@ -101,6 +101,27 @@ public partial class WaveEditorPlugin : EditorPlugin
         settings.AddChild(delay);
         settings.AddChild(Button("Refresh", Refresh));
 
+        var formation = new HBoxContainer();
+        form.AddChild(formation);
+        const string patternProperty = nameof(CommandSandbox.EnemySpawnPattern);
+        var pattern = new OptionButton();
+        foreach (var option in Enum.GetValues<WaveSpawnPattern>()) pattern.AddItem(option.ToString());
+        pattern.Select(scene.Get(patternProperty).AsInt32());
+        pattern.ItemSelected += index =>
+        {
+            Set(scene, patternProperty, (int)index, "Change wave spawn pattern");
+            Callable.From(Refresh).CallDeferred();
+        };
+        formation.AddChild(new Label { Text = "Spawn pattern" });
+        formation.AddChild(pattern);
+        if (pattern.Selected != (int)WaveSpawnPattern.Stream)
+            AddSpawnNumber(formation, scene, "Lane spacing", nameof(CommandSandbox.EnemySpawnSpacing), 1, 24, 0.5, "u");
+        if (pattern.Selected == (int)WaveSpawnPattern.Rows)
+        {
+            AddSpawnNumber(formation, scene, "Units per row", nameof(CommandSandbox.EnemiesPerRow), 2, 24, 1, "");
+            AddSpawnNumber(formation, scene, "Row delay", nameof(CommandSandbox.EnemyRowDelay), 0.25, 10, 0.25, "s");
+        }
+
         var controls = new HBoxContainer();
         form.AddChild(controls);
         var picker = new OptionButton();
@@ -129,6 +150,20 @@ public partial class WaveEditorPlugin : EditorPlugin
             }
         }
         rebuilding = false;
+    }
+
+    private void AddSpawnNumber(HBoxContainer row, Node scene, string label, string property,
+        double min, double max, double step, string suffix)
+    {
+        row.AddChild(new Label { Text = label });
+        var number = new SpinBox { MinValue = min, MaxValue = max, Step = step, Suffix = suffix,
+            Value = scene.Get(property).AsDouble() };
+        number.ValueChanged += value =>
+        {
+            Variant updated = property == nameof(CommandSandbox.EnemiesPerRow) ? (Variant)(int)value : (Variant)(float)value;
+            Set(scene, property, updated, $"Change {label.ToLowerInvariant()}");
+        };
+        row.AddChild(number);
     }
 
     private void ChangeCount(Node scene, string id, int count, SpinBox input)

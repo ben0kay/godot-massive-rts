@@ -15,6 +15,10 @@ internal sealed class FortressWaves
     private readonly CommandMovement movement;
     private readonly Vector3 inward, sideways;
     private readonly float citadelAlongEdge;
+    private readonly WaveSpawnPattern spawnPattern;
+    private readonly float laneSpacing, rowDelay;
+    private readonly int lanesPerSide, rowSize;
+    private readonly RandomNumberGenerator spawnRandom = new();
     private readonly Vector2 citadelMin, citadelMax;
     private readonly byte[][] waves;
     private readonly float intermission;
@@ -45,13 +49,20 @@ internal sealed class FortressWaves
     public int Remaining => WaveNumber == 0 ? 0 : units.FactionAlive[Factions.Red] + waves[WaveNumber - 1].Length - nextSpawn;
 
     public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, WaveSpawnEdge edge,
-        Godot.Collections.Array<WaveDefinition> definitions, float intermission)
+        Godot.Collections.Array<WaveDefinition> definitions, float intermission, WaveSpawnPattern pattern,
+        float spacing, int enemiesPerRow, float secondsBetweenRows)
     {
         this.units = units;
         this.buildings = buildings;
         this.movement = movement;
         structures = new StructureCombat(units, buildings.Structures, buildings.MapHalfWidth);
         SpawnEdge = edge;
+        spawnPattern = pattern;
+        float usableHalfWidth = buildings.MapHalfWidth - units.Catalog.MaxFootprint - 0.1f;
+        laneSpacing = Mathf.Min(Mathf.Max(spacing, units.Catalog.MaxFootprint * 2f + 0.5f), usableHalfWidth);
+        lanesPerSide = Mathf.Min(12, Mathf.FloorToInt(usableHalfWidth / laneSpacing));
+        rowSize = Mathf.Clamp(enemiesPerRow, 1, lanesPerSide * 2 + 1);
+        rowDelay = Mathf.Clamp(secondsBetweenRows, 0.25f, 10f);
         inward = edge switch
         {
             WaveSpawnEdge.North => Vector3.Back,
@@ -88,6 +99,7 @@ internal sealed class FortressWaves
     private void BeginNext()
     {
         WaveNumber++;
+        spawnRandom.Seed = (ulong)WaveNumber;
         nextSpawn = enemyCount = 0;
         if (WaveNumber == 1)
             for (int id = 0; id < units.Count; id++)
@@ -215,25 +227,42 @@ internal sealed class FortressWaves
         spawnClock -= delta;
         if (spawnClock > 0) return;
         spawnClock = SpawnInterval;
-        byte type = wave[nextSpawn];
-        float radius = units.Catalog[type].Footprint;
-        const int lanesPerSide = 8;
-        float spacing = radius * 2f + 0.5f;
-        float sideLimit = buildings.MapHalfWidth - radius - 0.1f - lanesPerSide * spacing;
-        float along = Mathf.Clamp(citadelAlongEdge, -sideLimit, sideLimit);
-        Vector3 entryCenter = sideways * along - inward * (buildings.MapHalfWidth - radius - 0.1f);
-        for (int i = 0; i <= lanesPerSide * 2; i++)
+        if (spawnPattern == WaveSpawnPattern.Rows)
         {
-            int lane = (i + 1) / 2 * (i % 2 == 0 ? -1 : 1);
-            Vector3 entry = entryCenter + sideways * (lane * spacing);
+            int remainingInRow = Mathf.Min(wave.Length - nextSpawn, rowSize - nextSpawn % rowSize);
+            for (int i = 0; i < remainingInRow; i++)
+                if (!TryReleaseSoldier(wave[nextSpawn], nextSpawn % rowSize)) return;
+            spawnClock = rowDelay;
+        }
+        else TryReleaseSoldier(wave[nextSpawn], 0);
+    }
+
+    private bool TryReleaseSoldier(byte type, int column)
+    {
+        float radius = units.Catalog[type].Footprint;
+        bool stream = spawnPattern == WaveSpawnPattern.Stream;
+        float spacing = stream ? radius * 2f + 0.5f : laneSpacing;
+        int halfLanes = stream ? Mathf.Min(8, Mathf.FloorToInt((buildings.MapHalfWidth - radius - 0.1f) / spacing)) : lanesPerSide;
+        int laneCount = halfLanes * 2 + 1;
+        float margin = buildings.MapHalfWidth - radius - 0.1f - halfLanes * spacing;
+        float along = Mathf.Clamp(citadelAlongEdge, -margin, margin);
+        Vector3 center = sideways * along - inward * (buildings.MapHalfWidth - radius - 0.1f);
+        int firstLane = spawnPattern == WaveSpawnPattern.Scatter ? spawnRandom.RandiRange(0, laneCount - 1) :
+            halfLanes - rowSize / 2 + column;
+        for (int i = 0; i < laneCount; i++)
+        {
+            int lane = stream ? (i + 1) / 2 * (i % 2 == 0 ? -1 : 1) :
+                (firstLane + i) % laneCount - halfLanes;
+            Vector3 entry = center + sideways * (lane * spacing);
             if (!buildings.IsSpawnClear(entry, radius)) continue;
             int id = units.TrySpawn(type, Factions.Red, entry);
-            if (id < 0) return;
+            if (id < 0) return false;
             buildings.ReservedWaveSlots--;
             enemies[enemyCount++] = id;
             nextSpawn++;
-            return;
+            return true;
         }
+        return false;
     }
 
     private float Detection(in UnitStats type) =>

@@ -49,6 +49,10 @@ public partial class CommandSandbox : Node3D
     }
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
+    [Export] public WaveSpawnPattern EnemySpawnPattern { get; set; }
+    [Export(PropertyHint.Range, "1,24,0.5")] public float EnemySpawnSpacing { get; set; } = 3f;
+    [Export(PropertyHint.Range, "2,24,1")] public int EnemiesPerRow { get; set; } = 7;
+    [Export(PropertyHint.Range, "0.25,10,0.25")] public float EnemyRowDelay { get; set; } = 1.5f;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
     [Export(PropertyHint.Range, "1,120,1")] public float BetweenWavesSeconds { get; set; } = 12f;
     private const string SummaryTitle = "Fortress Defense · Command Sandbox";
@@ -143,7 +147,7 @@ public partial class CommandSandbox : Node3D
         army.Initialize(units, FacetedSoldierMeshes.Create(catalog), null, false);
 
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
-            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds));
+            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing, EnemiesPerRow, EnemyRowDelay);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);
         projectileRenderer.Initialize(2048, catalog.Projectiles);
