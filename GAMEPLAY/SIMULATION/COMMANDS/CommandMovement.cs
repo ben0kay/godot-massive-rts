@@ -123,6 +123,7 @@ internal sealed class CommandMovement
         if (navigation?.QueueDepth > 0) navigation.BuildQueuedRoutes();
         else navigation?.AdvanceFrame();
         bool changed = false;
+        var turnSteps = units.TurnSteps(delta);
         for (int i = activeCount - 1; i >= 0; i--)
         {
             int id = active[i];
@@ -156,10 +157,8 @@ internal sealed class CommandMovement
             if (next == start) continue;
             units.Position[id] = new Vector3(next.X, previous.Y, next.Y);
             units.Grounding?.MarkMoved(id);
-            Vector2 direction = (next - start).Normalized();
-            if (stats.TurnDegreesPerSecond > 0f)
-                SoldierFacing.Turn(units, id, direction, SoldierFacing.TurnStep(delta, stats.TurnDegreesPerSecond));
-            else units.Facing[id] = direction;
+            if (stats.Shape != UnitShape.Circle)
+                SoldierFacing.Turn(units, id, (next - start).Normalized(), turnSteps[type]);
             units.Dirty[id] = true;
             changed = true;
         }

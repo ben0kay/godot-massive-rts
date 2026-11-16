@@ -13,6 +13,7 @@ Height = 0.3
 FootprintRadius = 0.63
 Health = 105.0
 Speed = 9.0
+TurnDegreesPerSecond = 260.0
 AccelerationSecondsOverride = 3.0
 Damage = 14.0
 Interval = 0.8

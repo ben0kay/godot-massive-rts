@@ -61,8 +61,9 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.AccelerationSecondsOverride), "Acceleration override", () => Unit.AccelerationSecondsOverride,
             v => Unit.AccelerationSecondsOverride = v, 0, 5, 0.05, " s", tooltip: "Zero uses the shared acceleration setting.");
 
-        Number(nameof(Unit.TurnDegreesPerSecond), "Turn rate override", () => Unit.TurnDegreesPerSecond,
-            v => Unit.TurnDegreesPerSecond = v, 0, 720, 1, "°/s", tooltip: "Zero uses the shared turn rate.");
+        Number(nameof(Unit.TurnDegreesPerSecond), "Turn rate", () => Unit.TurnDegreesPerSecond,
+            v => Unit.TurnDegreesPerSecond = v, 0, 720, 1, "°/s", () => Unit.Shape != UnitShape.Circle,
+            "Degrees per second while moving or aiming. Zero uses 300°/s. Circles skip turning.");
 
         Section("Defense");
         TextField(nameof(Unit.ArmourClass), "Armour class", Unit.ArmourClass, value => Unit.ArmourClass = value);

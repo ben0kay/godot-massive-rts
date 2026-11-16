@@ -193,7 +193,7 @@ internal sealed class FortressWaves
             if (units.Health[id] <= 0 || units.Target[id] >= 0) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
             if (type.TargetsStructures) structures.Attack(id, Projectiles, delta, Sight(type, field));
-            else if (type.TargetsUnits) AttackCitadel(id, field);
+            else if (type.TargetsUnits) AttackCitadel(id, field, delta);
         }
         Projectiles.Step(units, grid, combat, delta, SeparationPadding, field);
         if (!Defeat && Remaining == 0)
@@ -407,7 +407,7 @@ internal sealed class FortressWaves
         movement.SetGoal(id, Ground(edge + normal * standOff));
     }
 
-    private void AttackCitadel(int id, ObstacleField field)
+    private void AttackCitadel(int id, ObstacleField field, float dt)
     {
         ref readonly var type = ref units.Catalog[units.Type[id]];
         Vector2 from = ObstacleField.Xz(units.Position[id]);
@@ -416,7 +416,8 @@ internal sealed class FortressWaves
         if (distance > Detection(type)) return;
         if (!type.Ranged)
         {
-            if (distance > type.Footprint + ContactTolerance) return;
+            if (distance > type.Footprint + ContactTolerance ||
+                !SoldierFacing.Aim(units, id, edge - from, dt, 0.97f)) return;
             buildings.Citadel.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
             units.Kill(id);
             return;
@@ -424,9 +425,7 @@ internal sealed class FortressWaves
 
         if (units.Cooldown[id] > 0 || distance > type.Reach || distance < type.MinimumFireRange ||
             Sight(type, field)?.BlocksSightExcept(Ground(from), Ground(edge), buildings.Citadel.Area) == true) return;
-        var heading = (edge - from).Normalized();
-        units.Facing[id] = heading;
-        units.Dirty[id] = true;
+        if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f)) return;
         Vector3 aim = Ground(edge) + Vector3.Up * 1.5f;
         if (Projectiles.FireAtStructure(id, units, aim, buildings.Citadel))
             units.Cooldown[id] = type.Interval;

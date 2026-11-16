@@ -152,7 +152,7 @@ public static class CombatSystem
     internal static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
         ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null)
     {
-        Vector2 turnStep = SoldierFacing.TurnStep(dt);
+        var turnSteps = units.TurnSteps(dt);
         bool lungeChanged = false;
         for (int i = 0; i < units.Count; i++)
         {
@@ -180,7 +180,7 @@ public static class CombatSystem
                 (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
                 obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
             Vector2 facing = units.Facing[i];
-            if (!type.Ranged)
+            if (!type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled))
             {
                 Vector2 aim = new(offset.X, offset.Z);
                 float aimSquared = aim.LengthSquared();
@@ -195,7 +195,7 @@ public static class CombatSystem
                     if (facing == Vector2.Zero || forward < 0f || forward * forward < aimSquared * cone)
                     {
                         SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared),
-                            type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
+                            turnSteps[units.Type[i]]);
                         units.Dirty[i] = true;
                         continue;
                     }
@@ -203,16 +203,8 @@ public static class CombatSystem
             }
             if (type.Ranged)
             {
-                if (type.Outline.IsChevron)
-                {
-                    Vector2 aim = ObstacleField.Xz(offset).Normalized();
-                    if (aim != Vector2.Zero && facing.Dot(aim) < 0.995f)
-                    {
-                        SoldierFacing.Turn(units, i, aim, turnStep);
-                        units.Dirty[i] = true;
-                        continue;
-                    }
-                }
+                if (!SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
+                    continue;
                 // Only recoil when the projectile pool accepted the shot.
                 int before = projectiles.Count;
                 projectiles.Fire(i, target, units);

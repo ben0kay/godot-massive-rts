@@ -150,12 +150,12 @@ public sealed class TrampleSystem
     public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null)
     {
         float padding = units.Catalog.MaxSpeed * dt;
-        Vector2 turnStep = SoldierFacing.TurnStep(dt);
+        var turnSteps = units.TurnSteps(dt);
         for (int slot = 0; slot < ids.Length; slot++)
         {
             int id = ids[slot];
             if (units.Health[id] <= 0f || !states[slot].Active) continue;
-            MoveCharge(units, grid, id, slot, dt, padding, turnStep, obstacles);
+            MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles);
         }
         bool appliedShove = false;
         for (int i = 0; i < shoveCount; i++)
@@ -228,7 +228,7 @@ public sealed class TrampleSystem
 
         if (travel > 0f)
         {
-            SoldierFacing.Turn(units, id, charge.Heading, turnStep);
+            if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, charge.Heading, turnStep);
             Place(units, id, origin + charge.Heading * travel);
         }
         charge.Distance -= travel;

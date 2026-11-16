@@ -12,6 +12,7 @@ Width = 1.6
 Height = 0.825
 SizeMultiplier = 2.0
 Speed = 2.2
+TurnDegreesPerSecond = 120.0
 Health = 600.0
 Armour = 0.0
 ChargeResistance = 2.4

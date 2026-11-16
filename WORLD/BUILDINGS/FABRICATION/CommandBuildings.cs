@@ -203,7 +203,7 @@ internal sealed class CommandBuildings
 
             int id = units.TrySpawn(type, Factions.Blue, spawn);
             if (id < 0) return false;
-            units.Facing[id] = Vector2.Down;
+            if (units.Catalog[type].Shape != UnitShape.Circle) units.Facing[id] = Vector2.Down;
             movement.SetGoal(id, goal, exit);
             return true;
         }

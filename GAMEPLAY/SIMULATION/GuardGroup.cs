@@ -59,7 +59,7 @@ public sealed class GuardGroup
     public void Move(UnitState units, float dt, float separationGap, ObstacleField obstacles,
         ObstacleNavigation navigation, byte[] movementFlags)
     {
-        Vector2 turnStep = SoldierFacing.TurnStep(dt);
+        var turnSteps = units.TurnSteps(dt);
         for (int id = Start; id < End; id++)
         {
             if (movementFlags != null) movementFlags[id] = 0;
@@ -113,7 +113,7 @@ public sealed class GuardGroup
             if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);
             if (next == from) continue;
             if (movementFlags != null) movementFlags[id] = 1;
-            if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
+            if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, turnSteps[units.Type[id]]);
             units.Position[id] = new Vector3(next.X, position.Y, next.Y);
             units.Grounding?.MarkMoved(id);
             units.Dirty[id] = true;

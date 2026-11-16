@@ -13,6 +13,23 @@ public sealed class UnitState
     public readonly bool[] Dirty;
     public readonly int[] FactionAlive = new int[Factions.Count];
     private byte[] completedAttacks;
+    private Vector2[] turnSteps;
+    private float turnStepSeconds;
+
+    // A fixed tick shares one sine/cosine pair per directional unit type.
+    internal Vector2[] TurnSteps(float dt)
+    {
+        turnSteps ??= new Vector2[Catalog.Count];
+        if (turnStepSeconds == dt) return turnSteps;
+        turnStepSeconds = dt;
+        for (int i = 0; i < turnSteps.Length; i++)
+        {
+            ref readonly var type = ref Catalog[i];
+            if (type.Shape != UnitShape.Circle)
+                turnSteps[i] = SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond);
+        }
+        return turnSteps;
+    }
     private int[] retargetAfter;
 
     internal int[] RetargetDeadlines(bool enabled)

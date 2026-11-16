@@ -269,3 +269,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Restored Level 001 to full map size and added Home for a centered command-map overview.
 
 - 2026-11-15 — Set Fortress Defense Level 001 to 1,000 × 1,000 and added editor warnings for reduced map bounds.
+
+- 2026-11-15 — Applied editable per-unit turn rates to movement and combat across both modes, with shared tick coefficients and a Circle fast path.

@@ -12,7 +12,7 @@ public static class MovementSystem
         ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, StructureCombat structureCombat = null)
     {
         var catalog = units.Catalog;
-        Vector2 turnStep = SoldierFacing.TurnStep(dt);
+        var turnSteps = units.TurnSteps(dt);
         bool movementMode = mode == BenchmarkMode.Movement;
         float meleeRampRate = meleeRampSeconds > 0f ? 1f / meleeRampSeconds : 0f;
         float rangedRampRate = rangedRampSeconds > 0f ? 1f / rangedRampSeconds : 0f;
@@ -174,7 +174,7 @@ public static class MovementSystem
                 voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.
             if (travel > 0.00001f && type.Shape != UnitShape.Circle)
-                SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), type.TurnDegreesPerSecond > 0f ? SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond) : turnStep);
+                SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnSteps[units.Type[i]]);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);
             units.Dirty[i] = true;

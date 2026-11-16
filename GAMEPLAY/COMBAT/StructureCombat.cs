@@ -120,12 +120,8 @@ internal sealed class StructureCombat
         if (!CanHit(id, type, target, sight)) return false;
         Vector2 from = ObstacleField.Xz(units.Position[id]);
         Vector2 edge = Edge(target.Area, from);
-        Vector2 aim = (edge - from).Normalized();
-        if (type.Shape != UnitShape.Circle && aim != Vector2.Zero && units.Facing[id].Dot(aim) < 0.97f)
-        {
-            SoldierFacing.Turn(units, id, aim, SoldierFacing.TurnStep(dt, type.TurnDegreesPerSecond));
-            return units.Dirty[id] = true;
-        }
+        if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f))
+            return true;
 
         if (type.Ranged)
         {

@@ -13,6 +13,7 @@ Width = 0.8
 Height = 0.4125
 Health = 65.0
 Speed = 3.2
+TurnDegreesPerSecond = 220.0
 Damage = 13.0
 Interval = 1.7
 Reach = 48.0
