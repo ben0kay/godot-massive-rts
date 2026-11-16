@@ -39,7 +39,7 @@ internal sealed class CommandBuildings
             Vector3 position = citadelView.GlobalPosition;
             footprint = new ObstacleRectangle(Mathf.RoundToInt(position.X / DeploymentLayout.CellSize - 2.5f),
                 Mathf.RoundToInt(position.Z / DeploymentLayout.CellSize - 2.5f), 5, 5);
-            if (!footprint.IsValid)
+            if (!FitsMap(footprint))
             {
                 GD.PushWarning("Citadel must fit inside the map. Using the default position.");
                 footprint = new ObstacleRectangle(-4, -9, 5, 5);
@@ -55,9 +55,12 @@ internal sealed class CommandBuildings
         citadelView.GlobalPosition = Citadel.Center;
     }
 
-    public static bool OnMap(Vector3 point, float radius = 0) =>
-        Mathf.Abs(point.X) + radius <= DeploymentLayout.WorldHalfWidth &&
-        Mathf.Abs(point.Z) + radius <= DeploymentLayout.WorldHalfWidth;
+    public float MapHalfWidth => movement.MapHalfWidth;
+    public bool OnMap(Vector3 point, float radius = 0f) => movement.OnMap(point, radius);
+
+    private bool FitsMap(ObstacleRectangle area) => area.IsValid &&
+        OnMap(new Vector3(area.Min.X, 0f, area.Min.Y)) &&
+        OnMap(new Vector3(area.Max.X, 0f, area.Max.Y));
 
     public static ObstacleRectangle Snap(Vector3 point)
     {
@@ -84,7 +87,7 @@ internal sealed class CommandBuildings
 
     public bool CanPlace(ObstacleRectangle area)
     {
-        if (!area.IsValid || structures.Count >= FabricatorLimit + 1 || Carbon.Amount < CommandStructure.FabricatorCost)
+        if (!FitsMap(area) || structures.Count >= FabricatorLimit + 1 || Carbon.Amount < CommandStructure.FabricatorCost)
             return false;
 
         FoundationHeight(area, out float relief);
@@ -124,7 +127,7 @@ internal sealed class CommandBuildings
     public void AddHostileFabricator(Vector3 point)
     {
         var area = Snap(point);
-        if (!area.IsValid) return;
+        if (!FitsMap(area)) return;
         Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Red, fabricatorDefinition,
             units.Catalog.DamageRules, groundHeight: FoundationHeight(area, out _)));
     }

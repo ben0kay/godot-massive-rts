@@ -16,12 +16,16 @@ internal sealed class CommandMovement
     private readonly Vector3[] exits, engagementGoals;
     private int activeCount;
     public int ActiveCount => activeCount;
+    public float MapHalfWidth { get; }
+    public bool OnMap(Vector3 point, float radius = 0f) =>
+        Mathf.Abs(point.X) + radius <= MapHalfWidth && Mathf.Abs(point.Z) + radius <= MapHalfWidth;
     private ObstacleField field;
     private ObstacleNavigation navigation;
 
-    public CommandMovement(UnitState units)
+    public CommandMovement(UnitState units, float mapHalfWidth)
     {
         this.units = units;
+        MapHalfWidth = mapHalfWidth;
         int capacity = units.Position.Length;
         active = new int[capacity];
         ordered = new bool[capacity];
@@ -63,7 +67,7 @@ internal sealed class CommandMovement
     private void IssueOne(int id, Vector3 goal, bool attack)
     {
         float radius = units.Catalog[units.Type[id]].Footprint;
-        if (units.Health[id] <= 0 || !CommandBuildings.OnMap(goal, radius) ||
+        if (units.Health[id] <= 0 || !OnMap(goal, radius) ||
             field?.IntersectsCircle(ObstacleField.Xz(goal), radius) == true) return;
         SetGoal(id, goal);
         attackMove[id] = attack;

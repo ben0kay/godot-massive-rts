@@ -307,5 +307,5 @@ public partial class SquadCommandInput : Node
     }
 
     private bool TryGround(Vector2 point, out Vector3 ground) =>
-        buildings.TryGround(overlay.View, point, out ground) && CommandBuildings.OnMap(ground);
+        buildings.TryGround(overlay.View, point, out ground) && buildings.OnMap(ground);
 }

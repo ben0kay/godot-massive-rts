@@ -24,6 +24,7 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
+    [Export(PropertyHint.Range, "64,5000,4")] public float MapSize { get; set; } = 5000f;
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
@@ -34,7 +35,15 @@ public partial class CommandSandbox : Node3D
 
     public override void _Ready()
     {
-        var camera = new IsometricCamera();
+        float halfWidth = Mathf.Round(Mathf.Clamp(MapSize, 64f, 5000f) / 4f) * 2f;
+        if (GetNodeOrNull<MeshInstance3D>("Ground") is MeshInstance3D ground &&
+            ground.GetActiveMaterial(0) is ShaderMaterial shared)
+        {
+            var material = (ShaderMaterial)shared.Duplicate();
+            material.SetShaderParameter("map_half_width", halfWidth);
+            ground.MaterialOverride = material;
+        }
+        var camera = new IsometricCamera { MaximumZoomSize = Mathf.Min(2000f, halfWidth * 3f) };
         AddChild(camera);
         camera.MakeCurrent();
         var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
@@ -47,7 +56,7 @@ public partial class CommandSandbox : Node3D
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
         units = new UnitState(UnitCapacity, catalog, terrain: terrain);
-        movement = new CommandMovement(units);
+        movement = new CommandMovement(units, halfWidth);
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"));
         if (SpawnDefaultBlueSquad)
         {
@@ -195,7 +204,8 @@ public partial class CommandSandbox : Node3D
             Vector2I start = new(Mathf.RoundToInt(min.X), Mathf.RoundToInt(min.Y));
             Vector2I end = new(Mathf.RoundToInt(max.X), Mathf.RoundToInt(max.Y));
             var wall = new ObstacleRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y);
-            if (!wall.IsValid || !min.IsEqualApprox(new Vector2(start.X, start.Y)) ||
+            if (!wall.IsValid || !movement.OnMap(new Vector3(wall.Min.X, 0f, wall.Min.Y)) ||
+                !movement.OnMap(new Vector3(wall.Max.X, 0f, wall.Max.Y)) || !min.IsEqualApprox(new Vector2(start.X, start.Y)) ||
                 !max.IsEqualApprox(new Vector2(end.X, end.Y)))
             {
                 GD.PushWarning($"Command wall '{mesh.Name}' must fit on the {grid}-unit grid within the map.");

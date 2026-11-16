@@ -10,11 +10,13 @@ internal sealed class StructureCombat
     private readonly IReadOnlyList<StructureHealth> structures;
     private readonly StructureHealth[] targets;
     private readonly Vector3[] approachGoals;
+    private readonly float mapHalfWidth;
 
-    public StructureCombat(UnitState units, IReadOnlyList<StructureHealth> structures)
+    public StructureCombat(UnitState units, IReadOnlyList<StructureHealth> structures, float mapHalfWidth = DeploymentLayout.WorldHalfWidth)
     {
         this.units = units;
         this.structures = structures;
+        this.mapHalfWidth = mapHalfWidth;
         targets = new StructureHealth[units.Position.Length];
         approachGoals = new Vector3[targets.Length];
     }
@@ -100,7 +102,8 @@ internal sealed class StructureCombat
                 Vector2 candidate = alongZ ? new Vector2(fixedCoordinate, along) : new Vector2(along, fixedCoordinate);
                 float distance = p.DistanceSquaredTo(candidate);
                 Vector3 world = Ground(candidate);
-                if (distance >= best || !CommandBuildings.OnMap(world, type.Footprint) ||
+                if (distance >= best || Mathf.Abs(candidate.X) + type.Footprint > mapHalfWidth ||
+                    Mathf.Abs(candidate.Y) + type.Footprint > mapHalfWidth ||
                     field?.IntersectsCircle(candidate, type.Footprint) == true || !CanHit(world, type, target, sight)) continue;
                 best = distance;
                 goal = world;

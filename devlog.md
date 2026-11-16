@@ -263,3 +263,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Fixed Godot C# AddChild calls for internal terrain and unit previews.
 
 - 2026-11-15 — Command selection now treats starting and produced troops individually, regardless of spawn order.
+
+- 2026-11-15 — Level 001 now uses a 256-unit square, with matching runtime border, wave entry, command and placement bounds.

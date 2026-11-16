@@ -10,6 +10,8 @@ public partial class IsometricCamera : Camera3D
     private float yawDegrees = 45f;
     private Vector3 screenRight, screenBack, orbitOffset;
 
+    public float MaximumZoomSize { get; set; } = 2000f;
+
     public override void _Ready()
     {
         Projection = ProjectionType.Orthogonal; Size = targetSize; Far = 6000;
@@ -32,7 +34,7 @@ public partial class IsometricCamera : Camera3D
         Reposition();
     }
     // =========================================================
-    public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, 1800); }
+    public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, Mathf.Min(1800f, MaximumZoomSize)); }
     public void SetOpeningView(Vector3 center, float zoom, float yaw)
     {
         focus = center;
@@ -46,7 +48,7 @@ public partial class IsometricCamera : Camera3D
         if (input is InputEventMouseButton mouse && mouse.Pressed)
         {
             if (mouse.ButtonIndex == MouseButton.WheelUp) targetSize = Mathf.Max(15, targetSize * 0.88f);
-            if (mouse.ButtonIndex == MouseButton.WheelDown) targetSize = Mathf.Min(2000, targetSize / 0.88f);
+            if (mouse.ButtonIndex == MouseButton.WheelDown) targetSize = Mathf.Min(MaximumZoomSize, targetSize / 0.88f);
         }
     }
     // =========================================================

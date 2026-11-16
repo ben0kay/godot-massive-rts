@@ -36,6 +36,7 @@ internal sealed class FortressWaves
     private int enemyCount, nextSpawn, tick;
     private float spawnClock;
     public readonly ProjectileSystem Projectiles;
+    public WaveSpawnEdge SpawnEdge { get; }
     public int WaveNumber { get; private set; }
     public float Countdown { get; private set; }
     public bool Defeat => buildings.Citadel.Destroyed;
@@ -49,7 +50,8 @@ internal sealed class FortressWaves
         this.units = units;
         this.buildings = buildings;
         this.movement = movement;
-        structures = new StructureCombat(units, buildings.Structures);
+        structures = new StructureCombat(units, buildings.Structures, buildings.MapHalfWidth);
+        SpawnEdge = edge;
         inward = edge switch
         {
             WaveSpawnEdge.North => Vector3.Back,
@@ -217,9 +219,9 @@ internal sealed class FortressWaves
         float radius = units.Catalog[type].Footprint;
         const int lanesPerSide = 8;
         float spacing = radius * 2f + 0.5f;
-        float sideLimit = DeploymentLayout.WorldHalfWidth - radius - 0.1f - lanesPerSide * spacing;
+        float sideLimit = buildings.MapHalfWidth - radius - 0.1f - lanesPerSide * spacing;
         float along = Mathf.Clamp(citadelAlongEdge, -sideLimit, sideLimit);
-        Vector3 entryCenter = sideways * along - inward * (DeploymentLayout.WorldHalfWidth - radius - 0.1f);
+        Vector3 entryCenter = sideways * along - inward * (buildings.MapHalfWidth - radius - 0.1f);
         for (int i = 0; i <= lanesPerSide * 2; i++)
         {
             int lane = (i + 1) / 2 * (i % 2 == 0 ? -1 : 1);
