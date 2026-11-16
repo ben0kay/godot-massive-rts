@@ -5,18 +5,10 @@
 [ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres" id="3_uk3k8"]
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
 
-[ext_resource type="Shader" path="res://BENCHMARK/RTS/CommandGround.gdshader" id="5_ground"]
-
-[sub_resource type="ShaderMaterial" id="LevelGroundMaterial"]
-shader = ExtResource("5_ground")
-shader_parameter/map_half_width = 128.0
-
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
-MapSize = 256.0
 SpawnDefaultBlueSquad = false
 
 [node name="Ground" parent="." index="0"]
-material_override = SubResource("LevelGroundMaterial")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.056096077, -0.067583464, 0.074611664)
 
 [node name="UnitPlacement" parent="StartingUnits" index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]

@@ -11,10 +11,11 @@ public partial class IsometricCamera : Camera3D
     private Vector3 screenRight, screenBack, orbitOffset;
 
     public float MaximumZoomSize { get; set; } = 2000f;
+    public bool MapOverviewEnabled { get; set; }
 
     public override void _Ready()
     {
-        Projection = ProjectionType.Orthogonal; Size = targetSize; Far = 6000;
+        Projection = ProjectionType.Orthogonal; Size = targetSize; Far = MapOverviewEnabled ? Mathf.Max(6000f, MaximumZoomSize * 2f) : 6000f;
         SetYawDegrees(yawDegrees);
     }
 
@@ -45,6 +46,12 @@ public partial class IsometricCamera : Camera3D
 
     public override void _UnhandledInput(InputEvent input)
     {
+        if (MapOverviewEnabled && input is InputEventKey key && key.Pressed && !key.Echo && key.PhysicalKeycode == Key.Home)
+        {
+            focus = velocity = Vector3.Zero;
+            targetSize = MaximumZoomSize;
+            GetViewport().SetInputAsHandled();
+        }
         if (input is InputEventMouseButton mouse && mouse.Pressed)
         {
             if (mouse.ButtonIndex == MouseButton.WheelUp) targetSize = Mathf.Max(15, targetSize * 0.88f);
@@ -61,5 +68,11 @@ public partial class IsometricCamera : Camera3D
         velocity = velocity.Lerp(desired, 1 - Mathf.Exp(-10 * dt)); focus += velocity * dt;
         Size = Mathf.Lerp(Size, targetSize, 1 - Mathf.Exp(-10 * dt)); Reposition();
     }
-    private void Reposition() { Position = focus + orbitOffset; LookAt(focus, Vector3.Up); }
+    private void Reposition()
+    {
+        // Move the camera back at overview scales so the near side of the map stays in front of it.
+        float distanceScale = MapOverviewEnabled ? Mathf.Max(1f, Size / 1500f) : 1f;
+        Position = focus + orbitOffset * distanceScale;
+        LookAt(focus, Vector3.Up);
+    }
 }

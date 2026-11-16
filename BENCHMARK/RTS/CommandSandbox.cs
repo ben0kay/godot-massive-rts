@@ -43,7 +43,7 @@ public partial class CommandSandbox : Node3D
             material.SetShaderParameter("map_half_width", halfWidth);
             ground.MaterialOverride = material;
         }
-        var camera = new IsometricCamera { MaximumZoomSize = Mathf.Min(2000f, halfWidth * 3f) };
+        var camera = new IsometricCamera { MaximumZoomSize = halfWidth * 3f, MapOverviewEnabled = true };
         AddChild(camera);
         camera.MakeCurrent();
         var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
@@ -92,7 +92,7 @@ public partial class CommandSandbox : Node3D
         {
             Position = new Vector2(20f, 48f),
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click: move · Right-drag: straight formation\nRight Shift + Right-drag: freeform formation\nK + left-click: Attack-move · Hold K + left-drag: attack formation\nWASD or arrows to pan · Wheel to zoom"
+            Text = "Fortress Defense Command Sandbox\nCTRL Build Menu · Click or box-select · Right-click: move · Right-drag: straight formation\nRight Shift + Right-drag: freeform formation\nK + left-click: Attack-move · Hold K + left-drag: attack formation\nWASD or arrows to pan · Wheel to zoom · Home: map overview"
         });
         var rightHud = new VBoxContainer
         {

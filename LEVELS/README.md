@@ -36,4 +36,4 @@ The inherited scene exposes the opening layout in the 3D viewport:
 - Drag `WORLD/TERRAIN/AUTHORING/TerrainHill.tscn` under **Terrain**. Move it in X/Z and set **Radius** and **Rise**. The editor previews the sampled surface. Commands, starting units, waves, moving troops and prop bases use that same surface. Leave Terrain empty for a flat map.
 - Place upright props on level sites. The Fabricator rejects sites that vary by more than 0.5 world units across its footprint. Authored walls and Citadels warn about uneven sites and preview at the highest sampled point.
 
-**Map Size** on the command level root is the playable width and depth in world units. Fortress Defense Level 001 uses 256 × 256, so the boundary fits when zoomed out from the base. The selected wave edge follows that boundary. The standalone sandbox keeps its larger default.
+**Map Size** on the command level root is the playable width and depth in world units. Fortress Defense Level 001 uses the 5,000 × 5,000 default. Press **Home** in a running command level to center the camera and zoom out to the map overview. The selected wave edge follows the playable boundary.
