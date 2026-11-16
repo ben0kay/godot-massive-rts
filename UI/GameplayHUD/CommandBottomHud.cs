@@ -30,7 +30,7 @@ public partial class CommandBottomHud : Control
     private HBoxContainer controls;
     private int previousCarbon = -1;
     private CommandStructure selected;
-    internal System.Action PlaceRequested;
+    internal System.Action<CommandBuildType> PlaceRequested;
     internal bool MenuOpen { get => menu.Visible; set => menu.Visible = value; }
 
     internal void Initialize(RuntimeUnitCatalog catalog, CommandBuildings buildings)
@@ -53,7 +53,9 @@ public partial class CommandBottomHud : Control
         row.AddChild(menu);
         menu.AddChild(new Label { Text = "Build" });
         menu.AddChild(UIButtonFactory.Create($"Fabricator  ·  {CommandStructure.FabricatorCost} Carbon",
-            () => PlaceRequested?.Invoke(), UIButtonStyle.Compact));
+            () => PlaceRequested?.Invoke(CommandBuildType.Fabricator), UIButtonStyle.Compact));
+        menu.AddChild(UIButtonFactory.Create($"Laser Tower  ·  {CommandBuildings.LaserTowerCost} Carbon",
+            () => PlaceRequested?.Invoke(CommandBuildType.LaserTower), UIButtonStyle.Compact));
 
         var context = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         row.AddChild(context);
@@ -131,7 +133,7 @@ public partial class CommandBottomHud : Control
         var production = building.Production;
         bool controlsWereVisible = controls.Visible;
         controls.Visible = building.Release != null && building.Ready;
-        title.Text = production == null ? $"Citadel   ·   {building.Health:N0} / {building.MaxHealth:N0} HP" :
+        title.Text = production == null ? $"{building.DisplayName}   ·   {building.Health:N0} / {building.MaxHealth:N0} HP" :
             !building.Ready ? $"Fabricator   ·   Constructing {building.Built:P0}" :
             $"Fabricator   ·   {building.Health:N0} / {building.MaxHealth:N0} HP";
         title.Text += $"   ·   {buildings.ArmourName(building)} armour";

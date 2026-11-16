@@ -327,6 +327,7 @@ public partial class CommandSandbox : Node3D
     public override void _Process(double delta)
     {
         if (Engine.IsEditorHint()) return;
+        buildings.AdvanceDefenseEffects((float)delta);
         summary.Sample(delta);
         hudClock += delta;
         selectionClock += delta;

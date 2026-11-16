@@ -17,6 +17,7 @@ internal sealed class CommandStructure : StructureHealth
     private static QuadMesh productionBarMesh;
     private static Shader productionBarShader;
     public readonly Vector3 Center;
+    public string DisplayName { get; }
     public bool Ready => Built >= 1f;
     public float Built { get; private set; }
     public readonly FabricatorProduction Production;
@@ -32,14 +33,15 @@ internal sealed class CommandStructure : StructureHealth
     public readonly System.Func<byte, bool> Release;
 
     public CommandStructure(ObstacleRectangle area, float health, byte faction,
-        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null, Node3D citadelView = null, float groundHeight = 0f)
+        BuildingDefinition definition, DamageRules rules, System.Func<CommandStructure, byte, bool> release = null, Node3D readyView = null, float groundHeight = 0f)
         : base(area, faction, health, rules, rules.ArmourClass(definition.ArmourClass), definition.Armour)
     {
         Vector2 center = (area.Min + area.Max) * 0.5f;
         Center = new Vector3(center.X, groundHeight, center.Y);
-        if (citadelView != null)
+        DisplayName = definition.DisplayName;
+        if (readyView != null)
         {
-            View = citadelView;
+            View = readyView;
             Built = 1f;
             return;
         }

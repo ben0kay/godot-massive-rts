@@ -5,9 +5,19 @@ using Godot;
 
 namespace MassiveRts;
 
+internal enum CommandBuildType { Fabricator, LaserTower }
+
 internal sealed class CommandBuildings
 {
     private const int FabricatorLimit = 32;
+    private const int LaserTowerLimit = 32;
+    internal const int LaserTowerCost = 750;
+    private const float TowerBaseHeight = 1f;
+    private readonly BuildingDefinition laserDefinition;
+    private readonly BuildingStats laserStats;
+    private readonly RuntimeBuildingCatalog defenseCatalog;
+    private DefenseRenderer defenseRenderer;
+    private DefenseSystem defenses;
     private readonly Node3D root;
     private readonly UnitState units;
     private readonly CommandMovement movement;
@@ -39,6 +49,12 @@ internal sealed class CommandBuildings
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
         citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
+        var defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres");
+        laserDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/LaserTower001.tres");
+        defenseCatalog = new RuntimeBuildingCatalog(defenseDefinitions, units.Catalog.DamageRules);
+        if (!defenseCatalog.TryResolve(laserDefinition.Id, out int laserType))
+            throw new InvalidOperationException("The Laser Tower is missing from the building catalogue.");
+        laserStats = defenseCatalog[laserType];
         var footprint = new ObstacleRectangle(-4, -9, 5, 5);
         if (citadelView != null)
         {
@@ -56,7 +72,7 @@ internal sealed class CommandBuildings
         float citadelHeightOnTerrain = FoundationHeight(footprint, out float citadelRelief);
         if (citadelRelief > 0.5f) GD.PushWarning("Citadel footprint crosses uneven terrain. Use a flatter site.");
         Citadel = new CommandStructure(footprint, citadelHealth > 0f ? citadelHealth : citadelDefinition.Health,
-            Factions.Blue, citadelDefinition, units.Catalog.DamageRules, citadelView: citadelView, groundHeight: citadelHeightOnTerrain);
+            Factions.Blue, citadelDefinition, units.Catalog.DamageRules, readyView: citadelView, groundHeight: citadelHeightOnTerrain);
         Add(Citadel);
         citadelView.GlobalPosition = Citadel.Center;
         Workers = new CitadelWorkerProduction(workerSettings, units.Catalog, Carbon);
@@ -90,12 +106,13 @@ internal sealed class CommandBuildings
         OnMap(new Vector3(area.Min.X, 0f, area.Min.Y)) &&
         OnMap(new Vector3(area.Max.X, 0f, area.Max.Y));
 
-    public static ObstacleRectangle Snap(Vector3 point)
+    public ObstacleRectangle Snap(Vector3 point, CommandBuildType type = CommandBuildType.Fabricator)
     {
-        const int cells = CommandStructure.FabricatorCells;
+        int width = type == CommandBuildType.LaserTower ? laserStats.Width : CommandStructure.FabricatorCells;
+        int depth = type == CommandBuildType.LaserTower ? laserStats.Depth : CommandStructure.FabricatorCells;
         const float grid = DeploymentLayout.CellSize;
-        return new ObstacleRectangle(Mathf.RoundToInt(point.X / grid - cells * 0.5f),
-            Mathf.RoundToInt(point.Z / grid - cells * 0.5f), cells, cells);
+        return new ObstacleRectangle(Mathf.RoundToInt(point.X / grid - width * 0.5f),
+            Mathf.RoundToInt(point.Z / grid - depth * 0.5f), width, depth);
     }
 
     public Vector3 Center(ObstacleRectangle area)
@@ -113,10 +130,12 @@ internal sealed class CommandBuildings
         return terrain.FootprintHeight(area.Min, area.Max, out relief);
     }
 
-    public bool CanPlace(ObstacleRectangle area)
+    public bool CanPlace(ObstacleRectangle area, CommandBuildType type)
     {
-        if (!FitsMap(area) || structures.Count >= FabricatorLimit + 1 || Carbon.Amount < CommandStructure.FabricatorCost)
-            return false;
+        if (!FitsMap(area) || Carbon.Amount < Cost(type)) return false;
+        int towerCount = defenses?.ActiveCount ?? 0;
+        if (type == CommandBuildType.LaserTower ? towerCount >= LaserTowerLimit
+            : structures.Count - towerCount >= FabricatorLimit + 1) return false;
 
         FoundationHeight(area, out float relief);
         if (relief > 0.5f) return false;
@@ -147,12 +166,38 @@ internal sealed class CommandBuildings
         return min.X < otherMax.X && max.X > otherMin.X && min.Y < otherMax.Y && max.Y > otherMin.Y;
     }
 
-    public bool Place(ObstacleRectangle area)
+    private static int Cost(CommandBuildType type) =>
+        type == CommandBuildType.LaserTower ? LaserTowerCost : CommandStructure.FabricatorCost;
+
+    public bool Place(ObstacleRectangle area, CommandBuildType type)
     {
-        if (!CanPlace(area) || !Carbon.TrySpend(CommandStructure.FabricatorCost)) return false;
-        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition, units.Catalog.DamageRules, Release, groundHeight: FoundationHeight(area, out _)));
+        if (!CanPlace(area, type) || !Carbon.TrySpend(Cost(type))) return false;
+        float height = FoundationHeight(area, out _);
+        if (type == CommandBuildType.LaserTower)
+        {
+            if (defenses == null)
+            {
+                defenseRenderer = new DefenseRenderer { Name = "CommandDefenseRenderer" };
+                root.AddChild(defenseRenderer);
+                defenseRenderer.Initialize(Array.Empty<BuildingPlacement>(), defenseCatalog, TowerBaseHeight, battle: true);
+                defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
+            }
+
+            var tower = new CommandStructure(area, laserStats.Health, Factions.Blue, laserDefinition,
+                units.Catalog.DamageRules, readyView: new Node3D { Name = "LaserTower" }, groundHeight: height);
+            defenses.AddTower(tower, laserStats, TowerBaseHeight, height);
+            Add(tower);
+        }
+        else
+            Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition,
+                units.Catalog.DamageRules, Release, groundHeight: height));
         return true;
     }
+
+    public bool HasDefenses => defenses?.ActiveCount > 0;
+    public void StepDefenses(SpatialGrid grid, float delta, int tick) =>
+        defenses?.Step(units, grid, field, delta, tick, 1f / 60f);
+    public void AdvanceDefenseEffects(float delta) => defenseRenderer?.Advance(delta);
 
     public void AddHostileFabricator(Vector3 point)
     {
@@ -186,6 +231,7 @@ internal sealed class CommandBuildings
         foreach (var building in structures)
         {
             if (!building.Destroyed) continue;
+            if (building != Citadel && building.Production == null) defenses?.RemoveTower(building);
             building.View.QueueFree();
             removed = true;
         }
@@ -299,7 +345,7 @@ internal sealed class CommandBuildings
         foreach (var building in structures)
         {
             if (building.Destroyed) continue;
-            float height = building.Production == null ? 4.3f : 1.95f;
+            float height = building == Citadel ? 4.3f : building.Production == null ? TowerBaseHeight + 0.7f : 1.95f;
             Vector2 min = building.Area.Min, max = building.Area.Max;
             float start = 0f, end = nearest;
             if (!ClipRay(origin.X, ray.X, min.X, max.X, ref start, ref end) ||

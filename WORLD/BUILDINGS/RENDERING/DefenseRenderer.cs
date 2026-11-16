@@ -173,23 +173,12 @@ public partial class DefenseRenderer : Node3D
     // =========================================================
     public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle)
     {
-        bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings);
-        heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings);
-        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings);
+        InitializeBatches();
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount = placements.Count;
         for (int i = 0; i < placements.Count; i++)
         {
             var placement = placements[i];
-            var area = placement.Footprint(catalog);
-            Vector2 size = area.Max - area.Min;
-            Vector3 pivot = Pivot(area, height);
-            Color color = ArmyRenderer.FactionColor(placement.Faction);
-            bases.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
-                new Vector3(pivot.X, height * 0.5f, pivot.Z)));
-            bases.SetInstanceColor(i, color.Darkened(0.08f));
-            heads.SetInstanceColor(i, color);
-            barrels.SetInstanceColor(i, color.Lightened(0.22f));
-            Aim(i, pivot, 0f);
+            ShowTower(i, placement.Footprint(catalog), placement.Faction, height);
         }
         if (battle)
         {
@@ -198,6 +187,28 @@ public partial class DefenseRenderer : Node3D
             beams.VisibleInstanceCount = flashes.VisibleInstanceCount = 0;
             liveBeams = liveFlashes = 0;
         }
+    }
+
+    private void InitializeBatches()
+    {
+        bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings);
+        heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings);
+        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings);
+    }
+
+    internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f)
+    {
+        Vector2 size = area.Max - area.Min;
+        Vector3 pivot = Pivot(area, height) + Vector3.Up * ground;
+        Color color = ArmyRenderer.FactionColor(faction);
+        bases.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
+            new Vector3(pivot.X, ground + height * 0.5f, pivot.Z)));
+        bases.SetInstanceColor(index, color.Darkened(0.08f));
+        heads.SetInstanceColor(index, color);
+        barrels.SetInstanceColor(index, color.Lightened(0.22f));
+        Aim(index, pivot, 0f);
+        bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
+            Mathf.Max(bases.VisibleInstanceCount, index + 1);
     }
 
     public static Vector3 Pivot(ObstacleRectangle area, float height)

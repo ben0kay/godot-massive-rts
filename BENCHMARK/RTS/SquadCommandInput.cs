@@ -18,6 +18,9 @@ public partial class SquadCommandInput : Node
     private CommandBottomHud hud;
     private MeshInstance3D ghost;
     private bool placing;
+    private CommandBuildType buildType;
+    private Mesh fabricatorPreview;
+    private readonly BoxMesh towerPreview = new();
     private bool ctrlCandidate;
     private bool leftControl, rightControl;
 
@@ -29,11 +32,14 @@ public partial class SquadCommandInput : Node
         hud = fabrication;
         ghost = CommandStructure.MakePreview();
         GetParent().AddChild(ghost);
-        hud.PlaceRequested = () =>
+        fabricatorPreview = ghost.Mesh;
+        hud.PlaceRequested = type =>
         {
             CancelGesture();
             overlay.AttackMove = false;
             placing = true;
+            buildType = type;
+            ghost.Mesh = type == CommandBuildType.LaserTower ? towerPreview : fabricatorPreview;
             hud.MenuOpen = false;
         };
     }
@@ -83,7 +89,7 @@ public partial class SquadCommandInput : Node
                 if (click.ButtonIndex == MouseButton.Right) EndPlacement(true);
                 else if (click.ButtonIndex == MouseButton.Left)
                 {
-                    if (TryGround(click.Position, out Vector3 point) && buildings.Place(CommandBuildings.Snap(point)))
+                    if (TryGround(click.Position, out Vector3 point) && buildings.Place(buildings.Snap(point, buildType), buildType))
                         EndPlacement(true);
                 }
                 else return;
@@ -193,9 +199,16 @@ public partial class SquadCommandInput : Node
             ghost.Visible = TryGround(GetViewport().GetMousePosition(), out Vector3 point);
             if (ghost.Visible)
             {
-                var area = CommandBuildings.Snap(point);
+                var area = buildings.Snap(point, buildType);
                 ghost.Position = buildings.Center(area);
-                ((StandardMaterial3D)ghost.MaterialOverride).AlbedoColor = buildings.CanPlace(area)
+                if (buildType == CommandBuildType.LaserTower)
+                {
+                    Vector2 size = area.Max - area.Min;
+                    var dimensions = new Vector3(size.X, 1f, size.Y);
+                    if (towerPreview.Size != dimensions) towerPreview.Size = dimensions;
+                    ghost.Position += Vector3.Up * 0.5f;
+                }
+                ((StandardMaterial3D)ghost.MaterialOverride).AlbedoColor = buildings.CanPlace(area, buildType)
                     ? new Color(0.2f, 0.92f, 1f, 0.38f) : new Color(1f, 0.22f, 0.24f, 0.40f);
             }
         }
