@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn" id="2_uk3k8"]
 [ext_resource type="Resource" uid="uid://bprdem5fgqmkh" path="res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres" id="3_uk3k8"]
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
+[ext_resource type="PackedScene" path="res://WORLD/RESOURCES/CARBON/CarbonDeposit.tscn" id="6_gfqfu"]
 
 [sub_resource type="Resource" id="Resource_gfqfu"]
 script = ExtResource("2_4crng")
@@ -40,12 +41,18 @@ Enemies = Dictionary[String, int]({
 MapSize = 1000.0
 SpawnDefaultBlueSquad = false
 EnemySpawnPattern = 1
-EnemySpawnSpacing = 24.0
+EnemySpawnSpacing = 6.0
 WaveDefinitions = Array[ExtResource("2_4crng")]([SubResource("Resource_gfqfu"), SubResource("Resource_bbsqs"), SubResource("Resource_otgem"), SubResource("Resource_on2mr")])
 BetweenWavesSeconds = 30.0
+
+[node name="Ground" parent="." index="0" unique_id=959569258]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.17513934, -0.21327162)
 
 [node name="UnitPlacement" parent="StartingUnits" parent_id_path=PackedInt32Array(353634270) index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]
 Unit = ExtResource("3_uk3k8")
 
 [node name="CommandWall" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="0" unique_id=1162853422 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 1, -2)
+
+[node name="CarbonDeposit" parent="Resources" index="0" unique_id=222736308 instance=ExtResource("6_gfqfu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.229633, 0, -56.33676)
