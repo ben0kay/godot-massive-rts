@@ -1,20 +1,13 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://8qblkmsgok4f"]
 
-[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
 [resource]
 script = ExtResource("1")
 Id = "circle_infantry"
 DisplayName = "Basic Infantry"
 Role = "General-purpose melee"
-Shape = 0
-Width = 0.8
 Height = 0.4125
 Health = 50.0
-Speed = 5.0
-Damage = 5.0
-Interval = 0.9
-Reach = 1.6
-Armour = 0.0
-Style = 0
 ChargeResistance = 0.22
+Damage = 5.0
