@@ -9,6 +9,7 @@ public sealed class HitFeedbackSystem
     private readonly int[] activeIds;
     private readonly float duration, flashDuration, pulseDuration, riseDuration, fallDuration, peakExpansion;
     private int activeCount;
+    private bool hitRegistered;
 
     public HitFeedbackSystem(int capacity, HitFeedbackSettings settings)
     {
@@ -31,10 +32,13 @@ public sealed class HitFeedbackSystem
         riseStart[id] = active ? Expansion(id, duration - remaining[id]) : 0f;
         if (!active) activeIds[activeCount++] = id;
         remaining[id] = duration;
+        hitRegistered = true;
     }
 
-    public void Advance(UnitState units, float dt)
+    public bool Advance(UnitState units, float dt)
     {
+        bool changed = hitRegistered;
+        hitRegistered = false;
         for (int slot = activeCount - 1; slot >= 0; slot--)
         {
             int id = activeIds[slot];
@@ -48,8 +52,12 @@ public sealed class HitFeedbackSystem
             float previousAge = duration - before;
             if (after == 0f || (peakExpansion > 0f && previousAge < pulseDuration) ||
                 (previousAge < flashDuration && duration - after >= flashDuration))
+            {
                 units.Dirty[id] = true;
+                changed = true;
+            }
         }
+        return changed;
     }
 
     public (bool White, float Scale) Evaluate(int id)

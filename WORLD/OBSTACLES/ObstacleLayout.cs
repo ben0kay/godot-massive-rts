@@ -12,10 +12,14 @@ public readonly record struct ObstacleRectangle(
 {
     [JsonIgnore] public float GridSize { get; init; } = DeploymentLayout.CellSize;
     [JsonIgnore] private int HalfWidth => DeploymentLayout.CellHalfWidth(GridSize);
-    [JsonIgnore] public Vector2 Min => new Vector2(X, Z) * GridSize;
-    [JsonIgnore] public Vector2 Max => new Vector2(X + Width, Z + Depth) * GridSize;
+    // Authored scene meshes can supply exact world bounds. Painted saves use cells.
+    [JsonIgnore] public Rect2? WorldBounds { get; init; }
+    [JsonIgnore] public Vector2 Min => WorldBounds?.Position ?? new Vector2(X, Z) * GridSize;
+    [JsonIgnore] public Vector2 Max => WorldBounds?.End ?? new Vector2(X + Width, Z + Depth) * GridSize;
 
-    [JsonIgnore] public bool IsValid => Width > 0 && Depth > 0 &&
+    [JsonIgnore] public bool IsValid => WorldBounds is Rect2 bounds
+        ? bounds.Position.IsFinite() && bounds.End.IsFinite() && bounds.Size.X > 0f && bounds.Size.Y > 0f
+        : Width > 0 && Depth > 0 &&
         X >= -HalfWidth && Z >= -HalfWidth &&
         (long)X + Width <= HalfWidth && (long)Z + Depth <= HalfWidth;
 }

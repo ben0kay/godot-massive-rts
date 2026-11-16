@@ -303,3 +303,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — CARBON2: Added worker right-click construction orders on Carbon deposits, 4-second repairable/resumable extractor builds, automatic 5 Carbon/s from finite deposits to the existing wallet, and H-targetable destructible extractor structures. Shared bottom HUD reports deposit/extractor status. No hauling or worker mining AI. Source implementation pending Godot gameplay validation.
 
 - 2026-11-16 — CARBON2 review: Fixed unfinished extractor retargeting, released workers when rigs are destroyed, and kept extractor footprints and Fabricator limits independent. Increased Worker size 2.5× with speed and health unchanged. Source reviewed, awaiting Godot playtest.
+
+- 2026-11-16 — Fortress Defense: Wired in shared hit and death feedback and used exact authored wall mesh bounds for gameplay obstacles. Source reviewed, awaiting Godot playtest.

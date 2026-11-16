@@ -11,6 +11,8 @@ public partial class CommandSandbox : Node3D
 {
     private CommandMovement movement;
     private ArmyRenderer army;
+    private DeathFeedbackSystem deathFeedback;
+    private DeathEffectRenderer deathRenderer;
     private UnitState units;
     private CommandOverlay overlay;
     private BenchmarkSummary summary;
@@ -162,7 +164,14 @@ public partial class CommandSandbox : Node3D
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
-        units = new UnitState(NonWaveUnitCapacity + CountWaveSlots(), catalog, terrain: terrain);
+        int capacity = NonWaveUnitCapacity + CountWaveSlots();
+        var hitSettings = GD.Load<HitFeedbackSettings>("res://VISUALS/FEEDBACK/UNIT_HITS/HitFeedbackSettings.tres")
+            ?? new HitFeedbackSettings();
+        deathFeedback = new DeathFeedbackSystem();
+        units = new UnitState(capacity, catalog, new HitFeedbackSystem(capacity, hitSettings), terrain)
+        {
+            DeathFeedback = deathFeedback
+        };
         movement = new CommandMovement(units, halfWidth);
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"),
             WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"));
@@ -182,7 +191,11 @@ public partial class CommandSandbox : Node3D
 
         army = new ArmyRenderer();
         AddChild(army);
-        army.Initialize(units, FacetedSoldierMeshes.Create(catalog), ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows);
+        var soldierMeshes = FacetedSoldierMeshes.Create(catalog);
+        army.Initialize(units, soldierMeshes, ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows);
+        deathRenderer = new DeathEffectRenderer();
+        AddChild(deathRenderer);
+        deathRenderer.Initialize(catalog, soldierMeshes);
 
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
             WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing,
@@ -296,10 +309,9 @@ public partial class CommandSandbox : Node3D
         var walls = new List<ObstacleRectangle>();
         if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();
 
-        const float grid = DeploymentLayout.CellSize;
         foreach (Node child in authored.GetChildren())
         {
-            if (child is not MeshInstance3D mesh || mesh.Mesh is not BoxMesh box) continue;
+            if (child is not MeshInstance3D mesh || mesh.Mesh is not BoxMesh) continue;
             var basis = mesh.GlobalTransform.Basis;
             if (!Mathf.IsZeroApprox(basis.X.Y) || !Mathf.IsZeroApprox(basis.X.Z) ||
                 !Mathf.IsZeroApprox(basis.Y.X) || !Mathf.IsZeroApprox(basis.Y.Z) ||
@@ -309,23 +321,14 @@ public partial class CommandSandbox : Node3D
                 continue;
             }
 
-            Vector3 center = mesh.GlobalPosition;
-            Vector2 halfSize = new Vector2(Mathf.Abs(basis.X.X) * box.Size.X, Mathf.Abs(basis.Z.Z) * box.Size.Z) * 0.5f;
-            Vector2 min = (new Vector2(center.X, center.Z) - halfSize) / grid;
-            Vector2 max = (new Vector2(center.X, center.Z) + halfSize) / grid;
-            Vector2I start = new(Mathf.RoundToInt(min.X), Mathf.RoundToInt(min.Y));
-            Vector2I end = new(Mathf.RoundToInt(max.X), Mathf.RoundToInt(max.Y));
-            var wall = new ObstacleRectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y);
-            if (!wall.IsValid || !movement.OnMap(new Vector3(wall.Min.X, 0f, wall.Min.Y)) ||
-                !movement.OnMap(new Vector3(wall.Max.X, 0f, wall.Max.Y)) || !min.IsEqualApprox(new Vector2(start.X, start.Y)) ||
-                !max.IsEqualApprox(new Vector2(end.X, end.Y)))
+            var bounds = mesh.GlobalTransform * mesh.GetAabb();
+            var wall = new ObstacleRectangle(0, 0, 0, 0)
             {
-                GD.PushWarning($"Command wall '{mesh.Name}' must fit on the {grid}-unit grid within the map.");
-                continue;
-            }
+                WorldBounds = new Rect2(ObstacleField.Xz(bounds.Position), ObstacleField.Xz(bounds.Size))
+            };
+            if (!wall.IsValid) continue;
             Vector3 groundPosition = mesh.GlobalPosition;
             var terrain = units.Grounding?.Field;
-            var bounds = mesh.GlobalTransform * mesh.GetAabb();
             float relief = 0f;
             groundPosition.Y += (terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f) - bounds.Position.Y;
             if (relief > 0.5f) GD.PushWarning($"Command wall '{mesh.Name}' crosses uneven terrain.");
@@ -338,6 +341,8 @@ public partial class CommandSandbox : Node3D
     public override void _Process(double delta)
     {
         if (Engine.IsEditorHint()) return;
+        deathFeedback.Advance((float)delta);
+        deathRenderer.Sync(deathFeedback);
         buildings.AdvanceDefenseEffects((float)delta);
         summary.Sample(delta);
         hudClock += delta;
@@ -365,18 +370,26 @@ public partial class CommandSandbox : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
-        if (Engine.IsEditorHint() || waves.Defeat || waves.Victory) return;
+        if (Engine.IsEditorHint()) return;
+        bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
+        if (waves.Defeat || waves.Victory)
+        {
+            if (feedbackChanged) SyncArmy();
+            return;
+        }
         int previousCount = units.Count;
         buildings.Step((float)delta);
         bool changed = waves.Step((float)delta);
         if (waves.Defeat || waves.Victory) buildings.WorkerProductionOpen = false;
         buildings.RemoveDestroyed();
-        if (changed || previousCount != units.Count)
-        {
-            long start = Stopwatch.GetTimestamp();
-            army.Sync();
-            performance.RecordSync(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
-        }
+        if (feedbackChanged || changed || previousCount != units.Count) SyncArmy();
         projectileRenderer.Sync(waves.Projectiles);
+    }
+
+    private void SyncArmy()
+    {
+        long start = Stopwatch.GetTimestamp();
+        army.Sync();
+        performance.RecordSync(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
     }
 }
