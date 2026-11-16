@@ -11,7 +11,7 @@ Fortress Defense Level 001 is reserved for manual terrain and object placement i
 
 To add a level, author its scene and a `LevelDefinition` resource with a stable ID, display name, unique positive order, and scene path. Add the resource to the campaign's `Levels` array. Add modes as `CampaignDefinition` resources in `Catalog/DefaultCampaignCatalog.tres` in the order they should appear. The campaign menu orders levels by their authored order. The first level is unlocked, and each later level requires completion of its immediate predecessor.
 
-`Runtime/LevelLauncher.cs` validates the launch and attaches the level session controls. **Return to Campaign** and Escape return to the current mode’s level list and leave progress as-is. **Mark Test Level Complete (Dev)** records completion for the active profile and returns to the campaign. This control requires both a debug build and `AllowDevelopmentCompletion` on the catalog. Actual battle objectives and victory rules are future work.
+`Runtime/LevelLauncher.cs` attaches the campaign exit input. **Escape** returns to the current mode’s level list after closing or clearing any active command controls. **Shift+Escape** records test completion and returns to the campaign when both a debug build and **Allow Development Completion** on the catalog are enabled. Direct editor launches leave campaign data alone.
 
 For exports that use a selected-resource filter, include the menu scenes, UI config, campaign catalog and the level scenes referenced by path.
 

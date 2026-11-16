@@ -89,7 +89,7 @@ public partial class SquadCommandInput : Node
                 else return;
                 GetViewport().SetInputAsHandled();
             }
-            else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
+            else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape, ShiftPressed: false })
             {
                 EndPlacement(true);
                 GetViewport().SetInputAsHandled();
@@ -168,15 +168,19 @@ public partial class SquadCommandInput : Node
             else return;
             GetViewport().SetInputAsHandled();
         }
-        else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
+        else if (input is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape, ShiftPressed: false })
         {
+            bool consumed = held != MouseButton.None || overlay.AttackMove || overlay.Selection.Count > 0 ||
+                overlay.Building != null || hud.MenuOpen;
             CancelGesture();
-            if (overlay.AttackMove)
+            if (hud.MenuOpen) hud.MenuOpen = false;
+            else if (overlay.AttackMove)
             {
                 overlay.AttackMove = false;
                 overlay.QueueRedraw();
             }
             else ClearSelection();
+            if (consumed) GetViewport().SetInputAsHandled();
         }
     }
 
