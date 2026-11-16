@@ -277,3 +277,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Matched the embedded window override to 1920 × 820 and replaced the Fabricator dropdown with a scrollable two-column unit list.
 
 - 2026-11-15 — Removed the campaign gameplay overlay and kept campaign exit available through Escape.
+
+- 2026-11-15 — Allocated wave IDs separately from starting and produced troops, removed the raised Level 001 ground override, and enabled shared soldier shadows in command levels.

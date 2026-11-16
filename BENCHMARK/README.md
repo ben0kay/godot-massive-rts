@@ -189,7 +189,7 @@ Open `BENCHMARK/RTS/CommandSandbox.tscn` with F6. The sandbox starts with 10,000
 
 After five seconds of construction, select the Fabricator, choose a unit type, and watch the paid batch release through the front gate. Right-click terrain with a completed Fabricator selected to set its rally point. Clear it from the bottom panel to use the nearby holding area.
 
-The sandbox supports 2,048 soldier IDs and up to 32 Fabricators. A blocked exit, full holding area or soldier cap retains the paid batch. Units route around buildings, and the normal command movement still allows soldiers to cross paths outside release clearance. FAB1 runs on the sandbox's flat map. The playable Fortress Defense level remains separate.
+The command sandbox supports 2,048 starting and produced soldier IDs plus separate slots for up to 2,048 authored wave enemies, and up to 32 Fabricators. A blocked exit, full holding area or soldier cap retains the paid batch. Units route around buildings, and the normal command movement still allows soldiers to cross paths outside release clearance. FAB1 runs on the sandbox's flat map. The playable Fortress Defense level remains separate.
 
 ### Fortress Defense waves
 

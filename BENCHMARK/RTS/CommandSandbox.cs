@@ -17,7 +17,8 @@ public partial class CommandSandbox : Node3D
     private CommandPerformanceHud performance;
     private ArmyBalanceHud armyBalance;
     private SelectionHud selection;
-    internal const int UnitCapacity = 2048;
+    internal const int NonWaveUnitCapacity = 2048;
+    internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
     private CommandBuildings buildings;
@@ -47,6 +48,7 @@ public partial class CommandSandbox : Node3D
             mapSize = size;
         }
     }
+    [Export] public bool ShowGroundShadows { get; set; } = true;
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public WaveSpawnPattern EnemySpawnPattern { get; set; }
@@ -125,7 +127,7 @@ public partial class CommandSandbox : Node3D
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
-        units = new UnitState(UnitCapacity, catalog, terrain: terrain);
+        units = new UnitState(NonWaveUnitCapacity + CountWaveSlots(), catalog, terrain: terrain);
         movement = new CommandMovement(units, halfWidth);
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"));
         if (SpawnDefaultBlueSquad)
@@ -144,7 +146,7 @@ public partial class CommandSandbox : Node3D
 
         army = new ArmyRenderer();
         AddChild(army);
-        army.Initialize(units, FacetedSoldierMeshes.Create(catalog), null, false);
+        army.Initialize(units, FacetedSoldierMeshes.Create(catalog), ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows);
 
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
             WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing, EnemiesPerRow, EnemyRowDelay);
@@ -208,15 +210,26 @@ public partial class CommandSandbox : Node3D
         RefreshSelection();
     }
 
+    private int CountWaveSlots()
+    {
+        long count = 0;
+        foreach (var wave in WaveDefinitions)
+        {
+            if (wave == null) throw new System.InvalidOperationException("Each wave needs a definition.");
+            foreach (var entry in wave.Enemies)
+            {
+                if (entry.Value <= 0) throw new System.InvalidOperationException($"Invalid wave count for {entry.Key}.");
+                count += entry.Value;
+            }
+        }
+        if (count > WaveUnitCapacity)
+            throw new System.InvalidOperationException($"Authored waves can contain up to {WaveUnitCapacity:N0} soldiers in total.");
+        return (int)count;
+    }
+
     private void SpawnAuthoredUnits()
     {
         if (GetNodeOrNull<Node3D>("StartingUnits") is not Node3D container) return;
-        long reserved = 0;
-        foreach (var wave in WaveDefinitions)
-            if (wave != null)
-                foreach (var entry in wave.Enemies)
-                    reserved += entry.Value;
-
         foreach (Node child in container.GetChildren())
         {
             if (child is not CommandUnitPlacement placement) continue;
@@ -226,9 +239,9 @@ public partial class CommandSandbox : Node3D
                 continue;
             }
             int count = Mathf.Clamp(placement.Count, 1, 256);
-            if (count > UnitCapacity - units.Count - reserved)
+            if (count > NonWaveUnitCapacity - units.Count)
             {
-                GD.PushWarning($"Starting unit group '{placement.Name}' exceeds capacity after reserving wave slots.");
+                GD.PushWarning($"Starting unit group '{placement.Name}' exceeds the starting and produced troop capacity.");
                 continue;
             }
             SpawnFormation(type, (byte)placement.Faction, placement.GlobalPosition, placement.GlobalRotation.Y, count);

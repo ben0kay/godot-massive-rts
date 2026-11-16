@@ -142,7 +142,7 @@ public partial class WaveEditorPlugin : EditorPlugin
             {
                 int count = enemies != null && enemies.TryGetValue(unit.Id, out int amount) ? amount : 0;
                 string id = unit.Id;
-                var value = new SpinBox { MinValue = 0, MaxValue = CommandSandbox.UnitCapacity - CommandMovement.SquadSize,
+                var value = new SpinBox { MinValue = 0, MaxValue = CommandSandbox.WaveUnitCapacity,
                     Step = 1, Value = count, CustomMinimumSize = new Vector2(85, 0) };
                 value.ValueChanged += amount => ChangeCount(scene, id, (int)amount, value);
                 counts.AddChild(new Label { Text = unit.DisplayName });
@@ -180,7 +180,7 @@ public partial class WaveEditorPlugin : EditorPlugin
 
         WaveList changed = Copy(waves);
         changed[selected] = replacement;
-        if (replacement.Enemies.Count == 0 || CountEnemies(changed) > CommandSandbox.UnitCapacity - CommandMovement.SquadSize)
+        if (replacement.Enemies.Count == 0 || CountEnemies(changed) > CommandSandbox.WaveUnitCapacity)
         {
             input.SetValueNoSignal(original != null && original.TryGetValue(id, out int old) ? old : 0);
             return;
@@ -191,7 +191,7 @@ public partial class WaveEditorPlugin : EditorPlugin
     private void AddWave(Node scene)
     {
         var waves = scene.Get(WavesProperty).As<WaveList>() ?? new WaveList();
-        if (CountEnemies(waves) >= CommandSandbox.UnitCapacity - CommandMovement.SquadSize) return;
+        if (CountEnemies(waves) >= CommandSandbox.WaveUnitCapacity) return;
         var wave = new WaveDefinition();
         wave.Enemies[roster[0].Id] = 1;
         WaveList changed = Copy(waves);
