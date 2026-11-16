@@ -305,3 +305,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — CARBON2 review: Fixed unfinished extractor retargeting, released workers when rigs are destroyed, and kept extractor footprints and Fabricator limits independent. Increased Worker size 2.5× with speed and health unchanged. Source reviewed, awaiting Godot playtest.
 
 - 2026-11-16 — Fortress Defense: Wired in shared hit and death feedback and used exact authored wall mesh bounds for gameplay obstacles. Source reviewed, awaiting Godot playtest.
+
+- 2026-11-16 — CARBON2: Moved Extractors into the Ctrl build tray. Placement targets eligible Carbon Deposits and dispatches a Worker; ordinary right-click movement no longer begins construction.

@@ -33,4 +33,4 @@ In Fortress Defense, tap Ctrl and choose **Laser Tower** to place one for 750 Ca
 
 ## CARBON2 selection
 
-The shared bottom HUD now describes Carbon Deposits as untapped, assigned, under construction, active (Carbon/s), or depleted. A single selected Worker shows a right-click deposit hint. Selected Extractors display building HP and active income or construction progress in the same existing bottom HUD frame; no second panel was added.
+The shared bottom HUD now describes Carbon Deposits as untapped, assigned, under construction, active (Carbon/s), or depleted. The **Carbon Extractor** entry in the Ctrl build tray lets you choose a deposit or unfinished rig. Placement assigns the nearest available Worker. Selected Extractors display building HP and active income or construction progress in the same existing bottom HUD frame; no second panel was added.

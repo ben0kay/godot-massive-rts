@@ -5,7 +5,7 @@ using Godot;
 
 namespace MassiveRts;
 
-internal enum CommandBuildType { Fabricator, LaserTower }
+internal enum CommandBuildType { Fabricator, LaserTower, Extractor }
 
 internal sealed class CommandBuildings
 {
@@ -109,29 +109,47 @@ internal sealed class CommandBuildings
         }
     }
 
-    // Worker order: select a Worker and right-click a Carbon deposit. The worker
-    // approaches its unobstructed edge, then constructs one real attackable building.
-    public bool AssignExtractor(int id, CarbonDeposit deposit)
+    public bool CanPlaceExtractor(CarbonDeposit deposit) => TryPlanExtractor(deposit, out _, out _);
+
+    public bool PlaceExtractor(CarbonDeposit deposit)
     {
-        if ((uint)id >= (uint)units.Count || units.Health[id] <= 0f ||
-            units.Type[id] != workerType || units.Faction[id] != Factions.Blue ||
-            deposit == null || !deposits.Contains(deposit) || deposit.Depleted ||
-            deposit.Extractor is { Destroyed: false, BuildProgress: >= 1f } ||
-            deposit.WorkerAssigned) return false;
-        float radius = units.Catalog[workerType].Footprint;
-        if (!TryExtractorWorksite(units.Position[id], deposit.Area, radius, out Vector3 goal))
-            return false;
-        for (int i = extractorJobs.Count - 1; i >= 0; i--)
-        {
-            if (extractorJobs[i].Worker != id) continue;
-            extractorJobs[i].Deposit.WorkerAssigned = false;
-            extractorJobs.RemoveAt(i);
-        }
-        movement.SetGoal(id, goal);
-        units.Target[id] = -1;
-        extractorJobs.Add(new ExtractorJob(id, deposit, units.OnTerrain(goal)));
+        if (!TryPlanExtractor(deposit, out int worker, out Vector3 goal)) return false;
+        movement.SetGoal(worker, goal);
+        units.Target[worker] = -1;
+        extractorJobs.Add(new ExtractorJob(worker, deposit, goal));
         deposit.WorkerAssigned = true;
         return true;
+    }
+
+    private bool TryPlanExtractor(CarbonDeposit deposit, out int worker, out Vector3 goal)
+    {
+        worker = -1;
+        goal = default;
+        if (!CanOperateCitadel || !GodotObject.IsInstanceValid(deposit) || !deposits.Contains(deposit) ||
+            deposit.Depleted || deposit.WorkerAssigned ||
+            deposit.Extractor is { Destroyed: true } or { BuildProgress: >= 1f }) return false;
+
+        float nearest = float.PositiveInfinity;
+        Vector2 center = (deposit.Area.Min + deposit.Area.Max) * 0.5f;
+        for (int id = 0; id < units.Count; id++)
+        {
+            if (units.Type[id] != workerType || units.Faction[id] != Factions.Blue ||
+                units.Health[id] <= 0f) continue;
+            float distance = ObstacleField.Xz(units.Position[id]).DistanceSquaredTo(center);
+            if (distance >= nearest || HasExtractorJob(id)) continue;
+            nearest = distance;
+            worker = id;
+        }
+
+        return worker >= 0 && TryExtractorWorksite(units.Position[worker], deposit.Area,
+            units.Catalog[workerType].Footprint, out goal);
+    }
+
+    private bool HasExtractorJob(int worker)
+    {
+        foreach (var job in extractorJobs)
+            if (job.Worker == worker) return true;
+        return false;
     }
 
     private bool TryExtractorWorksite(Vector3 from, ObstacleRectangle area, float radius, out Vector3 goal)
@@ -222,7 +240,7 @@ internal sealed class CommandBuildings
 
     public bool CanPlace(ObstacleRectangle area, CommandBuildType type)
     {
-        if (!FitsMap(area) || Carbon.Amount < Cost(type)) return false;
+        if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type)) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
         if (type == CommandBuildType.LaserTower && towerCount >= LaserTowerLimit) return false;
 

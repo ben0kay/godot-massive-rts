@@ -57,12 +57,14 @@ public partial class CommandBottomHud : Control
             () => PlaceRequested?.Invoke(CommandBuildType.Fabricator), UIButtonStyle.Compact));
         menu.AddChild(UIButtonFactory.Create($"Laser Tower  ·  {CommandBuildings.LaserTowerCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.LaserTower), UIButtonStyle.Compact));
+        menu.AddChild(UIButtonFactory.Create("Carbon Extractor",
+            () => PlaceRequested?.Invoke(CommandBuildType.Extractor), UIButtonStyle.Compact));
 
         var context = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         row.AddChild(context);
         context.AddChild(soldiers);
         context.AddChild(workerHint);
-        workerHint.Text = "Worker: right-click a Carbon Deposit to construct an Extractor";
+        workerHint.Text = "To build an Extractor, open Ctrl Build and choose a Carbon Deposit.";
         context.AddChild(structureView);
         context.AddChild(depositView);
         depositView.AddChild(new Label { Text = "Carbon Deposit" });

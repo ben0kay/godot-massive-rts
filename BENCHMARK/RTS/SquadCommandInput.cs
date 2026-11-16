@@ -20,7 +20,7 @@ public partial class SquadCommandInput : Node
     private bool placing;
     private CommandBuildType buildType;
     private Mesh fabricatorPreview;
-    private readonly BoxMesh towerPreview = new();
+    private readonly BoxMesh footprintPreview = new();
     private bool ctrlCandidate;
     private bool leftControl, rightControl;
 
@@ -39,7 +39,7 @@ public partial class SquadCommandInput : Node
             overlay.AttackMove = false;
             placing = true;
             buildType = type;
-            ghost.Mesh = type == CommandBuildType.LaserTower ? towerPreview : fabricatorPreview;
+            ghost.Mesh = type == CommandBuildType.Fabricator ? fabricatorPreview : footprintPreview;
             hud.MenuOpen = false;
         };
     }
@@ -89,8 +89,11 @@ public partial class SquadCommandInput : Node
                 if (click.ButtonIndex == MouseButton.Right) EndPlacement(true);
                 else if (click.ButtonIndex == MouseButton.Left)
                 {
-                    if (TryGround(click.Position, out Vector3 point) && buildings.Place(buildings.Snap(point, buildType), buildType))
-                        EndPlacement(true);
+                    bool placed = buildType == CommandBuildType.Extractor
+                        ? buildings.PlaceExtractor(PickExtractorSite(click.Position))
+                        : TryGround(click.Position, out Vector3 point) &&
+                            buildings.Place(buildings.Snap(point, buildType), buildType);
+                    if (placed) EndPlacement(true);
                 }
                 else return;
                 GetViewport().SetInputAsHandled();
@@ -119,25 +122,6 @@ public partial class SquadCommandInput : Node
         {
             overlay.AttackMove = false;
             overlay.QueueRedraw();
-        }
-
-        // Give one selected Worker a build order by right-clicking a Carbon deposit.
-        // Other right-click movement/formation commands keep their existing behavior.
-        if (input is InputEventMouseButton
-            { Pressed: true, ButtonIndex: MouseButton.Right } depositClick &&
-            overlay.Selection.Count > 0)
-        {
-            var picked = buildings.Pick(overlay.View, depositClick.Position, out CarbonDeposit deposit);
-            deposit ??= (picked as CarbonExtractor)?.Deposit;
-            if (deposit != null)
-                foreach (int id in overlay.Selection)
-                    if (buildings.AssignExtractor(id, deposit))
-                    {
-                        CancelGesture();
-                        overlay.AttackMove = false;
-                        GetViewport().SetInputAsHandled();
-                        return;
-                    }
         }
 
         if (buildings.CanSetRally(overlay.Building) &&
@@ -213,27 +197,48 @@ public partial class SquadCommandInput : Node
     {
         if (held != MouseButton.None && !Input.IsMouseButtonPressed(held)) CancelGesture();
         if (held == MouseButton.Right || attackFormationDrag) UpdateFormation(overlay.Pointer);
-        if (placing)
-        {
-            ghost.Visible = TryGround(GetViewport().GetMousePosition(), out Vector3 point);
-            if (ghost.Visible)
-            {
-                var area = buildings.Snap(point, buildType);
-                ghost.Position = buildings.Center(area);
-                if (buildType == CommandBuildType.LaserTower)
-                {
-                    Vector2 size = area.Max - area.Min;
-                    var dimensions = new Vector3(size.X, 1f, size.Y);
-                    if (towerPreview.Size != dimensions) towerPreview.Size = dimensions;
-                    ghost.Position += Vector3.Up * 0.5f;
-                }
-                ((StandardMaterial3D)ghost.MaterialOverride).AlbedoColor = buildings.CanPlace(area, buildType)
-                    ? new Color(0.2f, 0.92f, 1f, 0.38f) : new Color(1f, 0.22f, 0.24f, 0.40f);
-            }
-        }
+        if (placing) UpdateBuildPreview(GetViewport().GetMousePosition());
         if (overlay.Building?.Destroyed == true ||
             overlay.Deposit != null && !GodotObject.IsInstanceValid(overlay.Deposit)) ClearSelection();
         if (overlay.Selection.Count > 0 || overlay.Building != null || held != MouseButton.None) overlay.QueueRedraw();
+    }
+
+    private CarbonDeposit PickExtractorSite(Vector2 pointer)
+    {
+        var picked = buildings.Pick(overlay.View, pointer, out CarbonDeposit deposit);
+        return deposit ?? (picked as CarbonExtractor)?.Deposit;
+    }
+
+    private void UpdateBuildPreview(Vector2 pointer)
+    {
+        bool valid;
+        ObstacleRectangle area;
+        if (buildType == CommandBuildType.Extractor)
+        {
+            var deposit = PickExtractorSite(pointer);
+            ghost.Visible = deposit != null;
+            if (deposit == null) return;
+            area = deposit.Area;
+            valid = buildings.CanPlaceExtractor(deposit);
+        }
+        else
+        {
+            ghost.Visible = TryGround(pointer, out Vector3 point);
+            if (!ghost.Visible) return;
+            area = buildings.Snap(point, buildType);
+            valid = buildings.CanPlace(area, buildType);
+        }
+
+        ghost.Position = buildings.Center(area);
+        if (buildType != CommandBuildType.Fabricator)
+        {
+            Vector2 size = area.Max - area.Min;
+            var dimensions = new Vector3(size.X, 1f, size.Y);
+            if (footprintPreview.Size != dimensions) footprintPreview.Size = dimensions;
+            ghost.Position += Vector3.Up * 0.5f;
+        }
+        ((StandardMaterial3D)ghost.MaterialOverride).AlbedoColor = valid
+            ? new Color(0.2f, 0.92f, 1f, 0.38f) : new Color(1f, 0.22f, 0.24f, 0.40f);
     }
 
     private void CancelGesture()
