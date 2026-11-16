@@ -127,7 +127,8 @@ public partial class SquadCommandInput : Node
             { Pressed: true, ButtonIndex: MouseButton.Right } depositClick &&
             overlay.Selection.Count > 0)
         {
-            buildings.Pick(overlay.View, depositClick.Position, out CarbonDeposit deposit);
+            var picked = buildings.Pick(overlay.View, depositClick.Position, out CarbonDeposit deposit);
+            deposit ??= (picked as CarbonExtractor)?.Deposit;
             if (deposit != null)
                 foreach (int id in overlay.Selection)
                     if (buildings.AssignExtractor(id, deposit))

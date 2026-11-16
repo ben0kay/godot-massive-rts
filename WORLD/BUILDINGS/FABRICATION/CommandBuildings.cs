@@ -224,8 +224,7 @@ internal sealed class CommandBuildings
     {
         if (!FitsMap(area) || Carbon.Amount < Cost(type)) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
-        if (type == CommandBuildType.LaserTower ? towerCount >= LaserTowerLimit
-            : structures.Count - towerCount >= FabricatorLimit + 1) return false;
+        if (type == CommandBuildType.LaserTower && towerCount >= LaserTowerLimit) return false;
 
         FoundationHeight(area, out float relief);
         if (relief > 0.5f) return false;
@@ -234,11 +233,14 @@ internal sealed class CommandBuildings
             if (Overlaps(min, max, deposit.Area)) return false;
         foreach (var wall in authoredWalls)
             if (Overlaps(min, max, wall)) return false;
+        int fabricators = 0;
         foreach (var building in structures)
         {
-            if (building.Destroyed) continue;
+            if (building.Destroyed || building is CarbonExtractor) continue;
+            if (building.Production != null) fabricators++;
             if (Overlaps(min, max, building.Area)) return false;
         }
+        if (type == CommandBuildType.Fabricator && fabricators >= FabricatorLimit) return false;
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0) continue;
@@ -301,7 +303,7 @@ internal sealed class CommandBuildings
     {
         structures.Add(building);
         if (building.View.GetParent() == null) root.AddChild(building.View);
-        RebuildObstacles();
+        if (building is not CarbonExtractor) RebuildObstacles();
     }
 
     private void RebuildObstacles()
@@ -310,27 +312,35 @@ internal sealed class CommandBuildings
         areas.AddRange(authoredWalls);
         foreach (var deposit in deposits) areas.Add(deposit.Area);
         foreach (var structure in structures)
-            if (!structure.Destroyed) areas.Add(structure.Area);
+            if (!structure.Destroyed && structure is not CarbonExtractor) areas.Add(structure.Area);
         field = areas.Count == 0 ? null : new ObstacleField(areas.ToArray());
         movement.SetObstacles(field);
     }
 
     public void RemoveDestroyed()
     {
-        bool removed = false;
+        bool removed = false, obstaclesChanged = false;
         foreach (var building in structures)
         {
             if (!building.Destroyed) continue;
-            if (building is CarbonExtractor extractor) extractor.Deposit.Extractor = null;
-            else if (building != Citadel && building.Production == null) defenses?.RemoveTower(building);
+            if (building is CarbonExtractor extractor)
+            {
+                var deposit = extractor.Deposit;
+                extractorJobs.RemoveAll(job => job.Deposit == deposit);
+                deposit.WorkerAssigned = false;
+                deposit.Extractor = null;
+            }
+            else
+            {
+                if (building != Citadel && building.Production == null) defenses?.RemoveTower(building);
+                obstaclesChanged = true;
+            }
             building.View.QueueFree();
             removed = true;
         }
         if (removed)
-        {
             structures.RemoveAll(building => building.Destroyed);
-            RebuildObstacles();
-        }
+        if (obstaclesChanged) RebuildObstacles();
     }
 
     public void Step(float delta)
