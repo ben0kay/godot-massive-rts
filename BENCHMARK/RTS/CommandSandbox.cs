@@ -6,6 +6,7 @@ using Godot;
 
 namespace MassiveRts;
 
+[Tool]
 public partial class CommandSandbox : Node3D
 {
     private CommandMovement movement;
@@ -24,7 +25,28 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
-    [Export(PropertyHint.Range, "64,5000,4")] public float MapSize { get; set; } = 5000f;
+    private float mapSize = 5000f;
+    private bool reducedMapSize;
+
+    [Export(PropertyHint.Range, "64,5000,4")]
+    public float MapSize
+    {
+        get => mapSize;
+        set
+        {
+            if (!float.IsFinite(value)) return;
+            float size = Mathf.Round(Mathf.Clamp(value, 64f, 5000f) / 4f) * 4f;
+            if (size == mapSize) return;
+            if (Engine.IsEditorHint() && IsInsideTree())
+            {
+                reducedMapSize = size < mapSize;
+                mapSize = size;
+                UpdateConfigurationWarnings();
+                return;
+            }
+            mapSize = size;
+        }
+    }
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
@@ -33,9 +55,53 @@ public partial class CommandSandbox : Node3D
     private double hudClock;
     private double selectionClock;
 
+    public override string[] _GetConfigurationWarnings()
+    {
+        if (!IsInsideTree()) return System.Array.Empty<string>();
+        var warnings = new List<string>();
+        if (reducedMapSize)
+            warnings.Add("The map was reduced. Content beyond the new bounds may be skipped or repositioned when you play. Scene nodes are kept.");
+
+        float half = MapSize * 0.5f;
+        bool Outside(Vector3 point, float padding = 0f) =>
+            Mathf.Abs(point.X) + padding > half || Mathf.Abs(point.Z) + padding > half;
+        var outside = new List<string>();
+        foreach (string name in new[] { "CameraStart", "BlueSpawn", "Citadel", "HostileFabricator" })
+        {
+            if (name == "BlueSpawn" && !SpawnDefaultBlueSquad) continue;
+            float padding = name == "Citadel" ? 5f : name == "HostileFabricator" ? 3f : 0f;
+            if (GetNodeOrNull<Node3D>(name) is Node3D item && Outside(item.GlobalPosition, padding))
+                outside.Add(name);
+        }
+        if (GetNodeOrNull<Node3D>("Obstacles") is Node3D obstacles)
+            foreach (Node child in obstacles.GetChildren())
+                if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh)
+                {
+                    Aabb bounds = mesh.GlobalTransform * mesh.GetAabb();
+                    if (Outside(bounds.Position) || Outside(bounds.End)) outside.Add(mesh.Name.ToString());
+                }
+        if (GetNodeOrNull<Node3D>("StartingUnits") is Node3D startingUnits)
+            foreach (Node child in startingUnits.GetChildren())
+                if (child is CommandUnitPlacement placement && Outside(placement.GlobalPosition))
+                    outside.Add(placement.Name.ToString());
+        if (GetNodeOrNull<Node3D>("Terrain") is Node3D terrain)
+            foreach (Node child in terrain.GetChildren())
+                if (child is TerrainHill hill && Outside(hill.GlobalPosition, hill.Radius))
+                    outside.Add(hill.Name.ToString());
+
+        if (outside.Count > 0)
+            warnings.Add($"Review these objects outside the {MapSize:0} × {MapSize:0} map bounds: {string.Join(", ", outside)}.");
+        return warnings.ToArray();
+    }
+
     public override void _Ready()
     {
-        float halfWidth = Mathf.Round(Mathf.Clamp(MapSize, 64f, 5000f) / 4f) * 2f;
+        if (Engine.IsEditorHint())
+        {
+            UpdateConfigurationWarnings();
+            return;
+        }
+        float halfWidth = MapSize * 0.5f;
         if (GetNodeOrNull<MeshInstance3D>("Ground") is MeshInstance3D ground &&
             ground.GetActiveMaterial(0) is ShaderMaterial shared)
         {
@@ -225,6 +291,7 @@ public partial class CommandSandbox : Node3D
 
     public override void _Process(double delta)
     {
+        if (Engine.IsEditorHint()) return;
         summary.Sample(delta);
         hudClock += delta;
         selectionClock += delta;
@@ -253,7 +320,7 @@ public partial class CommandSandbox : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
-        if (waves.Defeat || waves.Victory) return;
+        if (Engine.IsEditorHint() || waves.Defeat || waves.Victory) return;
         int previousCount = units.Count;
         buildings.Step((float)delta);
         bool changed = waves.Step((float)delta);

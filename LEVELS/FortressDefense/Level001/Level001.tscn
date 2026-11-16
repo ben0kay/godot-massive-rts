@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
 
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
+MapSize = 1000.0
 SpawnDefaultBlueSquad = false
 
 [node name="Ground" parent="." index="0"]
