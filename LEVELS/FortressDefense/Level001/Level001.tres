@@ -7,5 +7,5 @@ script = ExtResource("1")
 Id = "Level001"
 DisplayName = "Level 001"
 Order = 1
-Description = "Blank Open RTS map for hand authoring in Godot."
+Description = "Defend the Citadel with a single Long Triangle Marksman and an authored wall."
 ScenePath = "res://LEVELS/FortressDefense/Level001/Level001.tscn"
