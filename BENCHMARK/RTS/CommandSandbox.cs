@@ -58,6 +58,17 @@ public partial class CommandSandbox : Node3D
 
     public override void _EnterTree()
     {
+        // Campaign levels keep a matching resource beside their scene. Recover it
+        // when an inherited scene loses its exported resource assignment.
+        if (levelSettings == null && !string.IsNullOrEmpty(SceneFilePath))
+        {
+            string settingsPath = SceneFilePath.GetBaseName() + ".tres";
+            if (ResourceLoader.Exists(settingsPath) &&
+                GD.Load<Resource>(settingsPath) is LevelDefinition settings &&
+                settings.ScenePath == SceneFilePath)
+                levelSettings = settings;
+        }
+
         if (!Engine.IsEditorHint()) return;
         lastMapSize = MapSize;
         if (levelSettings != null) levelSettings.Changed += OnLevelSettingsChanged;

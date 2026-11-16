@@ -9,4 +9,4 @@ DisplayName = "Level 001"
 Order = 1
 Description = "Defend the Citadel with a single Long Triangle Marksman and an authored wall."
 ScenePath = "res://LEVELS/FortressDefense/Level001/Level001.tscn"
-MapSize = 500.0
+MapSize = 256.0

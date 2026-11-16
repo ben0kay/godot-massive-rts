@@ -297,3 +297,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — Wall authoring: Persisted per-wall red-handle dimensions in level scenes and verified separate sizes survive an editor save and runtime reload.
 
 - 2026-11-16 — Wall authoring: Exposed per-wall dimensions as Wall Size in the Inspector. Verified both Inspector and mesh edits save and reload independently.
+
+- 2026-11-16 — Fortress Defense: Restored Level 001 map settings at 256 × 256 and added a matching-resource fallback when a level scene loses its settings assignment. Source checked, awaiting Godot playtest.
