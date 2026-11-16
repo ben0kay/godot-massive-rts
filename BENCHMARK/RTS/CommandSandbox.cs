@@ -53,6 +53,8 @@ public partial class CommandSandbox : Node3D
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public WaveSpawnPattern EnemySpawnPattern { get; set; }
     [Export(PropertyHint.Range, "1,24,0.5")] public float EnemySpawnSpacing { get; set; } = 3f;
+    // Stream/Scatter only: higher units-per-second means shorter gaps between enemy spawns.
+    [Export(PropertyHint.Range, "1,60,0.25")] public float EnemySpawnRate { get; set; } = 6.25f;
     [Export(PropertyHint.Range, "2,24,1")] public int EnemiesPerRow { get; set; } = 7;
     [Export(PropertyHint.Range, "0.25,10,0.25")] public float EnemyRowDelay { get; set; } = 1.5f;
     [Export] public Godot.Collections.Array<WaveDefinition> WaveDefinitions { get; set; } = new();
@@ -150,7 +152,8 @@ public partial class CommandSandbox : Node3D
         army.Initialize(units, FacetedSoldierMeshes.Create(catalog), ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows);
 
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
-            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing, EnemiesPerRow, EnemyRowDelay);
+            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing,
+            EnemiesPerRow, EnemyRowDelay, EnemySpawnRate);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);
         projectileRenderer.Initialize(2048, catalog.Projectiles);

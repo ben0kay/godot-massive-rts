@@ -281,3 +281,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Allocated wave IDs separately from starting and produced troops, removed the raised Level 001 ground override, and enabled shared soldier shadows in command levels.
 
 - 2026-11-15 — CARBON1 / WORKER1 / HUD1: Added authored Carbon deposits and a paid Citadel Worker queue, and unified command selection and build controls in one bottom HUD.
+
+- 2026-11-15 — WAVE spawn rate: Added editable 1–60 units/sec Stream/Scatter spawn frequency to CommandSandbox and Wave Editor (default 6.25/s matching previous 0.16s interval). Retained fractional tick timing for high rates, capped to one attempt/tick, kept Rows/row delay unchanged; source checked, awaiting Godot owner validation.

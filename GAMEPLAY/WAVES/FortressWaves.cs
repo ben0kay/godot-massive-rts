@@ -6,7 +6,8 @@ namespace MassiveRts;
 
 internal sealed class FortressWaves
 {
-    private const float SpawnInterval = 0.16f;
+    // Preserve the existing retry cadence when one or more row spawn slots are blocked.
+    private const float RowSpawnRetrySeconds = 0.16f;
     private const int AcquisitionInterval = 6;
     private const float DefenderMeleeDetectionMultiplier = 2f;
     private const float ContactTolerance = 0.02f;
@@ -16,7 +17,7 @@ internal sealed class FortressWaves
     private readonly Vector3 inward, sideways;
     private readonly float citadelAlongEdge;
     private readonly WaveSpawnPattern spawnPattern;
-    private readonly float laneSpacing, rowDelay;
+    private readonly float laneSpacing, rowDelay, unitSpawnInterval;
     private readonly int lanesPerSide, rowSize;
     private readonly RandomNumberGenerator spawnRandom = new();
     private readonly Vector2 citadelMin, citadelMax;
@@ -50,7 +51,7 @@ internal sealed class FortressWaves
 
     public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, WaveSpawnEdge edge,
         Godot.Collections.Array<WaveDefinition> definitions, float intermission, WaveSpawnPattern pattern,
-        float spacing, int enemiesPerRow, float secondsBetweenRows)
+        float spacing, int enemiesPerRow, float secondsBetweenRows, float unitsPerSecond)
     {
         this.units = units;
         this.buildings = buildings;
@@ -63,6 +64,8 @@ internal sealed class FortressWaves
         lanesPerSide = Mathf.Min(12, Mathf.FloorToInt(usableHalfWidth / laneSpacing));
         rowSize = Mathf.Clamp(enemiesPerRow, 1, lanesPerSide * 2 + 1);
         rowDelay = Mathf.Clamp(secondsBetweenRows, 0.25f, 10f);
+        float spawnRate = float.IsFinite(unitsPerSecond) ? Mathf.Clamp(unitsPerSecond, 1f, 60f) : 6.25f;
+        unitSpawnInterval = 1f / spawnRate;
         inward = edge switch
         {
             WaveSpawnEdge.North => Vector3.Back,
@@ -226,15 +229,21 @@ internal sealed class FortressWaves
         if (nextSpawn == wave.Length) return;
         spawnClock -= delta;
         if (spawnClock > 0) return;
-        spawnClock = SpawnInterval;
         if (spawnPattern == WaveSpawnPattern.Rows)
         {
+            spawnClock = RowSpawnRetrySeconds;
             int remainingInRow = Mathf.Min(wave.Length - nextSpawn, rowSize - nextSpawn % rowSize);
             for (int i = 0; i < remainingInRow; i++)
                 if (!TryReleaseSoldier(wave[nextSpawn], nextSpawn % rowSize)) return;
             spawnClock = rowDelay;
         }
-        else TryReleaseSoldier(wave[nextSpawn], 0);
+        else
+        {
+            // Preserve fractional physics-step time for accurate high spawn rates,
+            // but cap catch-up to one attempt per tick and keep blocked-lane retries paced.
+            spawnClock = Mathf.Max(0f, spawnClock + unitSpawnInterval);
+            TryReleaseSoldier(wave[nextSpawn], 0);
+        }
     }
 
     private bool TryReleaseSoldier(byte type, int column)

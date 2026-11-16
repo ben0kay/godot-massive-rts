@@ -121,6 +121,16 @@ public partial class WaveEditorPlugin : EditorPlugin
             AddSpawnNumber(formation, scene, "Units per row", nameof(CommandSandbox.EnemiesPerRow), 2, 24, 1, "");
             AddSpawnNumber(formation, scene, "Row delay", nameof(CommandSandbox.EnemyRowDelay), 0.25, 10, 0.25, "s");
         }
+        else
+        {
+            // The editor saves this scene-root property through its existing undo/redo path.
+            var cadence = new HBoxContainer();
+            form.AddChild(cadence);
+            AddSpawnNumber(cadence, scene, "Spawn rate", nameof(CommandSandbox.EnemySpawnRate),
+                1, 60, 0.25, "units/s");
+            cadence.AddChild(new Label { Text = "Higher = faster · Stream/Scatter",
+                MouseFilter = Control.MouseFilterEnum.Ignore });
+        }
 
         var controls = new HBoxContainer();
         form.AddChild(controls);
