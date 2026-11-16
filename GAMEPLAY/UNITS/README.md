@@ -53,4 +53,4 @@ The new `long_triangle_marksman` (`LongTriangleMarksman.tres`) uses the same 0.8
 
 **Turn rate** in Entity Editor → Movement controls how quickly a directional unit rotates on the ground and aims in combat. It applies in both the benchmark and Fortress Defense. Circles skip heading updates. Older resources with a zero turn rate use 300°/s for directional shapes.
 
-Worker (`worker`, index 9) is a compact diamond utility unit produced by the Citadel. Its allowed targets are **None**, so it can move and take damage without initiating combat. Its first milestone covers production and movement.
+Worker (`worker`, index 9) is a compact rectangular utility unit with a front drill produced by the Citadel. Its allowed targets are **None**, so it can move and take damage without initiating combat. Its first milestone covers production and movement.

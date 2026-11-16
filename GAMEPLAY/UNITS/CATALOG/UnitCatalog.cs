@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -21,13 +21,22 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         new(0.34f, -1f), new(1f, -1f), new(1f, 0.84f), new(0.34f, 0.84f),
         new(0.34f, 0.23f), new(-0.34f, 0.23f), new(-0.34f, 0.84f), new(-1f, 0.84f)
     };
-    public float Footprint => IsHFrame ? Mathf.Sqrt(RadiusX * RadiusX + RadiusZ * RadiusZ) : Mathf.Max(RadiusX, RadiusZ);
+    private static readonly Vector2[] DrillRigVertices =
+    {
+        new(-1f, -0.5f), new(-0.36f, -0.5f), new(0f, -1f), new(0.36f, -0.5f),
+        new(1f, -0.5f), new(1f, 0.72f), new(-1f, 0.72f)
+    };
+
+    public float Footprint => IsDrillRig
+        ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
+        : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
     public float BarrelWidth => RadiusX * 0.25f;
     public float BarrelFront => RadiusZ;
     public float BarrelBack => RadiusZ * 0.38f;
 
     public Vector2 Vertex(int index)
     {
+        if (IsDrillRig) return DrillRigVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsHFrame) return HVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsChevron) return ChevronVertices[index] * (RadiusX * 2f);
         float angle = Rotation + Mathf.Tau * index / Sides;
@@ -64,6 +73,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
+            UnitShape.DrillRig => new(DrillRigVertices.Length, halfWidth, width * 0.70f, 0f, IsDrillRig: true),
             UnitShape.HFrame => new(12, halfWidth, width * 0.57f, 0f, IsHFrame: true),
             UnitShape.Hexagon => new(6, halfWidth, halfWidth, -Mathf.Pi * 0.5f),
             _ => throw new ArgumentOutOfRangeException(nameof(shape))

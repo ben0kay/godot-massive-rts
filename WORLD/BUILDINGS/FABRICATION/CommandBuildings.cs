@@ -206,6 +206,9 @@ internal sealed class CommandBuildings
         }
     }
 
+    public bool CanSetRally(CommandStructure building) =>
+        building != null && building.Ready && !building.Destroyed && (building == Citadel || building.Release != null);
+
     public bool CanRally(Vector3 point) =>
         OnMap(point, units.Catalog.MaxFootprint) &&
         field?.IntersectsCircle(ObstacleField.Xz(point), units.Catalog.MaxFootprint) != true;
@@ -215,8 +218,7 @@ internal sealed class CommandBuildings
         building.UnitCapBlocked = units.Count >= units.Position.Length - ReservedWaveSlots;
         if (building.UnitCapBlocked) return false;
         float radius = units.Catalog[type].Footprint;
-        float front = (building.Area.Max.Y - building.Area.Min.Y) * 0.5f;
-        Vector3 spawn = building.Center + Vector3.Back * (front + radius + 0.15f);
+        Vector3 spawn = building.FrontEdge + Vector3.Back * (radius + 0.15f);
         Vector3 exit = spawn + Vector3.Back * (radius + 1.0f);
         if (!OnMap(spawn, radius) || !OnMap(exit, radius) || !SpawnClear(spawn, radius) ||
             field?.IntersectsCircle(ObstacleField.Xz(spawn), radius) == true ||

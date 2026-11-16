@@ -63,6 +63,12 @@ public static class FacetedSoldierMeshes
             return surface.Commit();
         }
 
+        if (outline.IsDrillRig)
+        {
+            AppendDrillRig(surface, outline, height);
+            return surface.Commit();
+        }
+
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
             Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null, sideShade: SoldierSideShade);
         if (outline.IsChevron)
@@ -73,6 +79,30 @@ public static class FacetedSoldierMeshes
                 new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f), SoldierSideShade);
         }
         return surface.Commit();
+    }
+
+    private static void AppendDrillRig(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        AppendBeveledRectangle(surface, new Vector3(0f, 0f, z * 0.11f),
+            new Vector3(x * 2f, height, z * 1.22f), Colors.White, SoldierSideShade);
+
+        var steel = new Color(0.78f, 0.78f, 0.78f);
+        var baseCenter = new Vector3(0f, height * 0.08f, -z * 0.55f);
+        AppendBeveledRectangle(surface, baseCenter,
+            new Vector3(x * 0.72f, height * 0.62f, z * 0.24f), steel * 0.75f, SoldierSideShade);
+
+        const int facets = 6;
+        float radius = x * 0.34f;
+        var tip = new Vector3(0f, baseCenter.Y, -z);
+        for (int i = 0; i < facets; i++)
+        {
+            float first = Mathf.Tau * i / facets, second = Mathf.Tau * (i + 1) / facets;
+            Vector3 a = baseCenter + new Vector3(Mathf.Cos(first), Mathf.Sin(first), 0f) * radius;
+            Vector3 b = baseCenter + new Vector3(Mathf.Cos(second), Mathf.Sin(second), 0f) * radius;
+            Vector3 normal = (tip - a).Cross(b - a).Normalized();
+            AddTriangle(surface, a, tip, b, normal, steel * Mathf.Lerp(0.58f, 1f, (normal.Y + 1f) * 0.5f));
+        }
     }
 
     public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint, float sideShade = 1f)

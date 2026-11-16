@@ -21,6 +21,7 @@ internal sealed class CommandStructure : StructureHealth
     public float Built { get; private set; }
     public readonly FabricatorProduction Production;
     public readonly Node3D View;
+    public Vector3 FrontEdge => Center + Vector3.Back * ((Area.Max.Y - Area.Min.Y) * 0.5f);
     public Vector3? Rally;
     public bool UnitCapBlocked;
     private readonly MeshInstance3D solid, hologram;

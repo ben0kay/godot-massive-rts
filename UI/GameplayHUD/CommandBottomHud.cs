@@ -26,6 +26,7 @@ public partial class CommandBottomHud : Control
     private readonly CheckButton automatic = new() { Text = "Automatic production" };
     private readonly Button clear = new() { Text = "Clear rally" };
     private readonly ProgressBar progress = new() { CustomMinimumSize = new Vector2(270, 16) };
+    private readonly HBoxContainer rallyControls = new();
     private HBoxContainer controls;
     private int previousCarbon = -1;
     private CommandStructure selected;
@@ -92,14 +93,15 @@ public partial class CommandBottomHud : Control
         productionDetails.AddChild(progress);
         productionDetails.AddChild(status);
         productionDetails.AddChild(automatic);
-        productionDetails.AddChild(rally);
-        productionDetails.AddChild(clear);
+        structureView.AddChild(rallyControls);
+        rallyControls.AddChild(rally);
+        rallyControls.AddChild(clear);
         types.ItemSelected += index =>
         {
             if (selected?.Release != null && selected.Ready) selected.Production.RecipeIndex = recipeTypes[(int)index];
         };
         automatic.Toggled += enabled => { if (selected?.Production != null) selected.Production.Automatic = enabled; };
-        clear.Pressed += () => { if (selected != null) selected.Rally = null; };
+        clear.Pressed += () => { if (buildings.CanSetRally(selected)) selected.Rally = null; };
     }
 
     internal void Refresh(CommandBuildings buildings, UnitState units, ReadOnlySpan<int> selection, CommandStructure building, CarbonDeposit deposit)
@@ -133,6 +135,12 @@ public partial class CommandBottomHud : Control
             !building.Ready ? $"Fabricator   ·   Constructing {building.Built:P0}" :
             $"Fabricator   ·   {building.Health:N0} / {building.MaxHealth:N0} HP";
         title.Text += $"   ·   {buildings.ArmourName(building)} armour";
+        rallyControls.Visible = buildings.CanSetRally(building);
+        if (rallyControls.Visible)
+        {
+            rally.Text = building.Rally.HasValue ? "Rally set · Right-click to move" : "No rally · Right-click terrain to set";
+            clear.Disabled = !building.Rally.HasValue;
+        }
         if (!controls.Visible) return;
         if (changed || !controlsWereVisible)
         {
@@ -154,8 +162,6 @@ public partial class CommandBottomHud : Control
         progress.Value = production.Progress * 100;
         status.Text = building.UnitCapBlocked && production.Status == "Exit Blocked"
             ? "Exit Blocked · Unit cap reached" : production.Status;
-        rally.Text = building.Rally.HasValue ? "Rally set · Right-click to move" : "No rally · Right-click terrain to set";
-        clear.Disabled = !building.Rally.HasValue;
     }
 
     private void RefreshWorkers(CommandBuildings buildings)

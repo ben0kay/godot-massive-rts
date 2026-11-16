@@ -29,7 +29,7 @@ public partial class CommandOverlay : RectangleDimensions
             if (Units.Health[id] > 0) DrawFootprint(Units.Position[id], Radius(id), SelectionInk);
         if (Building?.Rally is Vector3 rally && !Building.Destroyed)
         {
-            Vector3 gate = Building.Center + Vector3.Back * 3f;
+            Vector3 gate = Building.FrontEdge;
             DrawLine(View.UnprojectPosition(gate), View.UnprojectPosition(rally), GhostInk, 1.25f, true);
             DrawFootprint(rally, 0.65f, SelectionInk);
         }
