@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://3vusufn7lcgk"]
 
-[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -8,15 +8,12 @@ Id = "square_infantry"
 DisplayName = "Strong Infantry"
 Role = "Hard-hitting armoured melee"
 Shape = 1
-Width = 0.8
 Height = 0.4125
-Health = 85.0
 Speed = 4.0
 TurnDegreesPerSecond = 270.0
+ArmourClass = "Medium"
+Health = 85.0
+ChargeResistance = 0.45
 Damage = 12.0
 Interval = 1.1
 Reach = 1.8
-Armour = 0.0
-ArmourClass = "Medium"
-Style = 0
-ChargeResistance = 0.45

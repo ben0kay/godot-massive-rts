@@ -1,32 +1,54 @@
 [gd_scene format=3 uid="uid://c3ihm5yq5r0ty"]
 
-[ext_resource type="PackedScene" path="res://BENCHMARK/RTS/CommandSandbox.tscn" id="1_1oal4"]
+[ext_resource type="PackedScene" uid="uid://di8v7bnl4y7og" path="res://BENCHMARK/RTS/CommandSandbox.tscn" id="1_1oal4"]
+[ext_resource type="Script" uid="uid://nnntsoysrjoj" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2_4crng"]
 [ext_resource type="PackedScene" path="res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn" id="2_uk3k8"]
-[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres" id="3_uk3k8"]
+[ext_resource type="Resource" uid="uid://bprdem5fgqmkh" path="res://GAMEPLAY/UNITS/DEFINITIONS/LongTriangleMarksman.tres" id="3_uk3k8"]
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
+
+[sub_resource type="Resource" id="Resource_gfqfu"]
+script = ExtResource("2_4crng")
+Enemies = Dictionary[String, int]({
+"circle_infantry": 500
+})
+
+[sub_resource type="Resource" id="Resource_bbsqs"]
+script = ExtResource("2_4crng")
+Enemies = Dictionary[String, int]({
+"circle_infantry": 500,
+"triangle_archer": 100
+})
+
+[sub_resource type="Resource" id="Resource_otgem"]
+script = ExtResource("2_4crng")
+Enemies = Dictionary[String, int]({
+"circle_infantry": 400,
+"diamond_cavalry": 50,
+"square_infantry": 200,
+"triangle_archer": 150
+})
+
+[sub_resource type="Resource" id="Resource_on2mr"]
+script = ExtResource("2_4crng")
+Enemies = Dictionary[String, int]({
+"chevron_artillery": 5,
+"circle_infantry": 1,
+"pentagon_elite": 100
+})
 
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
 MapSize = 1000.0
-EnemySpawnPattern = 1
 SpawnDefaultBlueSquad = false
+EnemySpawnPattern = 1
+EnemySpawnSpacing = 24.0
+WaveDefinitions = Array[ExtResource("2_4crng")]([SubResource("Resource_gfqfu"), SubResource("Resource_bbsqs"), SubResource("Resource_otgem"), SubResource("Resource_on2mr")])
+BetweenWavesSeconds = 30.0
 
-[node name="Ground" parent="." index="0"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.056096077, -0.067583464, 0.074611664)
+[node name="Ground" parent="." index="0" unique_id=959569258]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.20691395, 0.27296218, -0.2360115)
 
-[node name="UnitPlacement" parent="StartingUnits" index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]
+[node name="UnitPlacement" parent="StartingUnits" parent_id_path=PackedInt32Array(353634270) index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]
 Unit = ExtResource("3_uk3k8")
 
-[node name="CameraStart" parent="." index="3"]
-transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0, 0, 0)
-
-[node name="BlueSpawn" parent="." index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.65)
-
-[node name="Citadel" parent="." index="5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -13)
-
-[node name="HostileFabricator" parent="." index="6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 0, 14)
-
-[node name="CommandWall" parent="Obstacles" index="0" unique_id=1162853422 instance=ExtResource("4_gfqfu")]
+[node name="CommandWall" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="0" unique_id=1162853422 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 1, -2)

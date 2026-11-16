@@ -14,7 +14,6 @@ SizeMultiplier = 0.9
 Speed = 2.7
 TurnDegreesPerSecond = 180.0
 Health = 285.0
-Armour = 0.0
 ChargeResistance = 1.2
 Damage = 22.0
 Interval = 1.65

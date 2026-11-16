@@ -1,8 +1,7 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://camyruw8fxra0"]
 
-[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
-
-[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/LaserBolt/LaserBolt.tres" id="2"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Resource" uid="uid://cg7bcmsuoomlb" path="res://GAMEPLAY/PROJECTILES/Types/LaserBolt/LaserBolt.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -10,18 +9,14 @@ Id = "triangle_archer"
 DisplayName = "Archer"
 Role = "Fragile ranged infantry"
 Shape = 2
-Width = 0.8
 Height = 0.4125
-Health = 25.0
 Speed = 4.5
 TurnDegreesPerSecond = 300.0
+Health = 25.0
+ChargeResistance = 0.18
+Style = 1
 Damage = 9.0
 Interval = 1.25
 Reach = 32.0
-Armour = 0.0
-Style = 1
-RangedRecoilEnabled = true
-RangedRecoilDistance = 0.12
-RangedRecoilReturnSeconds = 0.18
 Projectile = ExtResource("2")
-ChargeResistance = 0.18
+RangedRecoilEnabled = true

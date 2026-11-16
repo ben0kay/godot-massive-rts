@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://b6umj0kyb6ymt"]
 
-[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
-[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/ArtilleryShell/ArtilleryShell.tres" id="2"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Resource" uid="uid://b32406r6b7ial" path="res://GAMEPLAY/PROJECTILES/Types/ArtilleryShell/ArtilleryShell.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -14,7 +14,6 @@ Height = 0.99
 Speed = 1.5
 TurnDegreesPerSecond = 75.0
 Health = 350.0
-Armour = 0.0
 ChargeResistance = 1.2
 Style = 1
 Damage = 80.0
