@@ -293,3 +293,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — Wall authoring: Made each placed or duplicated CommandWall box mesh independently resizable while sharing the material and retaining terrain snap. Verified mesh isolation in a headless Godot editor check.
 
 - 2026-11-16 — Fortress Defense: Added Laser Tower 001 to the Ctrl build menu, using shared tower rendering and combat, terrain-aware placement, and normal structure health and obstacle cleanup. Source checked, awaiting Godot playtest.
+
+- 2026-11-16 — Wall authoring: Persisted per-wall red-handle dimensions in level scenes and verified separate sizes survive an editor save and runtime reload.
