@@ -299,3 +299,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — Wall authoring: Exposed per-wall dimensions as Wall Size in the Inspector. Verified both Inspector and mesh edits save and reload independently.
 
 - 2026-11-16 — Fortress Defense: Restored Level 001 map settings at 256 × 256 and added a matching-resource fallback when a level scene loses its settings assignment. Source checked, awaiting Godot playtest.
+
+- 2026-11-16 — CARBON2: Added worker right-click construction orders on Carbon deposits, 4-second repairable/resumable extractor builds, automatic 5 Carbon/s from finite deposits to the existing wallet, and H-targetable destructible extractor structures. Shared bottom HUD reports deposit/extractor status. No hauling or worker mining AI. Source implementation pending Godot gameplay validation.

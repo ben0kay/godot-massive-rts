@@ -3,7 +3,7 @@ using Godot;
 
 namespace MassiveRts;
 
-internal sealed class CommandStructure : StructureHealth
+internal class CommandStructure : StructureHealth
 {
     public const int FabricatorCells = 3;
     public const int FabricatorCost = 500;

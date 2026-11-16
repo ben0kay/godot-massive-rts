@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CarbonExtractorSettings" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/RESOURCES/CARBON/CarbonExtractorSettings.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Health = 350.0
+ArmourClass = "Medium"
+Armour = 0.0
+BuildSeconds = 4.0
+CarbonPerSecond = 5

@@ -12,6 +12,13 @@ internal sealed class CarbonBalance
         Amount -= cost;
         return true;
     }
+
+    // Extractors credit the same wallet used by Citadel Workers and Fabricators.
+    public void Credit(int amount)
+    {
+        if (amount <= 0) return;
+        Amount = amount > int.MaxValue - Amount ? int.MaxValue : Amount + amount;
+    }
 }
 
 internal sealed class FabricatorProduction

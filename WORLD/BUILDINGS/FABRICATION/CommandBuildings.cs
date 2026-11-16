@@ -25,7 +25,12 @@ internal sealed class CommandBuildings
     private readonly BatchRecipe[] recipes;
     private readonly ObstacleRectangle[] authoredWalls;
     private readonly List<CarbonDeposit> deposits = new();
+    private readonly List<ExtractorJob> extractorJobs = new();
+    private readonly CarbonExtractorSettings extractorSettings;
+    private readonly byte workerType;
     private readonly Func<byte, bool> releaseWorker;
+
+    private readonly record struct ExtractorJob(int Worker, CarbonDeposit Deposit, Vector3 Goal);
     public CitadelWorkerProduction Workers { get; }
     private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
     private ObstacleField field;
@@ -46,6 +51,11 @@ internal sealed class CommandBuildings
         this.units = units;
         this.movement = movement;
         this.authoredWalls = authoredWalls;
+        extractorSettings = GD.Load<CarbonExtractorSettings>(
+            "res://WORLD/RESOURCES/CARBON/DefaultCarbonExtractorSettings.tres")
+            ?? new CarbonExtractorSettings();
+        if (!units.Catalog.TryResolve("worker", out workerType))
+            throw new InvalidOperationException("Extractor construction requires the registered Worker unit.");
         recipes = GD.Load<ProductionRecipes>("res://GAMEPLAY/PRODUCTION/FabricatorRecipes.tres").Compile(units.Catalog);
         citadelDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres");
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
@@ -96,6 +106,86 @@ internal sealed class CommandBuildings
             }
             deposit.PlaceOnMap(area, Center(area), root.GetPathTo(deposit).ToString());
             deposits.Add(deposit);
+        }
+    }
+
+    // Worker order: select a Worker and right-click a Carbon deposit. The worker
+    // approaches its unobstructed edge, then constructs one real attackable building.
+    public bool AssignExtractor(int id, CarbonDeposit deposit)
+    {
+        if ((uint)id >= (uint)units.Count || units.Health[id] <= 0f ||
+            units.Type[id] != workerType || units.Faction[id] != Factions.Blue ||
+            deposit == null || !deposits.Contains(deposit) || deposit.Depleted ||
+            deposit.Extractor is { Destroyed: false, BuildProgress: >= 1f } ||
+            deposit.WorkerAssigned) return false;
+        float radius = units.Catalog[workerType].Footprint;
+        if (!TryExtractorWorksite(units.Position[id], deposit.Area, radius, out Vector3 goal))
+            return false;
+        for (int i = extractorJobs.Count - 1; i >= 0; i--)
+        {
+            if (extractorJobs[i].Worker != id) continue;
+            extractorJobs[i].Deposit.WorkerAssigned = false;
+            extractorJobs.RemoveAt(i);
+        }
+        movement.SetGoal(id, goal);
+        units.Target[id] = -1;
+        extractorJobs.Add(new ExtractorJob(id, deposit, units.OnTerrain(goal)));
+        deposit.WorkerAssigned = true;
+        return true;
+    }
+
+    private bool TryExtractorWorksite(Vector3 from, ObstacleRectangle area, float radius, out Vector3 goal)
+    {
+        float clearance = radius + 0.40f;
+        Vector2 min = area.Min, max = area.Max, center = (min + max) * 0.5f;
+        Vector2[] points =
+        {
+            new(center.X, min.Y - clearance), new(max.X + clearance, center.Y),
+            new(center.X, max.Y + clearance), new(min.X - clearance, center.Y)
+        };
+        float best = float.PositiveInfinity;
+        goal = default;
+        foreach (Vector2 point in points)
+        {
+            Vector3 candidate = units.OnTerrain(new Vector3(point.X, 0f, point.Y));
+            float distance = ObstacleField.Xz(candidate - from).LengthSquared();
+            if (distance >= best || !OnMap(candidate, radius) ||
+                field?.IntersectsCircle(point, radius) == true) continue;
+            best = distance;
+            goal = candidate;
+        }
+        return float.IsFinite(best);
+    }
+
+    private void StepExtractorJobs(float delta)
+    {
+        for (int i = extractorJobs.Count - 1; i >= 0; i--)
+        {
+            ExtractorJob job = extractorJobs[i];
+            int id = job.Worker;
+            CarbonDeposit deposit = job.Deposit;
+            bool cancelled = (uint)id >= (uint)units.Count || units.Health[id] <= 0f ||
+                deposit.Depleted || deposit.Extractor?.Destroyed == true ||
+                units.Goal[id].DistanceSquaredTo(job.Goal) > 0.01f;
+            if (cancelled)
+            {
+                deposit.WorkerAssigned = false;
+                extractorJobs.RemoveAt(i);
+                continue;
+            }
+            if (ObstacleField.Xz(units.Position[id] - job.Goal).LengthSquared() > 0.20f * 0.20f)
+                continue;
+
+            if (deposit.Extractor == null)
+            {
+                var extractor = new CarbonExtractor(deposit, extractorSettings, units.Catalog.DamageRules);
+                deposit.Extractor = extractor;
+                Add(extractor);
+            }
+            deposit.Extractor.Work(delta);
+            if (deposit.Extractor.BuildProgress < 1f) continue;
+            deposit.WorkerAssigned = false;
+            extractorJobs.RemoveAt(i);
         }
     }
 
@@ -231,7 +321,8 @@ internal sealed class CommandBuildings
         foreach (var building in structures)
         {
             if (!building.Destroyed) continue;
-            if (building != Citadel && building.Production == null) defenses?.RemoveTower(building);
+            if (building is CarbonExtractor extractor) extractor.Deposit.Extractor = null;
+            else if (building != Citadel && building.Production == null) defenses?.RemoveTower(building);
             building.View.QueueFree();
             removed = true;
         }
@@ -244,10 +335,12 @@ internal sealed class CommandBuildings
 
     public void Step(float delta)
     {
+        StepExtractorJobs(delta);
         if (CanOperateCitadel) Workers.Step(delta, releaseWorker);
         foreach (var building in structures)
         {
             building.Construct(delta);
+            if (building is CarbonExtractor extractor) extractor.Extract(delta, Carbon);
             if (!building.Destroyed && building.Ready && building.Release != null) building.Production?.Step(delta, recipes, Carbon, building.Release);
         }
     }
@@ -345,7 +438,8 @@ internal sealed class CommandBuildings
         foreach (var building in structures)
         {
             if (building.Destroyed) continue;
-            float height = building == Citadel ? 4.3f : building.Production == null ? TowerBaseHeight + 0.7f : 1.95f;
+            float height = building == Citadel ? 4.3f :
+                building is CarbonExtractor ? 3.15f : building.Production == null ? TowerBaseHeight + 0.7f : 1.95f;
             Vector2 min = building.Area.Min, max = building.Area.Max;
             float start = 0f, end = nearest;
             if (!ClipRay(origin.X, ray.X, min.X, max.X, ref start, ref end) ||

@@ -12,7 +12,18 @@ public partial class CarbonDeposit : Node3D
     public string DepositId { get; private set; } = "";
     public int RemainingCarbon { get; private set; }
     public bool Depleted => RemainingCarbon == 0;
+    // One owned extractor at a time; destroying it leaves the mineral reserve intact.
+    internal CarbonExtractor Extractor { get; set; }
+    internal bool WorkerAssigned { get; set; }
     internal ObstacleRectangle Area { get; private set; }
+
+    internal int Extract(int requested)
+    {
+        if (requested <= 0 || Depleted) return 0;
+        int mined = Mathf.Min(requested, RemainingCarbon);
+        RemainingCarbon -= mined;
+        return mined;
+    }
     private Node3D model;
     internal float PickHeight => 2.5f * model.Scale.Y;
     private double previewClock;

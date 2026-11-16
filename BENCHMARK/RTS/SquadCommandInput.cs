@@ -121,6 +121,24 @@ public partial class SquadCommandInput : Node
             overlay.QueueRedraw();
         }
 
+        // Give one selected Worker a build order by right-clicking a Carbon deposit.
+        // Other right-click movement/formation commands keep their existing behavior.
+        if (input is InputEventMouseButton
+            { Pressed: true, ButtonIndex: MouseButton.Right } depositClick &&
+            overlay.Selection.Count > 0)
+        {
+            buildings.Pick(overlay.View, depositClick.Position, out CarbonDeposit deposit);
+            if (deposit != null)
+                foreach (int id in overlay.Selection)
+                    if (buildings.AssignExtractor(id, deposit))
+                    {
+                        CancelGesture();
+                        overlay.AttackMove = false;
+                        GetViewport().SetInputAsHandled();
+                        return;
+                    }
+        }
+
         if (buildings.CanSetRally(overlay.Building) &&
             input is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true } rallyClick)
         {

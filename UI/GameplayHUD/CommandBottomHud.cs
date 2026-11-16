@@ -13,6 +13,7 @@ public partial class CommandBottomHud : Control
     private readonly SelectionHud soldiers = new();
     private readonly VBoxContainer structureView = new(), workerView = new(), depositView = new();
     private readonly Label depositAmount = new(), depositStatus = new(), workerStatus = new(), workerQueue = new();
+    private readonly Label extractorStatus = new(), workerHint = new();
     private readonly ProgressBar workerProgress = new() { CustomMinimumSize = new Vector2(270, 16) };
     private readonly List<byte> recipeTypes = new();
     private Button buildWorker;
@@ -60,12 +61,15 @@ public partial class CommandBottomHud : Control
         var context = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         row.AddChild(context);
         context.AddChild(soldiers);
+        context.AddChild(workerHint);
+        workerHint.Text = "Worker: right-click a Carbon Deposit to construct an Extractor";
         context.AddChild(structureView);
         context.AddChild(depositView);
         depositView.AddChild(new Label { Text = "Carbon Deposit" });
         depositView.AddChild(depositAmount);
         depositView.AddChild(depositStatus);
         structureView.AddChild(title);
+        structureView.AddChild(extractorStatus);
         structureView.AddChild(workerView);
         buildWorker = UIButtonFactory.Create($"Build Worker  ·  {buildings.Workers.Cost:N0} Carbon",
             () => { buildings.QueueWorker(); RefreshWorkers(buildings); }, UIButtonStyle.Compact);
@@ -120,13 +124,27 @@ public partial class CommandBottomHud : Control
         soldiers.Visible = building == null && !showDeposit;
         bool changed = selected != building;
         selected = building;
+        workerHint.Visible = soldiers.Visible && selection.Length == 1 &&
+            units.Catalog.TryResolve("worker", out byte workerType) &&
+            units.Type[selection[0]] == workerType && units.Health[selection[0]] > 0f;
         if (soldiers.Visible) soldiers.Refresh(units, selection);
         if (depositView.Visible)
         {
             depositAmount.Text = $"Remaining  ·  {deposit.RemainingCarbon:N0} Carbon";
-            depositStatus.Text = deposit.Depleted ? "Depleted" : "Untapped";
+            CarbonExtractor extractor = deposit.Extractor;
+            depositStatus.Text = deposit.Depleted ? "Depleted" :
+                extractor?.Destroyed == false ? extractor.BuildProgress < 1f
+                    ? $"Extractor constructing · {extractor.BuildProgress:P0}" :
+                    $"Extractor active · +{extractor.CarbonPerSecond} Carbon/s" :
+                deposit.WorkerAssigned ? "Worker travelling to deposit" : "Untapped";
         }
         if (building == null) return;
+        extractorStatus.Visible = building is CarbonExtractor;
+        if (building is CarbonExtractor extractorBuilding)
+            extractorStatus.Text = extractorBuilding.BuildProgress < 1f
+                ? $"Constructing · {extractorBuilding.BuildProgress:P0}" :
+                extractorBuilding.Deposit.Depleted ? "Deposit depleted" :
+                $"+{extractorBuilding.CarbonPerSecond} Carbon/s · {extractorBuilding.Deposit.RemainingCarbon:N0} remaining";
 
         workerView.Visible = building == buildings.Citadel;
         if (workerView.Visible) RefreshWorkers(buildings);
