@@ -63,13 +63,7 @@ public partial class UnitEditorPanel : VBoxContainer
         foreach (var item in Enum.GetValues<EntityCategory>()) category.AddItem(item.ToString());
         roster.AddChild(category);
         roster.AddChild(search);
-        category.ItemSelected += index =>
-        {
-            var requested = (EntityCategory)index;
-            category.Select((int)activeCategory);
-            if (requested != activeCategory)
-                Callable.From(() => RequestSwitch(() => ShowCategory(requested))).CallDeferred();
-        };
+        category.Connect(OptionButton.SignalName.ItemSelected, new Callable(this, nameof(OnCategorySelected)));
         roster.AddChild(list);
 
         var workspace = new HSplitContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -104,13 +98,7 @@ public partial class UnitEditorPanel : VBoxContainer
         };
         confirmSwitch.Canceled += () => pendingSwitch = null;
 
-        list.ItemSelected += index =>
-        {
-            if (index < 0 || index >= visibleEntries.Count) return;
-            string path = visibleEntries[(int)index].Path;
-            // Allow any focused numeric field to commit before checking whether the draft is dirty.
-            Callable.From(() => { if (path != draft?.Path) RequestSwitch(() => LoadEntity(path)); }).CallDeferred();
-        };
+        list.Connect(ItemList.SignalName.ItemSelected, new Callable(this, nameof(OnEntitySelected)));
         search.TextChanged += _ => PopulateList();
         refresh.Pressed += RefreshCatalogue;
         save.Pressed += () => Save();
@@ -134,6 +122,27 @@ public partial class UnitEditorPanel : VBoxContainer
         UpdateView();
     }
 
+    private void OnCategorySelected(long index)
+    {
+        var requested = (EntityCategory)index;
+        category.Select((int)activeCategory);
+        if (requested != activeCategory) CallDeferred(nameof(SwitchCategory), (int)requested);
+    }
+
+    private void SwitchCategory(int index) => RequestSwitch(() => ShowCategory((EntityCategory)index));
+
+    private void OnEntitySelected(long index)
+    {
+        if (index < 0 || index >= visibleEntries.Count) return;
+        // Let the focused numeric field commit before checking whether the draft is dirty.
+        CallDeferred(nameof(SwitchEntity), visibleEntries[(int)index].Path);
+    }
+
+    private void SwitchEntity(string path)
+    {
+        if (path != draft?.Path) RequestSwitch(() => LoadEntity(path));
+    }
+
     private void RefreshCatalogue()
     {
         // Populate the list once when restoring a suspended draft.
@@ -145,7 +154,9 @@ public partial class UnitEditorPanel : VBoxContainer
             cacheMode: ResourceLoader.CacheMode.Ignore)?.EffectiveMovementSpeedMultiplier ?? 0.8f;
         var paths = new HashSet<string>(StringComparer.Ordinal);
         var ids = new HashSet<(EntityCategory Category, string Id)>();
-        int invalid = 0;
+        var skipped = new List<string>();
+        bool unsupportedShape = false;
+        status.TooltipText = "";
 
         void Register(Entry entry)
         {
@@ -155,7 +166,7 @@ public partial class UnitEditorPanel : VBoxContainer
                 entry.Path.Contains("::", StringComparison.Ordinal) || !FileAccess.FileExists(entry.Path) ||
                 paths.Contains(entry.Path) || !ids.Add((entry.Category, entry.Id)))
             {
-                invalid++;
+                skipped.Add(entry?.Path ?? "Missing or unreadable catalogue resource");
                 return;
             }
             paths.Add(entry.Path);
@@ -172,7 +183,12 @@ public partial class UnitEditorPanel : VBoxContainer
         if (catalog?.Definitions != null)
             foreach (var unit in catalog.Definitions)
             {
-                Register(Describe(unit));
+                if (unit != null && !Enum.IsDefined(unit.Shape))
+                {
+                    unsupportedShape = true;
+                    skipped.Add($"{unit.Id} uses unknown shape ID {(int)unit.Shape}");
+                }
+                else Register(Describe(unit));
                 RegisterProjectile(unit?.Projectile);
             }
         RegisterProjectile(ResourceLoader.Load<ProjectileDefinition>(ProjectileCatalog.BasicArrowPath,
@@ -186,7 +202,12 @@ public partial class UnitEditorPanel : VBoxContainer
             PopulateList();
             status.Text = "Restored your unsaved draft.";
         }
-        if (invalid > 0) status.Text = $"Skipped {invalid} invalid or duplicate catalogue entries.";
+        if (skipped.Count > 0)
+        {
+            status.Text = $"Skipped {skipped.Count} catalogue entries. Hover for details.";
+            if (unsupportedShape) status.Text += " Rebuild C# and restart Godot if you just pulled updates.";
+            status.TooltipText = string.Join("\n", skipped);
+        }
     }
 
     private static Entry Describe(Resource definition) => definition switch

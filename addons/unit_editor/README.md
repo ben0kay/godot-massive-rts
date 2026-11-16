@@ -19,3 +19,5 @@ For Heavy Artillery, set minimum range in **Ranged**, maximum range and centre d
 ## Projectile settings
 
 Select **Projectiles** in the roster, or use **Ranged → Edit projectile settings** on a unit such as Heavy Artillery. Tune flight speed, arc, obstacle behavior, faction tint and explosion radius or edge damage. **Save entity** writes the shared projectile resource. Every unit that uses it gets the updated settings. Set the base damage on the firing unit.
+
+If the catalogue skips units with unknown shape IDs after a pull, save your drafts, stop the running game, rebuild the C# project and restart Godot so the editor loads the current assembly. Open Entity Editor and use **Refresh catalogue**. Hover over the skipped-entry message to see the affected resources or shape IDs.

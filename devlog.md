@@ -287,3 +287,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — WORKER1: Shared Fabricator rally controls with the Citadel and gave the Worker a beveled rectangular chassis with a pointed front drill. Source checked, awaiting Godot owner validation.
 
 - 2026-11-16 — Fortress Defense: Moved map size into the per-level resource and enlarged the Worker chassis by 50% with twice the drill projection. Source checked, awaiting Godot owner validation.
+
+- 2026-11-16 — Entity Editor: Bound roster and category selection to named Godot methods and surfaced skipped entries and unrecognized unit shapes. Catalogue checked from source, awaiting editor validation.
