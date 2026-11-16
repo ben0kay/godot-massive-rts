@@ -295,3 +295,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-16 — Fortress Defense: Added Laser Tower 001 to the Ctrl build menu, using shared tower rendering and combat, terrain-aware placement, and normal structure health and obstacle cleanup. Source checked, awaiting Godot playtest.
 
 - 2026-11-16 — Wall authoring: Persisted per-wall red-handle dimensions in level scenes and verified separate sizes survive an editor save and runtime reload.
+
+- 2026-11-16 — Wall authoring: Exposed per-wall dimensions as Wall Size in the Inspector. Verified both Inspector and mesh edits save and reload independently.
