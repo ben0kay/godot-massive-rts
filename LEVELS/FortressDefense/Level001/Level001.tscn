@@ -8,7 +8,7 @@
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
 
 [node name="Ground" parent="." index="0"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.054706573, -0.024994278, 0.036758423)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.056096077, -0.067583464, 0.074611664)
 
 [node name="UnitPlacement" parent="StartingUnits" index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]
 Unit = ExtResource("3_uk3k8")
