@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
 [ext_resource type="PackedScene" path="res://WORLD/RESOURCES/CARBON/CarbonDeposit.tscn" id="6_gfqfu"]
 
+[ext_resource type="Resource" path="res://LEVELS/FortressDefense/Level001/Level001.tres" id="5_level"]
+
 [sub_resource type="Resource" id="Resource_gfqfu"]
 script = ExtResource("2_4crng")
 Enemies = Dictionary[String, int]({
@@ -38,7 +40,7 @@ Enemies = Dictionary[String, int]({
 })
 
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
-MapSize = 1000.0
+LevelSettings = ExtResource("5_level")
 SpawnDefaultBlueSquad = false
 EnemySpawnPattern = 1
 EnemySpawnSpacing = 6.0

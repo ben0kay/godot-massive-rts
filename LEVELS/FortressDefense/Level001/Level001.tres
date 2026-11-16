@@ -7,5 +7,6 @@ script = ExtResource("1")
 Id = "Level001"
 DisplayName = "Level 001"
 Order = 1
+MapSize = 1000.0
 Description = "Defend the Citadel with a single Long Triangle Marksman and an authored wall."
 ScenePath = "res://LEVELS/FortressDefense/Level001/Level001.tscn"

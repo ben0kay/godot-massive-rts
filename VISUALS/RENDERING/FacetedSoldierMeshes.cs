@@ -94,7 +94,7 @@ public static class FacetedSoldierMeshes
 
         const int facets = 6;
         float radius = x * 0.34f;
-        var tip = new Vector3(0f, baseCenter.Y, -z);
+        var tip = new Vector3(0f, baseCenter.Y, -outline.DrillLengthFromOrigin);
         for (int i = 0; i < facets; i++)
         {
             float first = Mathf.Tau * i / facets, second = Mathf.Tau * (i + 1) / facets;

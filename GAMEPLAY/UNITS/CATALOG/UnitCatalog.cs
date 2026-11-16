@@ -23,12 +23,14 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
     };
     private static readonly Vector2[] DrillRigVertices =
     {
-        new(-1f, -0.5f), new(-0.36f, -0.5f), new(0f, -1f), new(0.36f, -0.5f),
+        new(-1f, -0.5f), new(-0.36f, -0.5f), new(0f, -1.5f), new(0.36f, -0.5f),
         new(1f, -0.5f), new(1f, 0.72f), new(-1f, 0.72f)
     };
 
+    public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
+
     public float Footprint => IsDrillRig
-        ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
+        ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
     public float BarrelWidth => RadiusX * 0.25f;
     public float BarrelFront => RadiusZ;

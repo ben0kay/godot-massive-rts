@@ -25,28 +25,50 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
-    private float mapSize = 5000f;
+    private LevelDefinition levelSettings;
+    private float lastMapSize;
     private bool reducedMapSize;
 
-    [Export(PropertyHint.Range, "64,5000,4")]
-    public float MapSize
+    [Export]
+    public LevelDefinition LevelSettings
     {
-        get => mapSize;
+        get => levelSettings;
         set
         {
-            if (!float.IsFinite(value)) return;
-            float size = Mathf.Round(Mathf.Clamp(value, 64f, 5000f) / 4f) * 4f;
-            if (size == mapSize) return;
-            if (Engine.IsEditorHint() && IsInsideTree())
-            {
-                reducedMapSize = size < mapSize;
-                mapSize = size;
-                UpdateConfigurationWarnings();
-                return;
-            }
-            mapSize = size;
+            if (levelSettings == value) return;
+            bool watch = Engine.IsEditorHint() && IsInsideTree();
+            if (watch && levelSettings != null) levelSettings.Changed -= OnLevelSettingsChanged;
+            levelSettings = value;
+            if (!watch) return;
+            if (levelSettings != null) levelSettings.Changed += OnLevelSettingsChanged;
+            OnLevelSettingsChanged();
         }
     }
+
+    private float MapSize => LevelSettings?.MapSize ?? LevelDefinition.DefaultMapSize;
+
+    private void OnLevelSettingsChanged()
+    {
+        float size = MapSize;
+        if (size == lastMapSize) return;
+        reducedMapSize = size < lastMapSize;
+        lastMapSize = size;
+        UpdateConfigurationWarnings();
+    }
+
+    public override void _EnterTree()
+    {
+        if (!Engine.IsEditorHint()) return;
+        lastMapSize = MapSize;
+        if (levelSettings != null) levelSettings.Changed += OnLevelSettingsChanged;
+    }
+
+    public override void _ExitTree()
+    {
+        if (Engine.IsEditorHint() && levelSettings != null)
+            levelSettings.Changed -= OnLevelSettingsChanged;
+    }
+
     [Export] public CitadelWorkerSettings WorkerProductionSettings { get; set; }
     [Export] public bool ShowGroundShadows { get; set; } = true;
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
