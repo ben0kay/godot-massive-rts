@@ -160,11 +160,10 @@ internal sealed class FortressWaves
                 lungeChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: idleField);
                 AttackStructures(delta, idleField, Factions.Blue);
             }
-            if (Projectiles.Count > 0)
-            {
-                RebuildGrid();
-                Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField);
-            }
+            bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
+            if (Projectiles.Count > 0 || towerTargets) RebuildGrid();
+            if (towerTargets) buildings.StepDefenses(grid, delta, tick);
+            if (Projectiles.Count > 0) Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField);
             if (Countdown > 0 && !Defeat)
             {
                 Countdown = Mathf.Max(0, Countdown - delta);
@@ -177,6 +176,7 @@ internal sealed class FortressWaves
         TryRelease(delta);
         var field = buildings.Obstacles;
         RebuildGrid();
+        if (buildings.HasDefenses) buildings.StepDefenses(grid, delta, tick);
         AcquireDefenderTargets(field);
         for (int i = 0; i < enemyCount; i++)
         {

@@ -22,6 +22,35 @@ internal sealed class DefenseSystem
     private readonly ObstacleField staticWalls;
     private readonly bool[] removed;
     public IReadOnlyList<StructureHealth> Structures => structures;
+    public int ActiveCount { get; private set; }
+
+    // Command mode registers and removes individual towers in bounded, reusable slots.
+    public DefenseSystem(DefenseRenderer renderer, int capacity)
+    {
+        this.renderer = renderer;
+        structures = new StructureHealth[capacity];
+        towers = new Tower[capacity];
+        removed = new bool[capacity];
+    }
+
+    public void AddTower(StructureHealth structure, BuildingStats stats, float height, float ground)
+    {
+        int slot = System.Array.IndexOf(structures, null);
+        structures[slot] = structure;
+        towers[slot] = new Tower { Stats = stats, Faction = structure.Faction, Footprint = structure.Area,
+            Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1 };
+        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground);
+        ActiveCount++;
+    }
+
+    public void RemoveTower(StructureHealth structure)
+    {
+        int slot = System.Array.IndexOf(structures, structure);
+        if (slot < 0) return;
+        renderer.HideTower(slot);
+        structures[slot] = null;
+        ActiveCount--;
+    }
 
     public DefenseSystem(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog,
         float height, DefenseRenderer renderer, DamageRules rules, ObstacleField staticWalls)
@@ -76,7 +105,7 @@ internal sealed class DefenseSystem
         for (int i = 0; i < towers.Length; i++)
         {
             ref Tower tower = ref towers[i];
-            if (structures[i].Destroyed || !tower.Stats.AttacksSoldiers) continue;
+            if (structures[i]?.Destroyed != false || !tower.Stats.AttacksSoldiers) continue;
             tower.Cooldown = tower.Cooldown > 0f ? tower.Cooldown - dt : 0f;
             int target = tower.Target;
             if (target < 0 || !Valid(in tower, units, target, obstacles))
