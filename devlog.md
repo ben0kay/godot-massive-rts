@@ -261,3 +261,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Entity Editor now edits shared projectile flight and explosion settings, with a shortcut from ranged units.
 
 - 2026-11-15 — Fixed Godot C# AddChild calls for internal terrain and unit previews.
+
+- 2026-11-15 — Command selection now treats starting and produced troops individually, regardless of spawn order.

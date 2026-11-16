@@ -222,7 +222,6 @@ public partial class SquadCommandInput : Node
 
         int nearest = -1;
         float bestDistance = float.PositiveInfinity;
-        bool includeStartingSquad = false;
         Vector3 right = CameraRight();
         for (int i = 0; i < overlay.Units.Count; i++)
         {
@@ -233,8 +232,7 @@ public partial class SquadCommandInput : Node
             if (boxSelect)
             {
                 if (!box.Grow(pixels).HasPoint(center)) continue;
-                if (i < CommandMovement.SquadSize) includeStartingSquad = true;
-                else overlay.Selection.Add(i);
+                overlay.Selection.Add(i);
                 continue;
             }
             float distance = center.DistanceTo(point);
@@ -242,10 +240,7 @@ public partial class SquadCommandInput : Node
             nearest = i;
             bestDistance = distance;
         }
-        if (nearest >= CommandMovement.SquadSize) overlay.Selection.Add(nearest);
-        if (includeStartingSquad || nearest >= 0 && nearest < CommandMovement.SquadSize)
-            for (int id = 0; id < CommandMovement.SquadSize; id++)
-                if (overlay.Units.Health[id] > 0) overlay.Selection.Add(id);
+        if (nearest >= 0) overlay.Selection.Add(nearest);
         float radius = 0;
         foreach (int id in overlay.Selection) radius = Mathf.Max(radius, overlay.Radius(id));
         overlay.Spacing = radius * 2f + 0.3f;

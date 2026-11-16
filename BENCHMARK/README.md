@@ -177,7 +177,7 @@ In **Edit painted deployment → Paint tools**, enter a **Preset name** and clic
 
 ## Fortress Defense Command Sandbox
 
-Open `BENCHMARK/RTS/CommandSandbox.tscn` in Godot and press **F6**. Left-click a Blue soldier or drag a selection box across any squad member to select all 20. Right-click the ground to move into a centered 5×4 formation. Hold and drag right-click to set the front line. Wider drags fit more columns, up to a single rank of 20. The faint circles show the destination slots, and the dimension arrows show the line length in world units. Release to issue the previewed order. Press Escape to clear selection.
+Open `BENCHMARK/RTS/CommandSandbox.tscn` in Godot and press **F6**. Left-click to select one Blue soldier, or drag a box to select the Blue soldiers it touches. Right-click the ground to move into a centered 5×4 formation. Hold and drag right-click to set the front line. Wider drags fit more columns, up to a single rank of 20. The faint circles show the destination slots, and the dimension arrows show the line length in world units. Release to issue the previewed order. Press Escape to clear selection.
 
 The sandbox uses the shared unit catalog, renderer and camera. Command input and preview live in `BENCHMARK/RTS/`, and the movement pass lives in `GAMEPLAY/SIMULATION/COMMANDS/CommandMovement.cs`. Movement goes directly to assigned slots on flat ground. Obstacle routing, collision avoidance and combat orders are outside this first pass. The Auto-Battle Benchmark remains runnable from `BENCHMARK/BenchmarkArena.tscn`.
 
@@ -187,7 +187,7 @@ Both benchmark scenes use `BENCHMARK/UI/BenchmarkSummary.cs` for the top-right F
 
 Open `BENCHMARK/RTS/CommandSandbox.tscn` with F6. The sandbox starts with 10,000 Carbon, the original 20 Circles, and a selectable Citadel. Tap either Ctrl key to open or close Build. Choose Fabricator and left-click a cyan preview to place it for 500 Carbon. Right-click or Escape during placement returns to Build without spending. A successful placement also returns to Build.
 
-After five seconds of construction, select the Fabricator, choose a unit type, and watch the paid batch release through the front gate. Right-click terrain with a completed Fabricator selected to set its rally point. Clear it from the bottom panel to use the nearby holding area. The initial 20 remain one squad, and box selection can mix that squad with individual produced units.
+After five seconds of construction, select the Fabricator, choose a unit type, and watch the paid batch release through the front gate. Right-click terrain with a completed Fabricator selected to set its rally point. Clear it from the bottom panel to use the nearby holding area.
 
 The sandbox supports 2,048 soldier IDs and up to 32 Fabricators. A blocked exit, full holding area or soldier cap retains the paid batch. Units route around buildings, and the normal command movement still allows soldiers to cross paths outside release clearance. FAB1 runs on the sandbox's flat map. The playable Fortress Defense level remains separate.
 
