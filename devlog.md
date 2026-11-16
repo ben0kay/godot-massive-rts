@@ -273,3 +273,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-15 — Applied editable per-unit turn rates to movement and combat across both modes, with shared tick coefficients and a Circle fast path.
 
 - 2026-11-15 — Added editable Scatter and Rows wave entry patterns and enabled Scatter for Level 001.
+
+- 2026-11-15 — Matched the embedded window override to 1920 × 820 and replaced the Fabricator dropdown with a scrollable two-column unit list.

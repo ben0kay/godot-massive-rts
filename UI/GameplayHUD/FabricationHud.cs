@@ -9,11 +9,16 @@ public partial class FabricationHud : Control
     private readonly PanelContainer menu = new() { Position = new Vector2(16, 114), Visible = false };
     private readonly PanelContainer panel = new() { Visible = false };
     private readonly Label title = new(), cost = new(), status = new(), rally = new();
-    private readonly OptionButton types = new();
+    private readonly ItemList types = new()
+    {
+        CustomMinimumSize = new Vector2(440, 132),
+        MaxColumns = 2,
+        SameColumnWidth = true
+    };
     private readonly CheckButton automatic = new() { Text = "Automatic production" };
     private readonly Button clear = new() { Text = "Clear rally" };
     private readonly ProgressBar progress = new() { CustomMinimumSize = new Vector2(270, 16) };
-    private VBoxContainer controls;
+    private HBoxContainer controls;
     private int previousCarbon = -1;
     private CommandStructure selected;
     internal System.Action PlaceRequested;
@@ -45,19 +50,26 @@ public partial class FabricationHud : Control
         var details = new VBoxContainer();
         row.AddChild(details);
         details.AddChild(title);
-        controls = new VBoxContainer();
+        controls = new HBoxContainer { Visible = false };
         details.AddChild(controls);
-        controls.AddChild(types);
-        types.AddItem("Choose unit type");
-        types.SetItemDisabled(0, true);
+        var roster = new VBoxContainer();
+        controls.AddChild(roster);
+        roster.AddChild(new Label { Text = "Unit type" });
+        roster.AddChild(types);
         for (int i = 0; i < catalog.Count; i++) types.AddItem(catalog[i].Name);
-        controls.AddChild(cost);
-        controls.AddChild(progress);
-        controls.AddChild(status);
-        controls.AddChild(automatic);
-        controls.AddChild(rally);
-        controls.AddChild(clear);
-        types.ItemSelected += index => { if (selected?.Production != null) selected.Production.RecipeIndex = (int)index - 1; };
+
+        var productionDetails = new VBoxContainer();
+        controls.AddChild(productionDetails);
+        productionDetails.AddChild(cost);
+        productionDetails.AddChild(progress);
+        productionDetails.AddChild(status);
+        productionDetails.AddChild(automatic);
+        productionDetails.AddChild(rally);
+        productionDetails.AddChild(clear);
+        types.ItemSelected += index =>
+        {
+            if (selected?.Release != null && selected.Ready) selected.Production.RecipeIndex = (int)index;
+        };
         automatic.Toggled += enabled => { if (selected?.Production != null) selected.Production.Automatic = enabled; };
         clear.Pressed += () => { if (selected != null) selected.Rally = null; };
     }
@@ -75,15 +87,21 @@ public partial class FabricationHud : Control
         if (building == null) return;
 
         var production = building.Production;
+        bool controlsWereVisible = controls.Visible;
         controls.Visible = building.Release != null && building.Ready;
         title.Text = production == null ? $"Citadel   ·   {building.Health:N0} / {building.MaxHealth:N0} HP" :
             !building.Ready ? $"Fabricator   ·   Constructing {building.Built:P0}" :
             $"Fabricator   ·   {building.Health:N0} / {building.MaxHealth:N0} HP";
         title.Text += $"   ·   {buildings.ArmourName(building)} armour";
         if (!controls.Visible) return;
-        if (changed)
+        if (changed || !controlsWereVisible)
         {
-            types.Select(production.RecipeIndex + 1);
+            types.DeselectAll();
+            if (production.RecipeIndex >= 0)
+            {
+                types.Select(production.RecipeIndex);
+                types.EnsureCurrentIsVisible();
+            }
             automatic.SetPressedNoSignal(production.Automatic);
         }
         if (production.RecipeIndex >= 0)
