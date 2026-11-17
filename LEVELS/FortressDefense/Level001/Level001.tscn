@@ -7,13 +7,8 @@
 [ext_resource type="PackedScene" path="res://WORLD/OBSTACLES/CommandWall.tscn" id="4_gfqfu"]
 [ext_resource type="Resource" uid="uid://cp2ov8l52q2ab" path="res://LEVELS/FortressDefense/Level001/Level001.tres" id="5_level"]
 [ext_resource type="PackedScene" path="res://WORLD/RESOURCES/CARBON/CarbonDeposit.tscn" id="6_gfqfu"]
-
-[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaint.cs" id="7_world_paint"]
-[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaintData.cs" id="8_world_paint_data"]
-
-[sub_resource type="Resource" id="Resource_world_paint"]
-resource_local_to_scene = true
-script = ExtResource("8_world_paint_data")
+[ext_resource type="Script" uid="uid://th77p5pl8f4a" path="res://WORLD/WORLD_PAINT/WorldPaint.cs" id="7_world_paint"]
+[ext_resource type="Script" uid="uid://c36i5jevx86g2" path="res://WORLD/WORLD_PAINT/WorldPaintData.cs" id="8_world_paint_data"]
 
 [sub_resource type="Resource" id="Resource_gfqfu"]
 script = ExtResource("2_4crng")
@@ -49,25 +44,29 @@ Enemies = Dictionary[String, int]({
 shading_mode = 0
 albedo_color = Color(0.16, 0.19, 0.23, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_bbsqs"]
+[sub_resource type="BoxMesh" id="BoxMesh_on2mr"]
 material = SubResource("Material")
 size = Vector3(30, 2, 30)
 
-[sub_resource type="BoxMesh" id="BoxMesh_otgem"]
-material = SubResource("Material")
-size = Vector3(230, 2, 10)
-
-[sub_resource type="BoxMesh" id="BoxMesh_on2mr"]
-material = SubResource("Material")
-size = Vector3(10, 2, 109)
-
 [sub_resource type="BoxMesh" id="BoxMesh_7g4e2"]
 material = SubResource("Material")
-size = Vector3(10, 2, 109)
+size = Vector3(230, 2, 10)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wbjuq"]
 material = SubResource("Material")
+size = Vector3(10, 2, 109)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rsd55"]
+material = SubResource("Material")
+size = Vector3(10, 2, 109)
+
+[sub_resource type="BoxMesh" id="BoxMesh_31g5l"]
+material = SubResource("Material")
 size = Vector3(230, 2, 10)
+
+[sub_resource type="Resource" id="Resource_world_paint"]
+resource_local_to_scene = true
+script = ExtResource("8_world_paint_data")
 
 [node name="CommandSandbox" unique_id=2077023801 instance=ExtResource("1_1oal4")]
 LevelSettings = ExtResource("5_level")
@@ -86,31 +85,35 @@ Unit = ExtResource("3_uk3k8")
 
 [node name="CommandWall6" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="0" unique_id=1910230538 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4633789, 1, 80.772446)
-mesh = SubResource("BoxMesh_bbsqs")
+mesh = SubResource("BoxMesh_on2mr")
 wall_size = Vector3(30, 2, 30)
 
 [node name="CommandWall5" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="1" unique_id=1959667830 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -122.57475, 1, -13.184904)
-mesh = SubResource("BoxMesh_otgem")
+mesh = SubResource("BoxMesh_7g4e2")
 wall_size = Vector3(230, 2, 10)
 
 [node name="CommandWall4" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="2" unique_id=568456616 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44.26831, 1, -1.1137848)
-mesh = SubResource("BoxMesh_on2mr")
+mesh = SubResource("BoxMesh_wbjuq")
 wall_size = Vector3(10, 2, 109)
 
 [node name="CommandWall2" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="3" unique_id=646568295 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.865845, 1, 1.4431076)
-mesh = SubResource("BoxMesh_7g4e2")
+mesh = SubResource("BoxMesh_rsd55")
 wall_size = Vector3(10, 2, 109)
 
 [node name="CommandWall3" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="4" unique_id=126473404 instance=ExtResource("4_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 116.634155, 1, -12.556892)
-mesh = SubResource("BoxMesh_wbjuq")
+mesh = SubResource("BoxMesh_31g5l")
 wall_size = Vector3(230, 2, 10)
 
 [node name="CarbonDeposit" parent="Resources" index="0" unique_id=222736308 instance=ExtResource("6_gfqfu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.229633, 0, -56.33676)
-[node name="WorldPaint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.229633, 0, 17.663239)
+
+[node name="CarbonDeposit2" parent="Resources" index="1" unique_id=1527657482 instance=ExtResource("6_gfqfu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.770367, 0, -2.3367615)
+
+[node name="WorldPaint" type="Node3D" parent="." index="8" unique_id=1756202795]
 script = ExtResource("7_world_paint")
 Data = SubResource("Resource_world_paint")
