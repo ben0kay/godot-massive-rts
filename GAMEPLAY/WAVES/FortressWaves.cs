@@ -132,7 +132,7 @@ internal sealed class FortressWaves
         {
             start = Stopwatch.GetTimestamp();
             separation.Step(units, 1, SeparationGap, combat.SeparationNeighbourBudget, SeparationPadding,
-                tick, obstacles: buildings.Obstacles);
+                tick, obstacles: buildings.MovementField);
             SeparationMs += Stopwatch.GetElapsedTime(start).TotalMilliseconds;
             moved |= separation.MovedSoldiers;
         }
@@ -149,7 +149,7 @@ internal sealed class FortressWaves
         if (WaitingToStart || Countdown > 0)
         {
             // Allow structure engagements and in-flight shots even between waves.
-            var idleField = buildings.Obstacles;
+            var idleField = buildings.CoverField;
             bool engageStructures = units.HasStructureAttackers;
             if (engageStructures) AcquireDefenderTargets(idleField, structuresOnly: true);
             bool idleMoved = MoveAndSeparate(delta);
@@ -174,7 +174,7 @@ internal sealed class FortressWaves
 
         int previousCount = units.Count, previousAlive = units.Alive;
         TryRelease(delta);
-        var field = buildings.Obstacles;
+        var field = buildings.CoverField;
         RebuildGrid();
         if (buildings.HasDefenses) buildings.StepDefenses(grid, delta, tick);
         AcquireDefenderTargets(field);
@@ -332,7 +332,7 @@ internal sealed class FortressWaves
                 bool canApproach = !movement.HasCommand(id) || attackMove;
                 float structureRange = canApproach ? type.StructureDetectionRange :
                     Mathf.Min(type.StructureDetectionRange, StructureCombat.Reach(type));
-                StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, field, sight);
+                StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, buildings.MovementField, sight);
                 if (ChooseStructure(id, type, target, structure, sight))
                 {
                     units.Target[id] = -1;
@@ -387,7 +387,7 @@ internal sealed class FortressWaves
         if (type.TargetsStructures)
         {
             var sight = Sight(type, field);
-            StructureHealth structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, field, sight);
+            StructureHealth structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, buildings.MovementField, sight);
             if (ChooseStructure(id, type, target, structure, sight))
             {
                 units.Target[id] = -1;

@@ -8,6 +8,13 @@
 [ext_resource type="Resource" uid="uid://cp2ov8l52q2ab" path="res://LEVELS/FortressDefense/Level001/Level001.tres" id="5_level"]
 [ext_resource type="PackedScene" path="res://WORLD/RESOURCES/CARBON/CarbonDeposit.tscn" id="6_gfqfu"]
 
+[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaint.cs" id="7_world_paint"]
+[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaintData.cs" id="8_world_paint_data"]
+
+[sub_resource type="Resource" id="Resource_world_paint"]
+resource_local_to_scene = true
+script = ExtResource("8_world_paint_data")
+
 [sub_resource type="Resource" id="Resource_gfqfu"]
 script = ExtResource("2_4crng")
 Enemies = Dictionary[String, int]({
@@ -103,3 +110,6 @@ wall_size = Vector3(230, 2, 10)
 
 [node name="CarbonDeposit" parent="Resources" index="0" unique_id=222736308 instance=ExtResource("6_gfqfu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.229633, 0, -56.33676)
+[node name="WorldPaint" type="Node3D" parent="."]
+script = ExtResource("7_world_paint")
+Data = SubResource("Resource_world_paint")

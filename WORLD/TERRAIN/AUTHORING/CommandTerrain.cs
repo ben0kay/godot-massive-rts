@@ -12,6 +12,7 @@ public partial class CommandTerrain : Node3D
     private Node3D preview;
     private int fingerprint;
     private double previewDelay;
+    public event Action SurfaceChanged;
     public TerrainHeightField Field { get; private set; }
 
     public override void _Ready()
@@ -62,7 +63,11 @@ public partial class CommandTerrain : Node3D
             preview = null;
         }
         Field = null;
-        if (hills.Count == 0) return;
+        if (hills.Count == 0)
+        {
+            SurfaceChanged?.Invoke();
+            return;
+        }
 
         // Compile only chunks that a hill can touch, even if hills sit far apart.
         var regions = new List<Rect2>(hills.Count);
@@ -90,5 +95,6 @@ public partial class CommandTerrain : Node3D
         // Chunks are stored in world coordinates, independent of the authoring node.
         preview.TopLevel = true;
         preview.GlobalTransform = Transform3D.Identity;
+        SurfaceChanged?.Invoke();
     }
 }

@@ -23,7 +23,7 @@ internal sealed class CommandBuildings
     private readonly CommandMovement movement;
     private readonly List<CommandStructure> structures = new();
     private readonly BatchRecipe[] recipes;
-    private readonly ObstacleRectangle[] authoredWalls;
+    private readonly ObstacleRectangle[] authoredWalls, paintedRocks, paintedWater;
     private readonly List<CarbonDeposit> deposits = new();
     private readonly List<ExtractorJob> extractorJobs = new();
     private readonly CarbonExtractorSettings extractorSettings;
@@ -36,7 +36,8 @@ internal sealed class CommandBuildings
     private ObstacleField field;
     public readonly CarbonBalance Carbon = new();
     public CommandStructure Citadel { get; }
-    public ObstacleField Obstacles => field;
+    public ObstacleField MovementField => field;
+    public ObstacleField CoverField { get; private set; }
     public string ArmourName(CommandStructure building) => units.Catalog.DamageRules.ArmourName(building.ArmourClass);
     public int ReservedWaveSlots { get; set; }
     public IReadOnlyList<CommandStructure> Structures => structures;
@@ -45,12 +46,15 @@ internal sealed class CommandBuildings
     public bool CanOperateCitadel => WorkerProductionOpen && !Citadel.Destroyed && Citadel.Ready;
     public bool QueueWorker() => Workers.Enqueue(CanOperateCitadel);
 
-    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView, CitadelWorkerSettings workerSettings)
+    public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView, CitadelWorkerSettings workerSettings,
+        ObstacleRectangle[] paintedRocks, ObstacleRectangle[] paintedWater)
     {
         this.root = root;
         this.units = units;
         this.movement = movement;
         this.authoredWalls = authoredWalls;
+        this.paintedRocks = paintedRocks;
+        this.paintedWater = paintedWater;
         extractorSettings = GD.Load<CarbonExtractorSettings>(
             "res://WORLD/RESOURCES/CARBON/DefaultCarbonExtractorSettings.tres")
             ?? new CarbonExtractorSettings();
@@ -126,7 +130,7 @@ internal sealed class CommandBuildings
         worker = -1;
         goal = default;
         if (!CanOperateCitadel || !GodotObject.IsInstanceValid(deposit) || !deposits.Contains(deposit) ||
-            deposit.Depleted || deposit.WorkerAssigned ||
+            deposit.Depleted || deposit.WorkerAssigned || OverlapsPaint(deposit.Area) ||
             deposit.Extractor is { Destroyed: true } or { BuildProgress: >= 1f }) return false;
 
         float nearest = float.PositiveInfinity;
@@ -240,7 +244,7 @@ internal sealed class CommandBuildings
 
     public bool CanPlace(ObstacleRectangle area, CommandBuildType type)
     {
-        if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type)) return false;
+        if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type) || OverlapsPaint(area)) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
         if (type == CommandBuildType.LaserTower && towerCount >= LaserTowerLimit) return false;
 
@@ -268,6 +272,16 @@ internal sealed class CommandBuildings
             if (p.DistanceSquaredTo(closest) <= radius * radius) return false;
         }
         return true;
+    }
+
+    private bool OverlapsPaint(ObstacleRectangle area)
+    {
+        Vector2 min = area.Min, max = area.Max;
+        foreach (var rock in paintedRocks)
+            if (Overlaps(min, max, rock)) return true;
+        foreach (var water in paintedWater)
+            if (Overlaps(min, max, water)) return true;
+        return false;
     }
 
     private static bool Overlaps(Vector2 min, Vector2 max, ObstacleRectangle other)
@@ -306,13 +320,13 @@ internal sealed class CommandBuildings
 
     public bool HasDefenses => defenses?.ActiveCount > 0;
     public void StepDefenses(SpatialGrid grid, float delta, int tick) =>
-        defenses?.Step(units, grid, field, delta, tick, 1f / 60f);
+        defenses?.Step(units, grid, CoverField, delta, tick, 1f / 60f);
     public void AdvanceDefenseEffects(float delta) => defenseRenderer?.Advance(delta);
 
     public void AddHostileFabricator(Vector3 point)
     {
         var area = Snap(point);
-        if (!FitsMap(area)) return;
+        if (!FitsMap(area) || OverlapsPaint(area)) return;
         Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Red, fabricatorDefinition,
             units.Catalog.DamageRules, groundHeight: FoundationHeight(area, out _)));
     }
@@ -326,12 +340,15 @@ internal sealed class CommandBuildings
 
     private void RebuildObstacles()
     {
-        var areas = new List<ObstacleRectangle>(authoredWalls.Length + structures.Count + deposits.Count);
+        var areas = new List<ObstacleRectangle>(authoredWalls.Length + paintedRocks.Length + structures.Count + deposits.Count);
         areas.AddRange(authoredWalls);
+        areas.AddRange(paintedRocks);
         foreach (var deposit in deposits) areas.Add(deposit.Area);
         foreach (var structure in structures)
             if (!structure.Destroyed && structure is not CarbonExtractor) areas.Add(structure.Area);
-        field = areas.Count == 0 ? null : new ObstacleField(areas.ToArray());
+        CoverField = areas.Count == 0 ? null : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
+        if (paintedWater.Length > 0) areas.AddRange(paintedWater);
+        field = paintedWater.Length == 0 ? CoverField : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
         movement.SetObstacles(field);
     }
 
