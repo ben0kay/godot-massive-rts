@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -27,10 +27,19 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         new(1f, -0.5f), new(1f, 0.72f), new(-1f, 0.72f)
     };
 
+    // The tip is forward (-Z). A wide rear bar joins the narrow spear shaft.
+    private static readonly Vector2[] PikeVertices =
+    {
+        new(0f, -1f), new(0.24f, -0.62f), new(0.24f, 0.18f),
+        new(1f, 0.18f), new(1f, 0.82f), new(-1f, 0.82f),
+        new(-1f, 0.18f), new(-0.24f, 0.18f), new(-0.24f, -0.62f)
+    };
+
     public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
 
     public float Footprint => IsDrillRig
         ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
+        : IsPike ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.82f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
     public float BarrelWidth => RadiusX * 0.25f;
     public float BarrelFront => RadiusZ;
@@ -38,6 +47,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 
     public Vector2 Vertex(int index)
     {
+        if (IsPike) return PikeVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsDrillRig) return DrillRigVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsHFrame) return HVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsChevron) return ChevronVertices[index] * (RadiusX * 2f);
@@ -75,6 +85,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
+            UnitShape.Pike => new(PikeVertices.Length, halfWidth, width * 0.74f, 0f, IsPike: true),
             UnitShape.DrillRig => new(DrillRigVertices.Length, halfWidth, width * 0.70f, 0f, IsDrillRig: true),
             UnitShape.HFrame => new(12, halfWidth, width * 0.57f, 0f, IsHFrame: true),
             UnitShape.Hexagon => new(6, halfWidth, halfWidth, -Mathf.Pi * 0.5f),
@@ -88,7 +99,8 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     float DamageTaken, bool Ranged, int ProjectileType, float MinimumFireRange,
     bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
-    float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent)
+    float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent,
+    int MeleeBonusTarget, float MeleeBonusMultiplier)
 {
     public float AgainstUnits(float amount) => UnitDamagePercent < 0f ? amount : amount * (UnitDamagePercent * 0.01f);
     public float AgainstStructures(float amount) => StructureDamagePercent < 0f ? amount : amount * (StructureDamagePercent * 0.01f);
@@ -112,10 +124,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
@@ -170,6 +182,11 @@ public sealed class RuntimeUnitCatalog
             var worker = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Worker.tres");
             if (worker != null) byId.Add(WorkerId, worker);
         }
+        if (byId.Count == Pikeman && !byId.ContainsKey(PikemanId))
+        {
+            var pikeman = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Pikeman.tres");
+            if (pikeman != null) byId.Add(PikemanId, pikeman);
+        }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
@@ -217,7 +234,8 @@ public sealed class RuntimeUnitCatalog
                 DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), d.AllowedTargets, d.PreferredTarget,
                 ClampStat(d.StructureDetectionRange, 0f, 100f, 12f), ClampStat(d.TurnDegreesPerSecond, 0f, 720f, 0f),
                 ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
-                ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f));
+                ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
+                Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f));
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

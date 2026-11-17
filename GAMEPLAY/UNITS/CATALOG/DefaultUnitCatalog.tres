@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitCatalog" load_steps=13 format=3]
+[gd_resource type="Resource" script_class="UnitCatalog" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="2"]
@@ -18,6 +18,8 @@
 
 [ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/Worker.tres" id="12"]
 
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/Pikeman.tres" id="13"]
+
 [resource]
 script = ExtResource("1")
-Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12")])
+Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13")])

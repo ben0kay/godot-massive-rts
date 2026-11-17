@@ -70,7 +70,7 @@ public static class FacetedSoldierMeshes
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, chevron: outline.IsChevron ? outline : null, sideShade: SoldierSideShade);
+            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike ? outline : null, sideShade: SoldierSideShade);
         if (outline.IsChevron)
         {
             float length = outline.BarrelFront - outline.BarrelBack;
@@ -114,7 +114,7 @@ public static class FacetedSoldierMeshes
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
-        UnitOutline? chevron = null, float sideShade = 1f)
+        UnitOutline? customOutline = null, float sideShade = 1f)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -130,15 +130,17 @@ public static class FacetedSoldierMeshes
         var shoulder = new Vector3[sides];
         var bottom = new Vector3[sides];
 
-        // This point sees all six chevron edges, so the concave cap can use the same triangle fan.
-        Vector3 cap = chevron.HasValue ? new Vector3(0f, 0f, -radiusZ * 0.44f) : Vector3.Zero;
+        // Each concave outline uses an interior point that sees every edge of its cap.
+        Vector3 cap = Vector3.Zero;
+        if (customOutline is UnitOutline outline)
+            cap.Z = outline.IsPike ? radiusZ * 0.32f : -radiusZ * 0.44f;
         for (int i = 0; i < sides; i++)
         {
             float angle = rotation + i * Mathf.Tau / sides;
             float x = Mathf.Cos(angle) * radiusX, z = Mathf.Sin(angle) * radiusZ;
-            if (chevron.HasValue)
+            if (customOutline.HasValue)
             {
-                Vector2 vertex = chevron.Value.Vertex(i);
+                Vector2 vertex = customOutline.Value.Vertex(i);
                 x = vertex.X;
                 z = vertex.Y;
             }

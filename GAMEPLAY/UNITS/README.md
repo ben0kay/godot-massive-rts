@@ -19,6 +19,7 @@ UNITS/
     UnitDefinition.cs
     CircleInfantry.tres
     SquareInfantry.tres
+    Pikeman.tres
     TriangleArcher.tres
     LongTriangleMarksman.tres
     DiamondCavalry.tres
@@ -31,7 +32,7 @@ UNITS/
     DefaultUnitCatalog.tres
 ```
 
-The arena loads the catalogue once and builds a shared stat lookup and mesh set. Runtime byte indices are explicitly Circle 0, Square 1, Triangle 2, Diamond 3, Pentagon 4, Hexagon 5, Chevron 6, H Breacher 7 and Long Triangle Marksman 8. Deployment saves use version 1 and stable textual IDs. Legacy arrays map kind 0 to Circle and kind 1 to Triangle.
+The arena loads the catalogue once and builds a shared stat lookup and mesh set. Runtime byte indices are explicitly Circle 0, Square 1, Triangle 2, Diamond 3, Pentagon 4, Hexagon 5, Chevron 6, H Breacher 7 Long Triangle Marksman 8, Worker 9, and Pikeman 10. Deployment saves use version 1 and stable textual IDs. Legacy arrays map kind 0 to Circle and kind 1 to Triangle.
 
 Open a definition resource to tune its silhouette, dimensions, speed, health, armour, reach, damage or attack interval. The arena reads changes on restart. Both factions use the same definitions. Normal melee attacks require body contact based on both footprints. Authored melee reach still feeds acquisition and trample launch distance. Armour multiplies damage by the fraction left after reduction for both melee and projectiles.
 
@@ -54,3 +55,7 @@ The new `long_triangle_marksman` (`LongTriangleMarksman.tres`) uses the same 0.8
 **Turn rate** in Entity Editor → Movement controls how quickly a directional unit rotates on the ground and aims in combat. It applies in both the benchmark and Fortress Defense. Circles skip heading updates. Older resources with a zero turn rate use 300°/s for directional shapes.
 
 Worker (`worker`, index 9) is a compact rectangular utility unit with a front drill produced by the Citadel. Its allowed targets are **None**, so it can move and take damage without initiating combat. Its first milestone covers production and movement.
+
+## Pikeman
+
+The Pikeman (`pikeman`, index 10) uses Strong Infantry's base stats and a T silhouette with the spear tip pointing forward. Its regular melee strike deals 1.5× damage against the `diamond_cavalry` unit ID. The target ID and multiplier are authored in the Pikeman resource and resolved when the catalogue loads. Charge resistance is 1.10 versus Strong Infantry's 0.45. In the benchmark, that stops a stock cavalry charge with starting momentum 1.0 and reduces the contact damage. Fortress Defense currently uses ordinary cavalry melee. Select Pikemen in the deployment painter or produce a batch of 10 for 150 Carbon in 10 seconds at a Fabricator.
