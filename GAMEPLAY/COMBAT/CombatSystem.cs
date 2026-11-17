@@ -221,7 +221,12 @@ public static class CombatSystem
             }
             else if (type.CleaveEnabled)
                 AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
-            else units.Damage(target, type.AgainstUnits(type.Damage), type.UnitDamageType);
+            else
+            {
+                float damage = type.AgainstUnits(type.Damage);
+                if (units.Type[target] == type.MeleeBonusTarget) damage *= type.MeleeBonusMultiplier;
+                units.Damage(target, damage, type.UnitDamageType);
+            }
             if (type.MeleeLungeDistance > 0f) lungeChanged = units.Dirty[i] = true;
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }

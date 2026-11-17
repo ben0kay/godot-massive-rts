@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "pikeman"
+DisplayName = "Pikeman"
+Role = "Armoured melee that stops charges and counters mounted units"
+Shape = 10
+Height = 0.4125
+Speed = 4.0
+TurnDegreesPerSecond = 270.0
+ArmourClass = "Medium"
+Health = 85.0
+ChargeResistance = 1.1
+Damage = 12.0
+MeleeBonusTargetId = "diamond_cavalry"
+MeleeBonusMultiplier = 1.5
+Interval = 1.1
+Reach = 1.8

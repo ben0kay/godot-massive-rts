@@ -13,6 +13,7 @@ public readonly record struct ObstacleRectangle(
     [JsonIgnore] public float GridSize { get; init; } = DeploymentLayout.CellSize;
     [JsonIgnore] private int HalfWidth => DeploymentLayout.CellHalfWidth(GridSize);
     // Authored scene meshes can supply exact world bounds. Painted saves use cells.
+    [JsonIgnore] public Vector2? AirborneHeightRange { get; init; }
     [JsonIgnore] public Rect2? WorldBounds { get; init; }
     [JsonIgnore] public Vector2 Min => WorldBounds?.Position ?? new Vector2(X, Z) * GridSize;
     [JsonIgnore] public Vector2 Max => WorldBounds?.End ?? new Vector2(X + Width, Z + Depth) * GridSize;
@@ -76,29 +77,9 @@ public sealed class ObstacleLayout
     private static bool TryCompile(HashSet<Vector2I> cells, float gridSize, out ObstacleLayout layout)
     {
         layout = null;
-        var remaining = new HashSet<Vector2I>(cells);
-        var ordered = new List<Vector2I>(cells);
-        ordered.Sort((a, b) => a.Y == b.Y ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
-        var rectangles = new List<ObstacleRectangle>();
-        foreach (var first in ordered)
-        {
-            if (!remaining.Contains(first)) continue;
-            if (rectangles.Count == MaxRectangles) return false;
-            int width = 1, depth = 1;
-            while (remaining.Contains(first + new Vector2I(width, 0))) width++;
-            while (true)
-            {
-                int x = 0;
-                while (x < width && remaining.Contains(first + new Vector2I(x, depth))) x++;
-                if (x < width) break;
-                depth++;
-            }
-            for (int z = 0; z < depth; z++)
-            for (int x = 0; x < width; x++)
-                remaining.Remove(first + new Vector2I(x, z));
-            rectangles.Add(new ObstacleRectangle(first.X, first.Y, width, depth) { GridSize = gridSize });
-        }
-        layout = new ObstacleLayout(cells, rectangles.ToArray(), gridSize);
+        var rectangles = ObstacleCellCompiler.Merge(cells, gridSize, MaxRectangles);
+        if (rectangles == null) return false;
+        layout = new ObstacleLayout(cells, rectangles, gridSize);
         return true;
     }
 }

@@ -8,9 +8,11 @@ namespace MassiveRts;
 public sealed class ObstacleField
 {
     private readonly record struct Box(Vector2 Min, Vector2 Max);
+    private readonly record struct Leaf(Box Bounds, Vector2? AirborneHeightRange);
     private readonly record struct Node(Box Bounds, int Left, int Right);
     private readonly Node[] nodes;
     private int nodeCount;
+    private readonly Vector2?[] airborneHeights;
     public int RectangleCount => rectangles.Length;
     public ReadOnlySpan<ObstacleRectangle> Rectangles => rectangles;
     private readonly ObstacleRectangle[] rectangles;
@@ -47,38 +49,49 @@ public sealed class ObstacleField
 
     public float Boundary { get; }
 
-    public ObstacleField(ObstacleRectangle[] rectangles)
+    public ObstacleField(ObstacleRectangle[] rectangles, float? boundary = null)
     {
         float gridSize = rectangles.Length > 0 ? rectangles[0].GridSize : DeploymentLayout.CellSize;
-        Boundary = DeploymentLayout.CellHalfWidth(gridSize) * gridSize;
+        Boundary = boundary ?? DeploymentLayout.CellHalfWidth(gridSize) * gridSize;
         this.rectangles = (ObstacleRectangle[])rectangles.Clone();
-        var boxes = new Box[rectangles.Length];
-        for (int i = 0; i < boxes.Length; i++) boxes[i] = new Box(rectangles[i].Min, rectangles[i].Max);
-        nodes = new Node[boxes.Length * 2 - 1];
-        Build(boxes, 0, boxes.Length);
+        var leaves = new Leaf[rectangles.Length];
+        bool hasCustomAirborneHeight = false;
+        for (int i = 0; i < leaves.Length; i++)
+        {
+            var area = rectangles[i];
+            leaves[i] = new Leaf(new Box(area.Min, area.Max), area.AirborneHeightRange);
+            hasCustomAirborneHeight |= area.AirborneHeightRange.HasValue;
+        }
+        nodes = new Node[leaves.Length * 2 - 1];
+        if (hasCustomAirborneHeight) airborneHeights = new Vector2?[nodes.Length];
+        Build(leaves, 0, leaves.Length);
     }
 
-    private int Build(Box[] boxes, int start, int count)
+    private int Build(Leaf[] leaves, int start, int count)
     {
         int index = nodeCount++;
-        Box bounds = boxes[start];
+        Box bounds = leaves[start].Bounds;
         for (int i = start + 1; i < start + count; i++)
-            bounds = new Box(bounds.Min.Min(boxes[i].Min), bounds.Max.Max(boxes[i].Max));
-        if (count == 1) nodes[index] = new Node(bounds, -1, -1);
+            bounds = new Box(bounds.Min.Min(leaves[i].Bounds.Min), bounds.Max.Max(leaves[i].Bounds.Max));
+        if (count == 1)
+        {
+            nodes[index] = new Node(bounds, -1, -1);
+            if (airborneHeights != null) airborneHeights[index] = leaves[start].AirborneHeightRange;
+        }
         else
         {
             bool splitX = bounds.Max.X - bounds.Min.X >= bounds.Max.Y - bounds.Min.Y;
-            Array.Sort(boxes, start, count, ComparerForAxis(splitX));
+            Array.Sort(leaves, start, count, ComparerForAxis(splitX));
             int half = count / 2;
-            nodes[index] = new Node(bounds, Build(boxes, start, half), Build(boxes, start + half, count - half));
+            nodes[index] = new Node(bounds, Build(leaves, start, half), Build(leaves, start + half, count - half));
         }
         return index;
     }
 
-    private static System.Collections.Generic.IComparer<Box> ComparerForAxis(bool x) =>
-        System.Collections.Generic.Comparer<Box>.Create((a, b) => x
-            ? (a.Min.X + a.Max.X).CompareTo(b.Min.X + b.Max.X)
-            : (a.Min.Y + a.Max.Y).CompareTo(b.Min.Y + b.Max.Y));
+    private static System.Collections.Generic.IComparer<Leaf> ComparerForAxis(bool x) =>
+        System.Collections.Generic.Comparer<Leaf>.Create((a, b) => x
+            ? (a.Bounds.Min.X + a.Bounds.Max.X).CompareTo(b.Bounds.Min.X + b.Bounds.Max.X)
+            : (a.Bounds.Min.Y + a.Bounds.Max.Y).CompareTo(b.Bounds.Min.Y + b.Bounds.Max.Y));
 
     public void ResetCounters()
     {
@@ -177,23 +190,30 @@ public sealed class ObstacleField
     public float AirborneHit(Vector3 from, Vector3 delta, float wallHeight)
     {
         float enter = 0f, exit = 1f, first = float.PositiveInfinity;
-        if (Axis(from.Y, delta.Y, 0f, wallHeight, ref enter, ref exit))
-            SearchAirborne(0, Xz(from), Xz(delta), enter, exit, ref first);
+        if (airborneHeights != null || Axis(from.Y, delta.Y, 0f, wallHeight, ref enter, ref exit))
+            SearchAirborne(0, from, delta, wallHeight, enter, exit, ref first);
         return first;
     }
 
-    private void SearchAirborne(int index, Vector2 from, Vector2 delta, float enter, float exit, ref float first)
+    private void SearchAirborne(int index, Vector3 from, Vector3 delta, float wallHeight, float enter, float exit, ref float first)
     {
         ref readonly Node node = ref nodes[index];
         Box box = node.Bounds;
         if (!Axis(from.X, delta.X, box.Min.X, box.Max.X, ref enter, ref exit) || enter >= first ||
-            !Axis(from.Y, delta.Y, box.Min.Y, box.Max.Y, ref enter, ref exit) || enter >= first) return;
-        if (node.Left < 0) first = enter;
-        else
+            !Axis(from.Z, delta.Z, box.Min.Y, box.Max.Y, ref enter, ref exit) || enter >= first) return;
+        if (node.Left < 0)
         {
-            SearchAirborne(node.Left, from, delta, enter, exit, ref first);
-            SearchAirborne(node.Right, from, delta, enter, exit, ref first);
+            if (airborneHeights == null)
+            {
+                first = enter;
+                return;
+            }
+            Vector2 height = airborneHeights[index] ?? new Vector2(0f, wallHeight);
+            if (Axis(from.Y, delta.Y, height.X, height.Y, ref enter, ref exit) && enter < first) first = enter;
+            return;
         }
+        SearchAirborne(node.Left, from, delta, wallHeight, enter, exit, ref first);
+        SearchAirborne(node.Right, from, delta, wallHeight, enter, exit, ref first);
     }
 
     public bool BlocksCorridor(Vector2 from, Vector2 to, float radius)

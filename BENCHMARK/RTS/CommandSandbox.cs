@@ -47,7 +47,7 @@ public partial class CommandSandbox : Node3D
         }
     }
 
-    private float MapSize => LevelSettings?.MapSize ?? LevelDefinition.DefaultMapSize;
+    internal float MapSize => LevelSettings?.MapSize ?? LevelDefinition.DefaultMapSize;
 
     private void OnLevelSettingsChanged()
     {
@@ -173,8 +173,11 @@ public partial class CommandSandbox : Node3D
             DeathFeedback = deathFeedback
         };
         movement = new CommandMovement(units, halfWidth);
+        var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
+        var (rocks, water) = paint?.Compile() ??
+            (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"),
-            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"));
+            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water);
         if (SpawnDefaultBlueSquad)
         {
             var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
