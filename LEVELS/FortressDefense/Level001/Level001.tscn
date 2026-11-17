@@ -67,6 +67,7 @@ LevelSettings = ExtResource("5_level")
 SpawnDefaultBlueSquad = false
 EnemySpawnPattern = 1
 EnemySpawnSpacing = 6.0
+EnemySpawnRate = 30.0
 WaveDefinitions = Array[ExtResource("2_4crng")]([SubResource("Resource_gfqfu"), SubResource("Resource_bbsqs"), SubResource("Resource_otgem"), SubResource("Resource_on2mr")])
 BetweenWavesSeconds = 30.0
 
@@ -77,7 +78,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, -0.17513934, -7.2132716)
 Unit = ExtResource("3_uk3k8")
 
 [node name="CommandWall6" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="0" unique_id=1910230538 instance=ExtResource("4_gfqfu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5366211, 1, 182.77245)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4633789, 1, 80.772446)
 mesh = SubResource("BoxMesh_bbsqs")
 wall_size = Vector3(30, 2, 30)
 
@@ -87,12 +88,12 @@ mesh = SubResource("BoxMesh_otgem")
 wall_size = Vector3(230, 2, 10)
 
 [node name="CommandWall4" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="2" unique_id=568456616 instance=ExtResource("4_gfqfu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 66.26831, 1, 44.886215)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44.26831, 1, -1.1137848)
 mesh = SubResource("BoxMesh_on2mr")
 wall_size = Vector3(10, 2, 109)
 
 [node name="CommandWall2" parent="Obstacles" parent_id_path=PackedInt32Array(583024127) index="3" unique_id=646568295 instance=ExtResource("4_gfqfu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.865845, 1, 44.443108)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.865845, 1, 1.4431076)
 mesh = SubResource("BoxMesh_7g4e2")
 wall_size = Vector3(10, 2, 109)
 
@@ -102,4 +103,4 @@ mesh = SubResource("BoxMesh_wbjuq")
 wall_size = Vector3(230, 2, 10)
 
 [node name="CarbonDeposit" parent="Resources" index="0" unique_id=222736308 instance=ExtResource("6_gfqfu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.229633, 0, -56.33676)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.229633, 0, 4.6632385)

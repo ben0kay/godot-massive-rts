@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" format=3 uid="uid://c3kp7r4c208r2"]
 
-[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -10,10 +10,10 @@ Role = "Noncombat utility drone"
 Shape = 9
 Width = 0.7
 Height = 0.35
-FootprintRadius = 0.43
 SizeMultiplier = 3.0
-Health = 40.0
+FootprintRadius = 0.43
 Speed = 4.0
 TurnDegreesPerSecond = 270.0
-Damage = 0.0
+Health = 40.0
 AllowedTargets = 0
+Damage = 0.0
