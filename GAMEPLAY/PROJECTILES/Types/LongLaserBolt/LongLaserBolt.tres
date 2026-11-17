@@ -27,3 +27,4 @@ size = Vector3(0.07, 0.07, 0.64)
 script = ExtResource("1")
 VisualMesh = SubResource("3")
 TintByFaction = true
+Speed = 67.5

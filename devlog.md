@@ -311,3 +311,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-17 — WORLDPAINT1: Added the Godot 3D World Painter to Fortress Defense Level 001. Painted rock blocks movement and supplies cover, while water blocks movement and building placement and permits fire across it. Source reviewed with a bounded geometry check, awaiting Godot .NET playtest.
 
 - 2026-11-17 — Pikeman: Added a spear-tipped T-shaped Strong Infantry counterpart to the roster and Fabricator. Its charge resistance stops stock cavalry tramples in the benchmark, and its regular melee strike gains a bonus against the Diamond unit ID. Source checked, awaiting Godot playtest.
+
+- 2026-11-17 — PROJ-LASER4: Increased only the Long Triangle Marksman's dedicated laser projectile authored speed from 45 to 67.5 (+50%), preserving regular Triangle lasers, damage, range, firing interval, visuals and arc. Source reviewed; Godot playtest pending.
