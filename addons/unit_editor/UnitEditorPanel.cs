@@ -35,12 +35,14 @@ public partial class UnitEditorPanel : VBoxContainer
     private readonly ConfirmationDialog confirmSwitch = new()
     {
         Title = "Switch entities?",
+        Transient = true,
         Exclusive = true,
         DialogHideOnOk = false
     };
     private Draft draft;
     private Action pendingSwitch;
     private bool dirty;
+    private bool rebuildingForm;
     private float speedScale = 0.8f;
     internal Draft PendingDraft => dirty ? draft : null;
     private UnitDefinition Unit => (UnitDefinition)draft.Definition;
@@ -63,7 +65,7 @@ public partial class UnitEditorPanel : VBoxContainer
         foreach (var item in Enum.GetValues<EntityCategory>()) category.AddItem(item.ToString());
         roster.AddChild(category);
         roster.AddChild(search);
-        category.Connect(OptionButton.SignalName.ItemSelected, new Callable(this, nameof(OnCategorySelected)));
+        category.ItemSelected += OnCategorySelected;
         roster.AddChild(list);
 
         var workspace = new HSplitContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -98,16 +100,11 @@ public partial class UnitEditorPanel : VBoxContainer
         };
         confirmSwitch.Canceled += () => pendingSwitch = null;
 
-        list.Connect(ItemList.SignalName.ItemSelected, new Callable(this, nameof(OnEntitySelected)));
+        list.ItemSelected += OnEntitySelected;
         search.TextChanged += _ => PopulateList();
-        refresh.Pressed += RefreshCatalogue;
+        refresh.Pressed += () => Callable.From(RefreshCatalogue).CallDeferred();
         save.Pressed += () => Save();
-        reload.Pressed += () =>
-        {
-            if (draft == null) return;
-            if (dirty) confirmReload.PopupCentered();
-            else LoadEntity(draft.Path);
-        };
+        reload.Pressed += () => Callable.From(ReloadEntity).CallDeferred();
         confirmReload.Confirmed += () => { if (draft != null) LoadEntity(draft.Path); };
 
         if (suspended != null)
@@ -126,27 +123,31 @@ public partial class UnitEditorPanel : VBoxContainer
     {
         var requested = (EntityCategory)index;
         category.Select((int)activeCategory);
-        if (requested != activeCategory) CallDeferred(nameof(SwitchCategory), (int)requested);
+        if (requested != activeCategory)
+            Callable.From(() => RequestSwitch(() => ShowCategory(requested))).CallDeferred();
     }
-
-    private void SwitchCategory(int index) => RequestSwitch(() => ShowCategory((EntityCategory)index));
 
     private void OnEntitySelected(long index)
     {
         if (index < 0 || index >= visibleEntries.Count) return;
-        // Let the focused numeric field commit before checking whether the draft is dirty.
-        CallDeferred(nameof(SwitchEntity), visibleEntries[(int)index].Path);
+        // Capture the resource path before another input event can rebuild the roster.
+        string path = visibleEntries[(int)index].Path;
+        Callable.From(() =>
+        {
+            if (path != draft?.Path) RequestSwitch(() => LoadEntity(path));
+        }).CallDeferred();
     }
 
-    private void SwitchEntity(string path)
+    private void ReloadEntity()
     {
-        if (path != draft?.Path) RequestSwitch(() => LoadEntity(path));
+        if (!IsInsideTree() || draft == null || pendingSwitch != null || confirmReload.Visible) return;
+        if (dirty) confirmReload.PopupCentered();
+        else LoadEntity(draft.Path);
     }
 
     private void RefreshCatalogue()
     {
-        // Populate the list once when restoring a suspended draft.
-        if (dirty && entries.Count > 0) return;
+        if (!IsInsideTree()) return;
         entries.Clear();
         var catalog = ResourceLoader.Load<UnitCatalog>(CatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
         var defenses = ResourceLoader.Load<BuildingCatalog>(DefenseCatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
@@ -196,11 +197,16 @@ public partial class UnitEditorPanel : VBoxContainer
         if (defenses?.Definitions != null)
             foreach (var defense in defenses.Definitions) Register(Describe(defense));
 
-        if (!dirty) ShowCategory(activeCategory);
+        if (!dirty)
+        {
+            ShowCategory(activeCategory);
+            if (draft != null && string.IsNullOrEmpty(status.Text)) status.Text = "Catalogue refreshed.";
+        }
         else
         {
             PopulateList();
-            status.Text = "Restored your unsaved draft.";
+            UpdateView();
+            status.Text = "Catalogue refreshed. Unsaved edits are still open.";
         }
         if (skipped.Count > 0)
         {
@@ -280,7 +286,7 @@ public partial class UnitEditorPanel : VBoxContainer
     // Keep the roster and form on the same entity until a pending edit is resolved.
     private void RequestSwitch(Action action)
     {
-        if (!IsInsideTree() || confirmSwitch.Visible) return;
+        if (!IsInsideTree() || pendingSwitch != null || confirmReload.Visible) return;
         if (!dirty)
         {
             action();
@@ -315,7 +321,7 @@ public partial class UnitEditorPanel : VBoxContainer
     private void LoadEntity(string path)
     {
         string hash = FileAccess.GetSha256(path);
-        Resource definition = ResourceLoader.Load(path, cacheMode: ResourceLoader.CacheMode.Ignore);
+        Resource definition = ResourceLoader.Load(path, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
         Entry updated = Describe(definition);
         if (updated == null || string.IsNullOrEmpty(hash) || hash != FileAccess.GetSha256(path))
         {
@@ -371,6 +377,7 @@ public partial class UnitEditorPanel : VBoxContainer
 
     private void MarkEdited()
     {
+        if (rebuildingForm) return;
         dirty = true;
         status.Text = "";
         UpdateView();
@@ -380,7 +387,6 @@ public partial class UnitEditorPanel : VBoxContainer
     {
         save.Disabled = !dirty;
         reload.Disabled = draft == null;
-        refresh.Disabled = dirty;
         pathLabel.Text = draft == null ? "Entity Editor" : $"{draft.Path.GetFile()}   ·   {(dirty ? "Unsaved changes" : "Saved")}";
         pathLabel.TooltipText = draft?.Path ?? "";
         overlays.Visible = draft?.Definition is UnitDefinition;

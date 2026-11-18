@@ -20,6 +20,13 @@ public partial class UnitEditorPanel
 
     private void BuildForm()
     {
+        rebuildingForm = true;
+        try { RebuildFields(); }
+        finally { rebuildingForm = false; }
+    }
+
+    private void RebuildFields()
+    {
         foreach (Node child in fields.GetChildren())
         {
             fields.RemoveChild(child);
@@ -366,7 +373,7 @@ public partial class UnitEditorPanel
         Row(label, input, tooltip);
         input.ValueChanged += value =>
         {
-            if (!input.IsInsideTree() || (float)value == get()) return;
+            if (rebuildingForm || !input.IsInsideTree() || (float)value == get()) return;
             set((float)value);
             MarkEdited();
         };
