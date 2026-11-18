@@ -26,6 +26,7 @@ public partial class BenchmarkArena : Node3D
     private readonly DeathFeedbackSystem deathFeedback = new();
     private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
+    private AttackRangeOverlay attackRanges;
     private BenchmarkPanel panel;
     private ArmyBalanceHud armyBalanceHud;
     private DeploymentFactory deployment;
@@ -111,6 +112,8 @@ public partial class BenchmarkArena : Node3D
         buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"), catalog.DamageRules);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
+        attackRanges = new AttackRangeOverlay();
+        AddChild(attackRanges);
         // Keep the gameplay bar separate from BENCHMARK's developer panels.
         var gameplayHudLayer = new CanvasLayer { Layer = 2 };
         AddChild(gameplayHudLayer);
@@ -548,6 +551,8 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
         }
+        attackRanges.Refresh(units, camera, panel.Separation != SeparationMode.Off && units?.Alive > 1
+            ? Config.SeparationGap : 0f, panel.ShowAttackRanges && !spawning);
         shockwaves.Sync();
         deathRenderer.Sync(deathFeedback);
         measuredFrames++; hudClock += delta;

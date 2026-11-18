@@ -89,6 +89,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	private PanelContainer left, overlay;
 	private VBoxContainer right;
 	private CheckButton performanceToggle;
+	private readonly CheckButton attackRangesToggle = new() { Text = "Attack ranges on hover" };
+	public bool ShowAttackRanges => attackRangesToggle.ButtonPressed;
 	private bool leftPanelVisible = true, rightPanelVisible = true;
 
 	// =========================================================
@@ -281,6 +283,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		display.AddChild(DeathEffects);
 		groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
 		display.AddChild(groundShadows);
+		display.AddChild(attackRangesToggle);
+		display.AddChild(Hint("Gold: attack arc at target size (Circle if none)\nGreen/red: in/out of melee geometry\nBlue: shockwave radius"));
 		performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
 		performanceToggle.Toggled += _ => UpdatePanelVisibility();
 		display.AddChild(performanceToggle);

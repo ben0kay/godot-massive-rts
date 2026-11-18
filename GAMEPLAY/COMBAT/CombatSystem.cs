@@ -8,7 +8,7 @@ public static class CombatSystem
     private const int PursuitQueriesPerAcquisitionStep = 512;
     private const float FarMeleeRetargetDelaySeconds = 0.4f;
     internal const float MeleeLungeSeconds = 0.16f;
-    private const float MeleeContactTolerance = 0.08f;
+    internal const float MeleeContactTolerance = 0.08f;
 
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
         attackerRadius + defenderRadius + Mathf.Max(0f, separationGap);
