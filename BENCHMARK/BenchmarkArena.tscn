@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://b3w6comq3c5cg"]
 
 [ext_resource type="Script" uid="uid://bl8xldjabp3sd" path="res://BENCHMARK/BenchmarkArena.cs" id="1"]
-[ext_resource type="Resource" path="res://BENCHMARK/CONFIG/DefaultBenchmark.tres" id="2"]
+[ext_resource type="Resource" uid="uid://04cliv7ysvdu" path="res://BENCHMARK/CONFIG/DefaultBenchmark.tres" id="2"]
 
 [node name="BenchmarkArena" type="Node3D" unique_id=1163532606]
 script = ExtResource("1")
