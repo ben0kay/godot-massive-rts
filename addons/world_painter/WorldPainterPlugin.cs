@@ -15,6 +15,7 @@ public partial class WorldPainterPlugin : EditorPlugin
     private EditorDock dock;
     private bool dockRegistered;
     private bool signalsConnected;
+    private bool selectingPaintTarget;
     private CheckButton paintMode, showGrid;
     private OptionButton layer, tool, size, shape, action;
     private Label status;
@@ -132,18 +133,35 @@ public partial class WorldPainterPlugin : EditorPlugin
 
     private void OnDockVisibilityChanged()
     {
-        if (!dockRegistered) return;
-        if (dock.IsVisibleInTree()) RefreshScene();
-        else OnPaintModeToggled(false);
+        if (!dockRegistered || selectingPaintTarget) return;
+        if (!dock.IsVisibleInTree()) OnPaintModeToggled(false);
+        else if (paintMode.Disabled != (CurrentPaint() == null)) RefreshScene();
     }
 
     private void OnPaintModeToggled(bool enabled)
     {
-        if (enabled || !dockRegistered) return;
+        if (!dockRegistered) return;
+        if (enabled && CurrentPaint() is WorldPaint target)
+        {
+            // Route editor input through the selected paint node as well as the global forwarder.
+            selectingPaintTarget = true;
+            try
+            {
+                EditorInterface.Singleton.EditNode(target);
+                dock.MakeVisible();
+            }
+            finally { selectingPaintTarget = false; }
+            status.Text = "Paint mode on. Move over the level to preview the brush.";
+            return;
+        }
+
         paintMode.SetPressedNoSignal(false);
         ResetStroke();
         ClearCursor();
+        RefreshScene();
     }
+
+    public override bool _Handles(GodotObject handledObject) => handledObject is WorldPaint;
 
     // =========================================================
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent @event)
@@ -172,6 +190,15 @@ public partial class WorldPainterPlugin : EditorPlugin
         }
 
         bool hit = TryCell(camera, mouse.Position, target, out var cell);
+        bool inBounds = hit && target.Contains(cell);
+        if (strokeTarget == null)
+        {
+            string message = !hit ? "Aim the viewport down at the level. Numpad 7 opens Top view."
+                : inBounds ? $"Cell {cell.X}, {cell.Y}. Left-drag to paint."
+                : $"Outside the {target.MapHalfWidth * 2f:0}-unit level. Move closer to the map centre.";
+            if (status.Text != message) status.Text = message;
+        }
+
         bool released = @event is InputEventMouseButton { Pressed: false };
         if (strokeTarget != null && (released || @event is InputEventMouseMotion &&
             (mouse.ButtonMask & MouseButtonMask.Left) == 0))
@@ -184,7 +211,7 @@ public partial class WorldPainterPlugin : EditorPlugin
 
         if (@event is InputEventMouseButton { Pressed: true })
         {
-            if (hit && target.Contains(cell))
+            if (inBounds)
             {
                 BeginStroke(target, cell);
                 DrawCursor(target, cell);

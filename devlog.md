@@ -327,3 +327,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Labelled melee range input Base detection range under Targeting and ranged input Firing range under Primary attack in Entity Editor.
 
 - 2026-11-18 — Fixed World Painter activation by registering and opening its right-side dock after editor setup and balancing the paint resource subscriptions.
+
+- 2026-11-18 — World Painter selects its paint node when armed and shows viewport feedback for valid cells, map bounds and camera angle.
