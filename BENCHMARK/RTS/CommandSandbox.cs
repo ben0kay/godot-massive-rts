@@ -87,7 +87,7 @@ public partial class CommandSandbox : Node3D
     [Export] public bool SpawnDefaultBlueSquad { get; set; } = true;
     [Export] public WaveSpawnEdge EnemySpawnEdge { get; set; } = WaveSpawnEdge.South;
     [Export] public WaveSpawnPattern EnemySpawnPattern { get; set; }
-    [Export(PropertyHint.Range, "1,24,0.5")] public float EnemySpawnSpacing { get; set; } = 3f;
+    [Export(PropertyHint.Range, "1,5000,1,suffix:u")] public float EnemySpawnWidth { get; set; } = 256f;
     // Stream/Scatter only: higher units-per-second means shorter gaps between enemy spawns.
     [Export(PropertyHint.Range, "1,60,0.25")] public float EnemySpawnRate { get; set; } = 6.25f;
     [Export(PropertyHint.Range, "2,24,1")] public int EnemiesPerRow { get; set; } = 7;
@@ -201,7 +201,7 @@ public partial class CommandSandbox : Node3D
         deathRenderer.Initialize(catalog, soldierMeshes);
 
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
-            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnSpacing,
+            WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnWidth,
             EnemiesPerRow, EnemyRowDelay, EnemySpawnRate);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);

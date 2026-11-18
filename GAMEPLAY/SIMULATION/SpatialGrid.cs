@@ -106,30 +106,33 @@ public sealed class SpatialGrid
             factionMax[faction] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
         }
         // Reverse insertion preserves low IDs at the head; rotating queries change their start cell.
-        for (int i = units.Count - 1; i >= 0; i--)
+        for (int id = units.Count - 1; id >= 0; id--)
+            if (units.Health[id] > 0) AddSoldier(units, id);
+    }
+
+    internal void AddSoldier(UnitState units, int i)
+    {
+        pursuitTreesReady = false;
+        Vector3 position = units.Position[i];
+        int faction = units.Faction[i];
+        occupiedFactions |= 1 << faction;
+        var point = new Vector2(position.X, position.Z);
+        factionMin[faction] = factionMin[faction].Min(point);
+        factionMax[faction] = factionMax[faction].Max(point);
+        var cell = Cell(position);
+        int index = DenseIndex(cell.X, cell.Y, faction);
+        if (index >= 0)
         {
-            if (units.Health[i] <= 0) continue;
-            Vector3 position = units.Position[i];
-            int faction = units.Faction[i];
-            occupiedFactions |= 1 << faction;
-            var point = new Vector2(position.X, position.Z);
-            factionMin[faction] = factionMin[faction].Min(point);
-            factionMax[faction] = factionMax[faction].Max(point);
-            var cell = Cell(position);
-            int index = DenseIndex(cell.X, cell.Y, faction);
-            if (index >= 0)
-            {
-                int previous = heads[index];
-                if (previous == 0) occupied[occupiedCount++] = index;
-                next[i] = previous - 1;
-                heads[index] = i + 1;
-            }
-            else
-            {
-                var key = new Vector3I(cell.X, cell.Y, faction);
-                next[i] = overflowHeads.TryGetValue(key, out int first) ? first : -1;
-                overflowHeads[key] = i;
-            }
+            int previous = heads[index];
+            if (previous == 0) occupied[occupiedCount++] = index;
+            next[i] = previous - 1;
+            heads[index] = i + 1;
+        }
+        else
+        {
+            var key = new Vector3I(cell.X, cell.Y, faction);
+            next[i] = overflowHeads.TryGetValue(key, out int first) ? first : -1;
+            overflowHeads[key] = i;
         }
     }
     // =========================================================

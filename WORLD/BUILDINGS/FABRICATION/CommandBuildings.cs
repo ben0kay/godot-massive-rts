@@ -404,32 +404,39 @@ internal sealed class CommandBuildings
         float radius = units.Catalog[type].Footprint;
         Vector3 spawn = building.FrontEdge + Vector3.Back * (radius + 0.15f);
         Vector3 exit = spawn + Vector3.Back * (radius + 1.0f);
-        if (!OnMap(spawn, radius) || !OnMap(exit, radius) || !SpawnClear(spawn, radius) ||
-            field?.IntersectsCircle(ObstacleField.Xz(spawn), radius) == true ||
-            field?.IntersectsCircle(ObstacleField.Xz(exit), radius) == true ||
-            field?.BlocksCorridor(ObstacleField.Xz(spawn), ObstacleField.Xz(exit), radius) == true) return false;
+        bool workerExit = building == Citadel;
+        if (!IsClearGround(spawn, radius) || !IsClearGround(exit, radius) ||
+            field?.BlocksCorridor(ObstacleField.Xz(spawn), ObstacleField.Xz(exit), radius) == true ||
+            (workerExit && !SpawnClear(spawn, radius))) return false;
 
         Vector3 anchor = building.Rally ?? (exit + Vector3.Back * (3f + radius));
-        // Each slot is checked against the actual footprints and reserved goals.
+        Vector3? destination = FindReleaseGoal(anchor, spawn, radius, workerExit);
+        if (workerExit && !destination.HasValue) return false;
+
+        // Fabricator launches may overlap. Separation sorts out the units during movement.
+        int id = units.TrySpawn(type, Factions.Blue, spawn);
+        if (id < 0) return false;
+        if (units.Catalog[type].Shape != UnitShape.Circle) units.Facing[id] = Vector2.Down;
+        movement.SetGoal(id, destination ?? exit, exit);
+        return true;
+    }
+
+    private Vector3? FindReleaseGoal(Vector3 anchor, Vector3 spawn, float radius, bool workerExit)
+    {
         float spacing = radius * 2f + 0.45f;
+        float minimumDistanceSquared = (radius + 2f) * (radius + 2f);
         for (int row = 0; row < 16; row++)
         for (int column = 0; column < 11; column++)
         {
             int lateral = (column + 1) / 2 * (column % 2 == 0 ? -1 : 1);
             Vector3 goal = anchor + Vector3.Right * (lateral * spacing) + Vector3.Back * (row * spacing);
-            if (!FreeGoal(goal, radius) || goal.DistanceSquaredTo(spawn) < Mathf.Pow(radius + 2f, 2)) continue;
-
-            int id = units.TrySpawn(type, Factions.Blue, spawn);
-            if (id < 0) return false;
-            if (units.Catalog[type].Shape != UnitShape.Circle) units.Facing[id] = Vector2.Down;
-            movement.SetGoal(id, goal, exit);
-            return true;
+            if (goal.DistanceSquaredTo(spawn) < minimumDistanceSquared) continue;
+            if (workerExit ? FreePosition(goal, radius, true) : IsClearGround(goal, radius)) return goal;
         }
-        return false;
+        return null;
     }
 
-    // Check the hatch itself against live units; a clear static exit corridor is checked separately.
-    // This lets successive units follow one another without waiting for the entire path to empty.
+    // Citadel Worker releases still wait for the hatch to clear.
     private bool SpawnClear(Vector3 spawn, float radius)
     {
         for (int id = 0; id < units.Count; id++)
@@ -443,11 +450,12 @@ internal sealed class CommandBuildings
 
     public bool IsSpawnClear(Vector3 point, float radius) => FreePosition(point, radius, false);
 
-    private bool FreeGoal(Vector3 point, float radius) => FreePosition(point, radius, true);
+    private bool IsClearGround(Vector3 point, float radius) =>
+        OnMap(point, radius) && field?.IntersectsCircle(ObstacleField.Xz(point), radius) != true;
 
     private bool FreePosition(Vector3 point, float radius, bool checkGoals)
     {
-        if (!OnMap(point, radius) || field?.IntersectsCircle(ObstacleField.Xz(point), radius) == true) return false;
+        if (!IsClearGround(point, radius)) return false;
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0) continue;
