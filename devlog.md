@@ -333,3 +333,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Moved Wave Editor into the right-side dock beside World Painter and stacked its controls to fit.
 
 - 2026-11-18 — Fortress Defense waves now sample cached clear openings along a configurable spawn width. Nearby-unit checks reuse the battle grid.
+
+- 2026-11-18 — Allowed overlapping Fabricator launches and shared rally destinations so troop congestion no longer holds the release queue.
