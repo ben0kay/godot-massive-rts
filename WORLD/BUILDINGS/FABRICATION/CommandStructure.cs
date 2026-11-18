@@ -24,6 +24,7 @@ internal class CommandStructure : StructureHealth
     public readonly Node3D View;
     public Vector3 FrontEdge => Center + Vector3.Back * ((Area.Max.Y - Area.Min.Y) * 0.5f);
     public Vector3? Rally;
+    public int NextReleaseSlot;
     public bool UnitCapBlocked;
     private readonly MeshInstance3D solid, hologram;
     private readonly StandardMaterial3D ghostMaterial;

@@ -430,11 +430,22 @@ internal sealed class FortressWaves
             Vector2 offset = p - defender;
             float distance = offset.Length();
             if (distance <= range && distance >= type.MinimumFireRange)
+            {
                 movement.SetGoal(id, units.Position[id]);
-            else
-                movement.SetGoal(id, Ground(defender + (offset == Vector2.Zero ? Vector2.Down : offset / distance) *
-                    Mathf.Max(range, type.MinimumFireRange + 0.05f)));
-            return;
+                return;
+            }
+
+            Vector2 direction = offset == Vector2.Zero ? Vector2.Down : offset / distance;
+            float approachRange = Mathf.Max(range, type.MinimumFireRange + 0.05f);
+            for (int sample = 0; sample < 8; sample++)
+            {
+                int turn = (sample + 1) / 2 * (sample % 2 == 0 ? -1 : 1);
+                Vector2 candidate = defender + direction.Rotated(turn * Mathf.Pi / 4f) * approachRange;
+                if (!ClearApproach(candidate, type.Footprint, buildings.MovementField)) continue;
+                movement.SetGoal(id, Ground(candidate));
+                return;
+            }
+            units.Target[id] = -1;
         }
 
         float standOff = type.Ranged ? Mathf.Max(type.MinimumFireRange + 0.05f, type.Reach * 0.94f) :
@@ -467,7 +478,40 @@ internal sealed class FortressWaves
             // Close along the original approach when cover blocks the firing position.
             standOff = Mathf.Max(type.Footprint + 0.05f, type.MinimumFireRange + 0.05f);
         }
-        movement.SetGoal(id, Ground(edge + normal * standOff));
+        Vector2 approach = edge + normal * standOff;
+        var movementField = buildings.MovementField;
+        if (!ClearApproach(approach, type.Footprint, movementField))
+            approach = FindCitadelApproach(p, standOff, type.Footprint, movementField);
+        movement.SetGoal(id, Ground(approach));
+    }
+
+    private bool ClearApproach(Vector2 point, float radius, ObstacleField field) =>
+        buildings.OnMap(new Vector3(point.X, 0f, point.Y), radius) &&
+        field?.IntersectsCircle(point, radius) != true;
+
+    private Vector2 FindCitadelApproach(Vector2 from, float standOff, float radius, ObstacleField field)
+    {
+        Vector2 best = from;
+        float bestDistance = float.PositiveInfinity;
+        for (int face = 0; face < 4; face++)
+        {
+            bool alongZ = face < 2;
+            float low = (alongZ ? citadelMin.Y : citadelMin.X) + 0.05f;
+            float high = (alongZ ? citadelMax.Y : citadelMax.X) - 0.05f;
+            float fixedCoordinate = (face & 1) == 0
+                ? (alongZ ? citadelMin.X : citadelMin.Y) - standOff
+                : (alongZ ? citadelMax.X : citadelMax.Y) + standOff;
+            for (int sample = 0; sample <= 4; sample++)
+            {
+                float along = Mathf.Lerp(low, high, sample * 0.25f);
+                Vector2 candidate = alongZ ? new Vector2(fixedCoordinate, along) : new Vector2(along, fixedCoordinate);
+                float distance = from.DistanceSquaredTo(candidate);
+                if (distance >= bestDistance || !ClearApproach(candidate, radius, field)) continue;
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+        return best;
     }
 
     private void AttackCitadel(int id, ObstacleField field, float dt)

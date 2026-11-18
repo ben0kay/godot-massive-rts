@@ -128,8 +128,13 @@ internal sealed class CommandMovement
         {
             int id = active[i];
             Vector3 previous = units.Position[id];
-            Vector3 goal = hasExit[id] ? exits[id] : engaged[id] ? engagementGoals[id] : units.Goal[id];
+            ref readonly var stats = ref units.Catalog[units.Type[id]];
             Vector2 start = ObstacleField.Xz(previous);
+            // Separation can displace a soldier before it lands exactly on a shared exit.
+            float exitTolerance = Mathf.Max(0.1f, stats.Footprint);
+            if (hasExit[id] && start.DistanceSquaredTo(ObstacleField.Xz(exits[id])) <= exitTolerance * exitTolerance)
+                hasExit[id] = false;
+            Vector3 goal = hasExit[id] ? exits[id] : engaged[id] ? engagementGoals[id] : units.Goal[id];
             Vector2 waypoint = ObstacleField.Xz(goal);
             bool arrived = start.IsEqualApprox(waypoint);
             if (units.Health[id] <= 0 || arrived && !hasExit[id] && !engaged[id])
@@ -138,14 +143,9 @@ internal sealed class CommandMovement
                 active[i] = active[--activeCount];
                 continue;
             }
-            if (arrived)
-            {
-                hasExit[id] = false;
-                continue;
-            }
+            if (arrived) continue;
 
             byte type = units.Type[id];
-            ref readonly var stats = ref units.Catalog[type];
             if (field?.BlocksCorridor(start, waypoint, stats.Footprint) == true)
             {
                 navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
