@@ -17,6 +17,9 @@ public partial class UnitDefinition : Resource
     [Export] public string DisplayName { get; set; } = "";
     [Export] public string Role { get; set; } = "";
 
+    public const int MaxBattleRating = 1000000;
+    [Export(PropertyHint.Range, "0,1000000,1")] public int BattleRating { get; set; } = 100;
+
     [ExportGroup("Appearance and size")]
     [Export] public UnitShape Shape { get; set; }
     [Export] public float Width { get; set; } = 0.8f;

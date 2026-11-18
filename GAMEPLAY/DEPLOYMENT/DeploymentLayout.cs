@@ -23,6 +23,17 @@ public sealed class DeploymentLayout
     public int HalfWidth => CellHalfWidth(GridSize);
     private int SoldierBoundary => HalfWidth * SoldierSubdivisions;
     private readonly List<SoldierPlacement> placements = new();
+    private readonly long[] factionStrength = new long[Factions.Count];
+    private readonly int[] factionCounts = new int[Factions.Count];
+
+    internal long StrengthOf(int faction) => factionStrength[faction];
+    internal int CountForFaction(int faction) => factionCounts[faction];
+
+    private void Tally(SoldierPlacement placement, int change)
+    {
+        factionCounts[placement.Faction] += change;
+        factionStrength[placement.Faction] += change * (long)catalog.BattleRating(placement.Type);
+    }
     private readonly Dictionary<Vector2I, int> slots = new();
     private readonly Dictionary<Vector2I, List<Vector2I>> soldierBuckets = new();
     private readonly RuntimeUnitCatalog catalog;
@@ -155,6 +166,8 @@ public sealed class DeploymentLayout
         if (slots.TryGetValue(cell, out slot))
         {
             if (placements[slot] == placement) return false;
+            Tally(placements[slot], -1);
+            Tally(placement, 1);
             placements[slot] = placement;
             return true;
         }
@@ -165,6 +178,7 @@ public sealed class DeploymentLayout
             soldierBuckets.Add(center, bucket = new List<Vector2I>());
         bucket.Add(cell);
         placements.Add(placement);
+        Tally(placement, 1);
         return true;
     }
 
@@ -175,6 +189,7 @@ public sealed class DeploymentLayout
         var bucket = soldierBuckets[bucketKey];
         bucket.Remove(cell);
         if (bucket.Count == 0) soldierBuckets.Remove(bucketKey);
+        Tally(placements[slot], -1);
         int last = placements.Count - 1;
         if (slot != last)
         {
@@ -227,6 +242,8 @@ public sealed class DeploymentLayout
         CollisionField = null;
         defenses.Clear();
         placements.Clear();
+        System.Array.Clear(factionStrength);
+        System.Array.Clear(factionCounts);
         slots.Clear();
         soldierBuckets.Clear();
     }

@@ -268,14 +268,13 @@ public sealed class ObstacleNavigation
         {
             Radius = radius;
             var corners = new List<Vector2>(field.Rectangles.Length * 4);
-            var pad = new Vector2(radius + CornerClearance, radius + CornerClearance);
             foreach (ObstacleRectangle rectangle in field.Rectangles)
             {
-                Vector2 min = rectangle.Min - pad, max = rectangle.Max + pad;
-                AddCorner(corners, field, min);
-                AddCorner(corners, field, max);
-                AddCorner(corners, field, new Vector2(min.X, max.Y));
-                AddCorner(corners, field, new Vector2(max.X, min.Y));
+                Vector2 min = rectangle.Min, max = rectangle.Max;
+                AddCorner(corners, field, min, new Vector2(-1, -1));
+                AddCorner(corners, field, max, new Vector2(1, 1));
+                AddCorner(corners, field, new Vector2(min.X, max.Y), new Vector2(-1, 1));
+                AddCorner(corners, field, new Vector2(max.X, min.Y), new Vector2(1, -1));
             }
 
             points = corners.ToArray();
@@ -293,11 +292,19 @@ public sealed class ObstacleNavigation
             visited = new bool[count];
         }
 
-        private void AddCorner(List<Vector2> corners, ObstacleField field, Vector2 point)
+        private void AddCorner(List<Vector2> corners, ObstacleField field, Vector2 corner, Vector2 direction)
         {
-            float edge = field.Boundary - Radius;
-            if (Mathf.Abs(point.X) <= edge && Mathf.Abs(point.Y) <= edge && !field.IntersectsCircle(point, Radius))
-                corners.Add(point);
+            float edge = field.Boundary - Radius - 0.005f;
+            if (edge <= 0f) return;
+            var bounds = Vector2.One * edge;
+            Vector2 point = (corner + direction * (Radius + CornerClearance)).Clamp(-bounds, bounds);
+            if (field.IntersectsCircle(point, Radius))
+            {
+                // A stepped bank or map edge can consume the usual waypoint margin.
+                point = (corner + direction * (Radius + 0.025f)).Clamp(-bounds, bounds);
+                if (field.IntersectsCircle(point, Radius)) return;
+            }
+            corners.Add(point);
         }
 
         // Solve once for a shared request. Distances are seeded by all corners reachable from the start.

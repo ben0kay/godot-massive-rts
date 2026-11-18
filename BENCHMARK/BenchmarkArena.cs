@@ -29,6 +29,7 @@ public partial class BenchmarkArena : Node3D
     private AttackRangeOverlay attackRanges;
     private BenchmarkPanel panel;
     private ArmyBalanceHud armyBalanceHud;
+    private DeploymentStrengthBar deploymentStrengthBar;
     private DeploymentFactory deployment;
     private int autoAttackCount;
     private GuardGroup[] guards;
@@ -119,6 +120,8 @@ public partial class BenchmarkArena : Node3D
         AddChild(gameplayHudLayer);
         armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
         gameplayHudLayer.AddChild(armyBalanceHud);
+        deploymentStrengthBar = new DeploymentStrengthBar { Visible = false };
+        gameplayHudLayer.AddChild(deploymentStrengthBar);
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
         Config.RouteSectorSize = float.IsFinite(Config.RouteSectorSize) ? Mathf.Clamp(Config.RouteSectorSize, 4f, 32f) : 12f;
         painter = new DeploymentPainter
@@ -266,6 +269,8 @@ public partial class BenchmarkArena : Node3D
         painter.CancelDrag();
         painter.Visible = editing;
         panel.EditingDeployment = editing;
+        deploymentStrengthBar.Visible = editing;
+        if (editing) deploymentStrengthBar.Refresh(painter.Layout);
     }
 
     private string DeploymentCount() => $"Painted {painter.Layout.Placements.Count:N0} • " +
@@ -278,7 +283,11 @@ public partial class BenchmarkArena : Node3D
         battleWalls.Mesh = mesh;
         battleObstacleShadows.Mesh = GroundShadowMeshes.Obstacles(field, Config.ObstacleHeight);
     }
-    private void UpdateDeploymentStatus() => panel.Status.Text = DeploymentCount();
+    private void UpdateDeploymentStatus()
+    {
+        panel.Status.Text = DeploymentCount();
+        if (deploymentStrengthBar.Visible) deploymentStrengthBar.Refresh(painter.Layout);
+    }
 
     private void EnterDeployment()
     {

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "diamond_cavalry"
+BattleRating = 220
 DisplayName = "Cavalry"
 Role = "Fast close-range flanker"
 Shape = 3

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "worker"
+BattleRating = 0
 DisplayName = "Worker"
 Role = "Noncombat utility drone"
 Shape = 9

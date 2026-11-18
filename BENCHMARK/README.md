@@ -209,3 +209,7 @@ The right-side performance panel stays visible. **Normal separation** uses the s
 In the Command Sandbox, select Blue soldiers, then **hold Right Shift and right-drag** to draw a freeform line. The preview traces the cursor stroke and shows exactly where the selected soldier footprints will be ordered. On mouse release, soldiers receive move goals spaced along the stroke's arc length; extra ranks are offset behind the local path tangent. The measurement remains a **straight start-to-end distance** in world units, not the drawn stroke length. Regular right-click and straight right-drag, building rally, and K + left-click attack-move are unchanged.
 
 The stroke stores at most 512 sampled world points (thinning old samples if needed); destinations are cached on stroke edits and reuse ordinary map/obstacle order validity checks. No soldier nodes, expensive per-tick formation logic, or changes to combat. Very tight loops or self-intersections can crowd destination positions; collision resolving for complex drawn curves is outside this feature.
+
+### Estimated Army Strength
+
+**Edit painted deployment** shows a top bar comparing the sum of painted soldiers' **Battle Rating** values for Blue, Red and Green. Edit a unit's Battle Rating under **Identity** in Entity Editor and reload the benchmark to use the saved values. Circle Infantry is the 100-point reference and the Worker starts at zero. Ratings are rough planning weights independent of production cost and combat. Defenses and terrain are outside this estimate. The bar hides when a battle starts.

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "hexagon_siege"
+BattleRating = 500
 DisplayName = "Siege Infantry"
 Role = "Heavy melee infantry with a ground stomp"
 Shape = 5

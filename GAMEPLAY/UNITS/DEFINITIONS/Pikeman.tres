@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "pikeman"
+BattleRating = 180
 DisplayName = "Pikeman"
 Role = "Armoured melee that stops charges and counters mounted units"
 Shape = 10

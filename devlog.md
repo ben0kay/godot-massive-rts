@@ -337,3 +337,7 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Allowed overlapping Fabricator launches and shared rally destinations so troop congestion no longer holds the release queue.
 
 - 2026-11-18 — WATER2 adds animated painted-water shading and terrain-following banks inside the existing blocked water cells.
+
+- 2026-11-18 — Fixed Fabricator rally handoff under separation, distributed rally arrivals, and added clear enemy approach alternatives and tight routing corners.
+
+- 2026-11-18 — BENCH-POWER1 adds unit Battle Ratings and a painted-deployment strength bar with incremental faction totals.

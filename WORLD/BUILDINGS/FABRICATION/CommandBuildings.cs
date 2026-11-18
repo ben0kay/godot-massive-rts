@@ -410,7 +410,7 @@ internal sealed class CommandBuildings
             (workerExit && !SpawnClear(spawn, radius))) return false;
 
         Vector3 anchor = building.Rally ?? (exit + Vector3.Back * (3f + radius));
-        Vector3? destination = FindReleaseGoal(anchor, spawn, radius, workerExit);
+        Vector3? destination = FindReleaseGoal(building, anchor, spawn, radius, workerExit);
         if (workerExit && !destination.HasValue) return false;
 
         // Fabricator launches may overlap. Separation sorts out the units during movement.
@@ -421,10 +421,25 @@ internal sealed class CommandBuildings
         return true;
     }
 
-    private Vector3? FindReleaseGoal(Vector3 anchor, Vector3 spawn, float radius, bool workerExit)
+    private Vector3? FindReleaseGoal(CommandStructure building, Vector3 anchor, Vector3 spawn, float radius, bool workerExit)
     {
         float spacing = radius * 2f + 0.45f;
         float minimumDistanceSquared = (radius + 2f) * (radius + 2f);
+        if (!workerExit)
+        {
+            // Distribute arrivals around the flag without reserving slots or checking live units.
+            const int columns = 5, slots = 15;
+            for (int attempt = 0; attempt < slots; attempt++)
+            {
+                int slot = (building.NextReleaseSlot + attempt) % slots;
+                Vector3 goal = anchor + Vector3.Right * ((slot % columns - 2) * spacing)
+                    + Vector3.Back * ((slot / columns - 1) * spacing);
+                if (goal.DistanceSquaredTo(spawn) < minimumDistanceSquared || !IsClearGround(goal, radius)) continue;
+                building.NextReleaseSlot = (slot + 1) % slots;
+                return goal;
+            }
+        }
+
         for (int row = 0; row < 16; row++)
         for (int column = 0; column < 11; column++)
         {
