@@ -12,6 +12,7 @@ Shape = 4
 Width = 1.6
 Height = 0.825
 SizeMultiplier = 0.9
+SizeTier = 2.0
 Speed = 2.7
 TurnDegreesPerSecond = 180.0
 Health = 285.0

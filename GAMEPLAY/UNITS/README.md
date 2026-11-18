@@ -60,3 +60,9 @@ Worker (`worker`, index 9) is a compact rectangular utility unit with a front dr
 ## Pikeman
 
 The Pikeman (`pikeman`, index 10) uses Strong Infantry's base stats and a T silhouette with the spear tip pointing forward. Its regular melee strike deals 1.5× damage against the `diamond_cavalry` unit ID. The target ID and multiplier are authored in the Pikeman resource and resolved when the catalogue loads. Charge resistance is 1.10 versus Strong Infantry's 0.45. In the benchmark, that stops a stock cavalry charge with starting momentum 1.0 and reduces the contact damage. Fortress Defense currently uses ordinary cavalry melee. Select Pikemen in the deployment painter or produce a batch of 10 for 150 Carbon in 10 seconds at a Fabricator.
+
+## UNIT-TIER1 — Size tier
+
+Edit **Size tier** under **Appearance and size** in Entity Editor or the unit resource Inspector. It is an authored physical size class, starting at 1 in half-tier increments and allowing values beyond 5. The catalogue exposes it as `UnitStats.SizeTier` for each unit type. Older resources default to Tier 1.
+
+Size multiplier still controls visual and collision scaling. Size tier currently has no gameplay effects. The Worker starts at Tier 3 because its enlarged drill gives it a 2.205-unit collision radius, compared with 1.6 units for Hexagon Siege. The Worker's Battle Rating remains zero.

@@ -343,3 +343,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — BENCH-POWER1 adds unit Battle Ratings and a painted-deployment strength bar with incremental faction totals.
 
 - 2026-11-18 — Added Yellow and a shared faction catalogue for painted battles, unit colours and both army bars. Older deployments keep their faction IDs and battle orders.
+
+- 2026-11-18 — UNIT-TIER1 adds editable physical Size Tier metadata to unit definitions, the Entity Editor and the compiled unit catalogue.

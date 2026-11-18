@@ -12,6 +12,7 @@ Shape = 9
 Width = 0.7
 Height = 0.35
 SizeMultiplier = 3.0
+SizeTier = 3.0
 FootprintRadius = 0.43
 Speed = 4.0
 TurnDegreesPerSecond = 270.0

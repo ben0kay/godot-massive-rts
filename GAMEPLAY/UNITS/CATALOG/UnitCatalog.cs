@@ -100,7 +100,7 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     bool CleaveEnabled, float CleaveExtraReach, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
     float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent,
-    int MeleeBonusTarget, float MeleeBonusMultiplier)
+    int MeleeBonusTarget, float MeleeBonusMultiplier, float SizeTier)
 {
     public float AgainstUnits(float amount) => UnitDamagePercent < 0f ? amount : amount * (UnitDamagePercent * 0.01f);
     public float AgainstStructures(float amount) => StructureDamagePercent < 0f ? amount : amount * (StructureDamagePercent * 0.01f);
@@ -240,7 +240,7 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.StructureDetectionRange, 0f, 100f, 12f), ClampStat(d.TurnDegreesPerSecond, 0f, 720f, 0f),
                 ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
                 ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
-                Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f));
+                Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f), CompileSizeTier(d.SizeTier));
             battleRatings[i] = Mathf.Clamp(d.BattleRating, 0, UnitDefinition.MaxBattleRating);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
@@ -249,6 +249,9 @@ public sealed class RuntimeUnitCatalog
         HasRangedRecoil = hasRangedRecoil;
         if (Array.TrueForAll(stats, type => type.Ranged)) throw new ArgumentException("The catalogue needs a melee unit.");
     }
+
+    private static float CompileSizeTier(float tier) =>
+        float.IsFinite(tier) && tier >= 1f ? (float)(Math.Round(tier * 2d, MidpointRounding.AwayFromZero) / 2d) : 1f;
 
     private static float ClampStat(float value, float min, float max, float fallback) =>
         float.IsFinite(value) ? Mathf.Clamp(value, min, max) : fallback;

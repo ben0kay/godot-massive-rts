@@ -59,6 +59,8 @@ public partial class UnitEditorPanel
             tooltip: "Estimated strength per soldier in painted deployments.");
 
         Section("Appearance and size");
+        Number(nameof(Unit.SizeTier), "Size tier", () => Unit.SizeTier, v => Unit.SizeTier = v, 1, 5, 0.5, "",
+            tooltip: "Authored physical size class. Mesh and collision scaling are controlled by Size multiplier.", unbounded: true);
         Number(nameof(Unit.Width), "Base width", () => Unit.Width, v => Unit.Width = v, 0.001, 100, 0.001, " u", unbounded: true);
         Number(nameof(Unit.Height), "Base height", () => Unit.Height, v => Unit.Height = v, 0.001, 100, 0.001, " u", unbounded: true);
         Number(nameof(Unit.SizeMultiplier), "Size multiplier", () => Unit.SizeMultiplier, v => Unit.SizeMultiplier = v, 0.5, 3, 0.05, "×");

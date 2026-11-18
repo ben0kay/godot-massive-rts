@@ -11,6 +11,7 @@ DisplayName = "Long Triangle • Marksman"
 Role = "Slow, durable long-range laser infantry"
 Shape = 8
 Height = 0.4125
+SizeTier = 1.5
 Speed = 3.2
 TurnDegreesPerSecond = 220.0
 Health = 65.0

@@ -12,6 +12,7 @@ Role = "Long-range indirect explosive fire"
 Shape = 6
 Width = 1.92
 Height = 0.99
+SizeTier = 2.0
 Speed = 1.5
 TurnDegreesPerSecond = 75.0
 Health = 350.0

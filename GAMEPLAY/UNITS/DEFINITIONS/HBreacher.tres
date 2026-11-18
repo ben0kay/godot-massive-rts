@@ -11,6 +11,7 @@ Role = "Twin-ram melee siege"
 Shape = 7
 Width = 0.91
 Height = 0.44
+SizeTier = 1.5
 Speed = 2.8
 AccelerationSecondsOverride = 0.7
 TurnDegreesPerSecond = 105.0

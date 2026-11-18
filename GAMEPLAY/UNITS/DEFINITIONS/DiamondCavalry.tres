@@ -12,6 +12,7 @@ Shape = 3
 Width = 0.64
 Height = 0.3
 SizeMultiplier = 1.35
+SizeTier = 1.5
 FootprintRadius = 0.63
 Speed = 9.0
 AccelerationSecondsOverride = 3.0

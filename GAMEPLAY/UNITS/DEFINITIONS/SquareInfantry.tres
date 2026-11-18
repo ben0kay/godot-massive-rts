@@ -10,6 +10,7 @@ DisplayName = "Strong Infantry"
 Role = "Hard-hitting armoured melee"
 Shape = 1
 Height = 0.4125
+SizeTier = 1.0
 Speed = 4.0
 TurnDegreesPerSecond = 270.0
 ArmourClass = "Medium"

@@ -25,6 +25,7 @@ public partial class UnitDefinition : Resource
     [Export] public float Width { get; set; } = 0.8f;
     [Export] public float Height { get; set; } = 1.1f;
     [Export(PropertyHint.Range, "0.5,3.0,0.05")] public float SizeMultiplier { get; set; } = 1f;
+    [Export(PropertyHint.Range, "1,5,0.5,or_greater")] public float SizeTier { get; set; } = 1f;
     // Serialized legacy input for Diamond mesh length. Collision uses the compiled outline.
     [Export] public float FootprintRadius { get; set; } = 0.57f;
 

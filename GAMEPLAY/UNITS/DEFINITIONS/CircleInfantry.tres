@@ -9,6 +9,7 @@ BattleRating = 100
 DisplayName = "Basic Infantry"
 Role = "General-purpose melee"
 Height = 0.4125
+SizeTier = 1.0
 Health = 50.0
 ChargeResistance = 0.22
 Damage = 5.0
