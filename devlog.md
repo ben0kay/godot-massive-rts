@@ -323,3 +323,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Moved cleave into Primary attack as an area hit pattern and added configurable extra cleave reach. Combat, movement, and both previews use the new setting.
 
 - 2026-11-18 — Fixed Entity Editor selection and reload dispatch, refreshed linked resources from disk, and enabled catalogue refresh while retaining unsaved drafts.
+
+- 2026-11-18 — Labelled melee range input Base detection range under Targeting and ranged input Firing range under Primary attack in Entity Editor.

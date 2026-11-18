@@ -79,16 +79,21 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.ChargeResistance), "Charge resistance", () => Unit.ChargeResistance, v => Unit.ChargeResistance = v,
             0.01, 4, 0.01, "", tooltip: "Momentum consumed when this unit is struck by a charge.");
 
+        Section("Targeting");
+        EnumField(nameof(Unit.AllowedTargets), "Allowed targets", Unit.AllowedTargets, value => Unit.AllowedTargets = value);
+        EnumField(nameof(Unit.PreferredTarget), "Preferred target", Unit.PreferredTarget, value => Unit.PreferredTarget = value);
+        Number(nameof(Unit.StructureDetectionRange), "Structure detection", () => Unit.StructureDetectionRange,
+            v => Unit.StructureDetectionRange = v, 0, 100, 0.1, " u", () => (Unit.AllowedTargets & TargetCategory.Structures) != 0);
+        Number(nameof(Unit.Reach), "Base detection range", () => Unit.Reach, v => Unit.Reach = v, 0.001, 100, 0.001, " u",
+            tooltip: "Used to find nearby enemies and plan charges. Unit size and battle settings affect the final detection distance.",
+            unbounded: true, visible: () => IsMelee);
+
         Section("Primary attack");
         TextField(nameof(Unit.DamageType), "Damage type", Unit.DamageType, value => Unit.DamageType = value);
         Number(nameof(Unit.UnitDamagePercent), "Damage vs units", () => Unit.UnitDamagePercent,
             v => Unit.UnitDamagePercent = v, -1, 1000, 1, "%", tooltip: "−1 uses the damage matrix. Otherwise this is the percentage of base damage.");
         Number(nameof(Unit.StructureDamagePercent), "Damage vs structures", () => Unit.StructureDamagePercent,
             v => Unit.StructureDamagePercent = v, -1, 1000, 1, "%", tooltip: "−1 uses the damage matrix. Otherwise this is the percentage of base damage.");
-        EnumField(nameof(Unit.AllowedTargets), "Allowed targets", Unit.AllowedTargets, value => Unit.AllowedTargets = value);
-        EnumField(nameof(Unit.PreferredTarget), "Preferred target", Unit.PreferredTarget, value => Unit.PreferredTarget = value);
-        Number(nameof(Unit.StructureDetectionRange), "Structure detection", () => Unit.StructureDetectionRange,
-            v => Unit.StructureDetectionRange = v, 0, 100, 0.1, " u", () => (Unit.AllowedTargets & TargetCategory.Structures) != 0);
         Number(nameof(Unit.MeleeLungeDistance), "Melee lunge", () => Unit.MeleeLungeDistance,
             v => Unit.MeleeLungeDistance = v, 0, 1, 0.01, " u", () => IsMelee);
         EnumField(nameof(Unit.Style), "Attack style", Unit.Style, value => Unit.Style = value);
@@ -96,8 +101,8 @@ public partial class UnitEditorPanel
         checks.Add(() => Unit.AllowedTargets == TargetCategory.None || Unit.Damage > 0f
             ? null : "Combat units require positive base damage.");
         Number(nameof(Unit.Interval), "Attack interval", () => Unit.Interval, v => Unit.Interval = v, 0.001, 10, 0.001, " s", unbounded: true);
-        Number(nameof(Unit.Reach), "Authored reach", () => Unit.Reach, v => Unit.Reach = v, 0.001, 100, 0.001, " u",
-            tooltip: "Ranged firing distance. Melee uses this for acquisition and charge approach. Melee strike distance uses the unit footprints and any extra cleave reach.", unbounded: true);
+        Number(nameof(Unit.Reach), "Firing range", () => Unit.Reach, v => Unit.Reach = v, 0.001, 100, 0.001, " u",
+            tooltip: "Maximum distance from which this unit can fire.", unbounded: true, visible: () => !IsMelee);
         Number(nameof(Unit.MeleeFacingAngleDegrees), "Melee facing angle", () => Unit.MeleeFacingAngleDegrees, v => Unit.MeleeFacingAngleDegrees = v,
             1, 180, 1, "°", () => IsMelee && !HasCleave && Unit.Shape != UnitShape.Circle);
 
@@ -365,12 +370,18 @@ public partial class UnitEditorPanel
     }
 
     private SpinBox Number(string key, string label, Func<float> get, Action<float> set, double min, double max,
-        double step, string suffix, Func<bool> enabled = null, string tooltip = "", bool unbounded = false)
+        double step, string suffix, Func<bool> enabled = null, string tooltip = "", bool unbounded = false, Func<bool> visible = null)
     {
         represented.Add(key);
         var input = new SpinBox { MinValue = min, MaxValue = max, Step = step, Suffix = suffix, AllowGreater = unbounded };
         input.SetValueNoSignal(float.IsFinite(get()) ? get() : min);
-        Row(label, input, tooltip);
+        var row = Row(label, input, tooltip);
+        if (visible != null)
+            refreshFields.Add(() =>
+            {
+                row.Visible = visible();
+                if (row.Visible && float.IsFinite(get())) input.SetValueNoSignal(get());
+            });
         input.ValueChanged += value =>
         {
             if (rebuildingForm || !input.IsInsideTree() || (float)value == get()) return;
