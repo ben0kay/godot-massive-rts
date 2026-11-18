@@ -6,6 +6,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — per-type size tuning and owner checks.
+- **[SKIRM1 Skirmisher implementation plan](SKIRM1_IMPLEMENTATION_PLAN.md)** — **planned only**: closest-enemy ranged targeting, bounded all-direction retreat AI, and shared benchmark/Command Sandbox integration.
 - **[Starting roster and stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
 
 ## Folder structure

@@ -315,3 +315,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-17 — PROJ-LASER4: Increased only the Long Triangle Marksman's dedicated laser projectile authored speed from 45 to 67.5 (+50%), preserving regular Triangle lasers, damage, range, firing interval, visuals and arc. Source reviewed; Godot playtest pending.
 
 - 2026-11-17 — Widened Siege Infantry cleave from 100° to 150° and Elite Infantry cleave from 70° to 85°.
+
+- **2026-11-17 | SKIRM1 planning only.** Added `GAMEPLAY/UNITS/SKIRM1_IMPLEMENTATION_PLAN.md`: fragile mobile ranged Skirmisher, closest-valid-enemy shooting (ignoring ranged variety), staggered/bounded 360-degree threat checks, retreat hysteresis, normal separation/obstacle rules, and future benchmark plus Fortress Defense integrations. **No implementation performed**; Codex should review/adapt before separately authorized coding.
