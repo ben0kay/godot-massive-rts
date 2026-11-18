@@ -54,6 +54,9 @@ public partial class UnitEditorPanel
         TextField(nameof(Unit.DisplayName), "Display name", Unit.DisplayName, value => Unit.DisplayName = value);
         TextField(nameof(Unit.Role), "Role", Unit.Role, value => Unit.Role = value);
         EnumField(nameof(Unit.Shape), "Shape", Unit.Shape, value => Unit.Shape = value);
+        Number(nameof(Unit.BattleRating), "Battle rating", () => Unit.BattleRating,
+            value => Unit.BattleRating = (int)value, 0, UnitDefinition.MaxBattleRating, 1, "",
+            tooltip: "Estimated strength per soldier in painted deployments.");
 
         Section("Appearance and size");
         Number(nameof(Unit.Width), "Base width", () => Unit.Width, v => Unit.Width = v, 0.001, 100, 0.001, " u", unbounded: true);

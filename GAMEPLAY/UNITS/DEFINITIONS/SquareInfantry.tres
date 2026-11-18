@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "square_infantry"
+BattleRating = 160
 DisplayName = "Strong Infantry"
 Role = "Hard-hitting armoured melee"
 Shape = 1

@@ -132,6 +132,7 @@ public sealed class RuntimeUnitCatalog
     public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10;
     private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
+    private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
     public ProjectileCatalog Projectiles { get; }
@@ -140,6 +141,7 @@ public sealed class RuntimeUnitCatalog
     public float MaxFootprint { get; }
     public bool HasRangedRecoil { get; }
     public ref readonly UnitStats this[int index] => ref stats[index];
+    internal int BattleRating(byte type) => battleRatings[type];
     public bool TryResolve(string id, out byte index)
     {
         index = 0;
@@ -239,6 +241,7 @@ public sealed class RuntimeUnitCatalog
                 ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
                 ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
                 Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f));
+            battleRatings[i] = Mathf.Clamp(d.BattleRating, 0, UnitDefinition.MaxBattleRating);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);
             MaxFootprint = Mathf.Max(MaxFootprint, footprint);

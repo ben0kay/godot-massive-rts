@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "circle_infantry"
+BattleRating = 100
 DisplayName = "Basic Infantry"
 Role = "General-purpose melee"
 Height = 0.4125

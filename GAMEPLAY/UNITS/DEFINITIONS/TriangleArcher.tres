@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1")
 Id = "triangle_archer"
+BattleRating = 120
 DisplayName = "Archer"
 Role = "Fragile ranged infantry"
 Shape = 2

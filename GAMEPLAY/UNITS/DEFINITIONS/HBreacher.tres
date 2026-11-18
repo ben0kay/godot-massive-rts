@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "h_breacher"
+BattleRating = 200
 DisplayName = "H Breacher"
 Role = "Twin-ram melee siege"
 Shape = 7

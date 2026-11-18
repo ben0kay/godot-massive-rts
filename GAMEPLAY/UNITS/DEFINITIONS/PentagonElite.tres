@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "pentagon_elite"
+BattleRating = 270
 DisplayName = "Elite Infantry"
 Role = "Large slow armoured infantry"
 Shape = 4
