@@ -169,7 +169,7 @@ public partial class WorldPaint : Node3D
             water.RemoveWhere(cell => !Contains(cell));
             water.ExceptWith(rocks);
         }
-        rocksView.Mesh = WorldPaintMeshBuilder.Build(rocks, Surface, data.RockHeight, data.RockColor, rock: true);
-        waterView.Mesh = WorldPaintMeshBuilder.Build(water, Surface, 0.09f, data.WaterColor, rock: false);
+        rocksView.Mesh = WorldPaintMeshBuilder.BuildRocks(rocks, Surface, data.RockHeight, data.RockColor);
+        waterView.Mesh = PaintedWaterMesh.Build(water, Surface, data);
     }
 }

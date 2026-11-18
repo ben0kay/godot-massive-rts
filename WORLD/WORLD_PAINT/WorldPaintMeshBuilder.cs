@@ -1,4 +1,4 @@
-// Generates connected terrain-following rock and water meshes from occupied cells.
+// Generates connected terrain-following rock meshes from occupied cells.
 using System.Collections.Generic;
 using Godot;
 
@@ -9,7 +9,7 @@ internal static class WorldPaintMeshBuilder
     internal const float Step = WorldPaint.CellSize * 0.5f;
 
     // =========================================================
-    public static Mesh Build(HashSet<Vector2I> cells, TerrainHeightField terrain, float height, Color tint, bool rock)
+    public static Mesh BuildRocks(HashSet<Vector2I> cells, TerrainHeightField terrain, float height, Color tint)
     {
         if (cells.Count == 0) return null;
         using var surface = new SurfaceTool();
@@ -29,21 +29,13 @@ internal static class WorldPaintMeshBuilder
                 float left = x + col * Step, near = z + row * Step;
                 Vector3 a = Point(left, near), b = Point(left + Step, near);
                 Vector3 c = Point(left, near + Step), d = Point(left + Step, near + Step);
-                if (rock)
-                {
-                    float variation = ((cell.X * 17 + cell.Y * 31 + col * 7 + row * 11) & 7) * 0.011f;
-                    Triangle(surface, a, b, c, tint.Lightened(variation));
-                    Triangle(surface, b, d, c, tint.Darkened(variation));
-                    if (row == 0 && !cells.Contains(cell + Vector2I.Up)) Skirt(a, b);
-                    if (row == 1 && !cells.Contains(cell + Vector2I.Down)) Skirt(d, c);
-                    if (col == 0 && !cells.Contains(cell + Vector2I.Left)) Skirt(c, a);
-                    if (col == 1 && !cells.Contains(cell + Vector2I.Right)) Skirt(b, d);
-                }
-                else
-                {
-                    WaterVertex(a); WaterVertex(b); WaterVertex(c);
-                    WaterVertex(b); WaterVertex(d); WaterVertex(c);
-                }
+                float variation = ((cell.X * 17 + cell.Y * 31 + col * 7 + row * 11) & 7) * 0.011f;
+                Triangle(surface, a, b, c, tint.Lightened(variation));
+                Triangle(surface, b, d, c, tint.Darkened(variation));
+                if (row == 0 && !cells.Contains(cell + Vector2I.Up)) Skirt(a, b);
+                if (row == 1 && !cells.Contains(cell + Vector2I.Down)) Skirt(d, c);
+                if (col == 0 && !cells.Contains(cell + Vector2I.Left)) Skirt(c, a);
+                if (col == 1 && !cells.Contains(cell + Vector2I.Right)) Skirt(b, d);
             }
         }
         return surface.Commit();
@@ -56,13 +48,6 @@ internal static class WorldPaintMeshBuilder
             Color face = tint.Darkened(a.X == b.X ? 0.32f : 0.23f);
             Triangle(surface, a, a + bottom, b, face);
             Triangle(surface, b, a + bottom, b + bottom, face.Darkened(0.08f));
-        }
-
-        void WaterVertex(Vector3 point)
-        {
-            float wave = Mathf.Sin(point.X * 0.77f + point.Z * 0.48f) * 0.5f + 0.5f;
-            surface.SetColor(tint.Lightened(wave * 0.12f));
-            surface.AddVertex(point);
         }
     }
 

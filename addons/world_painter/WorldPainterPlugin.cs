@@ -350,13 +350,10 @@ public partial class WorldPainterPlugin : EditorPlugin
             return;
         }
 
-        var data = new WorldPaintData { ResourceLocalToScene = true, RockCells = Sorted(rocks), WaterCells = Sorted(water) };
-        if (originalData != null)
-        {
-            data.RockHeight = originalData.RockHeight;
-            data.RockColor = originalData.RockColor;
-            data.WaterColor = originalData.WaterColor;
-        }
+        var data = originalData == null ? new WorldPaintData() : (WorldPaintData)originalData.Duplicate();
+        data.ResourceLocalToScene = true;
+        data.RockCells = Sorted(rocks);
+        data.WaterCells = Sorted(water);
         string label = (eraseStroke ? "Erase " : "Paint ") + (waterStroke ? "deep water" : "rocks");
         var history = GetUndoRedo();
         var before = originalData;

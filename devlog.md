@@ -335,3 +335,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Fortress Defense waves now sample cached clear openings along a configurable spawn width. Nearby-unit checks reuse the battle grid.
 
 - 2026-11-18 — Allowed overlapping Fabricator launches and shared rally destinations so troop congestion no longer holds the release queue.
+
+- 2026-11-18 — WATER2 adds animated painted-water shading and terrain-following banks inside the existing blocked water cells.
