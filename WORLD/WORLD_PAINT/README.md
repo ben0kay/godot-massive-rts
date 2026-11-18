@@ -1,6 +1,6 @@
 # WORLDPAINT1
 
-Open Fortress Defense Level 001 in the Godot .NET editor and switch to the 3D viewport. Numpad 7 selects the top view. Open **World Painter**, enable **Paint in viewport**, and choose Rock / Cliff or Deep Water. Left-drag with a brush or filled rectangle. Use **Erase** to remove the selected layer, Ctrl+Z to undo a stroke, and Escape to leave paint mode. Save the level scene to keep the paint. Select the `WorldPaint` node and expand **Data** to edit rock height and layer colours.
+Open Fortress Defense Level 001 in the Godot .NET editor and switch to the 3D viewport. Numpad 7 selects the top view. Open the **World Painter** tab beside Inspector, enable **Paint in viewport**, and choose Rock / Cliff or Deep Water. Left-drag with a brush or filled rectangle. Use **Erase** to remove the selected layer, Ctrl+Z to undo a stroke, and Escape to leave paint mode. Save the level scene to keep the paint. Select the `WorldPaint` node and expand **Data** to edit rock height and layer colours.
 
 Each cell is 2 × 2 world units and aligns to the build grid. Preview and gameplay meshes sample terrain separately. Rock prevents movement and construction and provides solid cover. Water prevents movement and construction and leaves shots and sight clear. Water follows terrain slopes. The painted cell footprint defines the shoreline.
 

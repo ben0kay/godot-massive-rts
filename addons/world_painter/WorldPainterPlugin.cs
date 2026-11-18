@@ -13,6 +13,8 @@ public partial class WorldPainterPlugin : EditorPlugin
     private const int PassInput = (int)AfterGuiInput.Pass, StopInput = (int)AfterGuiInput.Stop;
     private static readonly int[] BrushSizes = { 1, 3, 5, 10 };
     private EditorDock dock;
+    private bool dockRegistered;
+    private bool signalsConnected;
     private CheckButton paintMode, showGrid;
     private OptionButton layer, tool, size, shape, action;
     private Label status;
@@ -30,12 +32,18 @@ public partial class WorldPainterPlugin : EditorPlugin
         dock = new EditorDock
         {
             Title = "World Painter",
-            LayoutKey = "MassiveRtsWorldPainter",
+            LayoutKey = "MassiveRtsWorldPainterSideDock",
             DefaultSlot = EditorDock.DockSlot.RightUl,
             AvailableLayouts = EditorDock.DockLayout.Vertical
         };
-        var form = new VBoxContainer { CustomMinimumSize = new Vector2(220, 0) };
-        paintMode = new CheckButton { Text = "Paint in viewport" };
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(220, 0),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled
+        };
+        var form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(form);
+        paintMode = new CheckButton { Text = "Paint in viewport", Disabled = true };
         form.AddChild(paintMode);
         layer = AddOptions(form, "Layer", "Rock / Cliff", "Deep Water");
         tool = AddOptions(form, "Tool", "Brush", "Filled rectangle");
@@ -46,24 +54,47 @@ public partial class WorldPainterPlugin : EditorPlugin
         form.AddChild(showGrid);
         status = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         form.AddChild(status);
-        dock.AddChild(form);
-        AddDock(dock);
-        SetInputEventForwardingAlwaysEnabled();
+        dock.AddChild(scroll);
+        var newDock = dock;
+        // Register after the editor finishes attaching the plugin and restoring its layout.
+        Callable.From(() => RegisterDock(newDock)).CallDeferred();
+    }
+
+    private void RegisterDock(EditorDock newDock)
+    {
+        if (!IsInsideTree() || dock != newDock || !IsInstanceValid(newDock) || dockRegistered) return;
+
+        AddDock(newDock);
+        dockRegistered = true;
         SceneChanged += OnSceneChanged;
-        dock.VisibilityChanged += OnDockVisibilityChanged;
+        newDock.VisibilityChanged += OnDockVisibilityChanged;
         paintMode.Toggled += OnPaintModeToggled;
+        signalsConnected = true;
         RefreshScene();
+        SetInputEventForwardingAlwaysEnabled();
+        newDock.MakeVisible();
     }
 
     public override void _ExitTree()
     {
+        if (signalsConnected)
+        {
+            SceneChanged -= OnSceneChanged;
+            if (IsInstanceValid(dock)) dock.VisibilityChanged -= OnDockVisibilityChanged;
+            if (IsInstanceValid(paintMode)) paintMode.Toggled -= OnPaintModeToggled;
+            signalsConnected = false;
+        }
+
         ResetStroke();
         ClearCursor();
-        SceneChanged -= OnSceneChanged;
-        paintMode.Toggled -= OnPaintModeToggled;
-        dock.VisibilityChanged -= OnDockVisibilityChanged;
-        RemoveDock(dock);
-        dock.QueueFree();
+        if (IsInstanceValid(dock))
+        {
+            if (dockRegistered) RemoveDock(dock);
+            dock.QueueFree();
+        }
+        dockRegistered = false;
+        dock = null;
+        paintMode = null;
     }
 
     private static OptionButton AddOptions(VBoxContainer form, string label, params string[] values)
@@ -78,11 +109,14 @@ public partial class WorldPainterPlugin : EditorPlugin
     private WorldPaint CurrentPaint()
     {
         var root = EditorInterface.Singleton.GetEditedSceneRoot();
-        return root is CommandSandbox ? root.GetNodeOrNull<WorldPaint>("WorldPaint") : null;
+        if (root is not CommandSandbox) return null;
+        var target = root.GetNodeOrNull<WorldPaint>("WorldPaint");
+        return IsInstanceValid(target) && !target.IsQueuedForDeletion() ? target : null;
     }
 
     private void RefreshScene()
     {
+        if (!dockRegistered) return;
         paintMode.SetPressedNoSignal(false);
         paintMode.Disabled = CurrentPaint() == null;
         status.Text = paintMode.Disabled ? "Open a command level with a WorldPaint node." :
@@ -98,12 +132,14 @@ public partial class WorldPainterPlugin : EditorPlugin
 
     private void OnDockVisibilityChanged()
     {
-        if (!dock.IsVisibleInTree()) OnPaintModeToggled(false);
+        if (!dockRegistered) return;
+        if (dock.IsVisibleInTree()) RefreshScene();
+        else OnPaintModeToggled(false);
     }
 
     private void OnPaintModeToggled(bool enabled)
     {
-        if (enabled) return;
+        if (enabled || !dockRegistered) return;
         paintMode.SetPressedNoSignal(false);
         ResetStroke();
         ClearCursor();
@@ -112,14 +148,16 @@ public partial class WorldPainterPlugin : EditorPlugin
     // =========================================================
     public override int _Forward3DGuiInput(Camera3D camera, InputEvent @event)
     {
-        if (!paintMode.ButtonPressed || !dock.IsVisibleInTree()) return PassInput;
+        if (!dockRegistered || !IsInstanceValid(paintMode) || !IsInstanceValid(dock) || !dock.IsVisibleInTree())
+            return PassInput;
         var target = CurrentPaint();
-        if (target == null)
+        if (paintMode.Disabled != (target == null))
         {
             OnPaintModeToggled(false);
             RefreshScene();
-            return PassInput;
         }
+        if (!paintMode.ButtonPressed || target == null) return PassInput;
+        if (strokeTarget != null && strokeTarget != target) ResetStroke();
         if (@event is InputEventKey { Pressed: true, Keycode: Key.Escape })
         {
             OnPaintModeToggled(false);

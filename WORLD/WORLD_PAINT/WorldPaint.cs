@@ -14,6 +14,7 @@ public partial class WorldPaint : Node3D
     internal const int MaxPaintedRectangles = 128;
 
     private WorldPaintData data;
+    private WorldPaintData observedData;
     private CommandTerrain terrain;
     private MeshInstance3D rocksView, waterView;
     private HashSet<Vector2I> draftRocks, draftWater;
@@ -26,9 +27,8 @@ public partial class WorldPaint : Node3D
         get => data;
         set
         {
-            if (data != null) data.Changed -= Invalidate;
             data = value;
-            if (data != null && IsInsideTree()) data.Changed += Invalidate;
+            if (IsInsideTree()) ObserveData(data);
             Invalidate();
         }
     }
@@ -38,15 +38,16 @@ public partial class WorldPaint : Node3D
     internal TerrainHeightField Surface => terrain?.Field;
 
     // =========================================================
-    public override void _Ready()
+    public override void _EnterTree()
     {
         terrain = CommandTerrain.Find(this);
         if (terrain != null) terrain.SurfaceChanged += Invalidate;
-        if (data != null)
-        {
-            data.Changed -= Invalidate;
-            data.Changed += Invalidate;
-        }
+        ObserveData(data);
+        Invalidate();
+    }
+
+    public override void _Ready()
+    {
         rocksView = AddView("RockPreview");
         waterView = AddView("WaterPreview");
         if (Engine.IsEditorHint()) Invalidate();
@@ -56,7 +57,16 @@ public partial class WorldPaint : Node3D
     public override void _ExitTree()
     {
         if (terrain != null) terrain.SurfaceChanged -= Invalidate;
-        if (data != null) data.Changed -= Invalidate;
+        terrain = null;
+        ObserveData(null);
+    }
+
+    private void ObserveData(WorldPaintData resource)
+    {
+        if (observedData == resource) return;
+        if (IsInstanceValid(observedData)) observedData.Changed -= Invalidate;
+        observedData = resource;
+        if (IsInstanceValid(observedData)) observedData.Changed += Invalidate;
     }
 
     public override void _Process(double delta)

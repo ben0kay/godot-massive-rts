@@ -325,3 +325,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Fixed Entity Editor selection and reload dispatch, refreshed linked resources from disk, and enabled catalogue refresh while retaining unsaved drafts.
 
 - 2026-11-18 — Labelled melee range input Base detection range under Targeting and ranged input Firing range under Primary attack in Entity Editor.
+
+- 2026-11-18 — Fixed World Painter activation by registering and opening its right-side dock after editor setup and balancing the paint resource subscriptions.
