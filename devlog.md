@@ -329,3 +329,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Fixed World Painter activation by registering and opening its right-side dock after editor setup and balancing the paint resource subscriptions.
 
 - 2026-11-18 — World Painter selects its paint node when armed and shows viewport feedback for valid cells, map bounds and camera angle.
+
+- 2026-11-18 — Moved Wave Editor into the right-side dock beside World Painter and stacked its controls to fit.

@@ -29,11 +29,15 @@ public partial class WaveEditorPlugin : EditorPlugin
         dock = new EditorDock
         {
             Title = "Wave Editor",
-            LayoutKey = "MassiveRtsWaveEditor",
-            DefaultSlot = EditorDock.DockSlot.Bottom,
-            AvailableLayouts = EditorDock.DockLayout.Horizontal
+            LayoutKey = "MassiveRtsWaveEditorSideDock",
+            DefaultSlot = EditorDock.DockSlot.RightUl,
+            AvailableLayouts = EditorDock.DockLayout.Vertical
         };
-        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(0, 215) };
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(220, 0),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled
+        };
         form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         scroll.AddChild(form);
         dock.AddChild(scroll);
@@ -79,14 +83,15 @@ public partial class WaveEditorPlugin : EditorPlugin
         Node scene = CommandScene();
         if (scene == null)
         {
-            form.AddChild(new Label { Text = "Open CommandSandbox or an inherited command level." });
+            form.AddChild(new Label { Text = "Open CommandSandbox or an inherited command level.",
+                AutowrapMode = TextServer.AutowrapMode.WordSmart });
             rebuilding = false;
             return;
         }
 
         var waves = scene.Get(WavesProperty).As<WaveList>() ?? new WaveList();
         selected = Math.Clamp(selected, 0, Math.Max(0, waves.Count - 1));
-        var settings = new HBoxContainer();
+        var settings = new VBoxContainer();
         form.AddChild(settings);
         var edge = new OptionButton();
         foreach (var option in Enum.GetValues<WaveSpawnEdge>()) edge.AddItem(option.ToString());
@@ -101,7 +106,7 @@ public partial class WaveEditorPlugin : EditorPlugin
         settings.AddChild(delay);
         settings.AddChild(Button("Refresh", Refresh));
 
-        var formation = new HBoxContainer();
+        var formation = new VBoxContainer();
         form.AddChild(formation);
         const string patternProperty = nameof(CommandSandbox.EnemySpawnPattern);
         var pattern = new OptionButton();
@@ -124,7 +129,7 @@ public partial class WaveEditorPlugin : EditorPlugin
         else
         {
             // The editor saves this scene-root property through its existing undo/redo path.
-            var cadence = new HBoxContainer();
+            var cadence = new VBoxContainer();
             form.AddChild(cadence);
             AddSpawnNumber(cadence, scene, "Spawn rate", nameof(CommandSandbox.EnemySpawnRate),
                 1, 60, 0.25, "units/s");
@@ -132,7 +137,7 @@ public partial class WaveEditorPlugin : EditorPlugin
                 MouseFilter = Control.MouseFilterEnum.Ignore });
         }
 
-        var controls = new HBoxContainer();
+        var controls = new HFlowContainer();
         form.AddChild(controls);
         var picker = new OptionButton();
         for (int i = 0; i < waves.Count; i++) picker.AddItem($"Wave {i + 1}");
@@ -141,11 +146,12 @@ public partial class WaveEditorPlugin : EditorPlugin
         controls.AddChild(picker);
         controls.AddChild(Button("Add wave", () => AddWave(scene), roster.Length == 0));
         controls.AddChild(Button("Remove wave", () => RemoveWave(scene), waves.Count <= 1));
-        controls.AddChild(new Label { Text = "Save changes with the level scene." });
+        form.AddChild(new Label { Text = "Save changes with the level scene.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart });
 
         if (waves.Count > 0)
         {
-            var counts = new GridContainer { Columns = 4 };
+            var counts = new GridContainer { Columns = 2 };
             form.AddChild(counts);
             var enemies = waves[selected]?.Enemies;
             foreach (var unit in roster)
@@ -155,14 +161,15 @@ public partial class WaveEditorPlugin : EditorPlugin
                 var value = new SpinBox { MinValue = 0, MaxValue = CommandSandbox.WaveUnitCapacity,
                     Step = 1, Value = count, CustomMinimumSize = new Vector2(85, 0) };
                 value.ValueChanged += amount => ChangeCount(scene, id, (int)amount, value);
-                counts.AddChild(new Label { Text = unit.DisplayName });
+                counts.AddChild(new Label { Text = unit.DisplayName, TooltipText = unit.DisplayName,
+                    ClipText = true, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
                 counts.AddChild(value);
             }
         }
         rebuilding = false;
     }
 
-    private void AddSpawnNumber(HBoxContainer row, Node scene, string label, string property,
+    private void AddSpawnNumber(VBoxContainer row, Node scene, string label, string property,
         double min, double max, double step, string suffix)
     {
         row.AddChild(new Label { Text = label });
