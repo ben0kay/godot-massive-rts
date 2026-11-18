@@ -19,6 +19,7 @@ Damage = 36.0
 Interval = 1.65
 Reach = 2.3
 CleaveEnabled = true
+CleaveAngleDegrees = 150.0
 CleaveSecondaryFraction = 0.8
 CleaveMaxAdditionalTargets = 4
 ShockwaveEveryAttacks = 5

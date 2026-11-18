@@ -19,4 +19,4 @@ Damage = 22.0
 Interval = 1.65
 Reach = 2.3
 CleaveEnabled = true
-CleaveAngleDegrees = 70.0
+CleaveAngleDegrees = 85.0

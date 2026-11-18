@@ -313,3 +313,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-17 — Pikeman: Added a spear-tipped T-shaped Strong Infantry counterpart to the roster and Fabricator. Its charge resistance stops stock cavalry tramples in the benchmark, and its regular melee strike gains a bonus against the Diamond unit ID. Source checked, awaiting Godot playtest.
 
 - 2026-11-17 — PROJ-LASER4: Increased only the Long Triangle Marksman's dedicated laser projectile authored speed from 45 to 67.5 (+50%), preserving regular Triangle lasers, damage, range, firing interval, visuals and arc. Source reviewed; Godot playtest pending.
+
+- 2026-11-17 — Widened Siege Infantry cleave from 100° to 150° and Elite Infantry cleave from 70° to 85°.
