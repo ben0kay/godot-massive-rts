@@ -341,3 +341,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Fixed Fabricator rally handoff under separation, distributed rally arrivals, and added clear enemy approach alternatives and tight routing corners.
 
 - 2026-11-18 — BENCH-POWER1 adds unit Battle Ratings and a painted-deployment strength bar with incremental faction totals.
+
+- 2026-11-18 — Added Yellow and a shared faction catalogue for painted battles, unit colours and both army bars. Older deployments keep their faction IDs and battle orders.

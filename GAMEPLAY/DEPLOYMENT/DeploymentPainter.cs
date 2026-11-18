@@ -455,13 +455,20 @@ public partial class DeploymentPainter : Node3D
                 }
                 if (saved.Battle != null)
                 {
-                    if (saved.Battle.Seed < 0 || saved.Battle.Orders?.Length != Factions.Count ||
+                    if (saved.Battle.Seed < 0 || saved.Battle.Orders == null || saved.Battle.Orders.Length < Factions.LegacyCount ||
+                        saved.Battle.Orders.Length > Factions.Count ||
                         !float.IsFinite(saved.Battle.GuardRadius) || saved.Battle.GuardRadius < 1f || saved.Battle.GuardRadius > 100f)
                         return "Saved battle settings are invalid.";
                     foreach (GuardOrder order in saved.Battle.Orders)
                         if (!System.Enum.IsDefined(order)) return "Saved battle order is invalid.";
                 }
                 battle = saved.Battle;
+                if (battle != null && battle.Orders.Length < Factions.Count)
+                {
+                    var orders = new GuardOrder[Factions.Count];
+                    battle.Orders.CopyTo(orders, 0);
+                    battle = battle with { Orders = orders };
+                }
                 foreach (SavedPlacement placement in saved.Placements)
                 {
                     if (placement == null || !catalog.TryResolve(placement.UnitId, out byte type) ||

@@ -15,7 +15,7 @@ public sealed class SeparationSystem
     private const int MaxGridCells = 1 << 20;
 
     // Indexed by soldier id.
-    private const byte RangedRole = 1, FactionMask = 6, VoluntaryMove = 8;
+    private const byte RangedRole = 1, FactionMask = (Factions.MaxCount - 1) << 1, VoluntaryMove = Factions.MaxCount << 1;
     private readonly int[] cellOfId;
     private byte[] slotFlags;
     private bool[] rangedByType = Array.Empty<bool>();

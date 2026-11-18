@@ -201,13 +201,7 @@ public partial class ArmyRenderer : Node3D
     public void ClearPoseHistory() => hasPreviousPose = false;
 
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
-    private static readonly Color[] FactionColors =
-    {
-        new(0.12f, 0.45f, 1f),
-        new(1f, 0.15f, 0.12f),
-        new(0.22f, 0.91f, 0.29f)
-    };
-    internal static Color FactionColor(int faction) => FactionColors[faction];
+    internal static Color FactionColor(int faction) => Factions.Color(faction);
 
     private static void StoreColor(float[] buffer, int offset, Color color)
     {

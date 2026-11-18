@@ -212,4 +212,10 @@ The stroke stores at most 512 sampled world points (thinning old samples if need
 
 ### Estimated Army Strength
 
-**Edit painted deployment** shows a top bar comparing the sum of painted soldiers' **Battle Rating** values for Blue, Red and Green. Edit a unit's Battle Rating under **Identity** in Entity Editor and reload the benchmark to use the saved values. Circle Infantry is the 100-point reference and the Worker starts at zero. Ratings are rough planning weights independent of production cost and combat. Defenses and terrain are outside this estimate. The bar hides when a battle starts.
+**Edit painted deployment** shows a top bar comparing the sum of painted soldiers' **Battle Rating** values for each painted faction. Edit a unit's Battle Rating under **Identity** in Entity Editor and reload the benchmark to use the saved values. Circle Infantry is the 100-point reference and the Worker starts at zero. Ratings are rough planning weights independent of production cost and combat. Defenses and terrain are outside this estimate. The bar hides when a battle starts.
+
+### Faction catalogue
+
+[DefaultFactionCatalog.tres](../GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.tres) supplies the paint menu, battle orders, unit colours and both top bars. The deployment bar uses ratings and the live bar uses surviving soldier counts. Blue, Red, Green and Yellow are available for painted battles.
+
+To add a faction, append a definition with the next unused ID, a name, a colour and a display order, then restart the game. Keep existing IDs stable for saved deployments. The simulation currently supports up to 32 catalogue entries. Fixed scenarios still use their authored factions.

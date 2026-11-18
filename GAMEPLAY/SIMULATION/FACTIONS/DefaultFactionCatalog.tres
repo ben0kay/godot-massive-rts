@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="FactionCatalog" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/SIMULATION/FACTIONS/FactionCatalog.cs" id="1"]
+[ext_resource type="Script" path="res://GAMEPLAY/SIMULATION/FACTIONS/FactionDefinition.cs" id="2"]
+
+[sub_resource type="Resource" id="Blue"]
+script = ExtResource("2")
+Id = 0
+DisplayName = "Blue"
+Color = Color(0.12, 0.45, 1, 1)
+DisplayOrder = 0
+ShowWhenEmpty = true
+
+[sub_resource type="Resource" id="Red"]
+script = ExtResource("2")
+Id = 1
+DisplayName = "Red"
+Color = Color(1, 0.15, 0.12, 1)
+DisplayOrder = 30
+ShowWhenEmpty = true
+
+[sub_resource type="Resource" id="Green"]
+script = ExtResource("2")
+Id = 2
+DisplayName = "Green"
+Color = Color(0.22, 0.91, 0.29, 1)
+DisplayOrder = 10
+
+[sub_resource type="Resource" id="Yellow"]
+script = ExtResource("2")
+Id = 3
+DisplayName = "Yellow"
+Color = Color(1, 0.79, 0.16, 1)
+DisplayOrder = 20
+
+[resource]
+script = ExtResource("1")
+Definitions = Array[ExtResource("2")]([SubResource("Blue"), SubResource("Red"), SubResource("Green"), SubResource("Yellow")])

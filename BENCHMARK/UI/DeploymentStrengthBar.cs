@@ -8,17 +8,10 @@ internal partial class DeploymentStrengthBar : Control
 {
     private const float LeftPanelEnd = 452f, RightPanelWidth = 296f, Margin = 12f;
     private const float MaximumWidth = 620f;
-    private static readonly string[] FactionNames = { "Blue", "Red", "Green" };
-    private static readonly Color[] FactionColors =
-    {
-        ArmyRenderer.FactionColor(Factions.Blue), ArmyRenderer.FactionColor(Factions.Red),
-        ArmyRenderer.FactionColor(Factions.Green)
-    };
-
     private readonly Label heading = MakeLabel(Colors.White, "Estimated Army Strength");
     private readonly Label[] labels = new Label[Factions.Count];
     private readonly long[] strengths = new long[Factions.Count];
-    private bool showGreen;
+    private readonly bool[] occupied = new bool[Factions.Count];
     private Rect2 bar;
 
     public override void _Ready()
@@ -28,7 +21,7 @@ internal partial class DeploymentStrengthBar : Control
         AddChild(heading);
         for (int faction = 0; faction < Factions.Count; faction++)
         {
-            labels[faction] = MakeLabel(FactionColors[faction], $"{FactionNames[faction]} 0");
+            labels[faction] = MakeLabel(Factions.Color(faction), $"{Factions.Name(faction)} 0");
             AddChild(labels[faction]);
         }
         Resized += LayoutBar;
@@ -37,15 +30,16 @@ internal partial class DeploymentStrengthBar : Control
 
     public void Refresh(DeploymentLayout layout)
     {
-        bool green = layout.CountForFaction(Factions.Green) > 0;
-        bool changed = green != showGreen;
-        showGreen = green;
+        bool changed = false;
         for (int faction = 0; faction < Factions.Count; faction++)
         {
+            bool hasUnits = layout.CountForFaction(faction) > 0;
+            changed |= occupied[faction] != hasUnits;
+            occupied[faction] = hasUnits;
             long strength = layout.StrengthOf(faction);
             if (strengths[faction] == strength) continue;
             strengths[faction] = strength;
-            labels[faction].Text = $"{FactionNames[faction]} {Format(strength)}";
+            labels[faction].Text = $"{Factions.Name(faction)} {Format(strength)}";
             changed = true;
         }
         if (changed) LayoutBar();
@@ -62,13 +56,22 @@ internal partial class DeploymentStrengthBar : Control
         heading.Size = new Vector2(width, 18f);
         bar = new Rect2(left, 27f, width, 8f);
 
-        int columns = showGreen ? Factions.Count : 2;
-        float columnWidth = width / columns;
-        for (int faction = 0; faction < Factions.Count; faction++)
+        int visibleCount = 0;
+        foreach (byte faction in Factions.DisplayOrder)
         {
-            labels[faction].Visible = faction < columns;
-            labels[faction].Position = new Vector2(left + columnWidth * faction, 38f);
-            labels[faction].Size = new Vector2(columnWidth, 18f);
+            labels[faction].Visible = occupied[faction] || Factions.ShowWhenEmpty(faction);
+            if (labels[faction].Visible) visibleCount++;
+        }
+        int columns = Mathf.Clamp((int)(width / 90f), 1, Mathf.Max(1, visibleCount));
+        float columnWidth = width / columns;
+        int slot = 0;
+        foreach (byte faction in Factions.DisplayOrder)
+        {
+            Label label = labels[faction];
+            if (!label.Visible) continue;
+            label.Position = new Vector2(left + columnWidth * (slot % columns), 38f + 18f * (slot / columns));
+            label.Size = new Vector2(columnWidth, 18f);
+            slot++;
         }
         QueueRedraw();
     }
@@ -76,16 +79,17 @@ internal partial class DeploymentStrengthBar : Control
     public override void _Draw()
     {
         DrawRect(bar, new Color("#17202b"));
-        long total = strengths[Factions.Blue] + strengths[Factions.Red] + strengths[Factions.Green];
+        long total = 0;
+        foreach (long strength in strengths) total += strength;
         if (total == 0) return;
         long cumulative = 0;
-        for (int faction = 0; faction < Factions.Count; faction++)
+        foreach (byte faction in Factions.DisplayOrder)
         {
             if (strengths[faction] == 0) continue;
             float start = bar.Position.X + bar.Size.X * (float)(cumulative / (double)total);
             cumulative += strengths[faction];
             float end = bar.Position.X + bar.Size.X * (float)(cumulative / (double)total);
-            DrawRect(new Rect2(start, bar.Position.Y, end - start, bar.Size.Y), FactionColors[faction]);
+            DrawRect(new Rect2(start, bar.Position.Y, end - start, bar.Size.Y), Factions.Color(faction));
         }
     }
 

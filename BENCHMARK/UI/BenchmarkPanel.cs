@@ -188,9 +188,9 @@ public partial class BenchmarkPanel : CanvasLayer
 		paintSection = new VBoxContainer { Visible = false };
 		column.AddChild(paintSection);
 		paintControls = Section(paintSection, "Paint tools", true, out paintHeader);
-		FactionChoice.AddItem("Blue", Factions.Blue);
-		FactionChoice.AddItem("Red", Factions.Red);
-		FactionChoice.AddItem("Green", Factions.Green);
+		foreach (byte faction in Factions.DisplayOrder)
+			FactionChoice.AddItem(Factions.Name(faction), faction);
+		FactionChoice.Select(FactionChoice.GetItemIndex(Factions.Blue));
 		// Single-click radio selection keeps all three tools visible without opening a dropdown.
 		var toolRow = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		toolRow.AddThemeConstantOverride("separation", 8);
@@ -260,8 +260,7 @@ public partial class BenchmarkPanel : CanvasLayer
 			};
 		}
 		var orders = Section(paintControls, "Battle orders", true, out _);
-		string[] teamNames = { "Blue", "Red", "Green" };
-		for (int faction = 0; faction < Factions.Count; faction++)
+		foreach (byte faction in Factions.DisplayOrder)
 		{
 			var choice = new OptionButton();
 			choice.AddItem("Auto Attack", (int)GuardOrder.AutoAttack);
@@ -270,7 +269,7 @@ public partial class BenchmarkPanel : CanvasLayer
 			choice.AddItem("Hold Ground – Auto Attack", (int)GuardOrder.Counterattack);
 			choice.Select(0);
 			teamOrders[faction] = choice;
-			Field(orders, teamNames[faction], choice);
+			Field(orders, Factions.Name(faction), choice);
 		}
 		Field(orders, "Melee guard radius", GuardRadius);
 		AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());

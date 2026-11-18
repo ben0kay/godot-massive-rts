@@ -41,9 +41,17 @@ public partial class BenchmarkSummary : PanelContainer
         }
 
         double average = count > 0 ? sum / count : 0;
+        var factions = new System.Text.StringBuilder();
+        foreach (byte faction in Factions.DisplayOrder)
+        {
+            int alive = units?.FactionAlive[faction] ?? 0;
+            if (alive == 0 && !Factions.ShowWhenEmpty(faction)) continue;
+            if (factions.Length > 0) factions.Append(" · ");
+            factions.Append($"{Factions.Name(faction)} {alive:N0}");
+        }
         metrics.Text = $"{title}\n{Engine.GetFramesPerSecond():F0} FPS · {average:F2} ms avg\nWorst frame  {worst:F2} ms\n" +
             $"Alive  {units?.Alive ?? 0:N0} / {units?.Count ?? 0:N0}\n" +
-            $"Blue {units?.FactionAlive[Factions.Blue] ?? 0:N0} · Red {units?.FactionAlive[Factions.Red] ?? 0:N0} · Green {units?.FactionAlive[Factions.Green] ?? 0:N0}" +
+            factions.ToString() +
             (projectiles.HasValue ? $"\nProjectiles  {projectiles.Value:N0}" : "");
     }
 }
