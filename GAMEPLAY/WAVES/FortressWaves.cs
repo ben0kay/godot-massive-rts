@@ -6,7 +6,7 @@ namespace MassiveRts;
 
 internal sealed class FortressWaves
 {
-    // Preserve the existing retry cadence when one or more row spawn slots are blocked.
+    // Preserve the existing retry cadence when a spawn batch is blocked.
     private const float RowSpawnRetrySeconds = 0.16f;
     private const int AcquisitionInterval = 6;
     private const float DefenderMeleeDetectionMultiplier = 2f;
@@ -17,8 +17,11 @@ internal sealed class FortressWaves
     private readonly Vector3 inward, sideways;
     private readonly float citadelAlongEdge;
     private readonly WaveSpawnPattern spawnPattern;
-    private readonly float laneSpacing, rowDelay, unitSpawnInterval;
-    private readonly int lanesPerSide, rowSize;
+    private readonly float spawnWidth, rowDelay, unitSpawnInterval;
+    private readonly int rowSize;
+    private readonly System.Collections.Generic.Dictionary<float, WaveSpawnBand> spawnBands = new();
+    private ObstacleField cachedSpawnGeometry;
+    public bool SpawnBandBlocked { get; private set; }
     private readonly RandomNumberGenerator spawnRandom = new();
     private readonly Vector2 citadelMin, citadelMax;
     private readonly byte[][] waves;
@@ -51,7 +54,7 @@ internal sealed class FortressWaves
 
     public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, WaveSpawnEdge edge,
         Godot.Collections.Array<WaveDefinition> definitions, float intermission, WaveSpawnPattern pattern,
-        float spacing, int enemiesPerRow, float secondsBetweenRows, float unitsPerSecond)
+        float width, int enemiesPerRow, float secondsBetweenRows, float unitsPerSecond)
     {
         this.units = units;
         this.buildings = buildings;
@@ -59,10 +62,8 @@ internal sealed class FortressWaves
         structures = new StructureCombat(units, buildings.Structures, buildings.MapHalfWidth);
         SpawnEdge = edge;
         spawnPattern = pattern;
-        float usableHalfWidth = buildings.MapHalfWidth - units.Catalog.MaxFootprint - 0.1f;
-        laneSpacing = Mathf.Min(Mathf.Max(spacing, units.Catalog.MaxFootprint * 2f + 0.5f), usableHalfWidth);
-        lanesPerSide = Mathf.Min(12, Mathf.FloorToInt(usableHalfWidth / laneSpacing));
-        rowSize = Mathf.Clamp(enemiesPerRow, 1, lanesPerSide * 2 + 1);
+        spawnWidth = float.IsFinite(width) ? Mathf.Clamp(width, 1f, buildings.MapHalfWidth * 2f) : buildings.MapHalfWidth * 2f;
+        rowSize = Mathf.Clamp(enemiesPerRow, 1, 24);
         rowDelay = Mathf.Clamp(secondsBetweenRows, 0.25f, 10f);
         float spawnRate = float.IsFinite(unitsPerSecond) ? Mathf.Clamp(unitsPerSecond, 1f, 60f) : 6.25f;
         unitSpawnInterval = 1f / spawnRate;
@@ -103,6 +104,8 @@ internal sealed class FortressWaves
     {
         WaveNumber++;
         spawnRandom.Seed = (ulong)WaveNumber;
+        spawnBands.Clear();
+        SpawnBandBlocked = false;
         nextSpawn = enemyCount = 0;
         if (WaveNumber == 1)
             for (int id = 0; id < units.Count; id++)
@@ -173,9 +176,9 @@ internal sealed class FortressWaves
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
+        RebuildGrid();
         TryRelease(delta);
         var field = buildings.CoverField;
-        RebuildGrid();
         if (buildings.HasDefenses) buildings.StepDefenses(grid, delta, tick);
         AcquireDefenderTargets(field);
         for (int i = 0; i < enemyCount; i++)
@@ -234,42 +237,64 @@ internal sealed class FortressWaves
             spawnClock = RowSpawnRetrySeconds;
             int remainingInRow = Mathf.Min(wave.Length - nextSpawn, rowSize - nextSpawn % rowSize);
             for (int i = 0; i < remainingInRow; i++)
-                if (!TryReleaseSoldier(wave[nextSpawn], nextSpawn % rowSize)) return;
+                if (!TryReleaseSoldier(wave[nextSpawn])) return;
             spawnClock = rowDelay;
         }
         else
         {
             // Preserve fractional physics-step time for accurate high spawn rates,
-            // but cap catch-up to one attempt per tick and keep blocked-lane retries paced.
+            // but cap catch-up to one attempt per tick and keep blocked-entry retries paced.
             spawnClock = Mathf.Max(0f, spawnClock + unitSpawnInterval);
-            TryReleaseSoldier(wave[nextSpawn], 0);
+            TryReleaseSoldier(wave[nextSpawn]);
         }
     }
 
-    private bool TryReleaseSoldier(byte type, int column)
+    private bool TryReleaseSoldier(byte type)
     {
-        float radius = units.Catalog[type].Footprint;
-        bool stream = spawnPattern == WaveSpawnPattern.Stream;
-        float spacing = stream ? radius * 2f + 0.5f : laneSpacing;
-        int halfLanes = stream ? Mathf.Min(8, Mathf.FloorToInt((buildings.MapHalfWidth - radius - 0.1f) / spacing)) : lanesPerSide;
-        int laneCount = halfLanes * 2 + 1;
-        float margin = buildings.MapHalfWidth - radius - 0.1f - halfLanes * spacing;
-        float along = Mathf.Clamp(citadelAlongEdge, -margin, margin);
-        Vector3 center = sideways * along - inward * (buildings.MapHalfWidth - radius - 0.1f);
-        int firstLane = spawnPattern == WaveSpawnPattern.Scatter ? spawnRandom.RandiRange(0, laneCount - 1) :
-            halfLanes - rowSize / 2 + column;
-        for (int i = 0; i < laneCount; i++)
+        var geometry = buildings.MovementField;
+        if (cachedSpawnGeometry != geometry)
         {
-            int lane = stream ? (i + 1) / 2 * (i % 2 == 0 ? -1 : 1) :
-                (firstLane + i) % laneCount - halfLanes;
-            Vector3 entry = center + sideways * (lane * spacing);
-            if (!buildings.IsSpawnClear(entry, radius)) continue;
+            spawnBands.Clear();
+            cachedSpawnGeometry = geometry;
+        }
+        float radius = units.Catalog[type].Footprint;
+        if (!spawnBands.TryGetValue(radius, out var band))
+        {
+            band = new WaveSpawnBand(geometry, inward, sideways, buildings.MapHalfWidth,
+                spawnWidth, citadelAlongEdge, radius);
+            spawnBands.Add(radius, band);
+        }
+
+        SpawnBandBlocked = band.IsEmpty;
+        if (SpawnBandBlocked) return false;
+
+        const int maxAttempts = 24;
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            Vector3 entry = band.Sample(spawnRandom);
+            if (SpawnOccupied(entry, radius)) continue;
             int id = units.TrySpawn(type, Factions.Red, entry);
             if (id < 0) return false;
+            grid.AddSoldier(units, id);
             buildings.ReservedWaveSlots--;
             enemies[enemyCount++] = id;
             nextSpawn++;
             return true;
+        }
+        return false;
+    }
+
+    private bool SpawnOccupied(Vector3 entry, float radius)
+    {
+        const float gap = 0.08f;
+        var candidates = grid.GetNearbySoldiers(entry, radius + units.MaxFootprint + gap);
+        while (candidates.MoveNext())
+        {
+            int id = candidates.Current;
+            if (units.Health[id] <= 0f) continue;
+            float clearance = radius + units.Catalog[units.Type[id]].Footprint + gap;
+            if (ObstacleField.Xz(units.Position[id] - entry).LengthSquared() < clearance * clearance)
+                return true;
         }
         return false;
     }

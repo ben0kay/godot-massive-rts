@@ -331,3 +331,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — World Painter selects its paint node when armed and shows viewport feedback for valid cells, map bounds and camera angle.
 
 - 2026-11-18 — Moved Wave Editor into the right-side dock beside World Painter and stacked its controls to fit.
+
+- 2026-11-18 — Fortress Defense waves now sample cached clear openings along a configurable spawn width. Nearby-unit checks reuse the battle grid.

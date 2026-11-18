@@ -119,8 +119,7 @@ public partial class WaveEditorPlugin : EditorPlugin
         };
         formation.AddChild(new Label { Text = "Spawn pattern" });
         formation.AddChild(pattern);
-        if (pattern.Selected != (int)WaveSpawnPattern.Stream)
-            AddSpawnNumber(formation, scene, "Lane spacing", nameof(CommandSandbox.EnemySpawnSpacing), 1, 24, 0.5, "u");
+        AddSpawnNumber(formation, scene, "Spawn width", nameof(CommandSandbox.EnemySpawnWidth), 1, 5000, 1, "u");
         if (pattern.Selected == (int)WaveSpawnPattern.Rows)
         {
             AddSpawnNumber(formation, scene, "Units per row", nameof(CommandSandbox.EnemiesPerRow), 2, 24, 1, "");

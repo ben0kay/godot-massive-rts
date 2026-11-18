@@ -30,6 +30,7 @@ public partial class WaveHud : PanelContainer
             waves.Victory ? "Victory · All waves cleared" :
             waves.WaitingToStart ? "Build and position your defenders" :
             waves.Countdown > 0 ? $"Wave {waves.WaveNumber + 1} in {Mathf.CeilToInt(waves.Countdown)} s" :
+            waves.SpawnBandBlocked ? $"Wave {waves.WaveNumber} · No clear entry on {waves.SpawnEdge} edge" :
             $"Wave {waves.WaveNumber} · {waves.Remaining:N0} enemies left · {waves.SpawnEdge} edge";
     }
 }
