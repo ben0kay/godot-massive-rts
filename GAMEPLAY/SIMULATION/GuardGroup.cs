@@ -82,7 +82,7 @@ public sealed class GuardGroup
             if (engaging)
             {
                 float reach = type.Ranged ? type.Reach :
-                    CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, separationGap);
+                    CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap);
                 bool indirect = type.Ranged &&
                     units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.IndirectFire;
                 bool clear = indirect || obstacles?.BlocksSight(position, units.Position[target]) != true;

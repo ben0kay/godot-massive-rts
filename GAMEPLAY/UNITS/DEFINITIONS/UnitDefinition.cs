@@ -52,12 +52,17 @@ public partial class UnitDefinition : Resource
     [Export] public float Reach { get; set; } = 1.6f;
     [Export(PropertyHint.Range, "1,180,1,degrees")] public float MeleeFacingAngleDegrees { get; set; } = 100f;
 
-    [ExportGroup("Melee target bonus")]
+    [ExportSubgroup("Melee target bonus")]
     [Export] public string MeleeBonusTargetId { get; set; } = "";
     [Export(PropertyHint.Range, "1,10,0.05")] public float MeleeBonusMultiplier { get; set; } = 1f;
 
-    [ExportGroup("Melee cleave")]
+    [ExportSubgroup("Cleave")]
     [Export] public bool CleaveEnabled { get; set; }
+    public const float MaxCleaveExtraReach = 16f;
+    [Export(PropertyHint.Range, "0,16,0.05,suffix:u")] public float CleaveExtraReach { get; set; }
+
+    public float EffectiveCleaveExtraReach => CleaveEnabled && Style == AttackStyle.Melee && float.IsFinite(CleaveExtraReach)
+        ? Mathf.Clamp(CleaveExtraReach, 0f, MaxCleaveExtraReach) : 0f;
     [Export(PropertyHint.Range, "1,180,1")] public float CleaveAngleDegrees { get; set; } = 100f;
     [Export(PropertyHint.Range, "0,1,0.05")] public float CleaveSecondaryFraction { get; set; } = 0.65f;
     public const int MaxCleaveAdditionalTargets = 50;

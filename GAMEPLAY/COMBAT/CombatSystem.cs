@@ -53,7 +53,7 @@ public static class CombatSystem
             if (refreshLocal || refreshPursuit)
             {
                 ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
-                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.Reach + units.MaxFootprint);
+                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.MeleeDetectionReach + units.MaxFootprint);
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
@@ -172,7 +172,7 @@ public static class CombatSystem
             if (!type.TargetsUnits) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? type.Reach :
-                MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
+                MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
             if (offset.LengthSquared() > radius * radius) continue;
             if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
                 type.MinimumFireRange * type.MinimumFireRange) continue;

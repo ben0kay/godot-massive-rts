@@ -275,7 +275,7 @@ internal sealed class FortressWaves
     }
 
     private float Detection(in UnitStats type) =>
-        type.Ranged ? type.Reach : Mathf.Max(combat.CellSize * 2f, type.Reach + units.MaxFootprint);
+        type.Ranged ? type.Reach : Mathf.Max(combat.CellSize * 2f, type.MeleeDetectionReach + units.MaxFootprint);
 
     private ObstacleField Sight(in UnitStats type, ObstacleField field) =>
         !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
@@ -297,7 +297,7 @@ internal sealed class FortressWaves
         if (type.PreferredTarget == TargetPreference.Units) return false;
         // Keep fighting an immediate threat when the preferred structure still needs an approach.
         float reach = type.Ranged ? type.Reach :
-            CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[unitTarget]].Footprint, SeparationGap) + 0.08f;
+            CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[unitTarget]].Footprint, SeparationGap) + 0.08f;
         return structures.CanHit(id, type, target, sight) ||
             units.Position[id].DistanceSquaredTo(units.Position[unitTarget]) > reach * reach;
     }
@@ -312,7 +312,7 @@ internal sealed class FortressWaves
             bool attackMove = movement.IsAttackMove(id);
             bool canPursue = !type.Ranged && (!movement.HasCommand(id) || attackMove);
             float range = type.Ranged ? type.Reach : canPursue ? Detection(type) * DefenderMeleeDetectionMultiplier :
-                type.Footprint + units.MaxFootprint + SeparationGap + 0.08f;
+                type.MeleeAttackRadius + units.MaxFootprint + SeparationGap + CombatSystem.MeleeContactTolerance;
             int target = structuresOnly ? -1 : units.Target[id];
             Vector3 position = units.Position[id];
             var sight = Sight(type, field);
@@ -326,7 +326,7 @@ internal sealed class FortressWaves
             if (!structuresOnly && (!attackMove || target < 0) && refresh)
                 target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, sight,
                     minimumRange: type.MinimumFireRange,
-                    meleeReachPadding: type.Ranged || canPursue ? -1f : SeparationGap + 0.08f);
+                    meleeReachPadding: type.Ranged || canPursue ? -1f : SeparationGap + CombatSystem.MeleeContactTolerance);
             if (type.TargetsStructures)
             {
                 bool canApproach = !movement.HasCommand(id) || attackMove;
@@ -358,7 +358,7 @@ internal sealed class FortressWaves
             }
 
             Vector3 enemy = units.Position[target];
-            float contact = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, SeparationGap);
+            float contact = CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector3 offset = position - enemy;
             movement.Engage(id, offset.LengthSquared() <= contact * contact
                 ? position : enemy + offset.Normalized() * contact);
@@ -401,7 +401,7 @@ internal sealed class FortressWaves
         {
             Vector2 defender = ObstacleField.Xz(units.Position[target]);
             float range = type.Ranged ? type.Reach * 0.94f :
-                CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[target]].Footprint, SeparationGap);
+                CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector2 offset = p - defender;
             float distance = offset.Length();
             if (distance <= range && distance >= type.MinimumFireRange)

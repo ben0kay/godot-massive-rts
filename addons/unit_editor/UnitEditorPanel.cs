@@ -419,7 +419,8 @@ public partial class UnitEditorPanel : VBoxContainer
             summary.Text += $"\n{Unit.Projectile.ExplosionRadius:0.##} u blast radius   ·   {Unit.Damage:0.##} centre / {edge:0.##} outer";
         }
         if (melee && Unit.CleaveEnabled)
-            summary.Text += $"\n{Unit.CleaveAngleDegrees:0.#}° cleave   ·   {Unit.CleaveMaxAdditionalTargets} extras at {Unit.CleaveSecondaryFraction:P0}";
+            summary.Text += $"\n{Unit.CleaveAngleDegrees:0.#}° cleave   ·   +{Unit.EffectiveCleaveExtraReach:0.##} u reach\n" +
+                $"  {Unit.CleaveMaxAdditionalTargets} extras at {Unit.CleaveSecondaryFraction:P0}";
         if (melee && Unit.ShockwaveEveryAttacks > 0)
             summary.Text += $"\nShockwave every {Unit.ShockwaveEveryAttacks} attacks\n" +
                 $"{Unit.ShockwaveBaseRadius * size:0.##} u radius   ·   {Unit.ShockwaveDamage:0.##} centre / {Unit.EffectiveShockwaveOuterDamage(Unit.ShockwaveDamage):0.##} outer";

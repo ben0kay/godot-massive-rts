@@ -49,7 +49,9 @@ public partial class UnitEditorPreview : Control
         bool drawWave = ShowShockwave && melee && unit.ShockwaveEveryAttacks > 0;
         float authoredRadius = float.IsFinite(unit.ShockwaveBaseRadius) && unit.ShockwaveBaseRadius > 0f ? unit.ShockwaveBaseRadius : 4f;
         float waveRadius = drawWave ? Mathf.Clamp(authoredRadius, 0.1f, 64f) * scale : 0f;
-        float coneRadius = outline.Footprint * 1.55f;
+        // Reference target is a stock Circle with the default separation gap.
+        float coneRadius = CombatSystem.MeleeContact(outline.Footprint + unit.EffectiveCleaveExtraReach,
+            0.4f, 0.05f) + CombatSystem.MeleeContactTolerance;
         float extent = Mathf.Max(Mathf.Max(waveRadius, drawCleave ? coneRadius : 0f), outline.Footprint * 1.3f);
         float pixels = Mathf.Max(1f, Mathf.Min(Size.X, Size.Y) * 0.43f) / extent;
         Vector2 origin = Size * 0.5f;

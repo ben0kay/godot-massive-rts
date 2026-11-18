@@ -212,7 +212,7 @@ public sealed class SpatialGrid
                             continue;
                         if (meleeReachPadding >= 0f)
                         {
-                            float contact = units.Catalog[units.Type[id]].Footprint +
+                            float contact = units.Catalog[units.Type[id]].MeleeAttackRadius +
                                 units.Catalog[units.Type[other]].Footprint + meleeReachPadding;
                             if (distance > contact * contact) continue;
                         }

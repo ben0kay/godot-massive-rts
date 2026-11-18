@@ -15,7 +15,7 @@ public static class AreaDamage
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f || limit == 0) return;
 
         int sourceFaction = units.Faction[attacker];
-        float queryRadius = CombatSystem.MeleeContact(type.Footprint, units.MaxFootprint, separationGap) + tolerance + movementPadding;
+        float queryRadius = CombatSystem.MeleeContact(type.MeleeAttackRadius, units.MaxFootprint, separationGap) + tolerance + movementPadding;
         Span<int> victims = stackalloc int[limit];
         Span<float> distances = stackalloc float[limit];
         int count = 0;
@@ -27,7 +27,7 @@ public static class AreaDamage
             if (id == primary || units.Health[id] <= 0f) continue;
             Vector3 offset = units.Position[id] - origin;
             float distance = offset.LengthSquared();
-            float reach = CombatSystem.MeleeContact(type.Footprint, units.Catalog[units.Type[id]].Footprint, separationGap) + tolerance;
+            float reach = CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[id]].Footprint, separationGap) + tolerance;
             if (distance > reach * reach) continue;
             float planarDistance = offset.X * offset.X + offset.Z * offset.Z;
             float forward = direction.X * offset.X + direction.Y * offset.Z;

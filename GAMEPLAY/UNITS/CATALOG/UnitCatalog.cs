@@ -97,7 +97,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 public readonly record struct UnitStats(string Id, string Name, UnitShape Shape, UnitOutline Outline, float Height,
     float Footprint, float Health, float Speed, float Damage, float Interval, float Reach,
     float DamageTaken, bool Ranged, int ProjectileType, float MinimumFireRange,
-    bool CleaveEnabled, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
+    bool CleaveEnabled, float CleaveExtraReach, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
     float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent,
     int MeleeBonusTarget, float MeleeBonusMultiplier)
@@ -108,6 +108,9 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     public int StructureDamageType => StructureDamagePercent < 0f ? DamageType : DamageRules.NeutralType;
     public bool TargetsUnits => (AllowedTargets & TargetCategory.Units) != 0;
     public bool TargetsStructures => (AllowedTargets & TargetCategory.Structures) != 0;
+    public float MeleeAttackRadius => Footprint + CleaveExtraReach;
+    public float MeleeDetectionReach => CleaveExtraReach > 0f
+        ? Mathf.Max(Reach, MeleeAttackRadius + CombatSystem.MeleeContactTolerance) : Reach;
     public float AttackReach(in UnitStats defender) => Ranged ? Reach : Reach + defender.Footprint;
 }
 
@@ -228,7 +231,7 @@ public sealed class RuntimeUnitCatalog
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
                 ranged ? Projectiles.Register(d.Projectile) : -1,
                 ranged ? ClampStat(d.MinimumFireRange, 0f, reach, 0f) : 0f,
-                d.CleaveEnabled && d.Style == AttackStyle.Melee, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
+                d.CleaveEnabled && d.Style == AttackStyle.Melee, d.EffectiveCleaveExtraReach, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
                 facingCosine * facingCosine, trample,
                 accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave, recoil,
                 DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), d.AllowedTargets, d.PreferredTarget,

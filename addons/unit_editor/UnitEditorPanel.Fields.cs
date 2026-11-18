@@ -90,17 +90,41 @@ public partial class UnitEditorPanel
             ? null : "Combat units require positive base damage.");
         Number(nameof(Unit.Interval), "Attack interval", () => Unit.Interval, v => Unit.Interval = v, 0.001, 10, 0.001, " s", unbounded: true);
         Number(nameof(Unit.Reach), "Authored reach", () => Unit.Reach, v => Unit.Reach = v, 0.001, 100, 0.001, " u",
-            tooltip: "Ranged firing distance. Melee uses this for acquisition and charge approach. Normal swings require body contact.", unbounded: true);
+            tooltip: "Ranged firing distance. Melee uses this for acquisition and charge approach. Melee strike distance uses the unit footprints and any extra cleave reach.", unbounded: true);
         Number(nameof(Unit.MeleeFacingAngleDegrees), "Melee facing angle", () => Unit.MeleeFacingAngleDegrees, v => Unit.MeleeFacingAngleDegrees = v,
             1, 180, 1, "°", () => IsMelee && !HasCleave && Unit.Shape != UnitShape.Circle);
 
-        AbilitySection("Melee cleave", nameof(Unit.CleaveEnabled), Unit.CleaveEnabled,
-            v => Unit.CleaveEnabled = v, () => IsMelee, () => HasCleave);
+        represented.Add(nameof(Unit.CleaveEnabled));
+        var hitPattern = new OptionButton();
+        hitPattern.AddItem("Single target");
+        hitPattern.AddItem("Area (cleave)");
+        hitPattern.Select(Unit.CleaveEnabled ? 1 : 0);
+        hitPattern.ItemSelected += index => { Unit.CleaveEnabled = index == 1; MarkEdited(); };
+        var meleePatternRow = Row("Hit pattern", hitPattern);
+        refreshFields.Add(() => meleePatternRow.Visible = IsMelee);
+
+        var rangedPattern = new Label();
+        var rangedPatternRow = Row("Hit pattern", rangedPattern);
+        refreshFields.Add(() =>
+        {
+            rangedPatternRow.Visible = !IsMelee;
+            rangedPattern.Text = Unit.Projectile?.ExplodesOnImpact == true ? "Area (blast)" : "Single target";
+        });
+
+        var primaryAttack = card;
+        var cleaveFields = new VBoxContainer();
+        primaryAttack.AddChild(cleaveFields);
+        card = cleaveFields;
+        refreshFields.Add(() => cleaveFields.Visible = HasCleave);
+        Number(nameof(Unit.CleaveExtraReach), "Extra cleave reach", () => Unit.CleaveExtraReach,
+            v => Unit.CleaveExtraReach = v, 0, UnitDefinition.MaxCleaveExtraReach, 0.05, " u", () => HasCleave,
+            "World units added beyond normal melee contact for the main target and extra cleave hits.");
         Number(nameof(Unit.CleaveAngleDegrees), "Cleave angle", () => Unit.CleaveAngleDegrees, v => Unit.CleaveAngleDegrees = v, 1, 180, 1, "°", () => HasCleave);
         Number(nameof(Unit.CleaveMaxAdditionalTargets), "Extra targets", () => Unit.CleaveMaxAdditionalTargets,
             v => Unit.CleaveMaxAdditionalTargets = (int)v, 0, UnitDefinition.MaxCleaveAdditionalTargets, 1, "", () => HasCleave);
         Number(nameof(Unit.CleaveSecondaryFraction), "Extra damage", () => Unit.CleaveSecondaryFraction * 100f,
             v => Unit.CleaveSecondaryFraction = v / 100f, 0, 100, 0.1, "%", () => HasCleave);
+        card = primaryAttack;
 
         // Shockwave is toggled through the existing cadence: 0 means off.
         AbilitySection("Shockwave", nameof(Unit.ShockwaveEveryAttacks), HasShockwave,
@@ -292,7 +316,7 @@ public partial class UnitEditorPanel
         return panel;
     }
 
-    private void Row(string name, Control editor, string tooltip = "")
+    private HBoxContainer Row(string name, Control editor, string tooltip = "")
     {
         var row = new HBoxContainer();
         card.AddChild(row);
@@ -301,6 +325,7 @@ public partial class UnitEditorPanel
         editor.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         editor.TooltipText = tooltip;
         row.AddChild(editor);
+        return row;
     }
 
     private void TextField(string key, string label, string value, Action<string> set)

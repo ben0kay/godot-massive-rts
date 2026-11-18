@@ -319,3 +319,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-17 | SKIRM1 planning only.** Added `GAMEPLAY/UNITS/SKIRM1_IMPLEMENTATION_PLAN.md`: fragile mobile ranged Skirmisher, closest-valid-enemy shooting (ignoring ranged variety), staggered/bounded 360-degree threat checks, retreat hysteresis, normal separation/obstacle rules, and future benchmark plus Fortress Defense integrations. **No implementation performed**; Codex should review/adapt before separately authorized coding.
 
 - 2026-11-18 — Added a benchmark attack range overlay for hovered units, including cleave geometry and shockwave radius.
+
+- 2026-11-18 — Moved cleave into Primary attack as an area hit pattern and added configurable extra cleave reach. Combat, movement, and both previews use the new setting.

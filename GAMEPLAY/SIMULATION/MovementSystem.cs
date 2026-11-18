@@ -58,7 +58,7 @@ public static class MovementSystem
             {
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
                 float reach = type.Ranged ? type.Reach :
-                    CombatSystem.MeleeContact(type.Footprint, defender.Footprint, separationGap);
+                    CombatSystem.MeleeContact(type.MeleeAttackRadius, defender.Footprint, separationGap);
                 float distanceSquared = offset.LengthSquared();
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
                 float sightRange = steerMelee ? reach + 0.075f : reach;
