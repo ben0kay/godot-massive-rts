@@ -304,12 +304,14 @@ public partial class CommandSandbox : Node3D
     }
 
     // =========================================================
-    internal void UpdateGroundBounds()
+    internal void UpdateGroundBounds(bool showEditorGrid = false)
     {
         if (GetNodeOrNull<MeshInstance3D>("Ground") is not MeshInstance3D ground ||
             ground.GetActiveMaterial(0) is not ShaderMaterial shared) return;
         var material = ground.MaterialOverride as ShaderMaterial ?? (ShaderMaterial)shared.Duplicate();
+        material.ResourceLocalToScene = true;
         material.SetShaderParameter("map_half_width", MapSize * 0.5f);
+        material.SetShaderParameter("editor_grid_size", showEditorGrid ? DeploymentLayout.CellSize : 0f);
         ground.MaterialOverride = material;
     }
 

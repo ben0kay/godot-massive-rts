@@ -15,7 +15,7 @@ public partial class LevelEditor : Node
     private LineEdit levelTitle;
     private TextEdit levelDescription;
     private SpinBox mapSize;
-    private CheckBox planView, snap;
+    private CheckBox planView, snap, showGrid;
     private ConfirmationDialog confirmation;
     private AcceptDialog settingsDialog;
     private Action accepted;
@@ -107,6 +107,9 @@ public partial class LevelEditor : Node
         toolsPanel.AddChild(planView);
         snap = new CheckBox { Text = "Snap to grid", ButtonPressed = true };
         toolsPanel.AddChild(snap);
+        showGrid = new CheckBox { Text = "Show grid", ButtonPressed = true };
+        showGrid.Toggled += _ => UpdateEditorGround();
+        toolsPanel.AddChild(showGrid);
         context = new VBoxContainer();
         toolsPanel.AddChild(context);
         var help = Heading(toolsPanel, "WASD / arrows to pan\nWheel to zoom · Home to frame\nCtrl+Z / Ctrl+Shift+Z", 15);
@@ -288,6 +291,7 @@ public partial class LevelEditor : Node
             camera.TopDown = false;
         }
         else FrameEditor();
+        UpdateEditorGround();
         RefreshLayout();
         ShowEditor();
         SetStatus(previewing ? "Opening layout preview · click Preview Layout again to edit" : "");

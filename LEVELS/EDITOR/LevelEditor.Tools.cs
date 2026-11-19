@@ -71,10 +71,12 @@ public partial class LevelEditor
         camera.SetOpeningView(Vector3.Zero, map.MapSize * 0.95f, camera.TopDown ? 0 : 45);
     }
 
+    private void UpdateEditorGround() => map?.UpdateGroundBounds(showGrid.ButtonPressed && !previewing);
+
     private void RefreshMap(bool terrainChanged = false)
     {
         if (terrainChanged) map.GetNodeOrNull<CommandTerrain>("Terrain")?.Rebuild(force: true);
-        map.UpdateGroundBounds();
+        UpdateEditorGround();
         paint.Compile();
         RefreshLayout();
     }
