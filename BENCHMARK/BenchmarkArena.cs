@@ -8,6 +8,37 @@ public partial class BenchmarkArena : Node3D
 {
     [Export] public BenchmarkConfig Config { get; set; } = new();
     [Export] public UnitCatalog SoldierCatalog { get; set; }
+    internal const string UnitCatalogPath = "res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres";
+    private const string BuildingCatalogPath = "res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres";
+    private RuntimeUnitCatalog editorCatalog;
+    private DeploymentLayout editorLayout;
+    private DeploymentPainter.BattleSettings editorSettings;
+    private bool openInDeployment;
+
+    internal (DeploymentLayout Layout, DeploymentPainter.BattleSettings Settings) CaptureTestSetup() =>
+        (painter.Layout, ReadBattleSettings());
+
+    // Validate against the new footprints before replacing an existing test scene.
+    internal void ConfigureEditorTest(UnitCatalog drafts, DeploymentLayout previous, DeploymentPainter.BattleSettings settings)
+    {
+        var simulation = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
+        editorCatalog = drafts.Compile(simulation.EffectiveMovementSpeedMultiplier);
+        if (previous != null)
+        {
+            var editorBuildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), editorCatalog.DamageRules);
+            editorLayout = new DeploymentLayout(editorCatalog, editorBuildings, previous.GridSize);
+            editorLayout.SetLoadedObstacles(previous.Obstacles);
+            foreach (var defense in previous.Defenses)
+                if (!editorLayout.TryPlaceDefense(defense))
+                    throw new InvalidOperationException("A test defense no longer fits the layout.");
+            foreach (var soldier in previous.Placements)
+                if (!editorLayout.TryPaint(soldier, out _))
+                    throw new InvalidOperationException("The draft footprints overlap in this setup. Move the affected units before applying the draft.");
+        }
+        editorSettings = settings;
+        openInDeployment = true;
+    }
+
     private RuntimeUnitCatalog catalog;
     private float projectileLifetime;
     private Mesh[] soldierMeshes;
@@ -71,7 +102,7 @@ public partial class BenchmarkArena : Node3D
     {
         var simulationSettings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         float movementScale = simulationSettings.EffectiveMovementSpeedMultiplier;
-        catalog = (SoldierCatalog ?? GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres")).Compile(movementScale);
+        catalog = editorCatalog ?? (SoldierCatalog ?? GD.Load<UnitCatalog>(UnitCatalogPath)).Compile(movementScale);
         // Keep the distance cap implied by the authored projectile lifetime.
         projectileLifetime = Config.ProjectileLifetime / movementScale;
         soldierMeshes = FacetedSoldierMeshes.Create(catalog);
@@ -111,7 +142,7 @@ public partial class BenchmarkArena : Node3D
             Material = new StandardMaterial3D { AlbedoColor = new Color(0.29f, 0.30f, 0.32f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres"), catalog.DamageRules);
+        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         attackRanges = new AttackRangeOverlay();
@@ -174,7 +205,13 @@ public partial class BenchmarkArena : Node3D
             deathRenderer.Sync(deathFeedback);
         };
         panel.PaintSpread.ValueChanged += value => painter.SoldierBrushSpread = (float)value;
-        Spawn();
+        if (openInDeployment)
+        {
+            if (editorSettings != null) panel.RestoreBattleSettings(editorSettings);
+            if (editorLayout != null) painter.ReplaceLayout(editorLayout);
+            EnterDeployment();
+        }
+        else Spawn();
     }
     // =========================================================
     private void Clear()

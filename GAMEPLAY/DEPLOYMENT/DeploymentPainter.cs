@@ -381,7 +381,12 @@ public partial class DeploymentPainter : Node3D
     public string Load()
     {
         string message = ReadDeployment(SavePath, out var loaded, out _);
-        if (loaded == null) return message;
+        if (loaded != null) ReplaceLayout(loaded);
+        return message;
+    }
+
+    internal void ReplaceLayout(DeploymentLayout loaded)
+    {
         CancelDrag();
         Layout = loaded;
         ((ShaderMaterial)placementGrid.MaterialOverride).SetShaderParameter("cell_size", Layout.GridSize);
@@ -390,7 +395,6 @@ public partial class DeploymentPainter : Node3D
         foreach (DeploymentPreview preview in previews) preview.Clear();
         foreach (SoldierPlacement placement in Layout.Placements) previews[placement.Type].Add(placement);
         Changed?.Invoke();
-        return message;
     }
 
     public string ReadDeployment(string path, out DeploymentLayout layout, out BattleSettings battle)

@@ -53,6 +53,15 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly OptionButton DefenseChoice = new();
 	private readonly OptionButton[] teamOrders = new OptionButton[Factions.Count];
 	public GuardOrder OrderFor(int faction) => (GuardOrder)teamOrders[faction].GetSelectedId();
+
+	internal void RestoreBattleSettings(DeploymentPainter.BattleSettings settings)
+	{
+		Seed.Value = settings.Seed;
+		GuardRadius.Value = settings.GuardRadius;
+		foreach (byte faction in Factions.DisplayOrder)
+			teamOrders[faction].Select(teamOrders[faction].GetItemIndex((int)settings.Orders[faction]));
+	}
+
 	public readonly SpinBox GuardRadius = new() { MinValue = 1, MaxValue = 100, Step = 1, Value = 12 };
 	public readonly OptionButton TerrainChoice = new();
 	public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };

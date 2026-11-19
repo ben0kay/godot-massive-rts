@@ -42,7 +42,7 @@ public partial class LevelEditor : Node
             AddChild(message);
             return;
         }
-        units = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
+        units = ResourceLoader.Load<UnitCatalog>(BenchmarkArena.UnitCatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep).Definitions
             .Where(unit => unit != null).ToArray();
         defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres")
             .Definitions.Where(definition => definition != null).ToArray();
@@ -76,6 +76,12 @@ public partial class LevelEditor : Node
         });
         startStatus = Heading(start, "", 15);
         startStatus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        Button(start, "Game Editor", () =>
+        {
+            void BackToHub() => MenuNavigation.Open(this, GameEditor.ScenePath);
+            if (dirty) Confirm("Discard unsaved changes?", "Return to the Game Editor?", BackToHub);
+            else BackToHub();
+        });
         Button(start, "Return to current level", () => ShowEditor());
 
         var bar = Panel(interfaceRoot, Control.LayoutPreset.TopWide, 12, 12, -12, 124);
