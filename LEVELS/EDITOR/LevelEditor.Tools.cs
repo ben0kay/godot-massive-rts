@@ -270,7 +270,11 @@ public partial class LevelEditor
         else if (mouse.ButtonIndex == MouseButton.Left)
         {
             try { Place(hit); }
-            catch (Exception error) { SetStatus(error.Message); }
+            catch (Exception error)
+            {
+                GD.PushError($"Map placement failed: {error}");
+                SetStatus(error.Message);
+            }
         }
         else return;
         GetViewport().SetInputAsHandled();

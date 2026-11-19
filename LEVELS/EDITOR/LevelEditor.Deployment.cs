@@ -122,7 +122,11 @@ public partial class LevelEditor
         cursor.Hide();
         WorldPoint(mouse.Position, out var last);
         try { EditSoldierRectangle(RectangleArea(first, ClampedCell(last)), mouse.ButtonIndex == MouseButton.Right); }
-        catch (Exception error) { SetStatus(error.Message); }
+        catch (Exception error)
+        {
+            GD.PushError($"Soldier rectangle failed: {error}");
+            SetStatus(error.Message);
+        }
         return true;
     }
 

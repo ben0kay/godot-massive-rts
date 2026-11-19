@@ -177,7 +177,7 @@ public partial class CommandSandbox : Node3D
         var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
         var (rocks, water) = paint?.Compile() ??
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
-        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"),
+        buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
             WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, StartingCarbon);
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (Node child in fabricators.GetChildren())
@@ -337,11 +337,12 @@ public partial class CommandSandbox : Node3D
     }
 
     // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
-    internal ObstacleRectangle[] ReadAuthoredWalls()
+    internal ObstacleRectangle[] ReadAuthoredWalls(bool groundForPlay = false)
     {
         var walls = new List<ObstacleRectangle>();
         if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();
 
+        var terrain = groundForPlay ? GetNodeOrNull<CommandTerrain>("Terrain")?.Field : null;
         foreach (Node child in authored.GetChildren())
         {
             if (child is not MeshInstance3D mesh || mesh.Mesh is not BoxMesh) continue;
@@ -360,12 +361,14 @@ public partial class CommandSandbox : Node3D
                 WorldBounds = new Rect2(ObstacleField.Xz(bounds.Position), ObstacleField.Xz(bounds.Size))
             };
             if (!wall.IsValid) continue;
-            Vector3 groundPosition = mesh.GlobalPosition;
-            var terrain = units.Grounding?.Field;
-            float relief = 0f;
-            groundPosition.Y += (terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f) - bounds.Position.Y;
-            if (relief > 0.5f) GD.PushWarning($"Command wall '{mesh.Name}' crosses uneven terrain.");
-            mesh.GlobalPosition = groundPosition;
+            if (groundForPlay)
+            {
+                Vector3 groundPosition = mesh.GlobalPosition;
+                float relief = 0f;
+                groundPosition.Y += (terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f) - bounds.Position.Y;
+                if (relief > 0.5f) GD.PushWarning($"Command wall '{mesh.Name}' crosses uneven terrain.");
+                mesh.GlobalPosition = groundPosition;
+            }
             walls.Add(wall);
         }
         return walls.ToArray();

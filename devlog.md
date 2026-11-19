@@ -357,3 +357,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-19 | Numbered campaign saves | Source implemented.** Save As offers 100 numbered slots per campaign, and campaign menus and unlocks follow numeric level order.
 
 - **2026-11-19 | Campaign briefing | Source implemented.** Added debug-profile level access and pre-deployment briefings with authored map previews, troop counts, and a future recruitment entry.
+
+- **2026-11-19 | Level editor placement fix.** Read authored wall footprints without grounding walls or accessing the battle simulation during placement. Placement errors now include a stack trace in Godot's output.
