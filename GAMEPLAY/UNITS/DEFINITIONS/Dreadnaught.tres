@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/MinigunRound/MinigunRound.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+Id = "dreadnaught"
+DisplayName = "Dreadnaught"
+Role = "Super-heavy melee hull with four independent miniguns"
+Shape = 11
+Width = 8.0
+HullLength = 14.0
+Height = 2.2
+SizeTier = 5.0
+BattleRating = 3500
+Health = 3000.0
+ArmourClass = "Heavy"
+Speed = 0.9
+AccelerationSecondsOverride = 1.5
+TurnDegreesPerSecond = 40.0
+Damage = 60.0
+UnitDamagePercent = 100.0
+Interval = 0.5
+Reach = 8.0
+Projectile = ExtResource("2")

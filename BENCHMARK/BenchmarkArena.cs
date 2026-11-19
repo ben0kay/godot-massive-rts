@@ -17,6 +17,7 @@ public partial class BenchmarkArena : Node3D
     private SeparationSystem separation;
     private MeleeSteering meleeSteering;
     private TrampleSystem trample;
+    private DreadnaughtCombat dreadnaughts;
     private byte[] voluntaryMovement;
     private AlliedYieldSettings alliedYieldSettings;
     private ProjectileSystem projectiles;
@@ -179,6 +180,12 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         armyBalanceHud?.Reset();
+        if (dreadnaughts != null)
+        {
+            RemoveChild(dreadnaughts);
+            dreadnaughts.QueueFree();
+            dreadnaughts = null;
+        }
         guards = null;
         autoAttackIds = null;
         autoAttackCount = 0;
@@ -403,7 +410,7 @@ public partial class BenchmarkArena : Node3D
         foreach (SoldierPlacement placement in placements)
         {
             factionMask |= 1 << placement.Faction;
-            ranged |= catalog[placement.Type].Ranged;
+            ranged |= catalog[placement.Type].Ranged || placement.Type == RuntimeUnitCatalog.Dreadnaught;
         }
         foreach (var defense in layout.Defenses) factionMask |= 1 << defense.Faction;
         if (placements.Count == 0 || System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
@@ -504,6 +511,12 @@ public partial class BenchmarkArena : Node3D
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
+                dreadnaughts = DreadnaughtCombat.Create(units);
+                if (dreadnaughts != null)
+                {
+                    AddChild(dreadnaughts);
+                    dreadnaughts.SyncVisuals();
+                }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units);
                 panel.Summary.ResetSamples();
@@ -549,6 +562,7 @@ public partial class BenchmarkArena : Node3D
                 long start = Stamp();
                 float blend = smooth ? (float)Math.Clamp(accumulator / Config.TickSeconds, 0.0, 1.0) : 1f;
                 armyRenderer.Sync(blend);
+                dreadnaughts?.SyncVisuals();
                 if (steps > 0) projectileRenderer.Sync(projectiles);
                 timeSinceArmySync = 0;
                 renderMs += Elapsed(start);
@@ -741,10 +755,11 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, trample, obstacles, shockwaves, units.HasStructureAttackers ? defenseCombat : null);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, trample, obstacles, shockwaves, units.HasStructureAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null);
+            dreadnaughts?.Step(grid, projectiles, obstacles, dt, units.Catalog.MaxSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
             AttackDefenses(dt);
             combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, obstacles, shockwaves); projectileMs += Elapsed(start); }
+            if (mode == BenchmarkMode.Ranged || dreadnaughts != null) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, obstacles, shockwaves); projectileMs += Elapsed(start); }
         }
         if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
         {

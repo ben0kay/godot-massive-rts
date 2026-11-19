@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -35,9 +35,14 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         new(-1f, 0.18f), new(-0.24f, 0.18f), new(-0.24f, -0.62f)
     };
 
+    private static readonly Vector2[] DreadnaughtVertices =
+    {
+        new(0, -1), new(1, -0.48f), new(1, 1), new(-1, 1), new(-1, -0.48f)
+    };
+
     public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
 
-    public float Footprint => IsDrillRig
+    public float Footprint => IsDreadnaught ? 1f : IsDrillRig
         ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
         : IsPike ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.82f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
@@ -47,6 +52,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 
     public Vector2 Vertex(int index)
     {
+        if (IsDreadnaught) return DreadnaughtVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsPike) return PikeVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsDrillRig) return DrillRigVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsHFrame) return HVertices[index] * new Vector2(RadiusX, RadiusZ);
@@ -66,6 +72,9 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             ? definition.FootprintRadius : 0.57f;
         float diamondLongRadius = definition.Shape == UnitShape.Diamond
             ? Mathf.Max(width * 0.707107f, legacyRadius) * size * 0.96f : 0f;
+        if (definition.Shape == UnitShape.Dreadnaught)
+            return new UnitOutline(5, Mathf.Clamp(width, 2f, 20f) * size * 0.5f,
+                (float.IsFinite(definition.HullLength) ? Mathf.Clamp(definition.HullLength, 3f, 30f) : 14f) * size * 0.5f, 0f, IsDreadnaught: true);
         return FromDimensions(definition.Shape, width * size, diamondLongRadius);
     }
 
@@ -127,15 +136,17 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
     public ProjectileCatalog Projectiles { get; }
+    internal (int Projectile, Vector4 Min, Vector4 Max, float Interval, float Damage) DreadnaughtGuns { get; }
+
     public int Count => stats.Length;
     public float MaxSpeed { get; }
     public float MaxFootprint { get; }
@@ -192,6 +203,11 @@ public sealed class RuntimeUnitCatalog
             var pikeman = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Pikeman.tres");
             if (pikeman != null) byId.Add(PikemanId, pikeman);
         }
+        if (!byId.ContainsKey(DreadnaughtId))
+        {
+            var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Dreadnaught.tres");
+            if (definition != null) byId.Add(DreadnaughtId, definition);
+        }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
@@ -202,6 +218,11 @@ public sealed class RuntimeUnitCatalog
             float size = UnitOutline.EffectiveSize(d);
             UnitOutline outline = UnitOutline.FromDefinition(d, size);
             float footprint = outline.Footprint;
+            if (outline.IsDreadnaught != (i == Dreadnaught))
+                throw new ArgumentException("The Dreadnaught shape belongs to the dreadnaught unit definition.");
+            if (i == Dreadnaught)
+                DreadnaughtGuns = (Projectiles.Register(d.Projectile), d.TurretMinimumRanges, d.TurretMaximumRanges,
+                    ClampStat(d.TurretShotInterval, 0.05f, 5f, 0.15f), ClampStat(d.TurretDamage, 0f, 200f, 3f));
             bool combat = d.AllowedTargets != TargetCategory.None;
             bool ranged = combat && d.Style == AttackStyle.Ranged;
             float reach = Positive(d.Reach, 1.6f);

@@ -219,3 +219,9 @@ The stroke stores at most 512 sampled world points (thinning old samples if need
 [DefaultFactionCatalog.tres](../GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.tres) supplies the paint menu, battle orders, unit colours and both top bars. The deployment bar uses ratings and the live bar uses surviving soldier counts. Blue, Red, Green and Yellow are available for painted battles.
 
 To add a faction, append a definition with the next unused ID, a name, a colour and a display order, then restart the game. Keep existing IDs stable for saved deployments. The simulation currently supports up to 32 catalogue entries. Fixed scenarios still use their authored factions.
+
+### DREAD1 first playtest
+
+Open **Edit painted deployment**, choose **Dreadnaught** under **Soldier type**, and place a hull apart from allies with a single click using the smallest brush. Paint the opposing force and select **Start painted battle** with Auto Attack selected. Place enemies on several sides to see the four guns pick different targets while the hull turns and advances. Prow contact starts at 60 damage per enemy with a 0.5-second repeat delay. Side and rear collisions only push units.
+
+The full turret and prow behavior runs in this benchmark. The first pass uses local hull-to-soldier contact and keeps the shared separation cell size tied to ordinary footprints. Painter spacing, obstacle routing, hull-to-hull collisions and incoming projectile hit volumes are still approximate. Fortress production and campaign integration are outside this first pass.

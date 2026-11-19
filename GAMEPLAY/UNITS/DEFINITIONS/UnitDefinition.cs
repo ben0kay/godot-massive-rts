@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught }
 [System.Flags]
 public enum TargetCategory { None = 0, Units = 1, Structures = 2, Both = Units | Structures }
 public enum TargetPreference { Units, Structures }
@@ -28,6 +28,13 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "1,5,0.5,or_greater")] public float SizeTier { get; set; } = 1f;
     // Serialized legacy input for Diamond mesh length. Collision uses the compiled outline.
     [Export] public float FootprintRadius { get; set; } = 0.57f;
+
+    [ExportGroup("Dreadnaught")]
+    [Export] public float HullLength { get; set; } = 14f;
+    [Export] public Vector4 TurretMinimumRanges { get; set; } = new(3, 3, 3, 3);
+    [Export] public Vector4 TurretMaximumRanges { get; set; } = new(30, 30, 30, 30);
+    [Export] public float TurretShotInterval { get; set; } = 0.15f;
+    [Export] public float TurretDamage { get; set; } = 3f;
 
     [ExportGroup("Movement")]
     [Export] public float Speed { get; set; } = 5f;

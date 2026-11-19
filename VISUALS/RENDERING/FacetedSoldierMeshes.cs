@@ -70,7 +70,7 @@ public static class FacetedSoldierMeshes
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike ? outline : null, sideShade: SoldierSideShade);
+            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught ? outline : null, sideShade: SoldierSideShade);
         if (outline.IsChevron)
         {
             float length = outline.BarrelFront - outline.BarrelBack;
@@ -133,7 +133,7 @@ public static class FacetedSoldierMeshes
         // Each concave outline uses an interior point that sees every edge of its cap.
         Vector3 cap = Vector3.Zero;
         if (customOutline is UnitOutline outline)
-            cap.Z = outline.IsPike ? radiusZ * 0.32f : -radiusZ * 0.44f;
+            cap.Z = outline.IsDreadnaught ? 0f : outline.IsPike ? radiusZ * 0.32f : -radiusZ * 0.44f;
         for (int i = 0; i < sides; i++)
         {
             float angle = rotation + i * Mathf.Tau / sides;

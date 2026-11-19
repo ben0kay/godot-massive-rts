@@ -54,16 +54,23 @@ public sealed class ProjectileSystem
 
     private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type)
     {
-        if (Count == Position.Length) { Dropped++; return false; }
-        ProjectileFlight flight = catalog.Flight(type.ProjectileType);
-        int i = Count++;
-        origin[i] = Position[i] = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
+        Vector3 muzzle = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
         if (type.Outline.IsChevron)
         {
             Vector2 heading = units.Facing[shooter];
-            origin[i] = Position[i] = units.Position[shooter] +
+            muzzle = units.Position[shooter] +
                 new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
         }
+        return LaunchFrom(muzzle, aim, units.Faction[shooter], type.ProjectileType,
+            type.AgainstUnits(type.Damage), type.UnitDamageType);
+    }
+
+    internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType)
+    {
+        if (Count == Position.Length) { Dropped++; return false; }
+        ProjectileFlight flight = catalog.Flight(projectileType);
+        int i = Count++;
+        origin[i] = Position[i] = muzzle;
         Vector3 path = aim - origin[i];
         displacement[i] = path;
         float distance = path.Length();
@@ -72,10 +79,10 @@ public sealed class ProjectileSystem
         duration[i] = Mathf.Max(0.0001f, distance / flight.Speed);
         elapsed[i] = 0;
         Direction[i] = path + Vector3.Up * (4f * arc[i]);
-        damage[i] = type.AgainstUnits(type.Damage);
-        damageTypes[i] = type.UnitDamageType;
-        Type[i] = type.ProjectileType;
-        sourceFaction[i] = units.Faction[shooter];
+        damage[i] = amount;
+        damageTypes[i] = damageType;
+        Type[i] = projectileType;
+        sourceFaction[i] = faction;
         Dirty = true;
         return true;
     }

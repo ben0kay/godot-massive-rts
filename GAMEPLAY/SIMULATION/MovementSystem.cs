@@ -40,7 +40,7 @@ public static class MovementSystem
             }
             ref readonly UnitStats type = ref catalog[units.Type[i]];
             bool rangedCombat = !movementMode && type.Ranged;
-            bool steerMelee = melee != null && !movementMode && !type.Ranged && hasTarget;
+            bool steerMelee = melee != null && !movementMode && !type.Ranged && hasTarget && !type.Outline.IsDreadnaught;
             if (!hasTarget) melee?.Reset(i);
             // Hold the firing line until there is a living target worth moving toward.
             if (rangedCombat && !hasTarget && !hasStructure && units.MoveSpeed[i] == 0f) continue;
@@ -155,6 +155,15 @@ public static class MovementSystem
                     continue;
                 }
             }
+            if (type.Outline.IsDreadnaught)
+            {
+                Vector2 intended = ObstacleField.Xz(direction);
+                SoldierFacing.Turn(units, i, intended, turnSteps[units.Type[i]]);
+                Vector2 heading = units.Facing[i];
+                travel *= Mathf.Max(0f, heading.Dot(intended));
+                direction = new Vector3(heading.X, 0f, heading.Y);
+                units.Dirty[i] = true;
+            }
             Vector3 next = units.Position[i] + direction * travel;
             if (obstacles != null)
             {
@@ -173,7 +182,7 @@ public static class MovementSystem
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
                 voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.
-            if (travel > 0.00001f && type.Shape != UnitShape.Circle)
+            if (travel > 0.00001f && type.Shape != UnitShape.Circle && !type.Outline.IsDreadnaught)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnSteps[units.Type[i]]);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);

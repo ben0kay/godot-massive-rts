@@ -150,7 +150,7 @@ public static class CombatSystem
 
     // =========================================================
     internal static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
-        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null)
+        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null, bool useDreadnaughtContact = false)
     {
         var turnSteps = units.TurnSteps(dt);
         bool lungeChanged = false;
@@ -169,11 +169,16 @@ public static class CombatSystem
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
-            if (!type.TargetsUnits) continue;
+            if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? type.Reach :
                 MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
-            if (offset.LengthSquared() > radius * radius) continue;
+            if (useDreadnaughtContact && !type.Ranged && units.Type[target] == RuntimeUnitCatalog.Dreadnaught)
+            {
+                float reachFromEdge = CombatSystem.MeleeContact(type.MeleeAttackRadius, 0f, separationGap) + MeleeContactTolerance;
+                if (DreadnaughtCombat.DistanceToHull(units, target, units.Position[i]) > reachFromEdge) continue;
+            }
+            else if (offset.LengthSquared() > radius * radius) continue;
             if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
                 type.MinimumFireRange * type.MinimumFireRange) continue;
             if (obstacles != null &&
