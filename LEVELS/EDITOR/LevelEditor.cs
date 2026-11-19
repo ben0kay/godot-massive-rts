@@ -10,7 +10,7 @@ public partial class LevelEditor : Node
 {
     private VBoxContainer start, toolsPanel, context, toolbar;
     private Control interfaceRoot;
-    private Label status, startStatus;
+    private Label status, startStatus, strength;
     private OptionButton modes, levels, toolPicker;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
@@ -75,7 +75,7 @@ public partial class LevelEditor : Node
         startStatus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         Button(start, "Return to current level", () => ShowEditor());
 
-        var bar = Panel(interfaceRoot, Control.LayoutPreset.TopWide, 12, 12, -12, 100);
+        var bar = Panel(interfaceRoot, Control.LayoutPreset.TopWide, 12, 12, -12, 124);
         toolbar = new VBoxContainer();
         bar.AddChild(toolbar);
         var buttons = new HBoxContainer();
@@ -86,13 +86,14 @@ public partial class LevelEditor : Node
         Button(buttons, "Load / New", ShowStart);
         Button(buttons, "Undo", () => ApplyHistory(undo, redo, true));
         Button(buttons, "Redo", () => ApplyHistory(redo, undo, false));
-        Button(buttons, "Map Settings", ShowMapSettings);
+        Button(buttons, "Map Size / Settings", ShowMapSettings);
         Button(buttons, "Preview Layout", ToggleLayout);
         Button(buttons, "Test Fortress", TestFortress);
         Button(buttons, "Return from Test", StopTest);
+        strength = Heading(toolbar, "", 16);
         status = Heading(toolbar, "", 15);
 
-        var sidebar = Panel(interfaceRoot, Control.LayoutPreset.LeftWide, 12, 110, 310, -12);
+        var sidebar = Panel(interfaceRoot, Control.LayoutPreset.LeftWide, 12, 134, 310, -12);
         var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         sidebar.AddChild(scroll);
         toolsPanel = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
@@ -201,7 +202,7 @@ public partial class LevelEditor : Node
         cursor = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Mesh = new BoxMesh { Size = new Vector3(1, 0.08f, 1),
                 Material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                    AlbedoColor = new Color("#ffd384") } }, Visible = false };
+                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha, AlbedoColor = new Color("#ffd38466") } }, Visible = false };
         map.AddChild(cursor, false, InternalMode.Back);
         SetTools();
         FrameEditor();

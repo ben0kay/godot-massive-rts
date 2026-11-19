@@ -347,3 +347,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — UNIT-TIER1 adds editable physical Size Tier metadata to unit definitions, the Entity Editor and the compiled unit catalogue.
 
 - **2026-11-19 | LEVEL-EDITOR1 | Source implemented.** Added an F6 campaign level editor with shared map authoring, Preset Battles deployment rules, Fortress testing and staged campaign saves with overwrite recovery. Awaiting Godot .NET validation.
+
+- **2026-11-19 | Level editor deployment tools | Source implemented.** Reserved arrow keys for camera panning and added a reversible Preset Battles deployment split, benchmark-style rectangle fills, live soldier strength, and authored laser towers. Awaiting Godot .NET validation.

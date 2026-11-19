@@ -21,14 +21,11 @@ internal static class LevelLayoutPreview
                 var key = (placement.Unit, (byte)placement.Faction);
                 if (!groups.TryGetValue(key, out var transforms))
                     groups.Add(key, transforms = new());
-                var right = placement.GlobalBasis.X.Normalized();
-                float spacing = 2f * UnitOutline.FromDefinition(placement.Unit, UnitOutline.EffectiveSize(placement.Unit)).Footprint + 0.3f;
-                int count = Mathf.Clamp(placement.Count, 1, 256);
-                int columns = Mathf.Min(count, CommandMovement.DefaultColumns);
+                float footprint = UnitOutline.FromDefinition(placement.Unit, UnitOutline.EffectiveSize(placement.Unit)).Footprint;
                 var basis = new Basis(Vector3.Up, placement.GlobalRotation.Y);
-                for (int slot = 0; slot < count; slot++)
+                foreach (var position in placement.Positions(footprint))
                 {
-                    var point = CommandMovement.Slot(placement.GlobalPosition, right, columns, slot, count, spacing);
+                    var point = position;
                     point.Y = Height(point.X, point.Z) + placement.Unit.Height * UnitOutline.EffectiveSize(placement.Unit) * 0.5f;
                     transforms.Add(new Transform3D(basis, point));
                 }
@@ -43,8 +40,32 @@ internal static class LevelLayoutPreview
             preview.AddChild(new MultiMeshInstance3D { Multimesh = batch });
         }
 
+        if (level.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
+        {
+            var renderer = new DefenseRenderer();
+            preview.AddChild(renderer);
+            renderer.Initialize(System.Array.Empty<BuildingPlacement>(), null, CommandLaserPlacement.BaseHeight, battle: false);
+            int index = 0;
+            foreach (var child in defenses.GetChildren())
+                if (child is CommandLaserPlacement tower && index < CommandSandbox.MaxStartingTowers)
+                {
+                    var area = tower.Footprint(tower.GlobalPosition);
+                    float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;
+                    renderer.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground);
+                }
+        }
+
+        if (level.PresetRules is { LineAxis: not PresetBattleRules.DeploymentAxis.Disabled } rules)
+        {
+            bool alongZ = rules.LineAxis == PresetBattleRules.DeploymentAxis.X;
+            float half = level.MapSize * 0.5f;
+            float offset = Mathf.Clamp(rules.LineOffset, -half, half);
+            float blue = rules.FlipBlueSide ? 1 : -1;
+            AddDeploymentLine(preview, terrain, alongZ, offset, half, blue);
+        }
         if (level.PresetRules?.BlueDeploymentCells is not { Count: > 0 } cells) return preview;
-        var region = new SurfaceTool();
+        using var region = new SurfaceTool();
+        bool hasRegion = false;
         region.Begin(Mesh.PrimitiveType.Triangles);
         var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             CullMode = BaseMaterial3D.CullModeEnum.Disabled, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
@@ -55,7 +76,10 @@ internal static class LevelLayoutPreview
         {
             float x = cell.X * cellSize, z = cell.Y * cellSize;
             if (Mathf.Abs(x + cellSize * 0.5f) > level.MapSize * 0.5f ||
-                Mathf.Abs(z + cellSize * 0.5f) > level.MapSize * 0.5f) continue;
+                Mathf.Abs(z + cellSize * 0.5f) > level.MapSize * 0.5f ||
+                !level.PresetRules.AllowsSide(new Vector3(x + cellSize * 0.5f, 0, z + cellSize * 0.5f),
+                    cellSize * 0.5f, blue: true)) continue;
+            hasRegion = true;
             Vector3 At(float vx, float vz) => new(vx, Height(vx, vz) + 0.08f, vz);
             var a = At(x, z);
             var b = At(x + cellSize, z);
@@ -64,7 +88,31 @@ internal static class LevelLayoutPreview
             region.AddVertex(a); region.AddVertex(b); region.AddVertex(c);
             region.AddVertex(a); region.AddVertex(c); region.AddVertex(d);
         }
-        preview.AddChild(new MeshInstance3D { Mesh = region.Commit() });
+        if (hasRegion) preview.AddChild(new MeshInstance3D { Mesh = region.Commit() });
         return preview;
+    }
+    private static void AddDeploymentLine(Node3D parent, CommandTerrain terrain, bool alongZ, float offset, float half, float blue)
+    {
+        using var surface = new SurfaceTool();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetMaterial(new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled, VertexColorUseAsAlbedo = true });
+        void Vertex(float across, float along)
+        {
+            float x = alongZ ? across : along, z = alongZ ? along : across;
+            surface.AddVertex(new Vector3(x, (terrain?.SampleHeight(x, z) ?? 0) + 0.2f, z));
+        }
+        foreach (float side in new[] { blue, -blue })
+        {
+            surface.SetColor(side == blue ? new Color("#63baff") : new Color("#ff746f"));
+            for (float from = -half; from < half; from += 2)
+            {
+                float end = Mathf.Min(half, from + 2);
+                float edge = offset + side * 0.6f;
+                Vertex(offset, from); Vertex(edge, from); Vertex(edge, end);
+                Vertex(offset, from); Vertex(edge, end); Vertex(offset, end);
+            }
+        }
+        parent.AddChild(new MeshInstance3D { Mesh = surface.Commit() });
     }
 }

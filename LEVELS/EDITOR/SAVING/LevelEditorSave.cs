@@ -181,8 +181,21 @@ internal static class LevelEditorSave
         var groups = map.GetNode("StartingUnits").GetChildren().OfType<CommandUnitPlacement>().ToArray();
         if (groups.Any(group => group.Unit == null || !roster.Contains(group.Unit.Id) || group.Count is < 1 or > 256))
             throw new InvalidOperationException("Every soldier formation needs a registered unit type and a count between 1 and 256.");
+        var towers = map.GetNodeOrNull<Node3D>("StartingDefenses")?.GetChildren().OfType<CommandLaserPlacement>().ToArray()
+            ?? Array.Empty<CommandLaserPlacement>();
+        if (towers.Length > CommandSandbox.MaxStartingTowers)
+            throw new InvalidOperationException($"A level supports up to {CommandSandbox.MaxStartingTowers} starting laser towers.");
         if (mode.Preset)
         {
+            var rules = map.PresetRules;
+            if (rules.LineAxis != PresetBattleRules.DeploymentAxis.Disabled &&
+                Mathf.Abs(rules.LineOffset) >= map.MapSize * 0.5f)
+                throw new InvalidOperationException("Move the deployment line inside the map boundary.");
+            if (groups.Any(group => !group.FitsSide(rules, group.GlobalPosition)) ||
+                towers.Any(tower => !tower.Red || !tower.FitsSide(rules, tower.GlobalPosition)))
+                throw new InvalidOperationException("Move preplaced formations and laser towers onto the Red side of the line.");
+            if (groups.Sum(group => (long)group.SoldierCount) > 100000)
+                throw new InvalidOperationException("Preset Battles supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||
                 map.PresetRules.BlueUnitLimit < 0 || map.PresetRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))
                 throw new InvalidOperationException("Check the Red formation factions and Blue deployment settings.");
@@ -194,7 +207,7 @@ internal static class LevelEditorSave
             throw new InvalidOperationException("Fortress Defense requires at least one valid enemy wave.");
         if (map.WaveDefinitions.SelectMany(wave => wave.Enemies).Sum(entry => (long)entry.Value) > CommandSandbox.WaveUnitCapacity)
             throw new InvalidOperationException($"Fortress waves may contain at most {CommandSandbox.WaveUnitCapacity} soldiers in total.");
-        if (groups.Sum(group => (long)group.Count) + (map.SpawnDefaultBlueSquad ? CommandMovement.SquadSize : 0) > CommandSandbox.NonWaveUnitCapacity)
+        if (groups.Sum(group => (long)group.SoldierCount) + (map.SpawnDefaultBlueSquad ? CommandMovement.SquadSize : 0) > CommandSandbox.NonWaveUnitCapacity)
             throw new InvalidOperationException($"Fortress may start with at most {CommandSandbox.NonWaveUnitCapacity} soldiers.");
     }
 

@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera }
+    private enum Tool { Select, Move, Erase, Rock, Water, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, LaserTower, DeploymentLine }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -32,9 +32,10 @@ public partial class LevelEditor
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
             if (mode.Preset && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
-            if (!mode.Preset && entry == Tool.Deployment) continue;
+            if (!mode.Preset && entry is Tool.Deployment or Tool.DeploymentLine) continue;
             toolPicker.AddItem(entry switch
             {
+                Tool.DeploymentLine => "Set deployment line", Tool.LaserTower => "Place laser tower",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Hill => "Place hill",
                 Tool.Wall => "Place solid wall", Tool.Soldiers => "Place soldier formation",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
@@ -65,6 +66,7 @@ public partial class LevelEditor
         camera.TopDown = planView.ButtonPressed;
         camera.MapOverviewEnabled = true;
         camera.SuspendPanWhileEditingText = true;
+        camera.ArrowsAlwaysPan = true;
         camera.MaximumZoomSize = map.MapSize * 1.6f;
         camera.SetOpeningView(Vector3.Zero, map.MapSize * 0.95f, camera.TopDown ? 0 : 45);
     }
@@ -85,6 +87,7 @@ public partial class LevelEditor
             layout.QueueFree();
         }
         layout = LevelLayoutPreview.Build(map);
+        RefreshStrength();
         if (map.GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (var child in fabricators.GetChildren())
                 if (child is Node3D marker)
@@ -108,6 +111,7 @@ public partial class LevelEditor
     private void UpdateTool()
     {
         tool = (Tool)toolPicker.GetSelectedId();
+        rectangleStart = null;
         foreach (var child in context.GetChildren())
         {
             context.RemoveChild(child);
@@ -141,13 +145,23 @@ public partial class LevelEditor
                 Number(context, "Depth", wallDepth, 1, 500).ValueChanged += value => wallDepth = (float)value;
                 Number(context, "Height", wallHeight, 0.5, 80, 0.5).ValueChanged += value => wallHeight = (float)value;
                 break;
+            case Tool.DeploymentLine:
+                DeploymentLineTools();
+                break;
+            case Tool.LaserTower:
+                if (!mode.Preset) Choice(context, "Faction", new[] { "Blue", "Red" }, redTower ? 1 : 0, index => redTower = index == 1);
+                break;
             case Tool.Soldiers:
+                Choice(context, "Placement", new[] { "Formation", "Rectangle fill" }, fillRectangle ? 1 : 0,
+                    index => { fillRectangle = index == 1; UpdateTool(); });
                 UnitPicker(context, unitIndex, index => unitIndex = index);
                 if (!mode.Preset)
                     Choice(context, "Faction", new[] { "Blue", "Red" }, red ? 1 : 0, index => red = index == 1);
-                Number(context, "Soldiers per formation", groupSize, 1, 256).ValueChanged += value => groupSize = (int)value;
+                if (fillRectangle)
+                    Number(context, "Density scale (lower is denser)", densityScale, 0, 3, 0.05).ValueChanged += value => densityScale = (float)value;
+                else Number(context, "Soldiers per formation", groupSize, 1, 256).ValueChanged += value => groupSize = (int)value;
                 Number(context, "Facing (degrees)", yaw, -180, 360).ValueChanged += value => yaw = (float)value;
-                Heading(context, "Click to place a formation.", 15);
+                Heading(context, fillRectangle ? "Drag to fill. Right-drag to erase." : "Click to place a formation.", 15);
                 break;
             case Tool.Carbon:
                 Number(context, "Initial Carbon", depositCarbon, 0, 1000000).ValueChanged += value => depositCarbon = (int)value;
@@ -173,7 +187,7 @@ public partial class LevelEditor
             case CommandUnitPlacement group:
                 UnitPicker(context, Array.IndexOf(units, units.FirstOrDefault(unit => unit.Id == group.Unit?.Id)),
                     index => SetValue(group.Unit, units[index], value => group.Unit = value));
-                Number(context, "Formation count", group.Count, 1, 256).ValueChanged += value =>
+                if (group.PaintedOffsets.Length == 0) Number(context, "Formation count", group.Count, 1, 256).ValueChanged += value =>
                     SetValue(group.Count, (int)value, count => group.Count = count);
                 Number(context, "Facing", group.RotationDegrees.Y, -180, 360).ValueChanged += value =>
                     SetValue(group.RotationDegrees, new Vector3(0, (float)value, 0), rotation => group.RotationDegrees = rotation);
@@ -219,6 +233,7 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
+        if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
         if (input is InputEventMouseMotion motion)
         {
             if (WorldPoint(motion.Position, out var point))
@@ -252,6 +267,8 @@ public partial class LevelEditor
 
     public override void _Process(double delta)
     {
+        if (rectangleStart != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
+            rectangleStart = null;
         if (beforePaint != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
             EndPaint();
     }
@@ -293,6 +310,7 @@ public partial class LevelEditor
         {
             Tool.Wall => new(wallWidth, 1, wallDepth),
             Tool.Citadel => new(10, 1, 10),
+            Tool.LaserTower => TowerCursor(),
             Tool.Carbon or Tool.Fabricator => new(6, 1, 6),
             _ when brush => new(Grid * (brushRadius * 2 - 1), 1, Grid * (brushRadius * 2 - 1)),
             _ => Vector3.One * 1.5f
@@ -331,7 +349,9 @@ public partial class LevelEditor
                 if (erase || tool == Tool.Erase) continue;
                 if (tool == Tool.Rock) { paintChanged |= water.Remove(next); paintChanged |= rocks.Add(next); }
                 if (tool == Tool.Water) { paintChanged |= rocks.Remove(next); paintChanged |= water.Add(next); }
-                if (tool == Tool.Deployment) paintChanged |= deployment.Add(next);
+                if (tool == Tool.Deployment && map.PresetRules.AllowsSide(
+                    new Vector3((next.X + 0.5f) * Grid, 0, (next.Y + 0.5f) * Grid), Grid * 0.5f, blue: true))
+                    paintChanged |= deployment.Add(next);
             }
         }
         previousCell = cell;
@@ -371,7 +391,7 @@ public partial class LevelEditor
     // =========================================================
     private IEnumerable<Node3D> Objects()
     {
-        foreach (string path in new[] { "Obstacles", "Terrain", "StartingUnits", "Resources", "StartingFabricators" })
+        foreach (string path in new[] { "Obstacles", "Terrain", "StartingUnits", "Resources", "StartingFabricators", "StartingDefenses" })
             if (map.GetNodeOrNull<Node3D>(path) is Node3D container)
                 foreach (var child in container.GetChildren())
                     if (child is Node3D node) yield return node;
@@ -391,6 +411,8 @@ public partial class LevelEditor
             {
                 MeshInstance3D mesh when mesh.Mesh is BoxMesh => (mesh.GlobalTransform * mesh.GetAabb()).HasPoint(
                     new Vector3(point.X, mesh.GlobalPosition.Y, point.Z)),
+                CommandUnitPlacement group when group.PaintedOffsets.Length > 0 => distance <= 4 ||
+                    group.Positions(0).Any(position => new Vector2(position.X - point.X, position.Z - point.Z).LengthSquared() <= 4),
                 TerrainHill hill => distance <= Mathf.Min(8, hill.Radius),
                 _ => distance <= (node.Name == "Citadel" ? 7 : 4)
             };
@@ -417,6 +439,10 @@ public partial class LevelEditor
                 return;
             case Tool.Citadel:
                 Move(map.GetNode<Node3D>("Citadel"), point);
+                return;
+            case Tool.DeploymentLine:
+                SetLine(map.PresetRules.LineAxis == PresetBattleRules.DeploymentAxis.Disabled
+                    ? PresetBattleRules.DeploymentAxis.Z : map.PresetRules.LineAxis, point);
                 return;
             case Tool.Camera:
                 var marker = map.GetNode<Marker3D>("CameraStart");
@@ -448,6 +474,10 @@ public partial class LevelEditor
                 formation.RotationDegrees = new Vector3(0, yaw, 0);
                 node = formation; parent = "StartingUnits";
                 break;
+            case Tool.LaserTower:
+                node = new CommandLaserPlacement { Name = "LaserTower", Red = mode.Preset || redTower };
+                parent = "StartingDefenses";
+                break;
             case Tool.Fabricator:
                 if (!map.HasNode("StartingFabricators"))
                 {
@@ -465,7 +495,32 @@ public partial class LevelEditor
                 break;
             default: return;
         }
-        var container = map.GetNode<Node3D>(parent);
+        if (!TryAddPlacement(node, parent, point)) node.Free();
+    }
+
+    private bool TryAddPlacement(Node3D node, string parent, Vector3 point)
+    {
+        if (node is CommandLaserPlacement tower)
+        {
+            point = tower.SnapCenter(point);
+            if (!TowerSiteClear(tower, point)) return false;
+            if (Objects().Count(item => item is CommandLaserPlacement) >= CommandSandbox.MaxStartingTowers)
+            {
+                SetStatus($"A level supports up to {CommandSandbox.MaxStartingTowers} starting laser towers.");
+                return false;
+            }
+        }
+        if (!FitsPresetSide(node, point))
+        {
+            SetStatus("Place the entire enemy formation or defense on the Red side of the deployment line.");
+            return false;
+        }
+        if (map.GetNodeOrNull<Node3D>(parent) is not Node3D container)
+        {
+            container = new Node3D { Name = parent };
+            map.AddChild(container);
+            container.Owner = map;
+        }
         void Add()
         {
             container.AddChild(node, true);
@@ -482,10 +537,21 @@ public partial class LevelEditor
         detached.Add(node);
         Add();
         Remember(Remove, Add);
+        return true;
     }
 
     private void Move(Node3D node, Vector3 point)
     {
+        if (node is CommandLaserPlacement tower)
+        {
+            point = tower.SnapCenter(point);
+            if (!TowerSiteClear(tower, point)) return;
+        }
+        if (!FitsPresetSide(node, point))
+        {
+            SetStatus("Move the entire enemy formation or defense onto the Red side.");
+            return;
+        }
         Vector3 old = node.GlobalPosition;
         void Apply(Vector3 at)
         {

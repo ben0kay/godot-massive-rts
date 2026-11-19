@@ -12,6 +12,7 @@ public partial class IsometricCamera : Camera3D
 
     public float MaximumZoomSize { get; set; } = 2000f;
     public bool MapOverviewEnabled { get; set; }
+    public bool ArrowsAlwaysPan { get; set; }
     public bool TopDown { get; set; }
     public bool SuspendPanWhileEditingText { get; set; }
 
@@ -64,11 +65,14 @@ public partial class IsometricCamera : Camera3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        Vector2 input = new((Input.IsPhysicalKeyPressed(Key.D) || Input.IsPhysicalKeyPressed(Key.Right) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) || Input.IsPhysicalKeyPressed(Key.Left) ? 1 : 0),
-            (Input.IsPhysicalKeyPressed(Key.S) || Input.IsPhysicalKeyPressed(Key.Down) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) || Input.IsPhysicalKeyPressed(Key.Up) ? 1 : 0));
-        if (SuspendPanWhileEditingText &&
-            (GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit || GetViewport().GuiGetFocusOwner() is Button))
-            input = Vector2.Zero;
+        Vector2 arrows = new(
+            (Input.IsPhysicalKeyPressed(Key.Right) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.Left) ? 1 : 0),
+            (Input.IsPhysicalKeyPressed(Key.Down) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.Up) ? 1 : 0));
+        Vector2 letters = new(
+            (Input.IsPhysicalKeyPressed(Key.D) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.A) ? 1 : 0),
+            (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0));
+        bool focused = SuspendPanWhileEditingText && GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit or Button;
+        Vector2 input = focused ? (ArrowsAlwaysPan ? arrows : Vector2.Zero) : (arrows + letters).Clamp(-Vector2.One, Vector2.One);
         Vector3 desired = (screenRight * input.X + screenBack * input.Y).LimitLength() * Size;
         velocity = velocity.Lerp(desired, 1 - Mathf.Exp(-10 * dt)); focus += velocity * dt;
         Size = Mathf.Lerp(Size, targetSize, 1 - Mathf.Exp(-10 * dt)); Reposition();

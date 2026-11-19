@@ -43,6 +43,21 @@ public sealed class DeploymentLayout
         Mathf.FloorToInt(point.Y / (float)SoldierSubdivisions + 0.5f));
     public ObstacleLayout Obstacles { get; private set; }
 
+    // =========================================================
+    internal static IEnumerable<Vector2I> RectangleSoldierSlots(ObstacleRectangle area, float spread, float footprint)
+    {
+        int subdivisions = SoldierSubdivisions;
+        int stride = Mathf.Max(1, Mathf.Max(Mathf.RoundToInt(spread * subdivisions),
+            Mathf.CeilToInt(footprint * 2f / (area.GridSize / subdivisions))));
+        int spanX = area.Width * subdivisions - subdivisions / 2;
+        int spanZ = area.Depth * subdivisions - subdivisions / 2;
+        if ((long)((spanX + stride - 1) / stride) * ((spanZ + stride - 1) / stride) > 100_000)
+            throw new System.InvalidOperationException("Rectangle exceeds 100,000 placement positions. Use a smaller area or wider spacing.");
+        for (int z = 0; z < spanZ; z += stride)
+        for (int x = 0; x < spanX; x += stride)
+            yield return new Vector2I(area.X * subdivisions + x, area.Z * subdivisions + z);
+    }
+
     public const int MaxBuildings = 64;
     private readonly RuntimeBuildingCatalog buildings;
     private readonly List<BuildingPlacement> defenses = new();

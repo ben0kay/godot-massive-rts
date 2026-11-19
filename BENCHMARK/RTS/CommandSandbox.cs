@@ -19,6 +19,7 @@ public partial class CommandSandbox : Node3D
     private CommandPerformanceHud performance;
     private ArmyBalanceHud armyBalance;
     internal const int NonWaveUnitCapacity = 2048;
+    internal const int MaxStartingTowers = 32;
     internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
@@ -181,6 +182,10 @@ public partial class CommandSandbox : Node3D
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (Node child in fabricators.GetChildren())
                 if (child is Node3D marker) buildings.AddStartingFabricator(marker.GlobalPosition, Factions.Blue);
+        if (GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
+            foreach (Node child in defenses.GetChildren())
+                if (child is CommandLaserPlacement tower)
+                    buildings.AddStartingTower(tower.GlobalPosition, tower.Faction);
         if (SpawnDefaultBlueSquad)
         {
             var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
@@ -286,13 +291,15 @@ public partial class CommandSandbox : Node3D
                 GD.PushWarning($"Starting unit '{placement.Name}' needs a registered unit definition.");
                 continue;
             }
-            int count = Mathf.Clamp(placement.Count, 1, 256);
+            int count = placement.SoldierCount;
             if (count > NonWaveUnitCapacity - units.Count)
             {
                 GD.PushWarning($"Starting unit group '{placement.Name}' exceeds the starting and produced troop capacity.");
                 continue;
             }
-            SpawnFormation(type, (byte)placement.Faction, placement.GlobalPosition, placement.GlobalRotation.Y, count);
+            foreach (var point in placement.Positions(units.Catalog[type].Footprint))
+                if (buildings.IsSpawnClear(point, units.Catalog[type].Footprint)) units.TrySpawn(type, (byte)placement.Faction, point);
+                else GD.PushWarning($"Starting unit at X/Z {point.X:0.##}, {point.Z:0.##} is blocked.");
         }
     }
 
@@ -328,7 +335,7 @@ public partial class CommandSandbox : Node3D
     }
 
     // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
-    private ObstacleRectangle[] ReadAuthoredWalls()
+    internal ObstacleRectangle[] ReadAuthoredWalls()
     {
         var walls = new List<ObstacleRectangle>();
         if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();

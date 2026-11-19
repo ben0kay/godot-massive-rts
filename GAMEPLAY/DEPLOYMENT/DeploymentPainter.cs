@@ -288,22 +288,12 @@ public partial class DeploymentPainter : Node3D
         }
         else
         {
-            int subdivisions = DeploymentLayout.SoldierSubdivisions;
-            int stride = Mathf.Max(Mathf.RoundToInt(SoldierBrushSpread * subdivisions),
-                Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / Layout.SoldierStep));
-            int spanX = area.Width * subdivisions - subdivisions / 2;
-            int spanZ = area.Depth * subdivisions - subdivisions / 2;
-            long columns = (spanX + stride - 1) / stride;
-            long rows = (spanZ + stride - 1) / stride;
-            if (columns * rows > 100_000)
+            try
             {
-                EditRejected?.Invoke("Rectangle exceeds 100,000 placement positions. Use a smaller area or wider spacing.");
-                return;
+                foreach (var slot in DeploymentLayout.RectangleSoldierSlots(area, SoldierBrushSpread, catalog[BrushType].Footprint))
+                    changed |= PaintSoldier(slot);
             }
-            // Anchor the pattern to the first cell inside the rectangle, regardless of drag direction.
-            for (int z = area.Z * subdivisions; z < (area.Z + area.Depth) * subdivisions - subdivisions / 2; z += stride)
-            for (int x = area.X * subdivisions; x < (area.X + area.Width) * subdivisions - subdivisions / 2; x += stride)
-                changed |= PaintSoldier(new Vector2I(x, z));
+            catch (System.InvalidOperationException error) { EditRejected?.Invoke(error.Message); }
         }
         if (changed) Changed?.Invoke();
     }

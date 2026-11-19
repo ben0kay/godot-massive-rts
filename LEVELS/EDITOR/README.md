@@ -11,3 +11,10 @@ Open `LEVELS/EDITOR/LevelEditor.tscn` in Godot .NET and press **F6**. Choose a c
 The scene stores shared map nodes and the existing world paint, terrain, placement and wave resources. A Preset Battle additionally stores `PresetBattleRules`, which defines the Blue deployment cells, count cap and eligible units. An empty allowed-unit list permits all registered units. The Preset Battles scene provides an opening layout preview ahead of CAMPAIGN1. Player deployments, combat progression and rewards belong to later gameplay work.
 
 Fortress Defense uses the existing command scene structure and the shared movement and combat simulation. Loading an older authored scene creates an in-memory editing session. Changes reach the project only through Save. Terrain and paint outside reduced map bounds are retained.
+
+### Deployment layout
+
+- Arrow keys pan the map while the editing canvas is active. **Map Size / Settings** sets the square map size.
+- In Preset Battles, choose **Set deployment line**, select X or Z and click the map to place the split. **Flip Blue** reverses which side Blue can use. New maps start with a centered Z split. Existing maps without a saved line retain their painted zones until a split is enabled. Painted Blue zones can further narrow the legal Blue side.
+- Choose **Rectangle fill** under the soldier tool. Drag to fill and right-drag to erase. A lower density scale packs soldiers closer, with minimum spacing set by the unit footprint. Each fill is one undoable edit. The top bar shows authored soldier totals and their estimated strength using Battle Rating. Preset Blue strength depends on the army the player eventually deploys.
+- Use **Place laser tower** to author a defense. Fortress Defense starts with the selected faction's towers in combat. Preset Battles saves and previews Red towers for the future campaign battle loop.

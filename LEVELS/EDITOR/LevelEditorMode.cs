@@ -42,7 +42,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Pr
             if (Preset)
             {
                 level.WaveDefinitions = new();
-                level.PresetRules = new PresetBattleRules();
+                level.PresetRules = new PresetBattleRules { LineAxis = PresetBattleRules.DeploymentAxis.Z };
                 foreach (string name in new[] { "Citadel", "BlueSpawn", "Resources" })
                     level.GetNode(name).Free();
             }
