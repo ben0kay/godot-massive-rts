@@ -45,7 +45,7 @@ internal static class LevelEditorSave
     }
 
     // =========================================================
-    public static void Write(LevelEditorMode mode, Destination confirmed, CommandSandbox map, LevelDefinition settings)
+    public static void Write(LevelEditorMode mode, Destination confirmed, CommandSandbox map, LevelDefinition settings, string title)
     {
         if (!CanWrite) throw new InvalidOperationException("Source saving requires the Godot editor's project build.");
         Directory.CreateDirectory(Disk(WorkFolder));
@@ -55,8 +55,6 @@ internal static class LevelEditorSave
             target.CampaignRevision != confirmed.CampaignRevision)
             throw new InvalidOperationException("The level or campaign changed since you selected Save. Review it and try again.");
 
-        var title = settings.DisplayName.Trim();
-        if (title.Length == 0) throw new InvalidOperationException("Enter a level title.");
         var campaign = ResourceLoader.Load<CampaignDefinition>(target.Campaign, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
         var level = (LevelDefinition)settings.Duplicate();
         level.Id = target.Id;

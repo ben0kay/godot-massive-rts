@@ -17,7 +17,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Pr
     public CommandSandbox Open(LevelDefinition existing, out LevelDefinition settings)
     {
         settings = existing == null
-            ? new LevelDefinition { MapSize = 256, DisplayName = "New Level" }
+            ? new LevelDefinition { MapSize = 256 }
             : (LevelDefinition)existing.Duplicate();
         var source = existing == null ? null : ResourceLoader.Load<PackedScene>(existing.ScenePath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
         if (existing != null && source == null) throw new InvalidOperationException("The registered scene could not be read.");

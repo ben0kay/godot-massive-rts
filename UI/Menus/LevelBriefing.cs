@@ -27,7 +27,7 @@ public partial class LevelBriefing : Control
         var body = new VBoxContainer();
         body.AddThemeConstantOverride("separation", 16);
         margin.AddChild(body);
-        AddLabel(body, $"{Campaign.DisplayName}   /   {Level.DisplayName}", 30);
+        AddLabel(body, $"{Campaign.DisplayName}   /   {Level.MenuName}", 30);
 
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         columns.AddThemeConstantOverride("separation", 24);

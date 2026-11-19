@@ -25,8 +25,8 @@ public partial class LevelEditor
         var form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         scroll.AddChild(form);
         mapSize = Number(form, "Map width and depth", metadata.MapSize, 64, LevelDefinition.DefaultMapSize, 4);
-        Heading(form, "Level title", 15);
-        levelTitle = new LineEdit { Text = metadata.DisplayName };
+        Heading(form, "Custom name (optional)", 15);
+        levelTitle = new LineEdit { Text = metadata.CustomName };
         form.AddChild(levelTitle);
         Heading(form, "Description", 15);
         levelDescription = new TextEdit { Text = metadata.Description, CustomMinimumSize = new Vector2(0, 70), WrapMode = TextEdit.LineWrappingMode.Boundary };
@@ -44,7 +44,6 @@ public partial class LevelEditor
             try
             {
                 string title = levelTitle.Text.Trim(), description = levelDescription.Text;
-                if (title.Length == 0) throw new InvalidOperationException("Enter a level title.");
                 var before = (metadata.DisplayName, metadata.Description, metadata.MapSize, map.OpeningCameraSize, cameraMarker.Transform);
                 var after = (title, description, (float)mapSize.Value, (float)zoom.Value,
                     new Transform3D(new Basis(Vector3.Up, Mathf.DegToRad((float)yawDegrees.Value)),

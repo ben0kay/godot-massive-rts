@@ -177,7 +177,7 @@ public partial class LevelEditor : Node
         if (modes.Selected < 0) return;
         string modeId = modes.GetItemMetadata(modes.Selected).AsString();
         listed = CampaignCatalog.OrderedLevels(catalog.Campaigns.Single(entry => entry.Id == modeId));
-        foreach (var level in listed) levels.AddItem($"{level.Id}  ·  {level.DisplayName}");
+        foreach (var level in listed) levels.AddItem(level.MenuName == level.Id ? level.Id : $"{level.Id}  ·  {level.MenuName}");
         if (listed.Length > 0) levels.Select(0);
         startStatus.Text = listed.Length == 0 ? "This campaign has no levels yet." : "";
     }
@@ -269,7 +269,12 @@ public partial class LevelEditor : Node
         }
         picker.Select(firstFree >= 0 ? firstFree : Math.Max(0, current));
         var dialog = new ConfirmationDialog { Title = $"Save level as · {latest.DisplayName}" };
-        dialog.AddChild(picker);
+        var fields = new VBoxContainer();
+        dialog.AddChild(fields);
+        fields.AddChild(picker);
+        var customName = new LineEdit { Text = metadata.CustomName, PlaceholderText = "Use the selected level number" };
+        Heading(fields, "Custom name (optional)", 15);
+        fields.AddChild(customName);
         interfaceRoot.AddChild(dialog);
         dialog.GetOkButton().Text = "Save";
         dialog.Confirmed += () =>
@@ -277,13 +282,13 @@ public partial class LevelEditor : Node
             string id = CampaignCatalog.NumberedLevelId(picker.GetSelectedId());
             dialog.Hide();
             dialog.QueueFree();
-            RequestSave(id);
+            RequestSave(id, customName.Text);
         };
         dialog.Canceled += dialog.QueueFree;
         dialog.PopupCentered();
     }
 
-    private void RequestSave(string id)
+    private void RequestSave(string id, string customName = null)
     {
         if (map == null || runningTest != null) return;
         EndPaint();
@@ -294,7 +299,11 @@ public partial class LevelEditor : Node
         {
             try
             {
-                LevelEditorSave.Write(mode, target, map, metadata);
+                string title = (customName ?? metadata.CustomName).Trim();
+                if (title.Length == 0) title = id;
+                LevelEditorSave.Write(mode, target, map, metadata, title);
+                metadata.Id = id;
+                metadata.DisplayName = title;
                 activeId = id;
                 dirty = false;
                 SetStatus($"Saved {target.Scene}");

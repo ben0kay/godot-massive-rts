@@ -14,6 +14,17 @@ public partial class LevelDefinition : Resource
     [Export(PropertyHint.File, "*.tscn,*.scn")] public string ScenePath { get; set; } = "";
     [Export] public bool Enabled { get; set; } = true;
 
+    internal string CustomName
+    {
+        get
+        {
+            string name = DisplayName?.Trim() ?? "";
+            return name == "New Level" || name == Id ? "" : name;
+        }
+    }
+
+    internal string MenuName => CustomName.Length == 0 ? Id : CustomName;
+
     internal const float DefaultMapSize = 5000f;
     private float mapSize = DefaultMapSize;
 

@@ -217,7 +217,7 @@ public partial class FrontMenu : Control
             bool missing = level.Enabled && !MenuNavigation.SceneExists(level.ScenePath);
             string suffix = !level.Enabled ? " (Coming Soon)" : missing ? " (Scene Unavailable)" : !unlocked ? " (Locked)" :
                 progress.IsComplete(campaign.Id, level.Id) ? " (Complete)" : "";
-            var button = UIButtonFactory.Create(level.DisplayName + suffix, () => Run(
+            var button = UIButtonFactory.Create(level.MenuName + suffix, () => Run(
                 () => LevelLauncher.Brief(this, campaign.Id, level.Id)), UIButtonStyle.Primary);
             button.Disabled = !level.Enabled || missing || !unlocked;
             button.TooltipText = missing ? $"Scene unavailable: {level.ScenePath}" : level.Description ?? "";
