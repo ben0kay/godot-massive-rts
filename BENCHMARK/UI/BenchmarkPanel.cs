@@ -14,6 +14,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public event Action<bool> GroundShadowsChanged;
 	public event Action<bool> PlacementGridChanged;
 	public event Action<long> PaintToolSelected;
+	public event Action<byte> BrushSelected;
 	private readonly CheckButton placementGridToggle = new()
 	{
 		Text = "Show placement grid", ButtonPressed = true
@@ -65,7 +66,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly SpinBox GuardRadius = new() { MinValue = 1, MaxValue = 100, Step = 1, Value = 12 };
 	public readonly OptionButton TerrainChoice = new();
 	public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
-	public readonly OptionButton BrushChoice = new();
+	private UnitPlacementBar unitBar;
+	private bool editingDeployment, placingSoldiers = true;
 	public readonly OptionButton SoldierPaintType = new();
 	public readonly OptionButton SoldierBrushSizeChoice = new();
 	public readonly OptionButton FactionChoice = new();
@@ -75,8 +77,10 @@ public partial class BenchmarkPanel : CanvasLayer
 	{
 		set
 		{
+			editingDeployment = value;
 			paintSection.Visible = value;
 			if (value) paintHeader.ButtonPressed = true;
+			UpdatePlacementBar();
 		}
 	}
 	public readonly OptionButton CountChoice = new(), ModeChoice = new(), LayoutChoice = new();
@@ -107,6 +111,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	private void UpdatePanelVisibility()
 	{
 		left.Visible = leftPanelVisible;
+		UpdatePlacementBar();
 		right.Visible = rightPanelVisible;
 		overlay.Visible = rightPanelVisible && performanceToggle.ButtonPressed;
 	}
@@ -229,9 +234,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		var factionRow = Field(paintControls, "Paint faction", FactionChoice);
 		var soldierControls = new VBoxContainer();
 		paintControls.AddChild(soldierControls);
-		for (int type = 0; type < Catalog.Count; type++)
-			BrushChoice.AddItem($"{Catalog[type].Shape} • {Catalog[type].Name}", type);
-		Field(soldierControls, "Soldier type", BrushChoice);
 		SoldierPaintType.AddItem("Brush");
 		SoldierPaintType.AddItem("Filled rectangle");
 		SoldierPaintType.Select(0);
@@ -261,7 +263,9 @@ public partial class BenchmarkPanel : CanvasLayer
 			toolButtons[i].Toggled += selected =>
 			{
 				if (!selected) return;
-				soldierControls.Visible = tool == 0;
+				placingSoldiers = tool == 0;
+				soldierControls.Visible = placingSoldiers;
+				UpdatePlacementBar();
 				wallHelp.Visible = tool == 1;
 				defenseControls.Visible = tool == 2;
 				factionRow.Visible = tool != 1;
@@ -331,7 +335,19 @@ public partial class BenchmarkPanel : CanvasLayer
 		obstacleDebug.AddChild(reuseWaypoints);
 		obstacleDebug.AddChild(ObstacleMetrics);
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
+		unitBar = new UnitPlacementBar { Visible = false };
+		AddChild(unitBar);
+		unitBar.Build(Catalog);
+		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
+
 	}
+	private void UpdatePlacementBar()
+	{
+		if (unitBar == null) return;
+		unitBar.Visible = leftPanelVisible && editingDeployment && placingSoldiers;
+		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -UnitPlacementBar.Height - 24 : -12;
+	}
+
 	private static Label DebugLabel()
 	{
 		var label = new Label { HorizontalAlignment = HorizontalAlignment.Right,

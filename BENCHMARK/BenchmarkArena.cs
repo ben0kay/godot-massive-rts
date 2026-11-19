@@ -185,7 +185,7 @@ public partial class BenchmarkArena : Node3D
         panel.BattleRequested += StartPaintedBattle;
         panel.SaveRequested += () => panel.Status.Text = painter.Save();
         panel.LoadRequested += () => panel.Status.Text = painter.Load() + "\n" + DeploymentCount();
-        panel.BrushChoice.ItemSelected += index => painter.BrushType = (byte)panel.BrushChoice.GetItemId((int)index);
+        panel.BrushSelected += type => painter.BrushType = type;
         panel.SoldierPaintType.ItemSelected += painter.SetSoldierPaintType;
         panel.SoldierBrushSizeChoice.ItemSelected += index =>
             painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId((int)index);
