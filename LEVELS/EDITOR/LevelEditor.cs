@@ -252,22 +252,35 @@ public partial class LevelEditor : Node
     private void SaveAs()
     {
         if (map == null || runningTest != null) return;
-        var input = new LineEdit { Text = activeId ?? "", PlaceholderText = "Level003", CustomMinimumSize = new Vector2(340, 0) };
-        var dialog = new ConfirmationDialog { Title = "Save level as" };
-        dialog.AddChild(input);
-        interfaceRoot.AddChild(dialog);
-        void Submit()
+        CampaignDefinition latest;
+        try { latest = CampaignCatalog.Load(fresh: true).Campaigns.Single(entry => entry.Id == mode.CampaignId); }
+        catch (Exception error) { SetStatus(error.Message); return; }
+        var existing = latest.Levels.Select(level => level.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var picker = new OptionButton { CustomMinimumSize = new Vector2(340, 0) };
+        int firstFree = -1, current = -1;
+        for (int number = 1; number <= CampaignCatalog.NumberedLevelLimit; number++)
         {
+            string id = CampaignCatalog.NumberedLevelId(number);
+            bool occupied = existing.Contains(id);
+            picker.AddItem(occupied ? $"{id} (existing)" : id, number);
+            int index = picker.ItemCount - 1;
+            if (!occupied && firstFree < 0) firstFree = index;
+            if (id == activeId) current = index;
+        }
+        picker.Select(firstFree >= 0 ? firstFree : Math.Max(0, current));
+        var dialog = new ConfirmationDialog { Title = $"Save level as · {latest.DisplayName}" };
+        dialog.AddChild(picker);
+        interfaceRoot.AddChild(dialog);
+        dialog.GetOkButton().Text = "Save";
+        dialog.Confirmed += () =>
+        {
+            string id = CampaignCatalog.NumberedLevelId(picker.GetSelectedId());
             dialog.Hide();
             dialog.QueueFree();
-            RequestSave(input.Text.Trim());
-        }
-        dialog.Confirmed += Submit;
+            RequestSave(id);
+        };
         dialog.Canceled += dialog.QueueFree;
-        input.TextSubmitted += _ => Submit();
         dialog.PopupCentered();
-        input.GrabFocus();
-        input.SelectAll();
     }
 
     private void RequestSave(string id)

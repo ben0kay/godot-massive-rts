@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using Godot;
 
 namespace MassiveRts;
@@ -47,13 +48,33 @@ public partial class CampaignCatalog : Resource
         id != null && id.Length is >= 1 and <= 64 &&
         id.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-');
 
+    internal const int NumberedLevelLimit = 100;
+
+    internal static string NumberedLevelId(int number) =>
+        "Level" + number.ToString("D3", CultureInfo.InvariantCulture);
+
+    private static int NumberedLevelOrder(string id)
+    {
+        if (id.Length == 8 && id.StartsWith("Level", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(id.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int number) &&
+            number is >= 1 and <= NumberedLevelLimit)
+            return number;
+        return int.MaxValue;
+    }
+
     public static LevelDefinition[] OrderedLevels(CampaignDefinition campaign) =>
-        campaign.Levels.OrderBy(level => level.Order).ToArray();
+        campaign.Levels.OrderBy(level => NumberedLevelOrder(level.Id)).ThenBy(level => level.Order).ToArray();
 
     internal static bool IsUnlocked(CampaignDefinition campaign, LevelDefinition level, CampaignProgress progress)
     {
-        LevelDefinition previous = campaign.Levels.Where(entry => entry.Order < level.Order)
-            .OrderByDescending(entry => entry.Order).FirstOrDefault();
-        return previous == null || progress.IsComplete(campaign.Id, previous.Id);
+        if (progress.IsComplete(campaign.Id, level.Id)) return true;
+        LevelDefinition previous = null;
+        foreach (var entry in OrderedLevels(campaign))
+        {
+            if (entry.Id == level.Id)
+                return previous == null || progress.IsComplete(campaign.Id, previous.Id);
+            previous = entry;
+        }
+        return false;
     }
 }
