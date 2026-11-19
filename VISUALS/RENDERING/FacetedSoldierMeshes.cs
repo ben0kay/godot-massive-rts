@@ -1,5 +1,6 @@
 // Creates shared beveled low-poly soldier meshes with baked top, chamfer and side tones.
 // All shapes use one unshaded material and remain compatible with MultiMesh batching.
+using System;
 using Godot;
 namespace MassiveRts;
 
