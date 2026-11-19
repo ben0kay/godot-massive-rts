@@ -27,7 +27,7 @@ internal partial class DreadnaughtCombat : Node3D
     private struct Gun
     {
         public int Target;
-        public float RefreshAt, Cooldown, Yaw;
+        public float RefreshAt, Cooldown, Yaw, VisualScale;
         public MeshInstance3D Model;
     }
 
@@ -46,19 +46,35 @@ internal partial class DreadnaughtCombat : Node3D
     {
         this.units = units;
         hulls = new Hull[ids.Count];
-        var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+        var housingMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             AlbedoColor = new Color("#344353") };
-        var housing = new BoxMesh { Material = material, Size = new Vector3(0.88f, 0.45f, 0.88f) };
-        var barrel = new BoxMesh { Material = material, Size = new Vector3(0.26f, 0.20f, BarrelLength) };
+        var baseMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            AlbedoColor = new Color("#243747") };
+        var capMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            AlbedoColor = new Color("#657B8D") };
+        // All gun components share just three meshes/materials across every Dreadnaught.
+        var housing = new BoxMesh { Material = housingMaterial, Size = new Vector3(0.88f, 0.38f, 0.88f) };
+        var basePlate = new BoxMesh { Material = baseMaterial, Size = new Vector3(1.08f, 0.13f, 1.08f) };
+        var topCap = new BoxMesh { Material = capMaterial, Size = new Vector3(0.57f, 0.055f, 0.55f) };
+        var barrel = new BoxMesh { Material = baseMaterial, Size = new Vector3(0.16f, 0.16f, BarrelLength) };
         for (int i = 0; i < ids.Count; i++)
         {
             var hull = hulls[i] = new Hull(ids[i]);
+            // The reference half-width is 4 for an 8-unit authored hull.
+            // Using the compiled outline keeps both the guns and their muzzles
+            // in proportion when the Dreadnaught SizeMultiplier changes.
+            float visualScale = units.Catalog[units.Type[ids[i]]].Outline.RadiusX / 4f;
             for (int slot = 0; slot < GunsPerHull; slot++)
             {
-                var model = new MeshInstance3D { Mesh = housing };
-                model.AddChild(new MeshInstance3D { Mesh = barrel, Position = Vector3.Forward * (BarrelLength * 0.5f) });
+                var model = new MeshInstance3D { Mesh = housing, Scale = Vector3.One * visualScale };
+                model.AddChild(new MeshInstance3D { Mesh = basePlate, Position = new Vector3(0f, -0.25f, 0f) });
+                model.AddChild(new MeshInstance3D { Mesh = topCap, Position = new Vector3(0f, 0.22f, 0.03f) });
+                for (int side = -1; side <= 1; side += 2)
+                    model.AddChild(new MeshInstance3D { Mesh = barrel,
+                        Position = new Vector3(side * 0.17f, 0.025f, -BarrelLength * 0.5f) });
                 AddChild(model);
-                hull.Guns[slot] = new Gun { Model = model, Target = -1, RefreshAt = ((i + slot) % GunsPerHull) * TargetRefresh / GunsPerHull };
+                hull.Guns[slot] = new Gun { Model = model, VisualScale = visualScale,
+                    Target = -1, RefreshAt = ((i + slot) % GunsPerHull) * TargetRefresh / GunsPerHull };
             }
         }
     }
@@ -143,7 +159,7 @@ internal partial class DreadnaughtCombat : Node3D
         float turn = Mathf.Pi * 2f * dt;
         gun.Yaw = Mathf.Wrap(gun.Yaw + Mathf.Clamp(error, -turn, turn), -Mathf.Pi, Mathf.Pi);
         if (gun.Cooldown > 0 || Mathf.Abs(error) > turn) return;
-        Vector3 muzzle = mount + Vector3.Forward.Rotated(Vector3.Up, gun.Yaw) * BarrelLength;
+        Vector3 muzzle = mount + Vector3.Forward.Rotated(Vector3.Up, gun.Yaw) * (BarrelLength * gun.VisualScale);
         if (obstacles?.BlocksSight(muzzle, aim) == true) return;
         projectiles.LaunchFrom(muzzle, aim, units.Faction[id], settings.Projectile, settings.Damage, DamageRules.NeutralType);
         gun.Cooldown = settings.Interval / Mathf.Max(0.01f, fireRate);

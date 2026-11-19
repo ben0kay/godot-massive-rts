@@ -71,6 +71,8 @@ public static class FacetedSoldierMeshes
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
             Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught ? outline : null, sideShade: SoldierSideShade);
+        if (outline.IsDreadnaught)
+            AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)
         {
             float length = outline.BarrelFront - outline.BarrelBack;
@@ -79,6 +81,75 @@ public static class FacetedSoldierMeshes
                 new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f), SoldierSideShade);
         }
         return surface.Commit();
+    }
+
+    // =========================================================
+    // Raised deck armor, narrow prow ridge, vents and side insets are baked once
+    // into the shared Dreadnaught mesh. They do not change its combat footprint.
+    private static void AppendDreadnaughtDetails(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ, deck = height * 0.5f;
+        float lower = deck + height * 0.012f, upper = deck + height * 0.065f;
+
+        // Inset convex plate follows the wedge nose without covering the corner turrets.
+        ReadOnlySpan<Vector2> plate =
+        [
+            new(0f, -0.78f), new(0.43f, -0.29f), new(0.43f, 0.39f),
+            new(0.31f, 0.53f), new(-0.31f, 0.53f),
+            new(-0.43f, 0.39f), new(-0.43f, -0.29f)
+        ];
+        for (int i = 0; i < plate.Length; i++)
+        {
+            int next = (i + 1) % plate.Length;
+            Vector2 a = plate[i], b = plate[next];
+            Vector3 outerA = new(a.X * x, lower, a.Y * z);
+            Vector3 outerB = new(b.X * x, lower, b.Y * z);
+            Vector3 topA = new(a.X * x * 0.94f, upper, a.Y * z * 0.94f);
+            Vector3 topB = new(b.X * x * 0.94f, upper, b.Y * z * 0.94f);
+            Vector3 outward = new(outerB.Z - outerA.Z, 0f, outerA.X - outerB.X);
+            outward = outward.Normalized();
+            AddTriangle(surface, new Vector3(0f, upper, 0f), topB, topA,
+                Vector3.Up, new Color(0.91f, 0.96f, 1f));
+            AddQuad(surface, outerA, topA, topB, outerB,
+                outward, new Color(0.72f, 0.84f, 0.97f));
+        }
+
+        // A restrained keel along the pointed front breaks up the otherwise flat prow.
+        AppendBeveledRectangle(surface,
+            new Vector3(0f, deck + height * 0.038f, -z * 0.76f),
+            new Vector3(x * 0.12f, height * 0.075f, z * 0.23f),
+            new Color(0.91f, 0.95f, 1f), SoldierSideShade);
+
+        // Two deck rails and short vents give the large hull readable detail from above.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            AppendBeveledRectangle(surface,
+                new Vector3(side * x * 0.78f, deck + height * 0.018f, z * 0.14f),
+                new Vector3(x * 0.19f, height * 0.036f, z * 0.35f),
+                new Color(0.82f, 0.90f, 1f), SoldierSideShade);
+            for (int vent = 0; vent < 2; vent++)
+            {
+                AppendBeveledRectangle(surface,
+                    new Vector3(side * x * 0.65f, deck + height * 0.019f, z * (0.39f + vent * 0.12f)),
+                    new Vector3(x * 0.28f, height * 0.038f, z * 0.055f),
+                    new Color(0.57f, 0.69f, 0.82f), SoldierSideShade);
+            }
+
+            // Flat vertical side armor panels add depth without widening the hull.
+            float panelX = side * (x + 0.008f);
+            for (int panel = 0; panel < 2; panel++)
+            {
+                float zStart = z * (0.08f + panel * 0.34f);
+                float zEnd = zStart + z * 0.23f;
+                if (side < 0) (zStart, zEnd) = (zEnd, zStart);
+                Vector3 bottomA = new(panelX, -height * 0.24f, zStart);
+                Vector3 topA = new(panelX, height * 0.06f, zStart);
+                Vector3 topB = new(panelX, height * 0.06f, zEnd);
+                Vector3 bottomB = new(panelX, -height * 0.24f, zEnd);
+                AddQuad(surface, bottomA, topA, topB, bottomB, new Vector3(side, 0f, 0f),
+                    new Color(0.55f, 0.65f, 0.78f));
+            }
+        }
     }
 
     private static void AppendDrillRig(SurfaceTool surface, UnitOutline outline, float height)

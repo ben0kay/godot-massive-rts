@@ -12,6 +12,7 @@ Shape = 11
 Width = 8.0
 HullLength = 14.0
 Height = 2.2
+SizeMultiplier = 0.9
 SizeTier = 5.0
 BattleRating = 3500
 Health = 3000.0
