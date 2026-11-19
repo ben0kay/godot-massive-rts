@@ -4,7 +4,7 @@
 >
 > **Status:** Proposed game modes; simulation/benchmark development remains the active priority.
 >
-> **Last refined:** 2026-11-12 · **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
+> **Last refined:** 2026-11-19 · **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
 
 ## 1. The game in one sentence
 
@@ -61,7 +61,7 @@ This is the more focused, simulation-forward mode. It can be enjoyable without p
 - Barracks, workers, resource gathering, a build menu or a recurring economy.
 - RTS-specific command processing running silently in the background.
 
-A campaign of handcrafted challenges, different enemy arrangements, terrain obstacles and objectives is conceivable, but level progression and exact victory conditions remain to be decided.
+**Preset Battles campaign direction (2026-11-19):** An authored sequence of increasingly difficult maps is now intended. Red troops begin predeployed and visible; the player deploys a limited Blue army, presses Fight and watches the autonomous outcome. Victories should award campaign credits for recruitment and upgrades, with a possible bonus for preserving more troops. Persistent roster rules, exact reward economics and future hidden enemy/fog mechanics remain design decisions. See the dedicated [Preset Battles campaign design](LEVELS/PresetBattles/PRESET_CAMPAIGN_DESIGN.md) for the current proposed loop, milestones and open questions.
 
 **Existing foundation:** the BENCH0 painted deployment editor already supports placing basic soldier types and starting a battle. It should be reused/adapted rather than mistaken for a fully finished game mode.
 

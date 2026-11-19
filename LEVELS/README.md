@@ -9,6 +9,8 @@ Both Level 001 scenes start as a single editable `Node3D`:
 
 Fortress Defense Level 001 is reserved for manual terrain and object placement in Godot. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
 
+**Preset Battles campaign plan:** [PRESET_CAMPAIGN_DESIGN.md](PresetBattles/PRESET_CAMPAIGN_DESIGN.md) describes the intended authored enemy/Blue deployment battles, recruiting, credits, casualty bonuses, upgrades and future intelligence/fog options. These are **planned**, not yet implemented in the blank Preset Battles Level 001.
+
 To add a level, author its scene and a `LevelDefinition` resource with a stable ID, display name, unique positive order, and scene path. Add the resource to the campaign's `Levels` array. Add modes as `CampaignDefinition` resources in `Catalog/DefaultCampaignCatalog.tres` in the order they should appear. The campaign menu orders levels by their authored order. The first level is unlocked, and each later level requires completion of its immediate predecessor.
 
 `Runtime/LevelLauncher.cs` attaches the campaign exit input. **Escape** returns to the current mode’s level list after closing or clearing any active command controls. **Shift+Escape** records test completion and returns to the campaign when both a debug build and **Allow Development Completion** on the catalog are enabled. Direct editor launches leave campaign data alone.
