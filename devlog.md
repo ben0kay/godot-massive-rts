@@ -359,3 +359,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-19 | Campaign briefing | Source implemented.** Added debug-profile level access and pre-deployment briefings with authored map previews, troop counts, and a future recruitment entry.
 
 - **2026-11-19 | Level editor placement fix.** Read authored wall footprints without grounding walls or accessing the battle simulation during placement. Placement errors now include a stack trace in Godot's output.
+
+- **2026-11-19 | DREAD1 plan only.** Added `GAMEPLAY/UNITS/DREAD1_IMPLEMENTATION_PLAN.md` for a Tier 5 Dreadnaught: one slow auto-pursuing pointed rectangular hull, four independent miniguns with per-turret nearest-target queries and minimum/maximum ranges, tiny fast pooled projectiles, and **moving front-only crushing**. Covers large-hull collision/separation, rarity, editor/level/production integration, performance budgets and validation. No gameplay code was added; implementation requires separate owner approval.
