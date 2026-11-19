@@ -213,12 +213,12 @@ public partial class FrontMenu : Control
         Button firstPlayable = null;
         foreach (var level in CampaignCatalog.OrderedLevels(campaign))
         {
-            bool unlocked = CampaignCatalog.IsUnlocked(campaign, level, progress);
+            bool unlocked = CampaignCatalog.IsUnlocked(level, ProfileStore.Selected);
             bool missing = level.Enabled && !MenuNavigation.SceneExists(level.ScenePath);
             string suffix = !level.Enabled ? " (Coming Soon)" : missing ? " (Scene Unavailable)" : !unlocked ? " (Locked)" :
                 progress.IsComplete(campaign.Id, level.Id) ? " (Complete)" : "";
             var button = UIButtonFactory.Create(level.DisplayName + suffix, () => Run(
-                () => LevelLauncher.Launch(this, campaign.Id, level.Id)), UIButtonStyle.Primary);
+                () => LevelLauncher.Brief(this, campaign.Id, level.Id)), UIButtonStyle.Primary);
             button.Disabled = !level.Enabled || missing || !unlocked;
             button.TooltipText = missing ? $"Scene unavailable: {level.ScenePath}" : level.Description ?? "";
             list.AddChild(button);
