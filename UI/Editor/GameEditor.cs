@@ -5,7 +5,7 @@ namespace MassiveRts;
 
 public partial class GameEditor : Control
 {
-    internal const string ScenePath = "res://UI/Editors/GameEditor.tscn";
+    internal const string ScenePath = "res://UI/Editor/GameEditor.tscn";
 
     public override void _Ready()
     {
@@ -16,7 +16,7 @@ public partial class GameEditor : Control
             return;
         }
         var levels = UIButtonFactory.Create("Level Editor", () =>
-            MenuNavigation.Open(this, "res://LEVELS/EDITOR/LevelEditor.tscn"), UIButtonStyle.Primary);
+            MenuNavigation.Open(this, "res://UI/Editor/LevelEditor.tscn"), UIButtonStyle.Primary);
         content.AddChild(levels);
         content.AddChild(UIButtonFactory.Create("Entity Editor", () =>
             MenuNavigation.Change(this, new RuntimeEntityEditor()), UIButtonStyle.Primary));

@@ -1,6 +1,6 @@
 # Standalone Campaign Level Editor
 
-Open `LEVELS/EDITOR/LevelEditor.tscn` in Godot .NET and press **F6**. Choose a campaign and open a registered map or create a new one. The editor saves source assets when running from the editor build.
+Open `UI/Editor/LevelEditor.tscn` in Godot .NET and press **F6**. Choose a campaign and open a registered map or create a new one. The editor saves source assets when running from the editor build.
 
 - Use **Map Settings** for the title, map size, opening camera and mode rules. Fortress Defense uses the existing wave definitions and spawn settings. Enter one wave per line as comma-separated `unit_id=count` pairs.
 - Drag rock, water and deployment brushes across the map. Right-drag to erase the selected paint type. Use the placement tools for hills, walls, soldier formations and Fortress structures. Select an object to move, delete or edit its available fields. Use the toolbar or Ctrl+Z and Ctrl+Shift+Z to undo and redo.
