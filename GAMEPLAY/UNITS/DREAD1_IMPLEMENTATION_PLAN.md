@@ -1,245 +1,210 @@
-# DREAD1 — Tier 5 Dreadnaught Super-Heavy Assault Platform
+# DREAD1 — Tier 5 Dreadnaught super-heavy assault platform
 
-**Status:** Planned — Codex implementation handoff; **this document does not implement gameplay code**.  
-**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Engine:** Godot 4 .NET/C#  
-**Unit display name:** **Dreadnaught** (preserve the owner's spelling) · **Stable unit ID:** `dreadnaught` · **Size Tier:** **5**
+**Status: Planned only — Codex implementation handoff.** This documentation commit does **not** implement gameplay or authorize implementation.  
+**Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main` · **Engine:** Godot 4 / C#  
+**Official name / stable ID:** **Dreadnaught** / `dreadnaught` (preserve the owner's spelling)  
+**SizeTier:** **5**; Hexagon is already Tier 3. Intended scarcity: very costly and generally **2–3 per level**.
 
-## 1. Objective and immutable gameplay rules
+## 0. Owner requirements (do not reinterpret)
 
-Create a rare, extremely expensive, very large geometric assault unit: a long rectangular hull with a pointed triangular front and four independent rapid-fire minigun turrets at **front-left, front-right, back-left and back-right**. The Dreadnaught feels like a slowly advancing land battleship in an auto-battler with thousands of smaller units.
+1. A huge **long rectangular armoured hull with a prominent triangular pointed front**. Low-poly beveled geometry and faction colouring consistent with the game's minimal geometric style.
+2. **Four independent minigun turrets:** front-left, front-right, back-left and back-right.
+3. Every turret independently **targets the closest valid enemy relative to its own mount/muzzle**, not hull center, and has **separately configurable minimum and maximum firing ranges**. Different turrets can shoot different enemies or converge on the same one naturally.
+4. Miniguns shoot **very small, very fast, frequent real projectiles** (not fake hitscan). Every turret has independent cooldown, aiming and rotation.
+5. The **hull itself pursues the closest enemy** via ordinary auto-acquisition. It moves **very slowly** and **turns very slowly**. Its travel/target selection must **not be overridden by a turret target** and it must **not stop just because a minigun is in range**.
+6. **Only its forward triangular prow hurts enemies on contact while advancing.** Sides and rear deal **NO contact damage** in DREAD1. Side/rear collisions still block or physically push when appropriate, without health damage.
+7. It is **one unit**, with one faction, health pool, movement/order ownership, hit/death effects, and 4 independent weapon state slots — **not five linked soldiers**.
+8. Tier 5 is a **physical size class**, not a direct visual scale multiplier or arbitrary strength rating. Ensure massive physical proportions through actual mesh dimensions, not by coupling `SizeTier` to `SizeMultiplier`.
+9. No user request for restrictive gun arcs: default to **full 360° turret acquisition**, subject to valid firing distances, world/obstacle LOS, occlusion by the Dreadnaught's own hull, and aiming/rotation. Do not silently limit turrets to quadrants. Optional arc settings can be considered later.
 
-**Owner decisions to preserve:**
+## 1. Read code and validate architecture before implementation
 
-1. **One unit:** one authoritative soldier ID, one main health pool, one faction, one hull position and heading. Four turrets are **weapons**, not four separate soldier entities.
-2. **Hull movement:** uses ordinary auto-attack nearest-enemy seeking and pursuit, consistent with other units. **Slow movement and very slow hull turning.** It does **not** stop just because its miniguns are firing.
-3. **Independent turrets:** each finds the **closest valid enemy measured from its own current muzzle/turret position**, with its **own minimum range and maximum range**, cooldown and aim direction. The four turrets can shoot different enemies—or the same closest enemy if individually appropriate. All-around targeting for DREAD1; do not impose arbitrary left/right firing quadrants.
-4. **Projectiles:** each minigun spits very small, fast, frequent visible projectiles, with low individual damage and the standard pooled projectile collision rules.
-5. **Frontal crushing:** the **pointed front** deals substantial physical/contact damage as the hull advances into enemies, especially small fragile Circle infantry. **The sides and rear do no contact damage** in DREAD1. A turret hitting someone at the side is ranged damage, not hull contact damage.
-6. **Tier 5:** use existing `SizeTier = 5` (current Hexagon is Tier 3). Tier classifies physical scale; it must **not** silently change `SizeMultiplier` or the older unit meshes.
-7. **Rarity:** intended maximum **2–3 Dreadnaughts per level**, at great production/deployment cost. Prefer an authored **per-level/per-faction cap** rather than hard-coding a universal magic limit that breaks editor/debug scenarios.
-8. **Default auto-battle:** no manual weapon controls, stance system, special defensive AI, shields, or player micro required.
+Read current `README.md`, `CodePreferences.md`, this plan and relevant local READMEs. Read `AGENTS.md` if present. Inspect the current versions of:
 
-Review source and adjust technical design if necessary, **without weakening these behaviours**. Explain substantial trade-offs before implementation.
+- `GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs`, `HexagonSiege.tres`, `ChevronArtillery.tres`
+- `GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs`, `DefaultUnitCatalog.tres`
+- `GAMEPLAY/SIMULATION/SpatialGrid.cs`, `MovementSystem.cs`, `UnitState.cs`, `SEPARATION/SeparationSystem.cs`, `COMMANDS/CommandMovement.cs`
+- `GAMEPLAY/COMBAT/CombatSystem.cs`, `GAMEPLAY/COMBAT/TRAMPLE/TrampleSystem.cs`
+- `GAMEPLAY/PROJECTILES/Shared/{ProjectileSystem,ProjectileRenderer,ProjectileDefinition,ProjectileCatalog}.cs`
+- `VISUALS/RENDERING/{FacetedSoldierMeshes,ArmyRenderer,GroundShadowMeshes}.cs`
+- `BENCHMARK/BenchmarkArena.cs`, `GAMEPLAY/WAVES/FortressWaves.cs`
+- `GAMEPLAY/PRODUCTION/ProductionRecipes.cs`, `GAMEPLAY/PRODUCTION/FabricatorRecipes.tres`
+- Deployment painting, level editor, Entity Editor, campaign saves, production/fabrication UI and any newer game-mode owners.
 
-## 2. Read and audit first
+**Verified architectural risks at plan creation (2026-11-19):**
 
-Read `README.md`, `CodePreferences.md`, `GAMEPLAY/UNITS/README.md`, the relevant combat/simulation/rendering/projectile/production documentation, and `AGENTS.md` if it exists. Inspect the current main branch—source may have changed after this plan.
+- `UnitDefinition.SizeTier` already exists; Hexagon's authored resource uses **3.0**, and current catalogue enumerates Circle 0 through Pikeman 10. **Append new unit ID; never renumber existing ones.**
+- Existing `CombatSystem` and `ProjectileSystem.Fire(shooter, victim, units)` assume **one target, cooldown and central muzzle per soldier**. Dreadnaught requires an opt-in 4-turret controller and a compatible explicitly-originated pooled projectile launch.
+- Generic ranged `MovementSystem` stops at weapon reach, which is **wrong for this hull**. Don't disguise it as a normal stationary ranged attacker; the hull should still seek contact.
+- `TrampleSystem` is short-duration cavalry charging; it doesn't model ongoing **prow-only** moving contact.
+- `SeparationSystem` uses a **circular footprint per unit** and derives spatial cell width from `units.MaxFootprint`. Setting a huge Dreadnaught collision radius could unexpectedly make **all 10k–20k soldiers' separation much more expensive**. A tiny radius would let soldiers stand inside the visible hull. This must be designed deliberately.
 
-Primary source:
+This is a plan, not a demand to copy any exact class/file path. Codex may refine minimal integration after inspecting latest code, especially to protect performance.
 
-- `GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs` and `GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs`
-- `GAMEPLAY/UNITS/DEFINITIONS/HexagonSiege.tres`, `ChevronArtillery.tres` and `DefaultUnitCatalog.tres`
-- `GAMEPLAY/SIMULATION/UnitState.cs`, `SpatialGrid.cs`, `MovementSystem.cs`, `SEPARATION/SeparationSystem.cs` and `SoldierFacing.cs`
-- `GAMEPLAY/COMBAT/CombatSystem.cs`, `COMBAT/TRAMPLE/TrampleSystem.cs`, `AreaDamage.cs`
-- `GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs`, `ProjectileCatalog.cs`, `ProjectileSystem.cs`, `ProjectileRenderer.cs`
-- `VISUALS/RENDERING/FacetedSoldierMeshes.cs`, `ArmyRenderer.cs`, shadow/feedback code
-- `BENCHMARK/BenchmarkArena.cs`, benchmark panel and metrics
-- `GAMEPLAY/SIMULATION/COMMANDS/CommandMovement.cs`, `GAMEPLAY/WAVES/FortressWaves.cs`, player orders
-- Deployment/painting, Entity Editor, Fabricator `GAMEPLAY/PRODUCTION` recipes, campaign/level editor save/unlock infrastructure.
+## 2. Shape, mounts and visuals
 
-**Relevant findings as of 2026-11-19:**
+Top-down layout (local forward direction is -Z):
 
-- `SizeTier` exists independently from `SizeMultiplier`; Hexagon is already authored Tier 3.
-- Existing `UnitState.Target[id]`, `CombatSystem.Acquire` and `MovementSystem` are built around one primary combat target per soldier. The existing `CombatSystem.Step` ranged code supports a **single projectile origin per firing unit**. **Do not overwrite `units.Target[id]` with turret targets.**
-- `SpatialGrid.FindEnemy` is a soldier-centred, candidate-budgeted local search, while `GetCandidates(center, radius, faction)` can search around an **arbitrary world-space point**. A turret-local query must measure from the *turret*, not from the hull centre. A raw cursor is not sorted by closeness, so an arbitrary 32-candidate cut-off may not truly pick the nearest.
-- `ProjectileSystem` is pooled and `ProjectileRenderer` uses per-projectile-type MultiMesh batches; its normal `Fire(shooter, victim, units)` launches from a **single unit-centred origin** (apart from Chevron special-casing) and reads attack stats from the firing unit. This must be extended safely for per-turret muzzle position, damage/shot speed and aim, without disrupting regular arrows/artillery.
-- `SeparationSystem` and existing `UnitOutline.Footprint` use **circular collision footprints**. A long, wide hull with an angular ram cannot be accurately represented by a circular footprint alone. Plan deliberate hull clearance and front crushing without changing the O(n) / bounded separation assumptions for everyone else.
-- Cavalry `TrampleSystem` is a **run-up/charge mechanic** with hit limits and momentum; it does not directly implement steady moving front-only contact.
-- The benchmark and Fortress Defense use different movement/order ownership. Source must work in both if Dreadnaught is available in both.
+```text
+                     FRONT
+                      /\
+                     /  \
+              ______/____\______
+             |                  |
+             |  FL          FR  |
+             |  []          []  |
+             |                  |
+             |                  |
+             |  []          []  |
+             |  BL          BR  |
+             |__________________|
+                      REAR
+```
 
-## 3. Hull geometry, size and visuals
+- Broad **beveled rectangular prism**, triangular pointed wedge at nose, chunky low flat silhouette, darkened side faces, faction tinted body and larger proportional ground shadow.
+- Four identical simple, small geometric rotating mount + thin barrel assemblies. Allow each to aim independently while the main hull very slowly turns.
+- Proposed *visual starting range only*: ~7–9 world units wide and 12–16 long, with substantial thickness; adjust after comparing against Hexagon. These are **not** final approved dimensions. Expose independent hull **width, length, height** in authored data. The existing `SizeMultiplier` clamp is 0.5–3; do not force `SizeTier=5` into it.
+- One canonical hull-local outline and four mount offsets should drive visuals, collision, prow contacts, muzzle transforms and painting clearance. Don't let visually large side walls have tiny invisible collisions.
+- Ensure the wedge's top cap is valid: current mesh generation's polygon-fan assumptions can be unsuitable for arbitrary concave outlines. A dedicated small reusable Dreadnaught mesh constructor is acceptable; avoid per-soldier procedural mesh creation.
+- Reuse faction MultiMesh for hull where feasible. Because only ~2–3 are expected per level, a dozen small turret render nodes/instances across the rare platforms may be acceptable; **never** create separate simulation soldiers or per-projectile nodes.
 
-### Main silhouette
+## 3. Normal nearest-enemy hull pursuit, independent turret combat
 
-- Low, broad, **elongated rectangle** viewed isometrically/top-down, with an integrated **pointed triangular prow on the front (-local Z)**.
-- Substantial height and visible bevels, solid faction colours, darker sides, large fake ground shadow. No detailed realistic tank/wheel animations.
-- **Four visibly distinct angular turrets** at front-left (FL), front-right (FR), back-left (BL) and back-right (BR), with thin short barrels.
-- Turret base remains anchored to the moving/turning hull; turret body/barrel independently rotates around local vertical axis toward its target. When idle, hold last orientation or return to a stable default without jitter.
-- Ensure projected placement outline, selection highlights, hit/death visual effects and terrain grounding read correctly.
+- The central Dreadnaught unit uses **ordinary nearest-valid-enemy** seeking/retargeting on the normal existing schedule, choosing a live opposing soldier as the main movement goal.
+- It advances very slowly; candidate starting **authored Speed 0.9**, **hull turn rate 40°/s**, low acceleration (balance later).
+- The hull does not use turret range as stopping distance. It keeps trying to approach the target into contact, while obeying map bounds, obstacles, navigation, large-body collision and turns.
+- Avoid accidentally adding a generic fifth melee swing or generic ranged shot on top of its **four guns plus prow damage**. Use a narrowly scoped compiled unit capability/flag rather than changing normal units' core behaviour.
+- When nearest enemy dies, hull retargets according to shared targeting budgets. Independent miniguns continue firing at their own targets while the hull changes heading.
+- Normal manual move and K attack-move orders must continue to apply to the **one hull**, and gun tracking should not discard player goals.
+- If a nearby valid enemy is behind the hull, its **main body turns gradually** to pursue, but turret barrels may independently rotate to engage threats while the hull turns.
 
-### Geometry implementation
+## 4. Four independent turret targeting / firing rules
 
-- Add new appended `UnitShape` variant and a lightweight custom `UnitOutline`/mesh path for rectangle + prow (or a similarly inexpensive compiled compound mesh).
-- One cached hull mesh per unit type, not dynamic meshes per soldier.
-- For the expected few Dreadnaughts, four light per-instance turret visuals can be acceptable, or use small batched turret meshes if simpler within existing code. **Do not create heavy scene graphs or new physics bodies for every ordinary soldier.**
-- Do not let the standard `SizeMultiplier` hard cap (currently 3×) accidentally limit this design to a merely Hexagon-sized shape: use appropriate **base width/length proportions**, with Tier 5 metadata. Avoid enlarging unrelated units.
-- Keep faction tint, low-poly faceting, optional fake shadow, white hit flash and dying effects consistent with the rest of the game.
+Each turret slot needs compact immutable authored config plus runtime data: local mount offset, yaw/facing, current target ID, cooldown, min/max range, aim/turn speed, projectile type, damage and shot cadence.
 
-### Important physical footprint audit
+**Target acquisition contract:**
 
-The circular separation radius may be far larger than the physical distance from hull to its **front nose**, preventing a prow from ever contacting a small enemy; or may be too small and allow soldiers to visibly occupy the Dreadnaught's side.
+- Search from the **turret's current world position**, not `units.Position[dreadId]` or the Dreadnaught's movement target.
+- Choose the **closest valid living enemy whose distance lies between that turret's minimum and maximum range**. A soldier **inside** minimum range is not targetable by that gun; do not merely pick that closest soldier and give up. The turret can find the next closest *eligible* enemy.
+- Respect other factions, dead units, LOS/obstacles, muzzle line and self-occlusion by the Dreadnaught's own body. Guns should not fire through the hull to the other side.
+- A turret should keep its current live/valid target between bounded acquisitions but eventually switch to a closer target when normal refresh occurs. Reacquire on death/out-of-range with a bounded urgent refresh.
+- Turret targets can all be different, all the same, or any combination; do **not** force target distribution.
+- **Full 360° acquisition by default**. Barrel aim angle and rotation are independent of hull facing. Require barrel alignment before firing; don't snap instantly across 180° unless explicitly tuned that way.
+- Expose **min and max independently per turret**. Shared defaults can initialize all 4, but each must be editable/overrideable. Validate `0 <= min < max`.
+- Default firing should continue while moving, provided gun alignment, target validity and physics allow it; no need for hull to stop.
 
-**Codex must choose and justify a bounded, size-aware plan:**
-- Preserve existing fast circular broadphase for ordinary units.
-- Use a Dreadnaught-specific oriented hull/ram **narrow-phase** for front impact.
-- Ensure friendly/enemy soldiers, structures and walls cannot unintentionally pass through its hull.
-- Avoid making its extra-wide circle create excessive crowd separation scans, cell sizes or route-clearance problems for 10k/20k soldiers. Audit `MaxFootprint` usage, navigation, deployment clearance, and solver grid sizing.
-- Prefer a targeted heavy-unit footprint solution over rewriting every soldier into full polygon collision. If a simpler approximation is chosen initially, **document limitations** rather than letting frontal damage trigger at the sides.
+**Spatial query integration:**
 
-## 4. Main hull target and movement
+`SpatialGrid.FindEnemy` currently centers local search on a **soldier**. Don't modify hull position or temporarily fake a unit to query a turret. Add a small arbitrary-origin nearest-valid local query (support annulus min/max and faction) or a dedicated bounded turret query reusing `SpatialGrid` cells. Do not enumerate every enemy in the map. Look near-first where practicable, with candidate caps and deterministic tie-breaking. If a capped query is truncated, the selected target is closest **among examined valid candidates**, not guaranteed globally closest — expose budget-hit diagnostics and use a sensible limit.
 
-Use the ordinary target-acquisition/pursuit system to select the **closest enemy unit** for the hull's destination, subject to normal acquisition budgets and refresh cadence. Respect existing faction/health/obstacle/guard semantics.
+Initially stagger acquisitions ~0.1–0.25 s per turret rather than 4 searches/tick. Cached target validity checks can be cheap. Avoid eight searches for four turrets just to rank possible directions.
 
-- The Dreadnaught advances slowly toward the main target **even when all four guns are already in range**.
-- Apply slow authored speed, acceleration and low `TurnDegreesPerSecond`. No instant snap-to-target.
-- Treat main hull targeting as a **movement goal**, not a fifth minigun. Avoid accidentally applying the normal ranged stand-off/stop logic.
-- If compiled as `AttackStyle.Melee`, prevent extra ordinary melee strikes from stacking with frontal crush; if compiled as `Ranged`, explicitly prevent the normal ranged halt and single-target auto-shot. Design a small explicit special attack/movement policy rather than relying on a conflicting style flag.
-- Support target death and reacquisition. If the closest enemy is to the rear, slowly turn to approach; no backward teleporting or unbounded instantaneous rotation.
-- Ordinary map boundary, obstacle blocking, movement orders and separation should remain in control. Avoid turning the Dreadnaught into a special unit that ignores route safety.
-- Preserve commanded normal move and attack-move semantics in Fortress Defense (turrets can still auto-fire at nearby valid enemies where command/combat rules permit).
+## 5. Tiny, fast, frequent projectile model
 
-## 5. Four independent turret combat controllers
+- Add a dedicated tiny minigun round projectile resource (small rectangular line/bolt), optionally using the existing subtle faction tint shader.
+- Suggested provisional stats: **speed 140 world units/s**, **damage 3**, **interval 0.15 s per turret**, **no explosion**, approximately straight travel. Rebalance after gameplay test.
+- 4 turrets × 6.67 shots/s = ~**26.7 projectiles/s** per Dreadnaught; 3 platforms ≈**80/s**, excluding all other ranged units. Don't claim that's free: check pooled projectile count and collision cost.
+- Introduce a narrow `ProjectileSystem` launch overload taking **explicit world muzzle origin, desired aim, shooter/faction, compiled projectile type, damage and damage type**, while reusing the fixed-capacity projectile pool, spatial swept collision, obstacle blocking, shadow/no-shadow and existing `ProjectileRenderer` MultiMesh. Keep ordinary Triangle/Marksman/Artillery launch logic unchanged.
+- Compute muzzle origin from rotated hull + current independent turret yaw/mount and barrel length. Don't fire four projectiles from hull center.
+- Extremely fast rounds **must use swept collisions** so they cannot tunnel through light infantry between 60 Hz ticks. Avoid Area3D per bullet, dynamic light per shot or spawning a node per round.
+- Ensure correct faction and armour/damage-matrix rules; no friendly fire unless existing projectile rules demand it. Respect projectile capacity, lifetime and dropped-shot counters; don't silently lose most gun output in large battles.
+- A subtle flash at each muzzle can be implemented with a bounded pooled/simple visual, never per-shot heavy object allocation.
 
-Implement a small **`DreadnaughtTurretSystem`** (suggested name/location `GAMEPLAY/COMBAT/DREADNAUGHT/`, adapt to current project organization) that operates on a *small indexed set of live Dreadnaught IDs*, not the entire army every time.
+## 6. Frontal crushing: triangular prow ONLY
 
-Each Dreadnaught has **four** compact turret states, e.g.:
+Use a true **forward-facing local triangular wedge collision region**, moved/rotated with the hull. The *swept* prow zone in the current movement step hits nearby opposing bodies. Do **not** use a circular radial damage zone or all-around trample.
 
-| Turret index | Mount | Independent state |
-| --- | --- | --- |
-| 0 | Front left | Target ID, current local yaw, cooldown, next search tick |
-| 1 | Front right | Target ID, current local yaw, cooldown, next search tick |
-| 2 | Back left | Target ID, current local yaw, cooldown, next search tick |
-| 3 | Back right | Target ID, current local yaw, cooldown, next search tick |
+- Trigger crush **only when the hull actually advances forward** into enemies beyond a minimum real forward speed. No damage while stationary, spinning in place, reversing or merely sliding sideways from separation.
+- Use current and previous actual prow positions, hull angle and nearby defender footprint to avoid tunneling; detect fronts accurately during slow turns as well.
+- Give heavy **contact damage** to small infantry: proposed first pass **60 damage per qualifying hit/contact**, so a 50-HP Circle can be crushed. This value is editable; use normal `UnitState.Damage` so hit flash/death effects work.
+- Add a controlled per-victim hit cooldown / fixed contact cadence (e.g. ~0.4–0.6s); don't apply full 60 damage every 1/60 second for prolonged overlap. Avoid per-hit allocations and arbitrary missed contacts when hundreds of victims line the prow.
+- **Sides and rear deal exactly zero damage**, even when other soldiers rub against the hull, when turning, or when being pushed. They may physically separate/shove/block.
+- Higher SizeTier units can be harder to shove or more resistant to the crush if defined in the Dreadnaught's tuning rules. Tier classification should not silently rewrite every other unit's health/damage.
+- A heavy enemy or wall can physically halt the hull. Don't let it ghost through Hexagons, structures, walls or another Dreadnaught.
+- Existing `TrampleSystem` contains useful swept-local-contact techniques but assumes short cavalry charges; implement a **specialized sustained front-contact capability** rather than a copied cavalry charge loop.
+- After death, immediately stop guns, movement and contact damage.
 
-- Mount offsets are authored in **hull-local X/Z units**, compiled or derived from dimensions; rotate/translate them into world space each tick.
-- Each turret has **editable minimum and maximum range**, measured from its own **world-space mount/muzzle**. Initially permit one common default with per-turret overrides; ensure the four can truly differ.
-- Choose **nearest valid living enemy** within inclusive maximum and outside minimum range. Ignore allies, dead enemies and blocked shots where appropriate.
-- Do not tie turret targets to `UnitState.Target[hullId]`, and do not use the benchmark `Ranged target variety` logic for turret target selection.
-- If the closest enemy is inside the minimum range, choose the closest **eligible** enemy outside that radius (do not lock onto the invalid closer target).
-- Each turret may choose the same target or separate targets; no enforced quadrant arcs in DREAD1. **360° rotation is allowed**; turret model should physically turn to face its target.
-- Update targets using a **staggered, bounded** query cadence. Validate cached target health, range and sight cheaply between full reacquisitions; do not run four full searches per Dreadnaught per 60 Hz tick.
-- Use `SpatialGrid.GetCandidates` around each **mount point**, or a new small query using existing spatial cells. **Correctness concern:** the raw cursor iterates cells, not nearest-distance order. Under a candidate cap choose a sensible closest-first cell search or explicitly report approximation and prioritize nearest cells. Preserve performance budgets.
-- Use individual aiming yaw/turn speed, separate cooldowns, independent muzzle world positions, and clear/hold invalid targets sensibly. Handle death/despawn and reset state without dangling IDs.
-- **All four turrets operate while the hull is moving.** They don't force hull rotation or stop the hull.
-- Expose min/max range, projectile damage, firing cadence, turret aim speed, muzzle offsets and target refresh rate as editable data. A dedicated `DreadnaughtDefinition` / `TurretDefinition` resource may be cleaner than adding dozens of unrelated inspector fields to every soldier; choose the least invasive well-supported design. No per-soldier polymorphic object allocation in the hot loop.
+## 7. CRITICAL — collision, large footprint, 20k separation performance
 
-## 6. Minigun projectiles and firing rate
+**Do not skip this investigation:** The standard `SeparationSystem` computes spatial cell width from **`units.MaxFootprint`**, and ordinary soldiers use circular footprints. A huge circle enclosing a Tier 5 rectangular hull could make separation scans dramatically more expensive for *all 20,000 units*. A small circle could let enemies intersect its side walls.
 
-- New lightweight `DreadnaughtMinigun` projectile resource or equivalent using current pooled projectile system.
-- Very small, bright, fast **non-explosive** bolts, preferably using the existing rectangular laser styling / faction tint pattern. No new particle nodes per shot.
-- Shots originate **at the actual turret muzzle**, not hull centre. Add a minimal pooled `FireFromMuzzle` / shot override API (or equivalent) accepting source soldier/faction, muzzle origin, target aim, damage and projectile-type reference. Preserve existing `Fire` and `FireAtStructure` behaviour; avoid hardcoding special origin logic inside the ordinary single-gun path.
-- No unlimited allocations; respect existing projectile cap, swept-hit tests, obstacles and team damage rules. Track dropped shots so the 4-gun platform doesn't silently starve normal Archer/Marksman projectiles.
-- Use **independent turret cooldowns** and stagger startup phases so all four don't always launch on the exact same tick unless that naturally happens.
-- Independently target closest enemies but projectile collisions still hit the **first valid soldier** along the travelling segment, as existing hitscan/sweep rules dictate.
-- Avoid cheating by applying hits directly at range if a real tiny projectile was requested. Fast bullets still require robust swept collision to prevent tunnelling.
+Before finalizing collision architecture, Codex must compare:
 
-**Starter numbers (illustrative; tune after owner tests):**
+**Approach A — conservative large circle:** Minimal changes but oversized avoidance and potentially substantial global separation cost. Accept only if benchmark data and collision fidelity are reasonable.
 
-| Property | Initial proposal |
-| --- | ---: |
-| Hull Size Tier | **5** |
-| Hull health | **3,000** |
-| Authored speed | **1.1 u/s** |
-| Hull turn rate | **35°/s** |
-| Turrets | **4** |
-| Turret minimum range | **3 u** |
-| Turret maximum range | **24 u** |
-| Individual minigun shot damage | **3** |
-| Firing interval per turret | **0.15 s** |
-| Projectile speed | **110 u/s** |
-| Turret target refresh | **0.20–0.35 s**, staggered |
-| Frontal crush per fresh victim/contact | **60** (tunable) |
-| Initial per-level availability target | **2–3** |
+**Approach B — rare-large-hull special case (preferred if needed):** Keep normal infantry separation cells stable; represent the Dreadnaught as an oriented rectangular/hull body tested against nearby small circles with a **bounded local broadphase**. Handle body collision separately from **damaging prow sweep**, reuse existing spatial data where safe, and preserve standard capped pushes for everyone else.
 
-The numbers are **not approved balance settings**, only safe first-pass starting points. At 0.15 s, all four turrets of one Dreadnaught can fire about **27 shots/sec**; three could produce about **80 shots/sec**, plus other battlefield projectiles. Confirm actual resource speed scaling and projectile lifetime/capacity before choosing values. Damage, firing interval and range must be tuneable without recompiling.
+Do not blindly rewrite `SeparationSystem` globally. Keep size tier metadata independent. Evaluate sharp turns, front corners, map edge, water, walls, obstruction paths, deployment and navigation clearance. Don't let the long nose rotate through static structures. Heavy platforms shouldn't be shoved aside by one Circle, but shouldn't become invulnerable to massed enemies either.
 
-## 7. Front-only physical crushing
+If there isn't a clean, safe choice in one focused implementation, report the specific alternatives and trade-offs to owner before proceeding.
 
-The Dreadnaught's **triangular pointed nose** must deal heavy damage to enemies when it physically moves into them. **No side or rear hull damage, even if close enough to overlap a broadphase circle.**
+## 8. Provisional tuning and economics (NOT final balance)
 
-Do **not** implement the crush as a radial shockwave or generic proximity aura.
+| Property | Proposal |
+| --- | --- |
+| SizeTier | **5** |
+| Hull dimensions | ~8 wide × 14 long, independent of SizeTier |
+| Hull HP | ~3,000 |
+| Hull speed | 0.9 authored units/s |
+| Hull turn speed | ~40°/s |
+| Four turrets | Front-left, front-right, back-left, back-right |
+| Per-turret minimum range | 3 units initially; editable independently |
+| Per-turret maximum range | 30 units initially; editable independently |
+| Per-turret fire interval | 0.15 seconds |
+| Minigun projectile damage | 3 |
+| Minigun projectile speed | 140 units/s |
+| Prow contact damage | 60 per qualifying contact, with cooldown |
+| Normal player availability | Configurable cap, e.g. 3 per level/faction |
+| Production | Very expensive, e.g. 5,000+ Carbon per single unit |
+| Production duration | Long, e.g. 90 seconds |
 
-Suggested separate `DreadnaughtCrushSystem` (or integrated with the small Dreadnaught component):
+The values above are **implementation starting points**. This platform is a formidable anti-light/siege presence, but sufficiently slow and expensive to be killed by focus fire, concentrated artillery or heavy opposition. The owner sets final costs and balance. Add an appropriate editable `BattleRating` for the army-strength painting estimator; physical Tier 5 is not its BattleRating.
 
-1. Detect each Dreadnaught's **actual forward hull displacement** for the current simulation tick.
-2. Build a **swept, forward-facing wedge / nose-zone** between previous and new hull poses (correct even during slow turning). The broadphase may use existing nearby enemy spatial cells.
-3. Apply narrow-phase **directional contact geometry** at the pointed front only, using enemy footprints and movement padding. Do not count soldiers alongside the hull, behind it, or outside the swept nose.
-4. Apply substantial per-contact damage using the existing damage matrix and `UnitState.Damage` so white-hit/death feedback works.
-5. Prevent the same victim from taking crush damage **every 1/60th second merely because it remains touching the nose**. Track bounded per-victim contact/exit or cooldown state, resetting appropriately when the victim separates or dies. Distinguish a fresh contact from continued overlap.
-6. Circle/other small weak infantry should be readily killed/cleared if struck; heavier soldiers should resist/require additional hits. This may be accomplished initially through hit damage vs ordinary HP and collision mass, or later with a *size-tier* modifier. **Do not automatically let a Tier 5 unit one-shot every Tier 1 unit without considering actual HP and balance.**
-7. On blocked contact with an uncrushable/heavy unit, stop, push within the existing capped separation, or go around. Do **not** pass through surviving units without collision handling.
-8. Use existing wall/boundary clipping and separation, including the fact that the unit can be stopped; do not allow crush damage to occur on the far side of an obstacle.
-9. No damaging stationary side walls; **front crush only while actually moving forward**. Reverse/sideways lateral drift caused by separation is not a new crush attack.
-10. Consider at most a modest number of **new** contacts per tick per Dreadnaught; use spatial broadphase and cap/record over-budget behaviour. Avoid n² soldier scans.
+## 9. Production, placement, editor and save compatibility
 
-The existing `TrampleSystem` is purpose-built for **temporary momentum charges** and is not an exact fit. Reuse its contact/sweep math and bounded hit handling selectively, but **do not force the Dreadnaught to launch or dash like cavalry**.
+- Append the unit type `dreadnaught` to `RuntimeUnitCatalog` and `DefaultUnitCatalog.tres` **without renumbering existing byte IDs**. Preserve older deployment/preset/save formats and all existing unit stats. Implement consistent stable-ID resolution.
+- Update `UnitDefinition`, unit editor, painter, campaign/level editor and previews for the new hull as necessary. Painter placement/selection must respect actual huge footprint and clear walls/obstacles.
+- **Scarcity is configurable** per level/mode (typical 2–3 simultaneously present or queued per faction), not a hard-coded limit in benchmark test mode. Count queued production plus alive units as appropriate; block invalid over-cap purchases *before* Carbon is spent, with clear UI feedback.
+- `GAMEPLAY/PRODUCTION/FabricatorRecipes.tres` uses `Vector3i(batchSize, carbonCost, productionSeconds)`. Dreadnaught can be batch size 1, but current standard Fabricator **may have a doorway far too small for a Tier 5 hull**. Do NOT spawn it through a hatch where it overlaps the factory or gets permanently stuck. Check for safe production/deployment alternatives; initial phase can allow editor/benchmark placement while super-heavy production remains gated until validated.
+- Keep regular right-click move, straight drag, Right Shift freeform drag, K attack-move, selections/rally behaviour and team ownership. A single hull gets the movement order; turrets remain independently automatic.
+- Make both benchmark battles and Fortress Defense use shared Dreadnaught firing/crush logic without duplicating entire systems. Ensure all new fields remain compatible with current entity-definition editing and save/load.
 
-## 8. Separation, obstacles and oversized hull routing
+## 10. Performance requirements
 
-This is a high-risk integration area and must be explicitly designed rather than left for incidental testing.
+- Typical runtime count 0–3 per faction. Use at most **four fixed, independent turret slots per hull**, no extra soldier objects per gun and no node per projectile.
+- Reuse shared `SpatialGrid`; stagger nearest turret searches, cap candidates and profile worst-case density. Do not implement full-map scans every 60 Hz step.
+- Localize crush scans to the swept prow region. No scan of all soldiers per contact update. Avoid per-shot/per-contact managed allocations, LINQ and individual timers.
+- Reuse existing projectile pool and MultiMesh. Track dropped projectiles, active bullets and their update cost. One new projectile definition should not cause unnecessary new texture/shader/material per shot.
+- **Do not let 1–3 huge soldiers balloon the ordinary infantry separation grid**. Compare 0 vs 1 vs 3 Dreadnaughts with similar 10k and 20k scenarios; inspect separation ms, candidate pairs, targeting ms, projectile ms, route cost and worst tick.
+- Add optional diagnostic counters in the profiler (per-turret targeting queries, limited searches, shots, pooled drop counts, front-crush contacts and milliseconds) without a noisy per-frame UI.
+- Per owner preferences, Codex should do source review + at most a basic practical build; user performs heavy Godot/FPS/visual tests unless separately requested.
 
-- The current single circular footprint is usable as a **broadphase** but not a faithful exact collision boundary for a long rectangular hull and wedge.
-- Audit how `MaxFootprint` affects separation-cell width, neighbour budget, spatial queries and navigation for **every other unit**. A single huge radius can inflate work for thousands of regular soldiers.
-- Avoid global regressions from changing baseline separation cell dimensions, pair budgets or collision formulas.
-- Prefer **special-cased heavy-unit local narrowphase** against nearby units and obstacles while keeping normal soldier separation unchanged. Evaluate whether bounded compound proxy circles, a capsule-like approximation or an oriented polygon/rectangle would be simplest. Reconcile this with UnitState's single authoritative position.
-- Nearby infantry should be pushed aside/around the hull within existing caps, not sit halfway inside it indefinitely, teleport, or receive damage from passive side overlap.
-- Never damage a soldier merely because standard separation moved it near a side. Never apply front crush because the entire unit's bounding radius overlaps.
-- Verify painted defenses, rivers/impassable terrain, walls, map edges, chokepoints, target pursuit, grounding and spawn placement at realistic hull dimensions.
-- A Dreadnaught may be unable to fit a narrow passage: safe blocking/rerouting is better than clipping.
-- Heavy unit should remain reasonably stable when many tiny soldiers push against it; avoid hundreds of Circles visibly shoving Tier 5 away.
+## 11. Implementation stages when separately approved
 
-## 9. Both battle modes, catalog, saves and economy
+1. **Audit latest repo** and confirm data ownership, main hull pursue semantics, 4-mount targeting origin API and collision approach. Flag any architectural issue before significant implementation.
+2. **Shape/data:** Dreadnaught resources, stable ID, Tier 5, editable hull dimensions, beveled wedge mesh and four turret visuals.
+3. **Hull movement/collision:** normal nearest-target pursuit, slow turn, no weapon-range stopping, safe map/obstacle and large-body separation behaviour.
+4. **Turrets/projectiles:** four independent ranges/targets/cooldowns and independently rotating barrels, pooled tiny fast muzzle-origin projectiles and LOS.
+5. **Prow:** moving-only swept triangular frontal damage, hit-cooldown, no side/rear damage, low-HP runover, heavy/wall blocking.
+6. **Game-mode integration:** benchmark painter, level editor, Fortress Defense commands, configurable scarcity and safe production (no illegal Fabricator hatch spawning).
+7. **Review/docs:** update relevant READMEs and `devlog.md`; focused validation and owner test checklist. Avoid unrelated rewrites.
 
-### Benchmark / painted deployment
+## 12. Acceptance checks (owner in Godot)
 
-- Add `Dreadnaught.tres` with stable ID `dreadnaught`; **append** to catalogue ordered IDs and `UnitShape` enum to preserve all existing IDs/numeric values.
-- Set `SizeTier = 5`; add suitable editable `BattleRating` for army strength estimator (proposed placeholder only).
-- Make it discoverable/selectable in benchmark deployment painting, selection displays, unit editor and preview without changing seeded baseline benchmark compositions.
-- Preserve existing saved deployment formats and old maps/presets. New saves store the stable ID; do not reinterpret prior indices.
-- Validate painting footprint and warning/handling of oversized placements and normal shared collision clearance.
+- [ ] Huge visually distinct Tier 5 beveled rectangle/wedge hull with exactly four distinct rotating corner miniguns and clear faction tint.
+- [ ] Hull seeks **closest valid unit**, keeps slowly approaching, turns slowly, and **does not stop at turret range**.
+- [ ] Each turret selects the **nearest eligible target measured from its own mount**, honors its own min/max range and LOS; simultaneous different targets are possible.
+- [ ] Rear turret can acquire behind hull independently while body continues toward target ahead; turret barrels aim smoothly without dragging hull heading.
+- [ ] Bullets originate from the proper gun, are visibly tiny/rapid, fly very fast with **swept collisions**, and respect projectile pool limits.
+- [ ] Only moving **front wedge** damages/crushes enemies; side/rear/stationary/front-turn-only touches do **zero** contact damage.
+- [ ] Light Circles can be run over; Hexagons/heavy units and buildings can slow/stop the hull. No sliding sideways through enemies, terrain, water or walls.
+- [ ] Global separation stays practical with 20k units and 0/1/3 Dreadnaught comparisons; no runaway spatial-grid width from huge footprint.
+- [ ] Dreadnaught is selectable/paintable/saveable and works in relevant battles; existing units, faction palettes, saves, hit/death feedback and combat remain unchanged.
+- [ ] Future gameplay scarcity/production cannot take Carbon for an unavailable/capped unit and does not spawn a colossal hull through a tiny Fabricator door.
+- [ ] Original move/right-drag/freeform/K attack-move commands still work; new gun targets don't override hull movement goal.
 
-### Fortress Defense / Command Sandbox
+## 13. Exclusions
 
-- Support the same four-turret system and front crush with regular `FortressWaves` and `CommandMovement`, using the same behaviour rules.
-- Normal move, attack-move, rally, Fabricator spawn/exit, user selection and battle orders should not erase turret state or inadvertently halt hull movement.
-- Make it available through Fabricator production once the economy/recipe can support its cost. **Avoid assuming an ordinary single-unit-sized hatch can release the Dreadnaught.** Verify spawn clearance and larger exit area; if not feasible without a special production building, document a safe alternate production approach and ask owner before broad building changes.
-- Set a very high configurable Carbon cost and long build time; suggested batch size **1**. Do not hardcode price until owner reviews economy. Do not alter other production recipes.
-- Define a per-level/per-faction Dreadnaught population cap (initial default **3**, optionally **2** for curated maps). Apply to production/deployment as appropriate; define whether cap counts living units, queued units and preplaced enemies. Allow explicit editor/debug overrides where needed.
-- Campaign/editor should show the Dreadnaught and its cost/rarity where relevant; avoid changing older level save semantics.
+No side/rear damage, railguns, shields, homing missiles, manually aimed turrets, per-turret HP, building targeting unless separately requested, attack arc restrictions, full tech-tree, individual-bullet nodes or unnecessary new AI. Main behaviour remains **automatic enemy pursuit plus automatic turret fire**.
 
-## 10. Instrumentation, performance and memory
-
-Target remains the project's existing **10k–20k+ soldier** benchmark; Dreadnaughts are rare and should not cause widespread system overhead.
-
-- Maintain compact arrays indexed by active Dreadnaught owner ID (4 turret slots each) and a small active-ID list. No nested per-tick allocations, LINQ, timers per gun, global pathfinding or full army scans.
-- Reuse current spatial index, bounded searches and pooled projectile system. Do not rebuild spatial grids separately for four turrets.
-- Stagger 4-gun target refreshes across ticks; when target dies/reaches invalid range, revalidate/reacquire within reasonable latency.
-- Bounds checks, deterministic tie-breaking for equidistant targets, safe cleanup on unit death/reset, support for mid-battle spawning, no stale-target reuse after reset.
-- Optional benchmark metrics: Dreadnaught count, 4-turret target queries and candidate caps, shots fired/dropped, front crush candidates/hits, Dreadnaught CPU milliseconds, projectile milliseconds, separation candidate/budget impact.
-- Confirm turret rotation and muzzle transforms do not require expensive new render uploads for all existing soldier meshes.
-- Keep ammunition visuals cheap: tiny geometric MultiMesh bullets, limited muzzle flashes, no particle explosion per bullet.
-- Inspect worst-frame/99th percentile and density around Dreadnaughts; **owner performs heavy Godot/FPS acceptance tests**.
-
-## 11. Suggested implementation sequence
-
-When Codex is separately instructed to implement DREAD1:
-
-1. **Audit & report** how the current standard melee/ranged target fields, projectile origin, collision footprint, navigation and production will interact with this unit; recommend the least invasive architecture and flag blockers.
-2. **Hull data & shape:** append type ID/shape, Tier 5 resource, editable balance, low-poly hull and four turret mounts. Add painter/editor visibility.
-3. **Movement:** keep main hull nearest-enemy seeking, very slow turns, continuous forward pursuit regardless of turret shots. Ensure no duplicate standard melee/ranged attack.
-4. **Turret controller:** four independently cached nearest-valid target searches with independent min/max ranges, aiming, cooldowns and transforms.
-5. **Projectile integration:** pooled fast tiny bolts from **per-turret muzzle positions**, with existing collision/LOS, source-faction and damage handling.
-6. **Frontal crush:** swept nose contacts only while advancing; bounded, non-duplicated damage events and safe interactions with separation and walls.
-7. **Integration:** benchmark, Fortress Defense/Command Sandbox, editor/paint/save/production and configurable scarcity. Fix large-hull passage and Fabricator-spawn issues without affecting normal soldiers.
-8. **Docs & handoff:** update unit/projectile/combat docs and `devlog.md`, inspect diffs, run one basic build if readily available, then leave heavy performance and visual acceptance to owner. Prefer one focused implementation commit.
-
-## 12. Acceptance checklist (owner to validate in Godot)
-
-- [ ] Dreadnaught appears as **large pointed rectangular hull** with **four clearly distinct corner guns** and is visibly Tier 5 compared with Tier 3 Hexagon.
-- [ ] Main hull acquires nearest enemy and **continues moving toward it while guns fire**; turning is deliberately slow.
-- [ ] All four turrets have independent minimum/maximum range, targets, cooldowns, direction and muzzle origins; nearest valid is measured **from the respective turret**.
-- [ ] Enemy too near one gun's minimum does not disable other guns; same enemy can be chosen independently by multiple guns.
-- [ ] Threats on left, right, front and behind can all be shot by their nearest qualifying turret; turrets can fire simultaneously.
-- [ ] Projectiles are visibly tiny, fast and frequent but pooled/batched; regular projectile collision, LOS and other units' firing remain unchanged.
-- [ ] **Front-only** moving nose crush damages/kills Circle infantry effectively; **side and rear** overlap cause **no contact damage**.
-- [ ] Stationary hull does not repeatedly deal front crush; each victim is not damaged 60 times per second while continuously overlapping.
-- [ ] Heavy soldiers, walls and tight corridors provide realistic resistance; smaller infantry cannot shove the hull implausibly.
-- [ ] Normal/Strong separation, target acquisition budgets, obstacles/grounding, death feedback and multi-faction rules work.
-- [ ] Painter, saved levels, benchmark, Fortress Defense, player orders, production, spawn clearance and scarcity cap behave correctly.
-- [ ] Compare 0, 1, 2 and 3 Dreadnaughts among 10k–20k soldiers; check projectiles, targeting, separation and worst-frame metrics without assuming perfect 60 FPS.
-
-### Explicitly out of scope
-
-No 5th central turret; no side/rear ram damage; no independent turret health; no explosive ammunition, ammo/reload inventory, shield systems, deployable cover, stances, directional armor, special boss AI, or player-controlled gun targeting. These are potential later iterations **only if the owner requests them**.
-
-**Codex instruction:** Preserve the owner's gameplay decisions; you may adapt the technical architecture after source review. Do not implement this merely because the plan file was added to the repository.
+**Codex handoff:** Treat as a design proposal that may be adapted to current code. The owner must separately authorize implementation. For collision architecture especially, prefer an explicit explanation of alternatives over a silently unsafe shortcut.

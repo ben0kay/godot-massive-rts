@@ -7,6 +7,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — per-type size tuning and owner checks.
 - **[SKIRM1 Skirmisher implementation plan](SKIRM1_IMPLEMENTATION_PLAN.md)** — **planned only**: closest-enemy ranged targeting, bounded all-direction retreat AI, and shared benchmark/Command Sandbox integration.
+- **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 super-heavy hull with 4 independent miniguns, nearest-target pursuit and front-only crush damage; includes large-footprint separation safeguards.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 pointed super-heavy hull, four independent nearest-target miniguns with individual min/max ranges, and front-only crush damage.
 - **[Starting roster and stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
 
