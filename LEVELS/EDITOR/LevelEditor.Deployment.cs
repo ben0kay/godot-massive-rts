@@ -57,10 +57,12 @@ public partial class LevelEditor
         UpdateTool();
     }
 
+    private BuildingDefinition SelectedDefense => defenseDefinitions[defensePicker.Selected - 1];
+
     private Vector3 TowerCursor()
     {
-        var size = CommandLaserPlacement.FootprintAt(Vector3.Zero).Max -
-            CommandLaserPlacement.FootprintAt(Vector3.Zero).Min;
+        var area = CommandLaserPlacement.FootprintAt(Vector3.Zero, SelectedDefense);
+        Vector2 size = area.Max - area.Min;
         return new Vector3(size.X, 1, size.Y);
     }
 
@@ -78,7 +80,7 @@ public partial class LevelEditor
         if (area.Min.X >= -half && area.Min.Y >= -half && area.Max.X <= half && area.Max.Y <= half &&
             relief <= 0.5f && !obstacles.Any(other => area.Min.X < other.Max.X && area.Max.X > other.Min.X &&
                 area.Min.Y < other.Max.Y && area.Max.Y > other.Min.Y)) return true;
-        SetStatus("A laser tower needs a clear, flat footprint inside the map.");
+        SetStatus("A defense needs a clear, flat footprint inside the map.");
         return false;
     }
 

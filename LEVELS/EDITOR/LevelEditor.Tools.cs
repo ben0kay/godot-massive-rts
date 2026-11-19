@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, LaserTower, DeploymentLine }
+    private enum Tool { Select, Move, Erase, Rock, Water, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -31,21 +31,21 @@ public partial class LevelEditor
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
+            if (entry is Tool.Soldiers or Tool.Defense) continue;
             if (mode.Preset && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
             if (!mode.Preset && entry is Tool.Deployment or Tool.DeploymentLine) continue;
             toolPicker.AddItem(entry switch
             {
-                Tool.DeploymentLine => "Set deployment line", Tool.LaserTower => "Place laser tower",
+                Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Hill => "Place hill",
-                Tool.Wall => "Place solid wall", Tool.Soldiers => "Place soldier formation",
+                Tool.Wall => "Place solid wall",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
                 _ => entry.ToString()
             }, (int)entry);
         }
-        toolPicker.Select(0);
-        UpdateTool();
+        SwitchTool(Tool.Select);
     }
 
     private void EnsurePaint()
@@ -112,13 +112,19 @@ public partial class LevelEditor
     // =========================================================
     private void UpdateTool()
     {
-        tool = (Tool)toolPicker.GetSelectedId();
         rectangleStart = null;
-        foreach (var child in context.GetChildren())
+        foreach (var section in new[] { mapToolsContext, unitContext, defenseContext })
+            foreach (var child in section.GetChildren())
+            {
+                section.RemoveChild(child);
+                child.QueueFree();
+            }
+        context = tool switch
         {
-            context.RemoveChild(child);
-            child.QueueFree();
-        }
+            Tool.Soldiers => unitContext,
+            Tool.Defense => defenseContext,
+            _ => mapToolsContext
+        };
         switch (tool)
         {
             case Tool.Select:
@@ -150,7 +156,8 @@ public partial class LevelEditor
             case Tool.DeploymentLine:
                 DeploymentLineTools();
                 break;
-            case Tool.LaserTower:
+            case Tool.Defense:
+                Heading(context, "Click the map to place this defense.", 15);
                 if (!mode.Preset) Choice(context, "Faction", new[] { "Blue", "Red" }, redTower ? 1 : 0, index => redTower = index == 1);
                 break;
             case Tool.Soldiers:
@@ -178,7 +185,9 @@ public partial class LevelEditor
 
     private void SwitchTool(Tool next)
     {
+        tool = next;
         toolPicker.Select(toolPicker.GetItemIndex((int)next));
+        if (next != Tool.Defense) defensePicker.Select(0);
         UpdateTool();
     }
 
@@ -312,7 +321,7 @@ public partial class LevelEditor
         {
             Tool.Wall => new(wallWidth, 1, wallDepth),
             Tool.Citadel => new(10, 1, 10),
-            Tool.LaserTower => TowerCursor(),
+            Tool.Defense => TowerCursor(),
             Tool.Carbon or Tool.Fabricator => new(6, 1, 6),
             _ when brush => new(Grid * (brushRadius * 2 - 1), 1, Grid * (brushRadius * 2 - 1)),
             _ => Vector3.One * 1.5f
@@ -476,8 +485,8 @@ public partial class LevelEditor
                 formation.RotationDegrees = new Vector3(0, yaw, 0);
                 node = formation; parent = "StartingUnits";
                 break;
-            case Tool.LaserTower:
-                node = new CommandLaserPlacement { Name = "LaserTower", Red = mode.Preset || redTower };
+            case Tool.Defense:
+                node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.Preset || redTower };
                 parent = "StartingDefenses";
                 break;
             case Tool.Fabricator:

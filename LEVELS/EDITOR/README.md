@@ -14,9 +14,9 @@ Fortress Defense uses the existing command scene structure and the shared moveme
 
 ### Deployment layout
 
-- Arrow keys pan the map while the editing canvas is active. **Map Size / Settings** sets the square map size.
+- Arrow keys pan the map while the editing canvas is active. **Map Size…** opens the width and depth setting at the top of the dialog. Select **Apply settings** to resize the map.
 - In Preset Battles, choose **Set deployment line**, select X or Z and click the map to place the split. **Flip Blue** reverses which side Blue can use. New maps start with a centered Z split. Existing maps without a saved line retain their painted zones until a split is enabled. Painted Blue zones can further narrow the legal Blue side.
-- Choose **Rectangle fill** under the soldier tool. Drag to fill and right-drag to erase. A lower density scale packs soldiers closer, with minimum spacing set by the unit footprint. Each fill is one undoable edit. The top bar shows authored soldier totals and their estimated strength using Battle Rating. Preset Blue strength depends on the army the player eventually deploys.
-- Use **Place laser tower** to author a defense. Fortress Defense starts with the selected faction's towers in combat. Preset Battles saves and previews Red towers for the future campaign battle loop.
+- Under **Unit placement**, click **Place units** and choose **Rectangle fill**. Drag to fill and right-drag to erase. A lower density scale packs soldiers closer, with minimum spacing set by the unit footprint. Each fill is one undoable edit. The top bar shows authored soldier totals and their estimated strength using Battle Rating. Preset Blue strength depends on the army the player eventually deploys.
+- Choose a building from the **Defenses** dropdown, then click the map to place it. Options come from the building catalogue. Fortress Defense starts with the selected faction's towers in combat. Preset Battles saves and previews Red towers for the future campaign battle loop.
 
 **Show grid** displays the same 2-unit cells used by grid snapping and painting, with a heavier line every eight cells. It defaults to on and can be toggled independently of snapping. Layout previews hide the grid.

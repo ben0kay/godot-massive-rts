@@ -351,3 +351,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-19 | Level editor deployment tools | Source implemented.** Reserved arrow keys for camera panning and added a reversible Preset Battles deployment split, benchmark-style rectangle fills, live soldier strength, and authored laser towers. Awaiting Godot .NET validation.
 
 - **2026-11-19 | Level editor visible grid | Source implemented.** Added a default-on, zoom-aware placement grid with an independent visibility toggle.
+
+- **2026-11-19 | Level editor placement controls | Source implemented.** Split unit and defense placement into sidebar sections, populated defenses from the building catalogue, and surfaced map size at the top of its settings dialog.

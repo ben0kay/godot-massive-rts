@@ -185,7 +185,7 @@ public partial class CommandSandbox : Node3D
         if (GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
             foreach (Node child in defenses.GetChildren())
                 if (child is CommandLaserPlacement tower)
-                    buildings.AddStartingTower(tower.GlobalPosition, tower.Faction);
+                    buildings.AddStartingTower(tower);
         if (SpawnDefaultBlueSquad)
         {
             var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");

@@ -8,10 +8,11 @@ namespace MassiveRts;
 
 public partial class LevelEditor : Node
 {
-    private VBoxContainer start, toolsPanel, context, toolbar;
+    private VBoxContainer start, toolsPanel, context, toolbar, mapToolsContext, unitContext, defenseContext;
     private Control interfaceRoot;
     private Label status, startStatus, strength;
-    private OptionButton modes, levels, toolPicker;
+    private OptionButton modes, levels, toolPicker, defensePicker;
+    private BuildingDefinition[] defenseDefinitions;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
     private SpinBox mapSize;
@@ -43,6 +44,8 @@ public partial class LevelEditor : Node
         }
         units = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
             .Where(unit => unit != null).ToArray();
+        defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres")
+            .Definitions.Where(definition => definition != null).ToArray();
         BuildInterface();
         ShowStart();
     }
@@ -86,7 +89,7 @@ public partial class LevelEditor : Node
         Button(buttons, "Load / New", ShowStart);
         Button(buttons, "Undo", () => ApplyHistory(undo, redo, true));
         Button(buttons, "Redo", () => ApplyHistory(redo, undo, false));
-        Button(buttons, "Map Size / Settings", ShowMapSettings);
+        Button(buttons, "Map Size…", ShowMapSettings);
         Button(buttons, "Preview Layout", ToggleLayout);
         Button(buttons, "Test Fortress", TestFortress);
         Button(buttons, "Return from Test", StopTest);
@@ -101,7 +104,7 @@ public partial class LevelEditor : Node
         Heading(toolsPanel, "Map tools", 22);
         toolPicker = new OptionButton();
         toolsPanel.AddChild(toolPicker);
-        toolPicker.ItemSelected += _ => { selected = null; UpdateTool(); };
+        toolPicker.ItemSelected += index => { selected = null; SwitchTool((Tool)toolPicker.GetItemId((int)index)); };
         planView = new CheckBox { Text = "Top-down view", ButtonPressed = true };
         planView.Toggled += _ => FrameEditor();
         toolsPanel.AddChild(planView);
@@ -110,8 +113,27 @@ public partial class LevelEditor : Node
         showGrid = new CheckBox { Text = "Show grid", ButtonPressed = true };
         showGrid.Toggled += _ => UpdateEditorGround();
         toolsPanel.AddChild(showGrid);
-        context = new VBoxContainer();
-        toolsPanel.AddChild(context);
+        mapToolsContext = new VBoxContainer();
+        toolsPanel.AddChild(mapToolsContext);
+        toolsPanel.AddChild(new HSeparator());
+        Heading(toolsPanel, "Unit placement", 18);
+        Button(toolsPanel, "Place units", () => { selected = null; SwitchTool(Tool.Soldiers); });
+        unitContext = new VBoxContainer();
+        toolsPanel.AddChild(unitContext);
+        toolsPanel.AddChild(new HSeparator());
+        Heading(toolsPanel, "Defenses", 18);
+        defensePicker = new OptionButton();
+        defensePicker.AddItem("Choose a defense…");
+        foreach (var definition in defenseDefinitions) defensePicker.AddItem(definition.DisplayName);
+        defensePicker.ItemSelected += index =>
+        {
+            selected = null;
+            SwitchTool(index > 0 ? Tool.Defense : Tool.Select);
+        };
+        toolsPanel.AddChild(defensePicker);
+        defenseContext = new VBoxContainer();
+        toolsPanel.AddChild(defenseContext);
+        toolsPanel.AddChild(new HSeparator());
         var help = Heading(toolsPanel, "WASD / arrows to pan\nWheel to zoom · Home to frame\nCtrl+Z / Ctrl+Shift+Z", 15);
         help.Modulate = new Color("#b6c9d5");
 

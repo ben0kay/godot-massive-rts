@@ -300,29 +300,35 @@ internal sealed class CommandBuildings
         if (!CanPlace(area, type) || !Carbon.TrySpend(Cost(type))) return false;
         float height = FoundationHeight(area, out _);
         if (type == CommandBuildType.LaserTower)
-            AddTower(area, Factions.Blue, height);
+            AddTower(area, Factions.Blue, height, laserDefinition, laserStats);
         else
             Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition,
                 units.Catalog.DamageRules, Release, groundHeight: height));
         return true;
     }
 
-    internal void AddStartingTower(Vector3 point, byte faction)
+    internal void AddStartingTower(CommandLaserPlacement placement)
     {
-        var area = Snap(point, CommandBuildType.LaserTower);
+        var definition = placement.EffectiveDefinition;
+        if (!defenseCatalog.TryResolve(definition.Id, out int type))
+        {
+            GD.PushWarning($"Starting defense '{definition.Id}' is missing from the building catalogue.");
+            return;
+        }
+        var area = placement.Footprint(placement.GlobalPosition);
         float height = FoundationHeight(area, out float relief);
         if (!FitsMap(area) || relief > 0.5f || defenses?.ActiveCount >= LaserTowerLimit || OverlapsPaint(area) ||
             authoredWalls.Any(wall => Overlaps(area.Min, area.Max, wall)) ||
             deposits.Any(deposit => Overlaps(area.Min, area.Max, deposit.Area)) ||
             structures.Any(structure => Overlaps(area.Min, area.Max, structure.Area)))
         {
-            GD.PushWarning("A starting laser tower was skipped because its site is blocked or uneven, or the tower limit was reached.");
+            GD.PushWarning("A starting defense was skipped because its site is blocked or uneven, or the tower limit was reached.");
             return;
         }
-        AddTower(area, faction, height);
+        AddTower(area, placement.Faction, height, definition, defenseCatalog[type]);
     }
 
-    private void AddTower(ObstacleRectangle area, byte faction, float height)
+    private void AddTower(ObstacleRectangle area, byte faction, float height, BuildingDefinition definition, BuildingStats stats)
     {
         if (defenses == null)
         {
@@ -331,9 +337,9 @@ internal sealed class CommandBuildings
             defenseRenderer.Initialize(Array.Empty<BuildingPlacement>(), defenseCatalog, TowerBaseHeight, battle: true);
             defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
         }
-        var tower = new CommandStructure(area, laserStats.Health, faction, laserDefinition,
+        var tower = new CommandStructure(area, stats.Health, faction, definition,
             units.Catalog.DamageRules, readyView: new Node3D { Name = "LaserTower" }, groundHeight: height);
-        defenses.AddTower(tower, laserStats, TowerBaseHeight, height);
+        defenses.AddTower(tower, stats, TowerBaseHeight, height);
         Add(tower);
     }
 

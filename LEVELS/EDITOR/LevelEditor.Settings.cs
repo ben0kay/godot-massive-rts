@@ -15,29 +15,31 @@ public partial class LevelEditor
         if (map == null || runningTest != null) return;
         EndPaint();
         settingsDialog?.QueueFree();
-        settingsDialog = new AcceptDialog { Title = $"{campaign.DisplayName} · Map Settings" };
+        settingsDialog = new AcceptDialog { Title = $"{campaign.DisplayName} · Map Size and Settings" };
         interfaceRoot.AddChild(settingsDialog);
         var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(510, 480),
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        settingsDialog.AddChild(scroll);
+        var dialogContent = new VBoxContainer();
+        settingsDialog.AddChild(dialogContent);
+        dialogContent.AddChild(scroll);
         var form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         scroll.AddChild(form);
+        mapSize = Number(form, "Map width and depth", metadata.MapSize, 64, LevelDefinition.DefaultMapSize, 4);
         Heading(form, "Level title", 15);
         levelTitle = new LineEdit { Text = metadata.DisplayName };
         form.AddChild(levelTitle);
         Heading(form, "Description", 15);
         levelDescription = new TextEdit { Text = metadata.Description, CustomMinimumSize = new Vector2(0, 70), WrapMode = TextEdit.LineWrappingMode.Boundary };
         form.AddChild(levelDescription);
-        mapSize = Number(form, "Map width and depth", metadata.MapSize, 64, LevelDefinition.DefaultMapSize, 4);
         var zoom = Number(form, "Opening camera zoom", map.OpeningCameraSize, 30, 1800);
         var cameraMarker = map.GetNode<Marker3D>("CameraStart");
         var x = Number(form, "Camera focus X", cameraMarker.Position.X, -2500, 2500, 0.25);
         var z = Number(form, "Camera focus Z", cameraMarker.Position.Z, -2500, 2500, 0.25);
         var yawDegrees = Number(form, "Camera yaw", cameraMarker.RotationDegrees.Y, -180, 360, 0.25);
         Func<(Action Undo, Action Redo)> readRules = mode.Preset ? PresetForm(form) : FortressForm(form);
-        var errorLabel = Heading(form, "", 15);
+        var errorLabel = Heading(dialogContent, "", 15);
         errorLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Button(form, "Apply settings", () =>
+        Button(dialogContent, "Apply settings", () =>
         {
             try
             {

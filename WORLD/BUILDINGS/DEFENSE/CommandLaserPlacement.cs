@@ -1,4 +1,4 @@
-// Stores one authored laser tower using the shared laser definition and footprint.
+// Stores one authored defense and preserves the laser-tower default for existing scenes.
 using Godot;
 
 namespace MassiveRts;
@@ -8,14 +8,15 @@ public partial class CommandLaserPlacement : Marker3D
     internal const string DefinitionPath = "res://WORLD/BUILDINGS/DEFINITIONS/LaserTower001.tres";
     internal const float BaseHeight = 1f;
     private static BuildingDefinition definition;
+    [Export] public BuildingDefinition Definition { get; set; }
+    internal BuildingDefinition EffectiveDefinition => Definition ?? (definition ??= GD.Load<BuildingDefinition>(DefinitionPath));
     [Export] public bool Red { get; set; }
     internal byte Faction => Red ? Factions.Red : Factions.Blue;
 
-    internal ObstacleRectangle Footprint(Vector3 center) => FootprintAt(center);
+    internal ObstacleRectangle Footprint(Vector3 center) => FootprintAt(center, EffectiveDefinition);
 
-    internal static ObstacleRectangle FootprintAt(Vector3 center)
+    internal static ObstacleRectangle FootprintAt(Vector3 center, BuildingDefinition definition)
     {
-        definition ??= GD.Load<BuildingDefinition>(DefinitionPath);
         int width = Mathf.Clamp(definition.Width, 1, 16), depth = Mathf.Clamp(definition.Depth, 1, 16);
         const float grid = DeploymentLayout.CellSize;
         return new ObstacleRectangle(Mathf.RoundToInt(center.X / grid - width * 0.5f),
