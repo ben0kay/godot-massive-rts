@@ -1,0 +1,367 @@
+// Hosts the F6 mode picker, shared map controls and save/load workflow.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+
+namespace MassiveRts;
+
+public partial class LevelEditor : Node
+{
+    private VBoxContainer start, toolsPanel, context, toolbar;
+    private Control interfaceRoot;
+    private Label status, startStatus;
+    private OptionButton modes, levels, toolPicker;
+    private LineEdit levelTitle;
+    private TextEdit levelDescription;
+    private SpinBox mapSize;
+    private CheckBox planView, snap;
+    private ConfirmationDialog confirmation;
+    private AcceptDialog settingsDialog;
+    private Action accepted;
+    private CampaignCatalog catalog;
+    private LevelEditorMode mode;
+    private CampaignDefinition campaign;
+    private LevelDefinition[] listed;
+    private CommandSandbox map, runningTest;
+    private IsometricCamera camera;
+    private LevelDefinition metadata;
+    private string activeId;
+    private bool dirty, previewing;
+    private UnitDefinition[] units;
+    private readonly Stack<(Action Undo, Action Redo)> undo = new(), redo = new();
+    private readonly List<Node3D> detached = new();
+
+    // =========================================================
+    public override void _Ready()
+    {
+        if (!LevelEditorSave.CanWrite)
+        {
+            var message = new Label { Text = "Open LevelEditor.tscn in the Godot editor and press F6." };
+            AddChild(message);
+            return;
+        }
+        units = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
+            .Where(unit => unit != null).ToArray();
+        BuildInterface();
+        ShowStart();
+    }
+
+    // =========================================================
+    private void BuildInterface()
+    {
+        var layer = new CanvasLayer { Layer = 30 };
+        AddChild(layer);
+        interfaceRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+        layer.AddChild(interfaceRoot);
+        interfaceRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+
+        var home = Panel(interfaceRoot, Control.LayoutPreset.Center, -295, -180, 295, 180);
+        start = new VBoxContainer { CustomMinimumSize = new Vector2(540, 0) };
+        home.AddChild(start);
+        Heading(start, "Campaign Level Editor", 34);
+        Heading(start, "Choose a campaign", 18);
+        modes = new OptionButton();
+        start.AddChild(modes);
+        modes.ItemSelected += _ => RefreshLevelList();
+        Button(start, "New Level", () => Open(null));
+        levels = new OptionButton();
+        start.AddChild(levels);
+        Button(start, "Load Existing Level", () =>
+        {
+            if (levels.Selected >= 0) Open(listed[levels.Selected]);
+        });
+        startStatus = Heading(start, "", 15);
+        startStatus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        Button(start, "Return to current level", () => ShowEditor());
+
+        var bar = Panel(interfaceRoot, Control.LayoutPreset.TopWide, 12, 12, -12, 100);
+        toolbar = new VBoxContainer();
+        bar.AddChild(toolbar);
+        var buttons = new HBoxContainer();
+        toolbar.AddChild(buttons);
+        Heading(buttons, "Level Editor   ", 22);
+        Button(buttons, "Save", () => { if (activeId == null) SaveAs(); else RequestSave(activeId); });
+        Button(buttons, "Save As", SaveAs);
+        Button(buttons, "Load / New", ShowStart);
+        Button(buttons, "Undo", () => ApplyHistory(undo, redo, true));
+        Button(buttons, "Redo", () => ApplyHistory(redo, undo, false));
+        Button(buttons, "Map Settings", ShowMapSettings);
+        Button(buttons, "Preview Layout", ToggleLayout);
+        Button(buttons, "Test Fortress", TestFortress);
+        Button(buttons, "Return from Test", StopTest);
+        status = Heading(toolbar, "", 15);
+
+        var sidebar = Panel(interfaceRoot, Control.LayoutPreset.LeftWide, 12, 110, 310, -12);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        sidebar.AddChild(scroll);
+        toolsPanel = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(toolsPanel);
+        Heading(toolsPanel, "Map tools", 22);
+        toolPicker = new OptionButton();
+        toolsPanel.AddChild(toolPicker);
+        toolPicker.ItemSelected += _ => { selected = null; UpdateTool(); };
+        planView = new CheckBox { Text = "Top-down view", ButtonPressed = true };
+        planView.Toggled += _ => FrameEditor();
+        toolsPanel.AddChild(planView);
+        snap = new CheckBox { Text = "Snap to grid", ButtonPressed = true };
+        toolsPanel.AddChild(snap);
+        context = new VBoxContainer();
+        toolsPanel.AddChild(context);
+        var help = Heading(toolsPanel, "WASD / arrows to pan\nWheel to zoom · Home to frame\nCtrl+Z / Ctrl+Shift+Z", 15);
+        help.Modulate = new Color("#b6c9d5");
+
+        confirmation = new ConfirmationDialog();
+        interfaceRoot.AddChild(confirmation);
+        confirmation.Confirmed += () => { var action = accepted; accepted = null; action?.Invoke(); };
+        confirmation.Canceled += () => accepted = null;
+    }
+
+    // =========================================================
+    private void ShowStart()
+    {
+        if (runningTest != null) return;
+        EndPaint();
+        cursor?.Hide();
+        start.GetParent<Control>().Show();
+        toolbar.GetParent<Control>().Hide();
+        toolsPanel.GetParent().GetParent<Control>().Hide();
+        if (map != null) map.Hide();
+        try
+        {
+            catalog = CampaignCatalog.Load(fresh: true);
+            modes.Clear();
+            foreach (var entry in catalog.Campaigns)
+            {
+                if (!LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id)) continue;
+                modes.AddItem(entry.DisplayName);
+                modes.SetItemMetadata(modes.ItemCount - 1, entry.Id);
+            }
+            if (modes.ItemCount > 0) modes.Select(0);
+            RefreshLevelList();
+        }
+        catch (Exception error) { startStatus.Text = error.Message; }
+        (start.GetChild(start.GetChildCount() - 1) as Control).Visible = map != null;
+    }
+
+    private void RefreshLevelList()
+    {
+        levels.Clear();
+        listed = Array.Empty<LevelDefinition>();
+        if (modes.Selected < 0) return;
+        string modeId = modes.GetItemMetadata(modes.Selected).AsString();
+        listed = CampaignCatalog.OrderedLevels(catalog.Campaigns.Single(entry => entry.Id == modeId));
+        foreach (var level in listed) levels.AddItem($"{level.Id}  ·  {level.DisplayName}");
+        if (listed.Length > 0) levels.Select(0);
+        startStatus.Text = listed.Length == 0 ? "This campaign has no levels yet." : "";
+    }
+
+    private void Open(LevelDefinition existing)
+    {
+        if (modes.Selected < 0) return;
+        var adapter = LevelEditorMode.Supported.Single(entry => entry.CampaignId == modes.GetItemMetadata(modes.Selected).AsString());
+        if (dirty)
+        {
+            Confirm("Discard unsaved changes?", "Opening another map replaces this editing session.", () => OpenMap(adapter, existing));
+            return;
+        }
+        OpenMap(adapter, existing);
+    }
+
+    private void OpenMap(LevelEditorMode adapter, LevelDefinition existing)
+    {
+        CommandSandbox next;
+        LevelDefinition nextMetadata;
+        try { next = adapter.Open(existing, out nextMetadata); }
+        catch (Exception error) { startStatus.Text = error.Message; return; }
+        if (map != null)
+        {
+            RemoveChild(map);
+            map.QueueFree();
+        }
+        foreach (var node in detached)
+            if (IsInstanceValid(node) && node.GetParent() == null) node.Free();
+        detached.Clear();
+        undo.Clear();
+        redo.Clear();
+        selected = null;
+        layout = null;
+        cursor = null;
+        dirty = previewing = false;
+        mode = adapter;
+        campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
+        activeId = existing?.Id;
+        map = next;
+        metadata = nextMetadata;
+        AddChild(map);
+        EnsurePaint();
+        camera = new IsometricCamera();
+        map.AddChild(camera);
+        camera.MakeCurrent();
+        cursor = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Mesh = new BoxMesh { Size = new Vector3(1, 0.08f, 1),
+                Material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    AlbedoColor = new Color("#ffd384") } }, Visible = false };
+        map.AddChild(cursor, false, InternalMode.Back);
+        SetTools();
+        FrameEditor();
+        RefreshMap();
+        ShowEditor();
+        SetStatus();
+    }
+
+    private void ShowEditor()
+    {
+        if (map == null) return;
+        start.GetParent<Control>().Hide();
+        toolbar.GetParent<Control>().Show();
+        toolsPanel.GetParent().GetParent<Control>().Visible = !previewing && runningTest == null;
+        map.Visible = runningTest == null;
+    }
+
+    private void SetStatus(string message = "") =>
+        status.Text = $"{campaign.DisplayName}   /   {activeId ?? "New level"}{(dirty ? "  •  Unsaved" : "")}    {message}";
+
+    // =========================================================
+    private void SaveAs()
+    {
+        if (map == null || runningTest != null) return;
+        var input = new LineEdit { Text = activeId ?? "", PlaceholderText = "Level003", CustomMinimumSize = new Vector2(340, 0) };
+        var dialog = new ConfirmationDialog { Title = "Save level as" };
+        dialog.AddChild(input);
+        interfaceRoot.AddChild(dialog);
+        void Submit()
+        {
+            dialog.Hide();
+            dialog.QueueFree();
+            RequestSave(input.Text.Trim());
+        }
+        dialog.Confirmed += Submit;
+        dialog.Canceled += dialog.QueueFree;
+        input.TextSubmitted += _ => Submit();
+        dialog.PopupCentered();
+        input.GrabFocus();
+        input.SelectAll();
+    }
+
+    private void RequestSave(string id)
+    {
+        if (map == null || runningTest != null) return;
+        EndPaint();
+        LevelEditorSave.Destination target;
+        try { target = LevelEditorSave.Inspect(mode, id); }
+        catch (Exception error) { SetStatus(error.Message); return; }
+        void Save()
+        {
+            try
+            {
+                LevelEditorSave.Write(mode, target, map, metadata);
+                activeId = id;
+                dirty = false;
+                SetStatus($"Saved {target.Scene}");
+            }
+            catch (Exception error) { SetStatus(error.Message); }
+        }
+        if (target.Existing == null) Save();
+        else Confirm($"Overwrite {campaign.DisplayName} / {id}?",
+            "This replaces the scene and level settings. A recovery copy is kept in .godot/level-editor.", Save);
+    }
+
+    private void Confirm(string title, string message, Action action)
+    {
+        accepted = action;
+        confirmation.Title = title;
+        confirmation.DialogText = message;
+        confirmation.PopupCentered();
+    }
+
+    // =========================================================
+    private void ToggleLayout()
+    {
+        if (map == null || runningTest != null) return;
+        previewing = !previewing;
+        if (previewing)
+        {
+            cursor.Hide();
+            map.FrameOpening(camera);
+            camera.TopDown = false;
+        }
+        else FrameEditor();
+        RefreshLayout();
+        ShowEditor();
+        SetStatus(previewing ? "Opening layout preview · click Preview Layout again to edit" : "");
+    }
+
+    private void TestFortress()
+    {
+        if (map == null || runningTest != null) return;
+        if (mode.Preset) { SetStatus("Use Preview Layout to inspect a Preset Battle."); return; }
+        EndPaint();
+        try { LevelEditorSave.ValidateContent(mode, map); }
+        catch (Exception error) { SetStatus(error.Message); return; }
+        var packed = new PackedScene();
+        if (packed.Pack(map) != Error.Ok || packed.Instantiate() is not CommandSandbox test)
+        {
+            SetStatus("Could not create a temporary test scene.");
+            return;
+        }
+        map.Hide();
+        camera.ProcessMode = ProcessModeEnum.Disabled;
+        runningTest = test;
+        AddChild(test);
+        ShowEditor();
+        SetStatus("Temporary Fortress test · use Return from Test to resume editing");
+    }
+
+    private void StopTest()
+    {
+        if (runningTest == null) return;
+        RemoveChild(runningTest);
+        runningTest.QueueFree();
+        runningTest = null;
+        camera.ProcessMode = ProcessModeEnum.Inherit;
+        camera.MakeCurrent();
+        ShowEditor();
+        SetStatus();
+    }
+
+    // =========================================================
+    private static PanelContainer Panel(Control parent, Control.LayoutPreset anchor, float left, float top, float right, float bottom)
+    {
+        var panel = new PanelContainer();
+        parent.AddChild(panel);
+        panel.SetAnchorsAndOffsetsPreset(anchor);
+        panel.OffsetLeft = left; panel.OffsetTop = top; panel.OffsetRight = right; panel.OffsetBottom = bottom;
+        var style = new StyleBoxFlat { BgColor = new Color("#172432ed"),
+            BorderColor = new Color("#40586b"), CornerRadiusTopLeft = 8, CornerRadiusTopRight = 8,
+            CornerRadiusBottomLeft = 8, CornerRadiusBottomRight = 8,
+            BorderWidthTop = 1, BorderWidthBottom = 1, BorderWidthLeft = 1, BorderWidthRight = 1,
+            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 10, ContentMarginBottom = 10 };
+        panel.AddThemeStyleboxOverride("panel", style);
+        return panel;
+    }
+
+    private static Label Heading(Control parent, string text, int size)
+    {
+        var label = new Label { Text = text };
+        label.AddThemeFontSizeOverride("font_size", size);
+        parent.AddChild(label);
+        return label;
+    }
+
+    private static Button Button(Control parent, string text, Action action)
+    {
+        var button = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
+        parent.AddChild(button);
+        button.Pressed += action;
+        return button;
+    }
+
+    private static SpinBox Number(Control parent, string text, double value, double min, double max, double step = 1)
+    {
+        Heading(parent, text, 15);
+        var number = new SpinBox { MinValue = min, MaxValue = max, Step = step, Value = value };
+        parent.AddChild(number);
+        return number;
+    }
+}

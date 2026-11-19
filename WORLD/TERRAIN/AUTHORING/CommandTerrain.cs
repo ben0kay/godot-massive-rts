@@ -40,7 +40,7 @@ public partial class CommandTerrain : Node3D
         return null;
     }
 
-    private void Rebuild(bool force)
+    internal void Rebuild(bool force)
     {
         var hills = new List<Hill>();
         var hash = new HashCode();

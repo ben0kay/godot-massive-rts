@@ -5,7 +5,8 @@ namespace MassiveRts;
 
 internal sealed class CarbonBalance
 {
-    public int Amount { get; private set; } = 10000;
+    public int Amount { get; private set; }
+    public CarbonBalance(int startingAmount = 10000) => Amount = Math.Max(0, startingAmount);
     public bool TrySpend(int cost)
     {
         if (cost < 0 || Amount < cost) return false;

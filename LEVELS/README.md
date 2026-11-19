@@ -1,13 +1,13 @@
 # LEVELS — Campaign Maps
 
-Both Level 001 scenes start as a single editable `Node3D`:
+Campaign scenes are grouped by mode:
 
 | Campaign mode | Stable campaign ID | Level 001 scene |
 | --- | --- | --- |
 | Fortress Defense | `OpenRTS` | `FortressDefense/Level001/Level001.tscn` |
 | Preset Battles | `Campaign001` | `PresetBattles/Level001/Level001.tscn` |
 
-Fortress Defense Level 001 is reserved for manual terrain and object placement in Godot. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
+Fortress Defense Level 001 contains a hand-authored map. Use the [standalone Level Editor](EDITOR/README.md) to create, reopen and register campaign maps through F6. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
 
 **Preset Battles campaign plan:** [PRESET_CAMPAIGN_DESIGN.md](PresetBattles/PRESET_CAMPAIGN_DESIGN.md) describes the intended authored enemy/Blue deployment battles, recruiting, credits, casualty bonuses, upgrades and future intelligence/fog options. These are **planned**, not yet implemented in the blank Preset Battles Level 001.
 
@@ -21,7 +21,7 @@ For exports that use a selected-resource filter, include the menu scenes, UI con
 
 The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. The Ground node is a saved flat plane visible in the editor. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
 
-1. For a playable map, create a new Godot scene inherited from `BENCHMARK/RTS/CommandSandbox.tscn` and save it in your level folder. The current Fortress Defense Level 001 is an empty template. Use the inherited scene as its replacement when you want the command game to run there.
+1. For a playable map, create a new Godot scene inherited from `BENCHMARK/RTS/CommandSandbox.tscn` and save it in your level folder. Existing Fortress Defense Level 001 already inherits the command scene.
 2. Drag `WORLD/OBSTACLES/CommandWall.tscn` into the scene as a child of `Obstacles`. Move or resize the wall in the editor with no rotation. Each wall has its own box dimensions, including duplicates, so the red mesh handles resize one wall at a time. You can also set **Wall Size** directly in the Inspector. Save the level scene to keep those dimensions in play. Walls block movement and line of sight at their actual X/Z mesh bounds. Grid snapping is optional for walls.
 3. Keep walls clear of the starting squad, the Citadel and the spawn markers. Press **F6** with your level open to test unit routing and Fabricator placement. Walls are registered once at startup.
 4. Set the level resource's `ScenePath` to your new scene. For Level 002 or 003, add each new level resource to `FortressDefense/OpenRTS.tres` with its own ID and order.

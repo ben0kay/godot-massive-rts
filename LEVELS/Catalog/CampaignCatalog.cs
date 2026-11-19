@@ -15,9 +15,11 @@ public partial class CampaignCatalog : Resource
 
     // =========================================================
     // Load metadata only. Packed scenes are opened when the player launches a level.
-    public static CampaignCatalog Load()
+    public static CampaignCatalog Load(bool fresh = false)
     {
-        var catalog = GD.Load<CampaignCatalog>(CatalogPath);
+        var catalog = fresh
+            ? ResourceLoader.Load<CampaignCatalog>(CatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep)
+            : GD.Load<CampaignCatalog>(CatalogPath);
         if (catalog == null || catalog.Campaigns == null || catalog.Campaigns.Count == 0)
             throw new InvalidOperationException("The campaign catalog is missing or empty.");
 

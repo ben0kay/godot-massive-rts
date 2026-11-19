@@ -1,0 +1,195 @@
+// Edits level metadata and mode-specific deployment or wave rules as one undoable change.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Godot;
+using Waves = Godot.Collections.Array<MassiveRts.WaveDefinition>;
+
+namespace MassiveRts;
+
+public partial class LevelEditor
+{
+    // =========================================================
+    private void ShowMapSettings()
+    {
+        if (map == null || runningTest != null) return;
+        EndPaint();
+        settingsDialog?.QueueFree();
+        settingsDialog = new AcceptDialog { Title = $"{campaign.DisplayName} · Map Settings" };
+        interfaceRoot.AddChild(settingsDialog);
+        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(510, 480),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        settingsDialog.AddChild(scroll);
+        var form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        scroll.AddChild(form);
+        Heading(form, "Level title", 15);
+        levelTitle = new LineEdit { Text = metadata.DisplayName };
+        form.AddChild(levelTitle);
+        Heading(form, "Description", 15);
+        levelDescription = new TextEdit { Text = metadata.Description, CustomMinimumSize = new Vector2(0, 70), WrapMode = TextEdit.LineWrappingMode.Boundary };
+        form.AddChild(levelDescription);
+        mapSize = Number(form, "Map width and depth", metadata.MapSize, 64, LevelDefinition.DefaultMapSize, 4);
+        var zoom = Number(form, "Opening camera zoom", map.OpeningCameraSize, 30, 1800);
+        var cameraMarker = map.GetNode<Marker3D>("CameraStart");
+        var x = Number(form, "Camera focus X", cameraMarker.Position.X, -2500, 2500, 0.25);
+        var z = Number(form, "Camera focus Z", cameraMarker.Position.Z, -2500, 2500, 0.25);
+        var yawDegrees = Number(form, "Camera yaw", cameraMarker.RotationDegrees.Y, -180, 360, 0.25);
+        Func<(Action Undo, Action Redo)> readRules = mode.Preset ? PresetForm(form) : FortressForm(form);
+        var errorLabel = Heading(form, "", 15);
+        errorLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        Button(form, "Apply settings", () =>
+        {
+            try
+            {
+                string title = levelTitle.Text.Trim(), description = levelDescription.Text;
+                if (title.Length == 0) throw new InvalidOperationException("Enter a level title.");
+                var before = (metadata.DisplayName, metadata.Description, metadata.MapSize, map.OpeningCameraSize, cameraMarker.Transform);
+                var after = (title, description, (float)mapSize.Value, (float)zoom.Value,
+                    new Transform3D(new Basis(Vector3.Up, Mathf.DegToRad((float)yawDegrees.Value)),
+                        new Vector3((float)x.Value, cameraMarker.Position.Y, (float)z.Value)));
+                var rules = readRules();
+                void Apply((string Title, string Description, float Size, float Zoom, Transform3D Camera) values, Action rulesAction)
+                {
+                    metadata.DisplayName = values.Title;
+                    metadata.Description = values.Description;
+                    metadata.MapSize = values.Size;
+                    map.OpeningCameraSize = values.Zoom;
+                    cameraMarker.Transform = values.Camera;
+                    rulesAction();
+                    RefreshMap();
+                    FrameEditor();
+                }
+                Apply(after, rules.Redo);
+                Remember(() => Apply(before, rules.Undo), () => Apply(after, rules.Redo));
+                settingsDialog.Hide();
+                if (after.Item3 < before.Item3) SetStatus("Map size reduced. Content outside the new boundary is retained.");
+            }
+            catch (Exception error) { errorLabel.Text = error.Message; }
+        });
+        settingsDialog.GetOkButton().Text = "Close";
+        settingsDialog.PopupCentered();
+    }
+
+    private Func<(Action Undo, Action Redo)> PresetForm(Control parent)
+    {
+        var rules = map.PresetRules;
+        Heading(parent, "Objective · Eliminate the enemy", 17);
+        var allowance = Number(parent, "Blue unit limit", rules.BlueUnitLimit, 0, 50000);
+        Heading(parent, "Allowed Blue unit types", 15);
+        var allowed = new HashSet<string>(rules.AllowedBlueUnitIds);
+        var checks = new List<(string Id, CheckBox Box)>();
+        var restrict = new CheckBox { Text = "Restrict unit types", ButtonPressed = allowed.Count > 0 };
+        parent.AddChild(restrict);
+        var types = new VBoxContainer { Visible = restrict.ButtonPressed };
+        parent.AddChild(types);
+        restrict.Toggled += on => types.Visible = on;
+        foreach (var unit in units)
+        {
+            var item = new CheckBox { Text = unit.DisplayName, ButtonPressed = allowed.Contains(unit.Id) };
+            types.AddChild(item);
+            checks.Add((unit.Id, item));
+        }
+        return () =>
+        {
+            string[] chosen = restrict.ButtonPressed ? checks.Where(item => item.Box.ButtonPressed).Select(item => item.Id).ToArray() : Array.Empty<string>();
+            if (restrict.ButtonPressed && chosen.Length == 0) throw new InvalidOperationException("Select at least one permitted unit type.");
+            int oldAllowance = rules.BlueUnitLimit, nextAllowance = (int)allowance.Value;
+            string[] oldAllowed = rules.AllowedBlueUnitIds;
+            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; },
+                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen; });
+        };
+    }
+
+    private Func<(Action Undo, Action Redo)> FortressForm(Control parent)
+    {
+        Heading(parent, "Fortress setup", 17);
+        var carbon = Number(parent, "Starting Carbon", map.StartingCarbon, 0, 1000000);
+        var health = Number(parent, "Citadel HP (0 uses definition)", map.CitadelHealth, 0, 50000);
+        var defaultSquad = new CheckBox { Text = "Spawn default Blue squad", ButtonPressed = map.SpawnDefaultBlueSquad };
+        parent.AddChild(defaultSquad);
+        int edge = (int)map.EnemySpawnEdge, pattern = (int)map.EnemySpawnPattern;
+        Choice(parent, "Spawn edge", Enum.GetNames<WaveSpawnEdge>(), edge, value => edge = value);
+        Choice(parent, "Spawn pattern", Enum.GetNames<WaveSpawnPattern>(), pattern, value => pattern = value);
+        var width = Number(parent, "Spawn width", map.EnemySpawnWidth, 1, 5000);
+        var spawnRate = Number(parent, "Units per second (stream / scatter)", map.EnemySpawnRate, 1, 60, 0.25);
+        var rowSize = Number(parent, "Enemies per row", map.EnemiesPerRow, 2, 24);
+        var rowDelay = Number(parent, "Row delay (seconds)", map.EnemyRowDelay, 0.25, 10, 0.25);
+        var waveDelay = Number(parent, "Time between waves (seconds)", map.BetweenWavesSeconds, 1, 120);
+        Heading(parent, "Waves · one per line, e.g. circle_infantry=25, triangle_archer=10", 15).AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        var wavesText = new TextEdit
+        {
+            Text = string.Join("\n", map.WaveDefinitions.Select(wave => string.Join(", ", wave.Enemies.Select(entry => $"{entry.Key}={entry.Value}")))),
+            CustomMinimumSize = new Vector2(0, 145)
+        };
+        parent.AddChild(wavesText);
+        var ids = new OptionButton();
+        foreach (var unit in units) ids.AddItem(unit.Id);
+        parent.AddChild(ids);
+        Button(parent, "Insert selected unit ID", () =>
+        {
+            if (ids.Selected >= 0) wavesText.InsertTextAtCaret(ids.GetItemText(ids.Selected) + "=");
+        });
+
+        return () =>
+        {
+            Waves waves = ParseWaves(wavesText.Text);
+            var before = (map.StartingCarbon, map.CitadelHealth, map.SpawnDefaultBlueSquad, map.EnemySpawnEdge, map.EnemySpawnPattern,
+                map.EnemySpawnWidth, map.EnemySpawnRate, map.EnemiesPerRow, map.EnemyRowDelay, map.BetweenWavesSeconds, map.WaveDefinitions);
+            var after = ((int)carbon.Value, (float)health.Value, defaultSquad.ButtonPressed, (WaveSpawnEdge)edge, (WaveSpawnPattern)pattern,
+                (float)width.Value, (float)spawnRate.Value, (int)rowSize.Value, (float)rowDelay.Value, (float)waveDelay.Value, waves);
+            void Apply((int Carbon, float Health, bool DefaultSquad, WaveSpawnEdge Edge, WaveSpawnPattern Pattern,
+                float Width, float Rate, int RowSize, float RowDelay, float WaveDelay, Waves Waves) values)
+            {
+                map.StartingCarbon = values.Carbon;
+                map.CitadelHealth = values.Health;
+                map.SpawnDefaultBlueSquad = values.DefaultSquad;
+                map.EnemySpawnEdge = values.Edge;
+                map.EnemySpawnPattern = values.Pattern;
+                map.EnemySpawnWidth = values.Width;
+                map.EnemySpawnRate = values.Rate;
+                map.EnemiesPerRow = values.RowSize;
+                map.EnemyRowDelay = values.RowDelay;
+                map.BetweenWavesSeconds = values.WaveDelay;
+                map.WaveDefinitions = values.Waves;
+            }
+            return (() => Apply(before), () => Apply(after));
+        };
+    }
+
+    private Waves ParseWaves(string text)
+    {
+        var waves = new Waves();
+        var ids = units.Select(unit => unit.Id).ToHashSet();
+        int total = 0;
+        foreach (string line in text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var wave = new WaveDefinition();
+            foreach (string entry in line.Split(',', StringSplitOptions.TrimEntries))
+            {
+                string[] pair = entry.Split('=', StringSplitOptions.TrimEntries);
+                if (pair.Length != 2 || !ids.Contains(pair[0]) || !int.TryParse(pair[1], out int count) ||
+                    count < 1 || wave.Enemies.ContainsKey(pair[0]))
+                    throw new InvalidOperationException($"Invalid wave entry '{entry}'. Use a registered unit ID and a positive count once per wave.");
+                if (count > CommandSandbox.WaveUnitCapacity - total)
+                    throw new InvalidOperationException($"Fortress waves support {CommandSandbox.WaveUnitCapacity} enemies in total.");
+                total += count;
+                wave.Enemies.Add(pair[0], count);
+            }
+            waves.Add(wave);
+        }
+        return waves;
+    }
+
+    private void UnitPicker(Control parent, int index, Action<int> changed) =>
+        Choice(parent, "Unit type", units.Select(unit => unit.DisplayName).ToArray(), index, changed);
+
+    private static void Choice(Control parent, string title, string[] options, int index, Action<int> changed)
+    {
+        Heading(parent, title, 15);
+        var picker = new OptionButton();
+        foreach (string option in options) picker.AddItem(option);
+        picker.Select(index);
+        picker.ItemSelected += selected => changed((int)selected);
+        parent.AddChild(picker);
+    }
+}

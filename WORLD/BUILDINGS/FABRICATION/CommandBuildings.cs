@@ -1,6 +1,7 @@
 // Reserves building footprints and releases soldiers into checked exit and destination positions.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace MassiveRts;
@@ -34,7 +35,7 @@ internal sealed class CommandBuildings
     public CitadelWorkerProduction Workers { get; }
     private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
     private ObstacleField field;
-    public readonly CarbonBalance Carbon = new();
+    public readonly CarbonBalance Carbon;
     public CommandStructure Citadel { get; }
     public ObstacleField MovementField => field;
     public ObstacleField CoverField { get; private set; }
@@ -47,8 +48,9 @@ internal sealed class CommandBuildings
     public bool QueueWorker() => Workers.Enqueue(CanOperateCitadel);
 
     public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView, CitadelWorkerSettings workerSettings,
-        ObstacleRectangle[] paintedRocks, ObstacleRectangle[] paintedWater)
+        ObstacleRectangle[] paintedRocks, ObstacleRectangle[] paintedWater, int startingCarbon)
     {
+        Carbon = new CarbonBalance(startingCarbon);
         this.root = root;
         this.units = units;
         this.movement = movement;
@@ -323,12 +325,25 @@ internal sealed class CommandBuildings
         defenses?.Step(units, grid, CoverField, delta, tick, 1f / 60f);
     public void AdvanceDefenseEffects(float delta) => defenseRenderer?.Advance(delta);
 
-    public void AddHostileFabricator(Vector3 point)
+    public void AddHostileFabricator(Vector3 point) => AddStartingFabricator(point, Factions.Red);
+
+    public void AddStartingFabricator(Vector3 point, byte faction)
     {
         var area = Snap(point);
         if (!FitsMap(area) || OverlapsPaint(area)) return;
-        Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Red, fabricatorDefinition,
-            units.Catalog.DamageRules, groundHeight: FoundationHeight(area, out _)));
+        float height = FoundationHeight(area, out float relief);
+        if (faction == Factions.Blue && (relief > 0.5f ||
+            authoredWalls.Any(wall => Overlaps(area.Min, area.Max, wall)) ||
+            deposits.Any(deposit => Overlaps(area.Min, area.Max, deposit.Area)) ||
+            structures.Any(structure => Overlaps(area.Min, area.Max, structure.Area))))
+        {
+            GD.PushWarning("A starting Fabricator overlaps an obstacle or sits on uneven terrain.");
+            return;
+        }
+        var fabricator = new CommandStructure(area, fabricatorDefinition.Health, faction, fabricatorDefinition,
+            units.Catalog.DamageRules, faction == Factions.Blue ? Release : null, groundHeight: height);
+        if (faction == Factions.Blue) fabricator.Construct(float.MaxValue);
+        Add(fabricator);
     }
 
     private void Add(CommandStructure building)

@@ -345,3 +345,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-18 — Added Yellow and a shared faction catalogue for painted battles, unit colours and both army bars. Older deployments keep their faction IDs and battle orders.
 
 - 2026-11-18 — UNIT-TIER1 adds editable physical Size Tier metadata to unit definitions, the Entity Editor and the compiled unit catalogue.
+
+- **2026-11-19 | LEVEL-EDITOR1 | Source implemented.** Added an F6 campaign level editor with shared map authoring, Preset Battles deployment rules, Fortress testing and staged campaign saves with overwrite recovery. Awaiting Godot .NET validation.

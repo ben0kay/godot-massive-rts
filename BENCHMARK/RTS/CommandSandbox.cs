@@ -22,6 +22,9 @@ public partial class CommandSandbox : Node3D
     internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
+    [Export] public PresetBattleRules PresetRules { get; set; }
+    [Export] public int StartingCarbon { get; set; } = 10000;
+    internal bool AuthoringPreview { get; set; }
     private CommandBuildings buildings;
     private CommandBottomHud bottomHud;
     private FortressWaves waves;
@@ -144,23 +147,20 @@ public partial class CommandSandbox : Node3D
             UpdateConfigurationWarnings();
             return;
         }
+        if (AuthoringPreview) return;
         float halfWidth = MapSize * 0.5f;
-        if (GetNodeOrNull<MeshInstance3D>("Ground") is MeshInstance3D ground &&
-            ground.GetActiveMaterial(0) is ShaderMaterial shared)
-        {
-            var material = (ShaderMaterial)shared.Duplicate();
-            material.SetShaderParameter("map_half_width", halfWidth);
-            ground.MaterialOverride = material;
-        }
+        UpdateGroundBounds();
         var camera = new IsometricCamera { MaximumZoomSize = halfWidth * 3f, MapOverviewEnabled = true };
         AddChild(camera);
         camera.MakeCurrent();
+        FrameOpening(camera);
         var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
-        var cameraStart = GetNodeOrNull<Marker3D>("CameraStart");
-        Vector3 cameraFocus = cameraStart?.GlobalPosition ?? Vector3.Zero;
-        cameraFocus.Y += terrain?.At(cameraFocus.X, cameraFocus.Z) ?? 0f;
-        camera.SetOpeningView(cameraFocus, OpeningCameraSize,
-            cameraStart == null ? 45f : Mathf.RadToDeg(cameraStart.GlobalRotation.Y));
+        if (PresetRules != null)
+        {
+            GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile();
+            LevelLayoutPreview.Build(this);
+            return;
+        }
 
         var settings = GD.Load<SimulationSettings>(SimulationSettings.DefaultPath) ?? new SimulationSettings();
         var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(settings.EffectiveMovementSpeedMultiplier);
@@ -177,7 +177,10 @@ public partial class CommandSandbox : Node3D
         var (rocks, water) = paint?.Compile() ??
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(), GetNodeOrNull<Node3D>("Citadel"),
-            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water);
+            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, StartingCarbon);
+        if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
+            foreach (Node child in fabricators.GetChildren())
+                if (child is Node3D marker) buildings.AddStartingFabricator(marker.GlobalPosition, Factions.Blue);
         if (SpawnDefaultBlueSquad)
         {
             var blueSpawn = GetNodeOrNull<Marker3D>("BlueSpawn");
@@ -293,6 +296,24 @@ public partial class CommandSandbox : Node3D
         }
     }
 
+    // =========================================================
+    internal void UpdateGroundBounds()
+    {
+        if (GetNodeOrNull<MeshInstance3D>("Ground") is not MeshInstance3D ground ||
+            ground.GetActiveMaterial(0) is not ShaderMaterial shared) return;
+        var material = ground.MaterialOverride as ShaderMaterial ?? (ShaderMaterial)shared.Duplicate();
+        material.SetShaderParameter("map_half_width", MapSize * 0.5f);
+        ground.MaterialOverride = material;
+    }
+
+    internal void FrameOpening(IsometricCamera camera)
+    {
+        var marker = GetNodeOrNull<Marker3D>("CameraStart");
+        Vector3 focus = marker?.GlobalPosition ?? Vector3.Zero;
+        focus.Y += GetNodeOrNull<CommandTerrain>("Terrain")?.SampleHeight(focus.X, focus.Z) ?? 0f;
+        camera.SetOpeningView(focus, OpeningCameraSize, marker == null ? 45f : Mathf.RadToDeg(marker.GlobalRotation.Y));
+    }
+
     private void SpawnFormation(byte type, byte faction, Vector3 start, float yaw, int count)
     {
         float spacing = 2f * units.Catalog[type].Footprint + 0.3f;
@@ -343,7 +364,7 @@ public partial class CommandSandbox : Node3D
 
     public override void _Process(double delta)
     {
-        if (Engine.IsEditorHint()) return;
+        if (units == null) return;
         deathFeedback.Advance((float)delta);
         deathRenderer.Sync(deathFeedback);
         buildings.AdvanceDefenseEffects((float)delta);
@@ -373,7 +394,7 @@ public partial class CommandSandbox : Node3D
 
     public override void _PhysicsProcess(double delta)
     {
-        if (Engine.IsEditorHint()) return;
+        if (units == null) return;
         bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
         if (waves.Defeat || waves.Victory)
         {
