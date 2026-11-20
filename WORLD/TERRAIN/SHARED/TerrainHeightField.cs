@@ -115,18 +115,38 @@ public sealed class TerrainHeightField
         return high;
     }
 
+    // Use the gradient of the same terrain triangle used for grounding.
+    internal float Grade(Vector3 position, Vector2 direction)
+    {
+        if (!TryCell(position.X, position.Z, out var heights, out int a, out float u, out float v)) return 0f;
+        float near = heights[a], east = heights[a + 1], south = heights[a + Stride];
+        if (u + v <= 1f)
+            return ((east - near) * direction.X + (south - near) * direction.Y) / Spacing;
+        float far = heights[a + Stride + 1];
+        return ((far - south) * direction.X + (far - east) * direction.Y) / Spacing;
+    }
+
     public float At(float x, float z)
     {
-        var chunk = ChunkAt(new Vector2(x, z));
-        if (!chunks.TryGetValue(chunk, out float[] heights)) return 0f;
-        float localX = Mathf.Clamp(x / Spacing - chunk.X * ChunkCells, 0f, ChunkCells);
-        float localZ = Mathf.Clamp(z / Spacing - chunk.Y * ChunkCells, 0f, ChunkCells);
-        int col = Mathf.Min((int)localX, ChunkCells - 1), row = Mathf.Min((int)localZ, ChunkCells - 1);
-        float u = localX - col, v = localZ - row;
-        int a = row * Stride + col;
+        if (!TryCell(x, z, out var heights, out int a, out float u, out float v)) return 0f;
         float near = heights[a], east = heights[a + 1], south = heights[a + Stride];
         if (u + v <= 1f) return near + (east - near) * u + (south - near) * v;
         float far = heights[a + Stride + 1];
         return far + (south - far) * (1f - u) + (east - far) * (1f - v);
+    }
+
+    private bool TryCell(float x, float z, out float[] heights, out int a, out float u, out float v)
+    {
+        var chunk = ChunkAt(new Vector2(x, z));
+        a = 0;
+        u = v = 0f;
+        if (!chunks.TryGetValue(chunk, out heights)) return false;
+        float localX = Mathf.Clamp(x / Spacing - chunk.X * ChunkCells, 0f, ChunkCells);
+        float localZ = Mathf.Clamp(z / Spacing - chunk.Y * ChunkCells, 0f, ChunkCells);
+        int col = Mathf.Min((int)localX, ChunkCells - 1), row = Mathf.Min((int)localZ, ChunkCells - 1);
+        u = localX - col;
+        v = localZ - row;
+        a = row * Stride + col;
+        return true;
     }
 }

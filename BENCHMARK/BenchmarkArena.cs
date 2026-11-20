@@ -882,7 +882,7 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp();
             CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, activeTrample, BattleSight, shockwaves, units.HasStructureAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null);
-            dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.Catalog.MaxSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
+            dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.MaximumTravelSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
             AttackDefenses(dt);
             combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged || dreadnaughts != null || projectiles.Count > 0) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, BattleSight, shockwaves); projectileMs += Elapsed(start); }

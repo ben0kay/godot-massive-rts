@@ -143,7 +143,7 @@ public static class MovementSystem
                 {
                     bool sample = (i & (MovementProfile.SampleStride - 1)) == samplePhase;
                     long start = sample ? Stopwatch.GetTimestamp() : 0;
-                    direction = melee.Steer(units, grid, obstacles, i, direction, type.Footprint, travel, catalog.MaxSpeed * dt);
+                    direction = melee.Steer(units, grid, obstacles, i, direction, type.Footprint, travel, units.MaximumTravelSpeed * dt);
                     if (sample)
                     {
                         profile.SidestepTicks += Stopwatch.GetTimestamp() - start;
@@ -158,15 +158,18 @@ public static class MovementSystem
                     continue;
                 }
             }
+            float headingFactor = 1f;
             if (type.Outline.IsDreadnaught)
             {
                 Vector2 intended = ObstacleField.Xz(direction);
                 SoldierFacing.Turn(units, i, intended, turnSteps[units.Type[i]]);
                 Vector2 heading = units.Facing[i];
-                travel *= Mathf.Max(0f, heading.Dot(intended));
+                headingFactor = Mathf.Max(0f, heading.Dot(intended));
                 direction = new Vector3(heading.X, 0f, heading.Y);
                 units.Dirty[i] = true;
             }
+            float slopeFactor = units.SlopeSpeedFactor(i, type, ObstacleField.Xz(direction));
+            travel = Mathf.Min(speed * dt * slopeFactor, remaining) * headingFactor;
             Vector3 next = units.Position[i] + direction * travel;
             if (obstacles != null)
             {
@@ -176,13 +179,13 @@ public static class MovementSystem
                 if (safe != desired)
                 {
                     travel = from.DistanceTo(safe);
-                    speed = travel / dt;
+                    speed = travel / (dt * slopeFactor);
                     next.X = safe.X;
                     next.Z = safe.Y;
                 }
             }
             if (!movementMode) units.MoveSpeed[i] = !routeCorner && travel >= remaining ? 0f : speed;
-            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * 0.5f))
+            if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * slopeFactor * 0.5f))
                 voluntaryMovement[i] = 1;
             // Circle infantry is rotationally symmetric; skip heading work entirely.
             if (travel > 0.00001f && type.Shape != UnitShape.Circle && !type.Outline.IsDreadnaught)

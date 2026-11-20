@@ -57,6 +57,26 @@ public sealed class UnitState
     internal float TravelSpeed(int id, in UnitStats stats) =>
         stats.SizeTier == 2f && Forest?.Contains(Position[id]) == true ? stats.Speed * 0.75f : stats.Speed;
 
+    private const float DownhillBonus = 0.10f;
+    internal float MaximumTravelSpeed => Catalog.MaxSpeed * (Grounding == null ? 1f : 1f + DownhillBonus);
+
+    // Ramps between a 2% dead zone and a 35% grade, measured in the travel direction.
+    internal float SlopeSpeedFactor(int id, in UnitStats stats, Vector2 direction)
+    {
+        if (Grounding == null) return 1f;
+        float grade = Grounding.Field.Grade(Position[id], direction);
+        float steepness = Mathf.Abs(grade);
+        if (steepness <= 0.02f) return 1f;
+        float amount = Mathf.Min(1f, (steepness - 0.02f) / 0.33f);
+        if (grade <= 0f) return 1f + amount * DownhillBonus;
+
+        float tier = stats.SizeTier;
+        float cap = tier <= 2f ? Mathf.Lerp(0.03f, 0.08f, Mathf.Clamp(tier - 1f, 0f, 1f))
+            : tier <= 3f ? Mathf.Lerp(0.08f, 0.15f, tier - 2f)
+            : Mathf.Lerp(0.15f, 0.22f, Mathf.Min(1f, (tier - 3f) * 0.5f));
+        return 1f - amount * cap;
+    }
+
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
     internal bool HasStructureAttackers { get; private set; }

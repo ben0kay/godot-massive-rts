@@ -221,11 +221,11 @@ public static class CombatSystem
                 ShockwaveStats stomp = type.Shockwave;
                 Vector3 impact = units.Position[i];
                 AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, type.AgainstUnits(stomp.Damage), stomp.EdgeDamageFraction,
-                    units.Catalog.MaxSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.UnitDamageType);
+                    units.MaximumTravelSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.UnitDamageType);
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
-                AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.Catalog.MaxSpeed * dt + separationPadding, obstacles);
+                AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.MaximumTravelSpeed * dt + separationPadding, obstacles);
             else
             {
                 float damage = type.AgainstUnits(type.Damage);

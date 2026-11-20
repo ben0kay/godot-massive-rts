@@ -108,7 +108,8 @@ public sealed class GuardGroup
             float distance = offset.Length();
             if (distance <= Mathf.Max(stop, 0.00001f)) continue;
             Vector2 direction = offset / distance;
-            Vector2 next = from + direction * Mathf.Min(units.TravelSpeed(id, type) * dt, distance - stop);
+            float speed = units.TravelSpeed(id, type) * units.SlopeSpeedFactor(id, type, direction);
+            Vector2 next = from + direction * Mathf.Min(speed * dt, distance - stop);
             float currentRadiusSquared = anchor.DistanceSquaredTo(from);
             if (anchor.DistanceSquaredTo(next) > Mathf.Max(radiusSquared, currentRadiusSquared)) continue;
             if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);

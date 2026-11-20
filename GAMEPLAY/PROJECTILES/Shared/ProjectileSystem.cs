@@ -117,7 +117,7 @@ public sealed class ProjectileSystem
     {
         if (Count == 0) return;
         Dirty = true;
-        float movementPadding = units.Catalog.MaxSpeed * dt + separationPadding;
+        float movementPadding = units.MaximumTravelSpeed * dt + separationPadding;
         for (int i = Count - 1; i >= 0; i--)
         {
             float endTime = Mathf.Min(duration[i], lifetime);

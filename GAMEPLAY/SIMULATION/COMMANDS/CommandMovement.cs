@@ -158,6 +158,7 @@ internal sealed class CommandMovement
                 waypoint = navigation.Steer(id, type, start, waypoint, 0, out _, out _);
             }
             float speed = units.TravelSpeed(id, stats) * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);
+            if (units.Grounding != null) speed *= units.SlopeSpeedFactor(id, stats, (waypoint - start).Normalized());
             Vector2 next = start.MoveToward(waypoint, speed * delta);
             if (field != null) next = field.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;

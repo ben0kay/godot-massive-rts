@@ -231,3 +231,8 @@ The full turret and prow behavior runs in this benchmark. The first pass uses lo
 **Hard** in **Live separation** validates each accepted position against soldier footprints and obstacles. Its live **Hard overlap** slider defaults to **0%** (no footprint overlap). At **10%**, units may approach to 90% of their combined footprint radii. Walls and map boundaries still use full footprints. Lowering the allowance can reposition units to make room. If packing fails, movement stops until you relax the allowance or switch modes.
 
 Blocked units try short sidesteps, and melee pressure can nudge up to four allied ranged units sideways. The same overlap allowance applies to those moves. Hard skips cavalry trample and render interpolation while active. Meshes, hit pulses and death effects can extend beyond gameplay footprints.
+
+
+### Terrain speed
+
+On maps with elevation, units adjust movement speed to the grade in their travel direction. Changes ramp from a 2% grade to full strength at a 35% grade. Downhill movement gains up to 10%. Uphill penalties follow Size Tier, capped at 3% for Tier 1, 8% for Tier 2, 15% for Tier 3 and 22% from Tier 5 onward. Intermediate tiers interpolate. Benchmark, Preset Battle playtests and Fortress Defense share the rule. Route selection keeps its existing costs.

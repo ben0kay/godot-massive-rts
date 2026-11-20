@@ -149,7 +149,7 @@ public sealed class TrampleSystem
 
     public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null)
     {
-        float padding = units.Catalog.MaxSpeed * dt;
+        float padding = units.MaximumTravelSpeed * dt;
         var turnSteps = units.TurnSteps(dt);
         for (int slot = 0; slot < ids.Length; slot++)
         {
@@ -183,7 +183,7 @@ public sealed class TrampleSystem
         charge.BypassThisTick = true;
         float momentumFraction = charge.Momentum / type.Trample.Efficiency;
         float speed = units.TravelSpeed(id, type) * (0.55f + 0.45f * momentumFraction);
-        float travel = Mathf.Min(charge.Distance, speed * dt);
+        float travel = Mathf.Min(charge.Distance, speed * units.SlopeSpeedFactor(id, type, charge.Heading) * dt);
         Vector2 origin = Xz(units.Position[id]);
         bool blocked = false;
         if (obstacles != null)
@@ -293,7 +293,7 @@ public sealed class TrampleSystem
             if (charge.Active || charge.Recovery > 0f || units.Health[id] <= 0f) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             float progress = (Xz(units.Position[id]) - charge.Start).Dot(charge.Approach);
-            if (units.MoveSpeed[id] >= type.Speed * 0.6f && progress >= units.MoveSpeed[id] * dt * 0.7f)
+            if (units.MoveSpeed[id] >= type.Speed * 0.6f && progress >= units.MoveSpeed[id] * dt * units.SlopeSpeedFactor(id, type, charge.Approach) * 0.7f)
                 charge.RunUp = Mathf.Min(type.Trample.RunUp, charge.RunUp + progress);
             else charge.RunUp = 0f;
         }
