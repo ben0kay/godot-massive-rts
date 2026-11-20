@@ -371,3 +371,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-19 | Game Editor first pass | Source implemented.** Added an F6 authoring hub, unit draft inspector and orbit preview, benchmark tests with unsaved stats, and reviewed saves to the original unit resources.
 
 - **2026-11-19 | Forest visual jitter | Source implemented.** ForestTree instances now use stable per-cell X/Z offsets up to ±0.3 world units while preserving the paint grid, forest gameplay boundaries, trunk/crown alignment and terrain grounding. No additional instances, collisions or simulation loops. Godot visual validation pending.
+
+- **2026-11-20 | Forest visibility | Source implemented.** Fade only trees with live units beneath their individual canopies and blend opacity without dithering. Godot visual validation pending.

@@ -1,6 +1,6 @@
-// Dither the instance opacity so nearby trees reveal troops without alpha sorting.
+// Blend per-instance opacity so troops under a canopy stay visible.
 shader_type spatial;
-render_mode unshaded, shadows_disabled;
+render_mode unshaded, shadows_disabled, depth_prepass_alpha;
 uniform vec4 tree_color : source_color;
 varying float opacity;
 
@@ -11,5 +11,4 @@ void vertex() {
 void fragment() {
     ALBEDO = tree_color.rgb;
     ALPHA = opacity;
-    ALPHA_HASH_SCALE = 1.0;
 }

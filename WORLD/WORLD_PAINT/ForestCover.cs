@@ -7,8 +7,9 @@ namespace MassiveRts;
 internal sealed class ForestCover
 {
     private static readonly Vector2I[] Neighbors = { Vector2I.Up, Vector2I.Right, Vector2I.Down, Vector2I.Left };
-    private readonly Dictionary<Vector2I, int> trees = new();
-    private readonly HashSet<Vector2I> sampledCells = new();
+    private const float CrownRadius = 0.56f;
+    private readonly record struct Tree(int Index, Vector2 Center, float RadiusSquared);
+    private readonly Dictionary<Vector2I, Tree> trees = new();
     private readonly Rect2I visibilityBounds;
     private HashSet<int> faded = new(), nearby = new();
     private readonly MultiMesh trunks, crowns;
@@ -27,7 +28,7 @@ internal sealed class ForestCover
 
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) }, cells.Count);
-        crowns = Batch(parent, new SphereMesh { Radius = 0.56f, Height = 1.18f,
+        crowns = Batch(parent, new SphereMesh { Radius = CrownRadius, Height = 1.18f,
             RadialSegments = 8, Rings = 4, Material = Material(new Color("#427c3b")) }, cells.Count);
 
         using var outline = new SurfaceTool();
@@ -43,7 +44,6 @@ internal sealed class ForestCover
             min = new Vector2I(System.Math.Min(min.X, cell.X), System.Math.Min(min.Y, cell.Y));
             max = new Vector2I(System.Math.Max(max.X, cell.X), System.Math.Max(max.Y, cell.Y));
             int index = trees.Count;
-            trees.Add(cell, index);
             uint seed = unchecked(((uint)cell.X * 0x9E3779B9u) ^ ((uint)cell.Y * 0x85EBCA6Bu));
             seed ^= seed >> 16;
             float height = 0.65f + (seed & 255) / 255f * 0.95f;
@@ -58,6 +58,8 @@ internal sealed class ForestCover
             Vector2 offset = new((jitter & 0xFFFFu) / 65535f * 2f - 1f,
                 (jitter >> 16) / 65535f * 2f - 1f);
             Vector2 center = low + Vector2.One * (cellSize * 0.5f) + offset * (cellSize * 0.15f);
+            float radius = CrownRadius * width;
+            trees.Add(cell, new Tree(index, center, radius * radius));
             float ground = Ground(center);
             trunks.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, height, width)),
                 new Vector3(center.X, ground + height * 0.5f, center.Y)));
@@ -85,7 +87,7 @@ internal sealed class ForestCover
                 outline.AddVertex(OnGround(b));
             }
         }
-        visibilityBounds = new Rect2I(min - Vector2I.One, max - min + Vector2I.One * 3);
+        visibilityBounds = new Rect2I(min, max - min + Vector2I.One);
         parent.AddChild(new MeshInstance3D { Mesh = outline.Commit(),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
@@ -123,15 +125,16 @@ internal sealed class ForestCover
         if (timeUntilRefresh > 0f) return;
         timeUntilRefresh = 0.1f;
         nearby.Clear();
-        sampledCells.Clear();
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0f) continue;
-            var cell = Cell(units.Position[id]);
-            if (!visibilityBounds.HasPoint(cell) || !sampledCells.Add(cell)) continue;
-            for (int z = -1; z <= 1; z++)
-            for (int x = -1; x <= 1; x++)
-                if (trees.TryGetValue(cell + new Vector2I(x, z), out int index)) nearby.Add(index);
+            Vector3 position = units.Position[id];
+            Vector2I cell = Cell(position);
+            // The crown fits inside its cell even at maximum scale and jitter.
+            if (!visibilityBounds.HasPoint(cell) || !trees.TryGetValue(cell, out var tree) ||
+                nearby.Contains(tree.Index)) continue;
+            if (tree.Center.DistanceSquaredTo(new Vector2(position.X, position.Z)) <= tree.RadiusSquared)
+                nearby.Add(tree.Index);
         }
         foreach (int index in faded)
             if (!nearby.Contains(index))
