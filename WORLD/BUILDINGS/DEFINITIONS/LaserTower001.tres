@@ -5,8 +5,10 @@
 [resource]
 script = ExtResource("1")
 Id = "laser_tower_001"
-DisplayName = "Laser Tower 001"
+DisplayName = "Railgun Tower"
 MinimumRange = 6.0
 MaximumRange = 36.0
 Damage = 50.0
-ShotsPerSecond = 1.5
+ShotsPerSecond = 0.25
+TurretDegreesPerSecond = 45.0
+BeamSeconds = 3.0

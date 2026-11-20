@@ -653,7 +653,12 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
         }
-        if (!paused) projectileRenderer?.AdvanceSmoke((float)delta);
+        if (!paused)
+        {
+            projectileRenderer?.AdvanceSmoke((float)delta);
+            if (!spawning && units?.Alive == 0 && projectiles?.Count == 0)
+                defenseSystem?.Step(units, null, BattleSight, null, (float)delta, -1, targetingStepSeconds);
+        }
         attackRanges.Refresh(units, camera, panel.Separation != SeparationMode.Off && units?.Alive > 1
             ? Config.SeparationGap : 0f, panel.ShowAttackRanges && !spawning);
         shockwaves.Sync();

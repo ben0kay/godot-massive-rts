@@ -374,17 +374,22 @@ public sealed class SpatialGrid
         }
     }
 
+    internal CandidateCursor GetSegmentCandidates(Vector3 from, Vector3 segment, float padding, int sourceFaction)
+    {
+        Vector3 end = from + segment;
+        var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
+        var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));
+        return new CandidateCursor(this, min, max, EnemiesOf(sourceFaction));
+    }
+
     // Search pre-movement cells padded by the maximum distance a soldier moved this tick.
     public int FirstProjectileHit(UnitState units, int sourceFaction, Vector3 from, Vector3 segment, float radius, float movementPadding, out float fraction, float before = float.PositiveInfinity)
     {
         float padding = Mathf.Max(radius, units.MaxFootprint) + movementPadding;
-        Vector3 end = from + segment;
-        var min = Cell(new Vector3(Mathf.Min(from.X, end.X) - padding, 0, Mathf.Min(from.Z, end.Z) - padding));
-        var max = Cell(new Vector3(Mathf.Max(from.X, end.X) + padding, 0, Mathf.Max(from.Z, end.Z) + padding));
         float lengthSquared = segment.LengthSquared();
         fraction = before;
         int hit = -1;
-        var candidates = new CandidateCursor(this, min, max, EnemiesOf(sourceFaction));
+        var candidates = GetSegmentCandidates(from, segment, padding, sourceFaction);
         while (candidates.MoveNext())
         {
             int id = candidates.Current;

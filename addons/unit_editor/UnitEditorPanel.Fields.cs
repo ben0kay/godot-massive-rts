@@ -263,11 +263,15 @@ public partial class UnitEditorPanel
         Number(nameof(defense.MaximumRange), "Maximum range", () => defense.MaximumRange, value => defense.MaximumRange = value, 0.1, 100, 0.1, " u");
         checks.Add(() => defense.MinimumRange <= defense.MaximumRange ? null : "Minimum range cannot exceed maximum range.");
         TextField(nameof(defense.DamageType), "Damage type", defense.DamageType, value => defense.DamageType = value);
-        Number(nameof(defense.Damage), "Damage", () => defense.Damage, value => defense.Damage = value, 0, 100000, 0.1, "");
-        Number(nameof(defense.ShotsPerSecond), "Fire rate", () => defense.ShotsPerSecond, value => defense.ShotsPerSecond = value, 0.05, 60, 0.05, " shots/s");
+        bool beam = defense.Projectile == null;
+        Number(nameof(defense.Damage), beam ? "Beam damage per second" : "Damage",
+            () => defense.Damage, value => defense.Damage = value, 0, 100000, 0.1, "");
+        Number(nameof(defense.ShotsPerSecond), beam ? "Recovery rate" : "Fire rate",
+            () => defense.ShotsPerSecond, value => defense.ShotsPerSecond = value, 0.05, 60, 0.05,
+            beam ? " cycles/s" : " shots/s");
         Number(nameof(defense.TurretDegreesPerSecond), "Turret turn rate", () => defense.TurretDegreesPerSecond,
             value => defense.TurretDegreesPerSecond = value, 1, 3600, 1, "°/s");
-        Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 2, 0.01, " s");
+        if (beam) Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 10, 0.01, " s");
         Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
             value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
     }

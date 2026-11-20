@@ -168,6 +168,7 @@ internal sealed class FortressWaves
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
             if (Projectiles.Count > 0 || towerTargets) RebuildGrid();
             if (towerTargets) buildings.StepDefenses(grid, Projectiles, delta, tick);
+            else buildings.FinishDefenseEffects(delta);
             if (Projectiles.Count > 0) Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField, impactRings);
             if (Countdown > 0 && !Defeat)
             {

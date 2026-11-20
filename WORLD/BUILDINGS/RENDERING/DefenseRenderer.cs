@@ -1,4 +1,4 @@
-// Batches faceted platforms, enlarged rotating turret heads and short laser pulses without per-shot nodes.
+// Batches faceted platforms, enlarged rotating turret heads and sustained railgun beams without per-shot nodes.
 using System;
 using System.Collections.Generic;
 using Godot;
@@ -31,26 +31,27 @@ public partial class DefenseRenderer : Node3D
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled
     };
-    private const int BeamCapacity = 256;
     private const int FlashCapacity = 256;
-    private readonly float[] beamTime = new float[BeamCapacity];
-    private readonly Transform3D[] beamPose = new Transform3D[BeamCapacity];
-    private readonly Color[] beamColor = new Color[BeamCapacity];
     private readonly float[] flashTime = new float[FlashCapacity];
     private readonly Transform3D[] flashPose = new Transform3D[FlashCapacity];
-    private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, beams, flashes;
+    private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, flashes;
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
+    private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
+    private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
     private int liveBeams, liveFlashes;
 
     // =========================================================
-    // Keep the laser origin exactly on the protruding barrel's forward end.
-    public static Vector3 Muzzle(Vector3 pivot, float yaw) =>
-        pivot + new Vector3(0f, 0f, -BarrelLength).Rotated(Vector3.Up, yaw);
+    private static Basis RailBarrelBasis(Basis yaw, float slope) =>
+        yaw * new Basis(Vector3.Right, Mathf.Atan(slope));
+
+    // Keep the beam origin on the tip as the barrel pitches and recoils.
+    public static Vector3 Muzzle(Vector3 pivot, float yaw, float recoil, float slope) =>
+        pivot + RailBarrelBasis(new Basis(Vector3.Up, yaw), slope) * new Vector3(0f, 0f, recoil - BarrelLength);
 
     // The twin muzzle ends lie beyond the 3x3 footprint even at a diagonal yaw,
     // preventing the arcing projectiles from immediately hitting their own tower.
-    public static Vector3 RocketMuzzle(Vector3 pivot, float yaw, int side) =>
-        pivot + new Vector3(side == 0 ? -0.7f : 0.7f, 0.9f, -4.7f).Rotated(Vector3.Up, yaw);
+    public static Vector3 RocketMuzzle(Vector3 pivot, float yaw, int side, float recoil = 0f) =>
+        pivot + new Vector3(side == 0 ? -0.7f : 0.7f, 0.9f, recoil - 4.7f).Rotated(Vector3.Up, yaw);
 
     // =========================================================
     // Shared beveled chassis: darker outer plinth, recessed side faces, bright inset
@@ -110,7 +111,7 @@ public partial class DefenseRenderer : Node3D
     }
 
     // Faceted barrel and muzzle sleeve are baked into one shared mesh; the tip
-    // remains at the same world position used by Fire() and EmitFlash().
+    // remains at the same world position used by ShowBeam() and EmitFlash().
     private static Mesh BuildBarrelMesh()
     {
         using var surface = new SurfaceTool();
@@ -172,15 +173,10 @@ public partial class DefenseRenderer : Node3D
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(Material);
-        for (int side = -1; side <= 1; side += 2)
-        {
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-                new Vector3(side * 0.70f, 0.90f, -3.12f),
-                new Vector3(0.37f, 0.31f, 3.16f), new Color(0.84f, 0.84f, 0.84f));
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-                new Vector3(side * 0.70f, 0.90f, -4.48f),
-                new Vector3(0.54f, 0.42f, 0.44f), Colors.White);
-        }
+        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.90f, -3.12f),
+            new Vector3(0.37f, 0.31f, 3.16f), new Color(0.84f, 0.84f, 0.84f));
+        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.90f, -4.48f),
+            new Vector3(0.54f, 0.42f, 0.44f), Colors.White);
         return surface.Commit();
     }
 
@@ -244,7 +240,7 @@ public partial class DefenseRenderer : Node3D
     {
         InitializeBatches();
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
-            rocketBases.VisibleInstanceCount = rocketHeads.VisibleInstanceCount = rocketBarrels.VisibleInstanceCount = placements.Count;
+            rocketBases.VisibleInstanceCount = rocketHeads.VisibleInstanceCount = rocketBarrels.VisibleInstanceCount = rightRocketBarrels.VisibleInstanceCount = placements.Count;
         for (int i = 0; i < placements.Count; i++)
         {
             var placement = placements[i];
@@ -254,7 +250,8 @@ public partial class DefenseRenderer : Node3D
         }
         if (battle)
         {
-            beams ??= Batch(BeamMesh, BeamCapacity);
+            beams ??= Batch(BeamMesh, DeploymentLayout.MaxBuildings);
+            Array.Fill(beamSlots, -1);
             flashes ??= Batch(FlashMesh, FlashCapacity, FlashMaterial);
             beams.VisibleInstanceCount = flashes.VisibleInstanceCount = 0;
             liveBeams = liveFlashes = 0;
@@ -269,6 +266,7 @@ public partial class DefenseRenderer : Node3D
         rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings);
         rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings);
         rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings);
+        rightRocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings);
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
@@ -288,16 +286,18 @@ public partial class DefenseRenderer : Node3D
         inactiveBase.SetInstanceTransform(index, hidden);
         inactiveHead.SetInstanceTransform(index, hidden);
         inactiveBarrels.SetInstanceTransform(index, hidden);
+        if (!rocket) rightRocketBarrels.SetInstanceTransform(index, hidden);
         activeBase.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
             new Vector3(pivot.X, ground + height * 0.5f, pivot.Z)));
         activeBase.SetInstanceColor(index, color.Darkened(rocket ? 0.16f : 0.08f));
         activeHead.SetInstanceColor(index, color);
         activeBarrels.SetInstanceColor(index, color.Lightened(rocket ? 0.10f : 0.22f));
+        if (rocket) rightRocketBarrels.SetInstanceColor(index, color.Lightened(0.10f));
         Aim(index, pivot, 0f);
         int count = Mathf.Max(bases.VisibleInstanceCount, index + 1);
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
             rocketBases.VisibleInstanceCount = rocketHeads.VisibleInstanceCount =
-                rocketBarrels.VisibleInstanceCount = count;
+                rocketBarrels.VisibleInstanceCount = rightRocketBarrels.VisibleInstanceCount = count;
     }
 
     public static Vector3 Pivot(ObstacleRectangle area, float height)
@@ -315,41 +315,66 @@ public partial class DefenseRenderer : Node3D
         rocketBases.SetInstanceTransform(index, hidden);
         rocketHeads.SetInstanceTransform(index, hidden);
         rocketBarrels.SetInstanceTransform(index, hidden);
+        rightRocketBarrels.SetInstanceTransform(index, hidden);
+        HideBeam(index);
     }
 
-    public void Aim(int index, Vector3 pivot, float yaw)
+    public void Aim(int index, Vector3 pivot, float yaw, float leftRecoil = 0f, float rightRecoil = 0f, float beamSlope = 0f)
     {
         Basis basis = new Basis(Vector3.Up, yaw);
         if (rocketSlots[index])
         {
             rocketHeads.SetInstanceTransform(index, new Transform3D(basis, pivot));
-            rocketBarrels.SetInstanceTransform(index, new Transform3D(basis, pivot));
+            rocketBarrels.SetInstanceTransform(index, new Transform3D(basis, pivot + basis * new Vector3(-0.7f, 0f, leftRecoil)));
+            rightRocketBarrels.SetInstanceTransform(index, new Transform3D(basis, pivot + basis * new Vector3(0.7f, 0f, rightRecoil)));
         }
         else
         {
             heads.SetInstanceTransform(index, new Transform3D(basis, pivot));
-            barrels.SetInstanceTransform(index, new Transform3D(basis, pivot + basis * new Vector3(0, 0, -BarrelCenterForward)));
+            Basis barrelBasis = RailBarrelBasis(basis, beamSlope);
+            barrels.SetInstanceTransform(index, new Transform3D(barrelBasis,
+                pivot + barrelBasis * new Vector3(0, 0, leftRecoil - BarrelCenterForward)));
         }
     }
 
-    public void Fire(Vector3 from, Vector3 to, byte faction, float duration, float yaw)
+    internal void ShowBeam(int index, Vector3 from, Vector3 to, byte faction)
     {
-        EmitFlash(from, yaw);
         Vector3 direction = to - from;
         float length = direction.Length();
-        if (liveBeams == BeamCapacity || length < 0.001f) return;
+        if (beams == null) return;
+        if (length < 0.001f) { HideBeam(index); return; }
         Vector3 up = Mathf.Abs(direction.Y) / length > 0.98f ? Vector3.Right : Vector3.Up;
-        Basis basis = Basis.LookingAt(direction, up) * new Basis(new Vector3(0.055f, 0, 0), new Vector3(0, 0.055f, 0), new Vector3(0, 0, length));
-        int i = liveBeams++;
-        beamPose[i] = new Transform3D(basis, (from + to) * 0.5f);
-        beamColor[i] = ArmyRenderer.FactionColor(faction).Lightened(0.45f);
-        beamTime[i] = duration;
-        WriteBeam(i);
+        Basis basis = Basis.LookingAt(direction, up) * new Basis(new Vector3(0.28f, 0, 0), new Vector3(0, 0.28f, 0), new Vector3(0, 0, length));
+        int slot = beamSlots[index];
+        if (slot < 0)
+        {
+            slot = liveBeams++;
+            beamSlots[index] = slot;
+            beamOwners[slot] = index;
+            beams.SetInstanceColor(slot, Factions.Color(faction).Lightened(0.55f));
+            beams.VisibleInstanceCount = liveBeams;
+        }
+        beams.SetInstanceTransform(slot, new Transform3D(basis, (from + to) * 0.5f));
+    }
+
+    internal void HideBeam(int index)
+    {
+        if (beams == null || beamSlots[index] < 0) return;
+        int slot = beamSlots[index], last = --liveBeams;
+        beamSlots[index] = -1;
+        if (slot != last)
+        {
+            int moved = beamOwners[last];
+            beamOwners[slot] = moved;
+            beamSlots[moved] = slot;
+            beams.SetInstanceTransform(slot, beams.GetInstanceTransform(last));
+            beams.SetInstanceColor(slot, beams.GetInstanceColor(last));
+        }
         beams.VisibleInstanceCount = liveBeams;
     }
 
     // =========================================================
-    private void EmitFlash(Vector3 muzzle, float yaw)
+    internal void EmitFlash(Vector3 muzzle, float yaw)
     {
         if (flashes == null || liveFlashes >= FlashCapacity) return;
         int i = liveFlashes++;
@@ -361,21 +386,7 @@ public partial class DefenseRenderer : Node3D
 
     public void Advance(float dt)
     {
-        int before = liveBeams;
-        for (int i = liveBeams - 1; i >= 0; i--)
-        {
-            beamTime[i] -= dt;
-            if (beamTime[i] > 0f) continue;
-            liveBeams--;
-            if (i == liveBeams) continue;
-            beamTime[i] = beamTime[liveBeams];
-            beamPose[i] = beamPose[liveBeams];
-            beamColor[i] = beamColor[liveBeams];
-            WriteBeam(i);
-        }
-        if (liveBeams != before) beams.VisibleInstanceCount = liveBeams;
-
-        before = liveFlashes;
+        int before = liveFlashes;
         for (int i = liveFlashes - 1; i >= 0; i--)
         {
             flashTime[i] -= dt;
@@ -404,9 +415,4 @@ public partial class DefenseRenderer : Node3D
         flashes.SetInstanceColor(i, new Color(1f, 1f, 1f, remaining));
     }
 
-    private void WriteBeam(int i)
-    {
-        beams.SetInstanceTransform(i, beamPose[i]);
-        beams.SetInstanceColor(i, beamColor[i]);
-    }
 }

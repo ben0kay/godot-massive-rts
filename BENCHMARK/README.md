@@ -156,7 +156,7 @@ The right overlay keeps the battle summary visible and folds CPU, obstacle, and 
 
 ## DEF1 — Static laser defense
 
-Open **Edit painted deployment → Paint tools → Defenses** to place Laser Tower 001. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../WORLD/BUILDINGS/README.md) for configuration and limits.
+Open **Edit painted deployment → Paint tools → Defenses** to place Railgun Tower. Defenses support Blue, Red and Green. A painted battle can start with a tower faction opposing a soldier faction. Save and load preserve defense type, faction and footprint position. See [BUILDINGS](../WORLD/BUILDINGS/README.md) for configuration and limits.
 
 ## SIM60 — Core and acquisition clocks
 

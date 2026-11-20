@@ -17,13 +17,14 @@ public partial class BuildingDefinition : Resource
     [Export] public string ArmourClass { get; set; } = "Fortified";
     [Export(PropertyHint.Range, "0,1,0.01")] public float Armour { get; set; }
     [Export] public string DamageType { get; set; } = "Standard";
+    // Beam weapons deal Damage per second, with recovery equal to 1 / ShotsPerSecond.
     [Export] public float Damage { get; set; } = 12f;
     [Export] public float ShotsPerSecond { get; set; } = 2f;
     [Export] public float TurretDegreesPerSecond { get; set; } = 360f;
-    [Export] public float BeamSeconds { get; set; } = 0.08f;
+    [Export] public float BeamSeconds { get; set; } = 3f;
 
     [ExportGroup("Projectile weapon")]
-    // Null retains hitscan lasers; rocket towers use the existing pooled projectile.
+    // Null uses a sustained beam; rocket towers use the existing pooled projectile.
     [Export] public ProjectileDefinition Projectile { get; set; }
     [Export(PropertyHint.Range, "0.5,4,0.05")] public float ProjectileVisualScale { get; set; } = 1f;
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;

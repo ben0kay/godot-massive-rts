@@ -193,7 +193,7 @@ internal static class LevelEditorSave
         var towers = map.GetNodeOrNull<Node3D>("StartingDefenses")?.GetChildren().OfType<CommandLaserPlacement>().ToArray()
             ?? Array.Empty<CommandLaserPlacement>();
         if (towers.Length > CommandSandbox.MaxStartingTowers)
-            throw new InvalidOperationException($"A level supports up to {CommandSandbox.MaxStartingTowers} starting laser towers.");
+            throw new InvalidOperationException($"A level supports up to {CommandSandbox.MaxStartingTowers} starting defense towers.");
         if (mode.Preset)
         {
             var rules = map.PresetRules;
@@ -202,7 +202,7 @@ internal static class LevelEditorSave
                 throw new InvalidOperationException("Move the deployment line inside the map boundary.");
             if (groups.Any(group => !group.FitsSide(rules, group.GlobalPosition)) ||
                 towers.Any(tower => !tower.Red || !tower.FitsSide(rules, tower.GlobalPosition)))
-                throw new InvalidOperationException("Move preplaced formations and laser towers onto the Red side of the line.");
+                throw new InvalidOperationException("Move preplaced formations and defense towers onto the Red side of the line.");
             if (groups.Sum(group => (long)group.SoldierCount) > 100000)
                 throw new InvalidOperationException("Preset Battles supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||

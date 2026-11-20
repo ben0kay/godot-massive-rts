@@ -149,6 +149,26 @@ public sealed class ObstacleField
         return BlocksSightExcept(node.Left, from, delta, own) || BlocksSightExcept(node.Right, from, delta, own);
     }
 
+    internal float FirstSightHitExcept(Vector3 from, Vector3 segment, ObstacleRectangle own)
+    {
+        float nearest = 1f;
+        FindSightHit(0, Xz(from), Xz(segment), new Box(own.Min, own.Max), ref nearest);
+        return nearest;
+    }
+
+    private void FindSightHit(int index, Vector2 from, Vector2 delta, Box own, ref float nearest)
+    {
+        ref readonly Node node = ref nodes[index];
+        if (!EnterBox(from, delta, node.Bounds.Min, node.Bounds.Max, out float entry) || entry >= nearest) return;
+        if (node.Left < 0)
+        {
+            if (node.Bounds != own) nearest = entry;
+            return;
+        }
+        FindSightHit(node.Left, from, delta, own, ref nearest);
+        FindSightHit(node.Right, from, delta, own, ref nearest);
+    }
+
     public Vector2 ClipMove(Vector2 from, Vector2 to, float radius)
     {
         long start = BeginSample(Query.Clip);

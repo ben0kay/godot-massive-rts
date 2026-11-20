@@ -55,7 +55,7 @@ public partial class CommandBottomHud : Control
         menu.AddChild(new Label { Text = "Build" });
         menu.AddChild(UIButtonFactory.Create($"Fabricator  ·  {CommandStructure.FabricatorCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.Fabricator), UIButtonStyle.Compact));
-        menu.AddChild(UIButtonFactory.Create($"Laser Tower  ·  {CommandBuildings.LaserTowerCost} Carbon",
+        menu.AddChild(UIButtonFactory.Create($"Railgun Tower  ·  {CommandBuildings.LaserTowerCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.LaserTower), UIButtonStyle.Compact));
         menu.AddChild(UIButtonFactory.Create($"Rocket Tower  ·  {CommandBuildings.RocketTowerCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.RocketTower), UIButtonStyle.Compact));

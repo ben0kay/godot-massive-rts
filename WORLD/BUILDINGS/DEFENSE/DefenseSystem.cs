@@ -13,7 +13,7 @@ internal sealed class DefenseSystem
         public Vector3 Pivot;
         public ObstacleRectangle Footprint;
         public int Target;
-        public float Yaw, Cooldown;
+        public float Yaw, Cooldown, BeamRemaining, BeamSlope, LeftRecoil, RightRecoil;
         public byte NextRocketMuzzle;
     }
 
@@ -107,56 +107,131 @@ internal sealed class DefenseSystem
         {
             ref Tower tower = ref towers[i];
             if (structures[i]?.Destroyed != false || !tower.Stats.AttacksSoldiers) continue;
-            tower.Cooldown = tower.Cooldown > 0f ? tower.Cooldown - dt : 0f;
-            int target = tower.Target;
-            if (target < 0 || !Valid(in tower, units, target, obstacles))
+            bool rocket = tower.Stats.ProjectileType >= 0;
+            float oldYaw = tower.Yaw, oldSlope = tower.BeamSlope, left = tower.LeftRecoil, right = tower.RightRecoil;
+            float returnSpeed = rocket ? 1.25f : 1.8f;
+            tower.LeftRecoil = Mathf.MoveToward(left, 0f, returnSpeed * dt);
+            tower.RightRecoil = Mathf.MoveToward(right, 0f, returnSpeed * dt);
+            if (tower.BeamRemaining <= 0f && tower.Cooldown > 0f) tower.Cooldown -= dt;
+
+            if (grid == null || tower.Target < 0 || !Valid(in tower, units, tower.Target, obstacles))
             {
                 tower.Target = -1;
                 tower.Cooldown = Mathf.Max(0f, tower.Cooldown);
-                if (acquisitionStep < 0 || i % refreshInterval != acquisitionStep % refreshInterval) continue;
-                float nearest = float.PositiveInfinity;
-                var candidates = grid.GetCandidates(tower.Pivot, tower.Stats.MaximumRange, tower.Faction);
-                while (candidates.MoveNext())
-                {
-                    int id = candidates.Current;
-                    if (!InRange(in tower, units, id, out float distance) || distance >= nearest ||
-                        !Visible(in tower, units.Position[id], obstacles)) continue;
-                    tower.Target = id;
-                    nearest = distance;
-                }
-                if (tower.Target < 0) continue;
+                if (grid != null && acquisitionStep >= 0 && i % refreshInterval == acquisitionStep % refreshInterval)
+                    Acquire(ref tower, units, grid, obstacles);
             }
 
-            target = tower.Target;
-            Vector3 offset = units.Position[target] - tower.Pivot;
-            float desired = Mathf.Atan2(-offset.X, -offset.Z);
-            float error = Mathf.Wrap(desired - tower.Yaw, -Mathf.Pi, Mathf.Pi);
-            float step = tower.Stats.TurnRate * dt;
-            if (Mathf.Abs(error) > 0.0001f)
+            bool aligned = false;
+            if (tower.Target >= 0)
             {
+                Vector3 offset = units.Position[tower.Target] - tower.Pivot;
+                float desired = Mathf.Atan2(-offset.X, -offset.Z);
+                float error = Mathf.Wrap(desired - tower.Yaw, -Mathf.Pi, Mathf.Pi);
+                float step = tower.Stats.TurnRate * dt;
                 tower.Yaw = Mathf.Wrap(tower.Yaw + Mathf.Clamp(error, -step, step), -Mathf.Pi, Mathf.Pi);
-                renderer.Aim(i, tower.Pivot, tower.Yaw);
+                aligned = Mathf.Abs(error) <= step;
+                if (!rocket)
+                {
+                    Vector3 target = units.Position[tower.Target] + Vector3.Up * (units.Catalog[units.Type[tower.Target]].Height * 0.5f);
+                    float slope = (target.Y - tower.Pivot.Y) / Mathf.Max(1f, ObstacleField.Xz(offset).Length());
+                    tower.BeamSlope = Mathf.MoveToward(tower.BeamSlope, Mathf.Clamp(slope, -1f, 1f), step);
+                    if (tower.BeamRemaining <= 0f) tower.BeamSlope = Mathf.Clamp(slope, -1f, 1f);
+                }
             }
 
-            if (tower.Cooldown > 0f || Mathf.Abs(error) > step) continue;
-            if (tower.Stats.ProjectileType >= 0)
+            if (aligned && tower.Cooldown <= 0f && tower.BeamRemaining <= 0f)
             {
-                // Real arcing shot: the shared projectile pool owns splash and impacts.
-                // Alternate barrels only when a rocket was actually launched.
-                if (projectiles == null || !projectiles.LaunchFrom(
-                    DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw, tower.NextRocketMuzzle),
-                    units.Position[target], tower.Faction, tower.Stats.ProjectileType,
-                    tower.Stats.Damage, tower.Stats.DamageType)) continue;
-                tower.NextRocketMuzzle ^= 1;
+                if (rocket)
+                {
+                    bool useLeft = tower.NextRocketMuzzle == 0;
+                    if (projectiles?.LaunchFrom(DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw,
+                        tower.NextRocketMuzzle, useLeft ? tower.LeftRecoil : tower.RightRecoil),
+                        units.Position[tower.Target], tower.Faction, tower.Stats.ProjectileType,
+                        tower.Stats.Damage, tower.Stats.DamageType) == true)
+                    {
+                        if (useLeft) tower.LeftRecoil = 0.30f;
+                        else tower.RightRecoil = 0.30f;
+                        tower.NextRocketMuzzle ^= 1;
+                        tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
+                    }
+                }
+                else
+                {
+                    tower.LeftRecoil = 0.64f;
+                    tower.BeamRemaining = tower.Stats.BeamSeconds;
+                    tower.Cooldown = tower.Stats.Interval;
+                    renderer.EmitFlash(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.BeamSlope), tower.Yaw);
+                }
             }
-            else
-            {
-                units.Damage(target, tower.Stats.Damage, tower.Stats.DamageType);
-                Vector3 end = units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f);
-                renderer.Fire(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw), end, tower.Faction,
-                    tower.Stats.BeamSeconds, tower.Yaw);
-            }
-            tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
+
+            if (oldYaw != tower.Yaw || oldSlope != tower.BeamSlope || left != tower.LeftRecoil || right != tower.RightRecoil)
+                renderer.Aim(i, tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.RightRecoil, tower.BeamSlope);
+            if (tower.BeamRemaining <= 0f) continue;
+            float firingSeconds = Mathf.Min(dt, tower.BeamRemaining);
+            TraceBeam(i, in tower, units, grid, obstacles, tower.Stats.Damage * firingSeconds);
+            tower.BeamRemaining -= firingSeconds;
+            if (tower.BeamRemaining <= 0f) renderer.HideBeam(i);
+        }
+    }
+
+    private static void Acquire(ref Tower tower, UnitState units, SpatialGrid grid, ObstacleField obstacles)
+    {
+        float nearest = float.PositiveInfinity;
+        var candidates = grid.GetCandidates(tower.Pivot, tower.Stats.MaximumRange, tower.Faction);
+        while (candidates.MoveNext())
+        {
+            int id = candidates.Current;
+            if (!InRange(in tower, units, id, out float distance) || distance >= nearest ||
+                !Visible(in tower, units.Position[id], obstacles)) continue;
+            tower.Target = id;
+            nearest = distance;
+        }
+    }
+
+    // =========================================================
+    // Check every hostile footprint intersected by the current beam segment.
+    // Soldiers do not occlude one another, but cover and terrain stop the segment.
+    private void TraceBeam(int index, in Tower tower, UnitState units, SpatialGrid grid, ObstacleField obstacles, float damage)
+    {
+        Vector3 from = DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.BeamSlope);
+        Vector3 forward = Vector3.Forward.Rotated(Vector3.Up, tower.Yaw);
+        float length = Mathf.Max(0f, tower.Stats.MaximumRange - (from - tower.Pivot).Dot(forward));
+        Vector3 segment = (forward + Vector3.Up * tower.BeamSlope) * length;
+        float end = obstacles?.FirstSightHitExcept(from, segment, tower.Footprint) ?? 1f;
+        var terrain = units.Grounding?.Field;
+        if (terrain != null) end = Mathf.Min(end, terrain.SurfaceHit(from, segment, end));
+        else if (segment.Y < 0f && from.Y + segment.Y < 0f)
+            end = Mathf.Min(end, Mathf.Clamp(-from.Y / segment.Y, 0f, 1f));
+        segment *= end;
+        renderer.ShowBeam(index, from, from + segment, tower.Faction);
+
+        Vector2 flat = ObstacleField.Xz(segment);
+        float reach = flat.Length();
+        if (grid == null || reach <= 0.001f) return;
+        const float beamRadius = 0.14f;
+        Vector2 along = flat / reach;
+        float slope = segment.Y / reach;
+        var candidates = grid.GetSegmentCandidates(from, segment, units.MaxFootprint + beamRadius, tower.Faction);
+        while (candidates.MoveNext())
+        {
+            int id = candidates.Current;
+            if (units.Health[id] <= 0f) continue;
+            ref readonly var type = ref units.Catalog[units.Type[id]];
+            Vector3 offset = units.Position[id] - from;
+            Vector2 cross = ObstacleField.Xz(offset);
+            float projection = cross.Dot(along);
+            float perpendicular = cross.X * along.Y - cross.Y * along.X;
+            float radius = type.Footprint + beamRadius;
+            float chord = radius * radius - perpendicular * perpendicular;
+            if (chord < 0f) continue;
+            float half = Mathf.Sqrt(chord);
+            float enter = Mathf.Max(0f, projection - half), exit = Mathf.Min(reach, projection + half);
+            if (enter > exit) continue;
+            float a = enter * slope, b = exit * slope;
+            if (Mathf.Max(a, b) + beamRadius < offset.Y || Mathf.Min(a, b) - beamRadius > offset.Y + type.Height)
+                continue;
+            units.Damage(id, damage, tower.Stats.DamageType);
         }
     }
 

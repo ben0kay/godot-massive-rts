@@ -420,6 +420,7 @@ public partial class CommandSandbox : Node3D
         bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
         if (waves.Defeat || waves.Victory)
         {
+            buildings.FinishDefenseEffects((float)delta);
             impactRings.Sync();
             if (feedbackChanged) SyncArmy();
             return;

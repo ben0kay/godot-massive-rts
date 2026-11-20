@@ -553,7 +553,7 @@ public partial class LevelEditor
             if (!TowerSiteClear(tower, point)) return false;
             if (Objects().Count(item => item is CommandLaserPlacement) >= CommandSandbox.MaxStartingTowers)
             {
-                SetStatus($"A level supports up to {CommandSandbox.MaxStartingTowers} starting laser towers.");
+                SetStatus($"A level supports up to {CommandSandbox.MaxStartingTowers} starting defense towers.");
                 return false;
             }
         }

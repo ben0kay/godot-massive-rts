@@ -75,7 +75,7 @@ internal sealed class CommandBuildings
         rocketDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/RocketTower001.tres");
         defenseCatalog = new RuntimeBuildingCatalog(defenseDefinitions, units.Catalog.DamageRules, units.Catalog.Projectiles);
         if (!defenseCatalog.TryResolve(laserDefinition.Id, out int laserType))
-            throw new InvalidOperationException("The Laser Tower is missing from the building catalogue.");
+            throw new InvalidOperationException("The Railgun Tower is missing from the building catalogue.");
         if (!defenseCatalog.TryResolve(rocketDefinition.Id, out int rocketType))
             throw new InvalidOperationException("The Rocket Tower is missing from the building catalogue.");
         laserStats = defenseCatalog[laserType];
@@ -353,7 +353,7 @@ internal sealed class CommandBuildings
             defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
         }
         var tower = new CommandStructure(area, stats.Health, faction, definition,
-            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ProjectileType >= 0 ? "RocketTower" : "LaserTower" }, groundHeight: height);
+            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height);
         defenses.AddTower(tower, stats, TowerBaseHeight, height);
         Add(tower);
     }
@@ -361,6 +361,8 @@ internal sealed class CommandBuildings
     public bool HasDefenses => defenses?.ActiveCount > 0;
     public void StepDefenses(SpatialGrid grid, ProjectileSystem projectiles, float delta, int tick) =>
         defenses?.Step(units, grid, CoverField, projectiles, delta, tick, 1f / 60f);
+    internal void FinishDefenseEffects(float delta) =>
+        defenses?.Step(units, null, CoverField, null, delta, -1, 1f / 60f);
     public void AdvanceDefenseEffects(float delta) => defenseRenderer?.Advance(delta);
 
     public void AddHostileFabricator(Vector3 point) => AddStartingFabricator(point, Factions.Red);

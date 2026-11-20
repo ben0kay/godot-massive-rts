@@ -410,7 +410,9 @@ public partial class UnitEditorPanel : VBoxContainer
             summary.Text = $"{Defense.Width} × {Defense.Depth} cells";
             if (Defense.AttacksSoldiers)
                 summary.Text += $"\n{Defense.MinimumRange:0.##}–{Defense.MaximumRange:0.##} u range" +
-                    $"\n{Defense.Damage:0.##} damage · {Defense.ShotsPerSecond:0.##} shots/s";
+                    (Defense.Projectile == null
+                        ? $"\n{Defense.Damage:0.##} DPS · {Defense.BeamSeconds:0.##} s beam"
+                        : $"\n{Defense.Damage:0.##} damage · {Defense.ShotsPerSecond:0.##} shots/s");
             return;
         }
         float size = UnitOutline.EffectiveSize(Unit);
