@@ -403,3 +403,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Benchmark hard separation | Source implemented.** Added bounded sideways yielding for allied ranged units and local sidesteps under hard footprint checks.
 
 - **2026-11-20 | FX2 | Source implemented.** Added progressive cracks using the existing instance stride, terrain-grounded pooled fragments with per-tick and active caps, and an FX2 toggle in UnitVisualConfig. Awaiting owner visual and FPS validation.
+
+- **2026-11-20 | VIS-IDEAS1 | Planning only.** Added a Codex review backlog for eight optional unit and battlefield visual polish ideas under `VISUALS/FEEDBACK/`, indexed in visual-feedback and unit READMEs. Existing FX2 remains source-implemented; no visual or gameplay code changed.

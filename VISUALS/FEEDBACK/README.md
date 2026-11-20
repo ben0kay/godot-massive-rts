@@ -2,6 +2,8 @@
 
 **Status:** FB0 and FX2 are source implemented and await owner visual validation.
 
+**[VIS-IDEAS1: Unit and Battlefield Visual Ideas](UNIT_VISUAL_IDEAS_REVIEW.md)** is a **planning-only Codex review backlog** covering melee sparks, battlefield dust, directional hit wobble, large-unit ground disturbance, temporary explosion scars, projectile near-miss detail, extra armour wear and reactive forests. None of these ideas are authorized for implementation by the backlog itself. It builds on existing FX2 cracks/crumbling instead of replacing them.
+
 This major root folder houses reusable **presentation-only** effects. The first family is [UNIT_HITS / FB0](UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md): centralizes the white damage flash and adds a fast, subtle 6% size pulse, with a shared settings resource and no per-unit nodes or materials.
 
 ## Ownership and future growth

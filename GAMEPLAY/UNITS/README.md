@@ -10,6 +10,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 - **[ROCKET1 Wide Deep-Fork Twin-Rocket Launcher plan](ROCKET1_IMPLEMENTATION_PLAN.md)** — **source implemented**: wide fork silhouette, two prong-mounted launchers firing alternating arcing rockets, small splash via existing artillery code.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 super-heavy hull with 4 independent miniguns, nearest-target pursuit and front-only crush damage; includes large-footprint separation safeguards.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 pointed super-heavy hull, four independent nearest-target miniguns with individual min/max ranges, and front-only crush damage.
+- **[Visual ideas backlog](../../VISUALS/FEEDBACK/UNIT_VISUAL_IDEAS_REVIEW.md)** — Codex review only: optional future unit and battlefield feedback effects; nothing implemented from this plan.
 - **[Starting roster and stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
 
 ## Folder structure
