@@ -371,7 +371,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog);
+		unitBar.Build(Catalog, compact: PresetTest);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
 
 	}
@@ -379,7 +379,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	{
 		if (unitBar == null) return;
 		unitBar.Visible = leftPanelVisible && editingDeployment && placingSoldiers;
-		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -UnitPlacementBar.Height - 24 : -12;
+		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -unitBar.BarHeight - 24 : -12;
 	}
 
 	private static Label DebugLabel()

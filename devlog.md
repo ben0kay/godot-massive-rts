@@ -415,3 +415,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Elevation brush | Source implemented.** Replaced Place hill with signed elevation strokes, preserving legacy hills and sharing the ground shader between sculpted terrain and flat areas. Added save and undo support.
 
 - **2026-11-20 | Strong separation | Source implemented.** Added a live 0–10% overlap slider that relaxes Strong pair clearance while retaining its original behavior at 0%.
+
+- **2026-11-20 | Preset playtest UI | Source implemented.** Shortened the bottom placement panel and arranged compact silhouette cards in two rows.

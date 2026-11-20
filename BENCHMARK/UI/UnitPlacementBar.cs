@@ -6,17 +6,18 @@ namespace MassiveRts;
 
 internal partial class UnitPlacementBar : PanelContainer
 {
-    internal const int Height = 142;
+    internal int BarHeight { get; private set; }
     internal event Action<byte> UnitSelected;
 
-    internal void Build(RuntimeUnitCatalog catalog)
+    internal void Build(RuntimeUnitCatalog catalog, bool compact)
     {
+        BarHeight = compact ? 118 : 142;
         AnchorTop = AnchorBottom = AnchorRight = 1;
         OffsetLeft = 12;
         OffsetRight = -12;
-        OffsetTop = -Height - 12;
+        OffsetTop = -BarHeight - 12;
         OffsetBottom = -12;
-        AddThemeStyleboxOverride("panel", UIButtonFactory.Box(new Color("#091a2d"), new Color("#327fa3"), 10));
+        AddThemeStyleboxOverride("panel", UIButtonFactory.Box(new Color("#091a2d"), new Color("#327fa3"), compact ? 6 : 10));
         var body = new VBoxContainer();
         AddChild(body);
         var heading = new Label { Text = "UNIT PLACEMENT" };
@@ -26,8 +27,16 @@ internal partial class UnitPlacementBar : PanelContainer
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill,
             VerticalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true };
         body.AddChild(scroll);
-        var cards = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        cards.AddThemeConstantOverride("separation", 6);
+        Container cards = compact
+            ? new GridContainer { Columns = Math.Max(1, (catalog.Count + 1) / 2) }
+            : new HBoxContainer();
+        cards.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        if (compact)
+        {
+            cards.AddThemeConstantOverride("h_separation", 5);
+            cards.AddThemeConstantOverride("v_separation", 4);
+        }
+        else cards.AddThemeConstantOverride("separation", 6);
         scroll.AddChild(cards);
 
         var group = new ButtonGroup();
@@ -41,7 +50,7 @@ internal partial class UnitPlacementBar : PanelContainer
             byte type = (byte)i;
             ref readonly var unit = ref catalog[type];
             var card = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = i == 0,
-                CustomMinimumSize = new Vector2(104, 82), SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                CustomMinimumSize = compact ? new Vector2(134, 36) : new Vector2(104, 82), SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 TooltipText = unit.Name,
                 AccessibilityName = unit.Name };
             card.AddThemeStyleboxOverride("normal", normal);
@@ -50,18 +59,22 @@ internal partial class UnitPlacementBar : PanelContainer
             card.AddThemeStyleboxOverride("hover_pressed", pressed);
             card.AddThemeStyleboxOverride("focus", focus);
             cards.AddChild(card);
-            var face = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-            face.AddThemeConstantOverride("separation", 0);
+            BoxContainer face = compact ? new HBoxContainer() : new VBoxContainer();
+            face.MouseFilter = MouseFilterEnum.Ignore;
+            face.AddThemeConstantOverride("separation", compact ? 5 : 0);
             card.AddChild(face);
             face.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            face.OffsetTop = 4;
+            face.OffsetTop = compact ? 2 : 4;
             face.OffsetLeft = 5;
             face.OffsetRight = -5;
-            face.OffsetBottom = -4;
+            face.OffsetBottom = compact ? -2 : -4;
             var icon = new UnitSilhouette { MouseFilter = MouseFilterEnum.Ignore };
-            icon.SetOutline(unit.Outline);
+            icon.SetOutline(unit.Outline, compact);
             face.AddChild(icon);
-            var name = new Label { Text = unit.Name, HorizontalAlignment = HorizontalAlignment.Center,
+            var name = new Label { Text = unit.Name,
+                HorizontalAlignment = compact ? HorizontalAlignment.Left : HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                SizeFlagsHorizontal = compact ? SizeFlags.ExpandFill : SizeFlags.Fill,
                 AutowrapMode = TextServer.AutowrapMode.WordSmart, MaxLinesVisible = 2,
                 MouseFilter = MouseFilterEnum.Ignore };
             name.AddThemeFontSizeOverride("font_size", 12);
@@ -75,9 +88,9 @@ internal partial class UnitPlacementBar : PanelContainer
     {
         private Vector2[] points = Array.Empty<Vector2>();
 
-        internal void SetOutline(UnitOutline outline)
+        internal void SetOutline(UnitOutline outline, bool compact)
         {
-            CustomMinimumSize = new Vector2(0, 43);
+            CustomMinimumSize = compact ? new Vector2(26, 0) : new Vector2(0, 43);
             points = new Vector2[outline.Sides];
             float extent = 0.001f;
             for (int i = 0; i < points.Length; i++)
@@ -85,7 +98,7 @@ internal partial class UnitPlacementBar : PanelContainer
                 points[i] = outline.Vertex(i);
                 extent = Mathf.Max(extent, Mathf.Max(Mathf.Abs(points[i].X), Mathf.Abs(points[i].Y)));
             }
-            for (int i = 0; i < points.Length; i++) points[i] *= 17f / extent;
+            for (int i = 0; i < points.Length; i++) points[i] *= (compact ? 10f : 17f) / extent;
             QueueRedraw();
         }
 
