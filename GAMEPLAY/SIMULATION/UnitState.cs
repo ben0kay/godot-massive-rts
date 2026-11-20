@@ -42,6 +42,16 @@ public sealed class UnitState
         return retargetAfter ??= new int[Target.Length];
     }
     public int Count;
+    internal ForestCover Forest { get; set; }
+
+    internal float RangedReach(Vector3 position, in UnitStats stats) =>
+        Forest?.Contains(position) == true ? stats.Reach * 0.5f : stats.Reach;
+
+    internal float RangedReach(int id, in UnitStats stats) => RangedReach(Position[id], stats);
+
+    internal float TravelSpeed(int id, in UnitStats stats) =>
+        stats.SizeTier == 2f && Forest?.Contains(Position[id]) == true ? stats.Speed * 0.75f : stats.Speed;
+
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
     internal bool HasStructureAttackers { get; private set; }

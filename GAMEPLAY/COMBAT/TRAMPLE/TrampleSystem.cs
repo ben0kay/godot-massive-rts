@@ -182,7 +182,7 @@ public sealed class TrampleSystem
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
         charge.BypassThisTick = true;
         float momentumFraction = charge.Momentum / type.Trample.Efficiency;
-        float speed = type.Speed * (0.55f + 0.45f * momentumFraction);
+        float speed = units.TravelSpeed(id, type) * (0.55f + 0.45f * momentumFraction);
         float travel = Mathf.Min(charge.Distance, speed * dt);
         Vector2 origin = Xz(units.Position[id]);
         bool blocked = false;

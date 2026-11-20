@@ -22,10 +22,11 @@ public partial class WorldPainterPlugin : EditorPlugin
     private MeshInstance3D cursor;
     private WorldPaint strokeTarget;
     private WorldPaintData originalData;
-    private HashSet<Vector2I> rocks, water;
+    private HashSet<Vector2I> rocks, water, forest;
     private Vector2I start, last;
-    private bool waterStroke, rectangleStroke, eraseStroke, roundStroke, overBudget;
-    private int strokeSize, activeCells;
+    private int strokeLayer;
+    private bool rectangleStroke, eraseStroke, roundStroke, overBudget;
+    private int strokeSize, activeCells, activeForestCells;
 
     // =========================================================
     public override void _EnterTree()
@@ -46,7 +47,7 @@ public partial class WorldPainterPlugin : EditorPlugin
         scroll.AddChild(form);
         paintMode = new CheckButton { Text = "Paint in viewport", Disabled = true };
         form.AddChild(paintMode);
-        layer = AddOptions(form, "Layer", "Rock / Cliff", "Deep Water");
+        layer = AddOptions(form, "Layer", "Rock / Cliff", "Deep Water", "Forest");
         tool = AddOptions(form, "Tool", "Brush", "Filled rectangle");
         size = AddOptions(form, "Brush size", "1 × 1", "3 × 3", "5 × 5", "10 × 10");
         shape = AddOptions(form, "Brush shape", "Square", "Circle");
@@ -255,7 +256,9 @@ public partial class WorldPainterPlugin : EditorPlugin
         water = new HashSet<Vector2I>(originalData?.WaterCells ?? new Cells());
         activeCells = rocks.Count(target.Contains) + water.Count(target.Contains);
         start = last = cell;
-        waterStroke = layer.Selected == 1;
+        forest = new HashSet<Vector2I>(originalData?.ForestCells ?? new Cells());
+        activeForestCells = forest.Count(target.Contains);
+        strokeLayer = layer.Selected;
         rectangleStroke = tool.Selected == 1;
         eraseStroke = action.Selected == 1;
         roundStroke = shape.Selected == 1;
@@ -263,7 +266,7 @@ public partial class WorldPainterPlugin : EditorPlugin
         overBudget = false;
         if (!rectangleStroke) Stamp(cell);
         if (overBudget) ShowBudgetError();
-        else if (!rectangleStroke) target.Preview(rocks, water);
+        else if (!rectangleStroke) target.Preview(rocks, water, forest);
     }
 
     private void UpdateStroke(Vector2I cell)
@@ -286,10 +289,10 @@ public partial class WorldPainterPlugin : EditorPlugin
             }
             if (overBudget)
             {
-                strokeTarget.Preview(null, null);
+                strokeTarget.Preview(null, null, null);
                 ShowBudgetError();
             }
-            else strokeTarget.Preview(rocks, water);
+            else strokeTarget.Preview(rocks, water, forest);
         }
         last = cell;
     }
@@ -313,16 +316,25 @@ public partial class WorldPainterPlugin : EditorPlugin
     private void EditCell(Vector2I cell)
     {
         if (!strokeTarget.Contains(cell)) return;
-        var selected = waterStroke ? water : rocks;
+        var selected = strokeLayer == 2 ? forest : strokeLayer == 1 ? water : rocks;
         if (eraseStroke)
         {
-            if (selected.Remove(cell)) activeCells--;
+            if (selected.Remove(cell))
+            {
+                if (strokeLayer == 2) activeForestCells--;
+                else activeCells--;
+            }
             return;
         }
-        var other = waterStroke ? rocks : water;
-        if (other.Remove(cell)) activeCells--;
-        if (selected.Add(cell)) activeCells++;
-        overBudget = activeCells > WorldPaint.MaxPaintedCells;
+        if (selected != rocks && rocks.Remove(cell)) activeCells--;
+        if (selected != water && water.Remove(cell)) activeCells--;
+        if (selected != forest && forest.Remove(cell)) activeForestCells--;
+        if (selected.Add(cell))
+        {
+            if (strokeLayer == 2) activeForestCells++;
+            else activeCells++;
+        }
+        overBudget = activeCells > WorldPaint.MaxPaintedCells || activeForestCells > WorldPaint.MaxPaintedCells;
     }
 
     private void CommitStroke()
@@ -343,8 +355,8 @@ public partial class WorldPainterPlugin : EditorPlugin
             ResetStroke();
             return;
         }
-        if ((originalData == null && rocks.Count == 0 && water.Count == 0) ||
-            (originalData != null && rocks.SetEquals(originalData.RockCells) && water.SetEquals(originalData.WaterCells)))
+        if ((originalData == null && rocks.Count == 0 && water.Count == 0 && forest.Count == 0) ||
+            (originalData != null && rocks.SetEquals(originalData.RockCells) && water.SetEquals(originalData.WaterCells) && forest.SetEquals(originalData.ForestCells)))
         {
             ResetStroke();
             return;
@@ -354,7 +366,8 @@ public partial class WorldPainterPlugin : EditorPlugin
         data.ResourceLocalToScene = true;
         data.RockCells = Sorted(rocks);
         data.WaterCells = Sorted(water);
-        string label = (eraseStroke ? "Erase " : "Paint ") + (waterStroke ? "deep water" : "rocks");
+        data.ForestCells = Sorted(forest);
+        string label = (eraseStroke ? "Erase " : "Paint ") + (strokeLayer == 2 ? "forest" : strokeLayer == 1 ? "deep water" : "rocks");
         var history = GetUndoRedo();
         var before = originalData;
         ResetStroke();
@@ -373,10 +386,10 @@ public partial class WorldPainterPlugin : EditorPlugin
 
     private void ResetStroke()
     {
-        if (IsInstanceValid(strokeTarget)) strokeTarget.Preview(null, null);
+        if (IsInstanceValid(strokeTarget)) strokeTarget.Preview(null, null, null);
         strokeTarget = null;
         originalData = null;
-        rocks = water = null;
+        rocks = water = forest = null;
     }
 
     // =========================================================

@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -17,8 +17,8 @@ public partial class LevelEditor
     private WorldPaint paint;
     private int brushRadius = 2;
     private Vector2I? previousCell;
-    private (Cells Rocks, Cells Water, Cells Blue)? beforePaint;
-    private HashSet<Vector2I> rocks, water, deployment;
+    private (Cells Rocks, Cells Water, Cells Forest, Cells Blue)? beforePaint;
+    private HashSet<Vector2I> rocks, water, forest, deployment;
     private bool paintChanged;
     private float hillRadius = 16, hillRise = 5;
     private float wallWidth = 10, wallDepth = 4, wallHeight = 2, yaw;
@@ -37,7 +37,7 @@ public partial class LevelEditor
             toolPicker.AddItem(entry switch
             {
                 Tool.DeploymentLine => "Set deployment line",
-                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Hill => "Place hill",
+                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Hill => "Place hill",
                 Tool.Wall => "Place solid wall",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
@@ -139,6 +139,7 @@ public partial class LevelEditor
                 break;
             case Tool.Rock:
             case Tool.Water:
+            case Tool.Forest:
             case Tool.Deployment:
             case Tool.Erase:
                 Number(context, "Brush radius (cells)", brushRadius, 1, 14).ValueChanged += value => brushRadius = (int)value;
@@ -261,7 +262,7 @@ public partial class LevelEditor
             return;
         }
         if (!WorldPoint(mouse.Position, out var hit)) return;
-        if (tool is Tool.Rock or Tool.Water or Tool.Deployment ||
+        if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment ||
             (tool == Tool.Erase && (mouse.ButtonIndex == MouseButton.Right || Pick(hit) == null)))
         {
             BeginPaint();
@@ -317,7 +318,7 @@ public partial class LevelEditor
 
     private void ShowCursor(Vector3 point)
     {
-        bool brush = tool is Tool.Rock or Tool.Water or Tool.Deployment or Tool.Erase;
+        bool brush = tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment or Tool.Erase;
         var position = brush ? new Vector3((Cell(point).X + 0.5f) * Grid, 0, (Cell(point).Y + 0.5f) * Grid) : Snap(point);
         position.Y = Surface(position) + 0.13f;
         cursor.GlobalPosition = position;
@@ -337,9 +338,10 @@ public partial class LevelEditor
     private void BeginPaint()
     {
         EndPaint();
-        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, map.PresetRules?.BlueDeploymentCells);
+        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.PresetRules?.BlueDeploymentCells);
         rocks = new(paint.Data.RockCells);
         water = new(paint.Data.WaterCells);
+        forest = new(paint.Data.ForestCells);
         deployment = map.PresetRules == null ? new() : new(map.PresetRules.BlueDeploymentCells);
         paintChanged = false;
     }
@@ -360,10 +362,12 @@ public partial class LevelEditor
                 if (x * x + z * z >= brushRadius * brushRadius || !paint.Contains(next)) continue;
                 if (tool == Tool.Erase || (erase && tool == Tool.Rock)) paintChanged |= rocks.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Water)) paintChanged |= water.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Forest)) paintChanged |= forest.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Deployment)) paintChanged |= deployment.Remove(next);
                 if (erase || tool == Tool.Erase) continue;
-                if (tool == Tool.Rock) { paintChanged |= water.Remove(next); paintChanged |= rocks.Add(next); }
-                if (tool == Tool.Water) { paintChanged |= rocks.Remove(next); paintChanged |= water.Add(next); }
+                if (tool == Tool.Rock) { paintChanged |= forest.Remove(next); paintChanged |= water.Remove(next); paintChanged |= rocks.Add(next); }
+                if (tool == Tool.Water) { paintChanged |= forest.Remove(next); paintChanged |= rocks.Remove(next); paintChanged |= water.Add(next); }
+                if (tool == Tool.Forest) { paintChanged |= rocks.Remove(next); paintChanged |= water.Remove(next); paintChanged |= forest.Add(next); }
                 if (tool == Tool.Deployment && map.PresetRules.AllowsSide(
                     new Vector3((next.X + 0.5f) * Grid, 0, (next.Y + 0.5f) * Grid), Grid * 0.5f, blue: true))
                     paintChanged |= deployment.Add(next);
@@ -371,7 +375,7 @@ public partial class LevelEditor
         }
         previousCell = cell;
         if (!paintChanged) return;
-        if (!paint.TryMerge(new(rocks), new(water), out _, out _) || deployment.Count > WorldPaint.MaxPaintedCells)
+        if (!paint.TryMerge(new(rocks), new(water), out _, out _) || forest.Count > WorldPaint.MaxPaintedCells || deployment.Count > WorldPaint.MaxPaintedCells)
         {
             var previous = beforePaint.Value;
             beforePaint = null;
@@ -380,7 +384,7 @@ public partial class LevelEditor
             SetStatus("Stroke exceeded the map paint budget and was reverted.");
             return;
         }
-        SetPaint((Sorted(rocks), Sorted(water), Sorted(deployment)));
+        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(deployment)));
     }
 
     private static Cells Sorted(HashSet<Vector2I> cells) => new(cells.OrderBy(cell => cell.Y).ThenBy(cell => cell.X));
@@ -391,14 +395,15 @@ public partial class LevelEditor
         beforePaint = null;
         previousCell = null;
         if (!paintChanged) return;
-        (Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, map.PresetRules?.BlueDeploymentCells);
+        (Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.PresetRules?.BlueDeploymentCells);
         Remember(() => SetPaint(previous), () => SetPaint(next));
     }
 
-    private void SetPaint((Cells Rocks, Cells Water, Cells Blue) cells)
+    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Blue) cells)
     {
         paint.Data.RockCells = cells.Rocks;
         paint.Data.WaterCells = cells.Water;
+        paint.Data.ForestCells = cells.Forest;
         if (map.PresetRules != null) map.PresetRules.BlueDeploymentCells = cells.Blue;
         RefreshMap();
     }

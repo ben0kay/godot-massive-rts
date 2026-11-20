@@ -53,7 +53,7 @@ public static class CombatSystem
             if (refreshLocal || refreshPursuit)
             {
                 ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
-                float radius = type.Ranged ? type.Reach : Mathf.Max(config.CellSize * 2, type.MeleeDetectionReach + units.MaxFootprint);
+                float radius = type.Ranged ? units.RangedReach(i, type) : Mathf.Max(config.CellSize * 2, type.MeleeDetectionReach + units.MaxFootprint);
                 float distance = target >= 0 ? units.Position[i].DistanceSquaredTo(units.Position[target]) : float.PositiveInfinity;
                 if (refreshLocal)
                 {
@@ -95,11 +95,11 @@ public static class CombatSystem
                                 distance = foundDistance;
                             }
                         }
-                        if (obstacles != null && type.Ranged && target >= 0 && distance <= type.Reach * type.Reach &&
+                        if (obstacles != null && type.Ranged && target >= 0 && distance <= radius * radius &&
                             units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight &&
                             obstacles.BlocksSight(units.Position[i], units.Position[target]))
                         {
-                            int visible = grid.FindEnemy(units, i, type.Reach, config.QueryCandidateLimit, tick, obstacles);
+                            int visible = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, obstacles);
                             if (visible >= 0)
                             {
                                 target = visible;
@@ -171,7 +171,7 @@ public static class CombatSystem
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
             if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
-            float radius = type.Ranged ? type.Reach :
+            float radius = type.Ranged ? units.RangedReach(i, type) :
                 MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
             if (useDreadnaughtContact && !type.Ranged && units.Type[target] == RuntimeUnitCatalog.Dreadnaught)
             {

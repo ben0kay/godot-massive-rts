@@ -64,12 +64,12 @@ internal sealed class StructureCombat
     public bool CanHit(int id, in UnitStats type, StructureHealth target, ObstacleField sight) =>
         CanHit(units.Position[id], type, target, sight);
 
-    private static bool CanHit(Vector3 position, in UnitStats type, StructureHealth target, ObstacleField sight)
+    private bool CanHit(Vector3 position, in UnitStats type, StructureHealth target, ObstacleField sight)
     {
         Vector2 from = ObstacleField.Xz(position);
         Vector2 edge = Edge(target.Area, from);
         float squared = from.DistanceSquaredTo(edge);
-        float reach = Reach(type);
+        float reach = type.Ranged ? units.RangedReach(position, type) : Reach(type);
         return squared <= reach * reach && squared >= type.MinimumFireRange * type.MinimumFireRange &&
             sight?.BlocksSightExcept(position, Ground(edge), target.Area) != true;
     }
@@ -82,7 +82,7 @@ internal sealed class StructureCombat
         Vector2 min = target.Area.Min, max = target.Area.Max;
         float clearance = type.Footprint + 0.025f;
         float standOff = type.Ranged
-            ? Mathf.Max(clearance, Mathf.Max(type.MinimumFireRange + 0.02f, type.Reach * 0.9f))
+            ? Mathf.Max(clearance, Mathf.Max(type.MinimumFireRange + 0.02f, units.RangedReach(id, type) * 0.9f))
             : clearance;
         float best = float.PositiveInfinity;
         goal = position;

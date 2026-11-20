@@ -151,7 +151,7 @@ internal sealed class CommandMovement
                 navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
                 waypoint = navigation.Steer(id, type, start, waypoint, 0, out _, out _);
             }
-            float speed = stats.Speed * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);
+            float speed = units.TravelSpeed(id, stats) * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);
             Vector2 next = start.MoveToward(waypoint, speed * delta);
             if (field != null) next = field.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;

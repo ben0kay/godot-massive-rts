@@ -195,7 +195,7 @@ internal sealed class FortressWaves
             if (units.Health[id] <= 0 || units.Target[id] < 0 ||
                 units.Catalog[units.Type[id]].TargetsStructures) continue;
             Vector2 position = ObstacleField.Xz(units.Position[id]);
-            float radius = Detection(units.Catalog[units.Type[id]]);
+            float radius = Detection(id, units.Catalog[units.Type[id]]);
             int target = units.Target[id];
             if (position.DistanceSquaredTo(ClosestEdge(position)) <= radius * radius ||
                 units.Health[target] <= 0 ||
@@ -299,8 +299,8 @@ internal sealed class FortressWaves
         return false;
     }
 
-    private float Detection(in UnitStats type) =>
-        type.Ranged ? type.Reach : Mathf.Max(combat.CellSize * 2f, type.MeleeDetectionReach + units.MaxFootprint);
+    private float Detection(int id, in UnitStats type) =>
+        type.Ranged ? units.RangedReach(id, type) : Mathf.Max(combat.CellSize * 2f, type.MeleeDetectionReach + units.MaxFootprint);
 
     private ObstacleField Sight(in UnitStats type, ObstacleField field) =>
         !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
@@ -321,7 +321,7 @@ internal sealed class FortressWaves
         if (unitTarget < 0 || units.Health[unitTarget] <= 0) return true;
         if (type.PreferredTarget == TargetPreference.Units) return false;
         // Keep fighting an immediate threat when the preferred structure still needs an approach.
-        float reach = type.Ranged ? type.Reach :
+        float reach = type.Ranged ? units.RangedReach(id, type) :
             CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[unitTarget]].Footprint, SeparationGap) + 0.08f;
         return structures.CanHit(id, type, target, sight) ||
             units.Position[id].DistanceSquaredTo(units.Position[unitTarget]) > reach * reach;
@@ -336,7 +336,7 @@ internal sealed class FortressWaves
             if (structuresOnly && !type.TargetsStructures) continue;
             bool attackMove = movement.IsAttackMove(id);
             bool canPursue = !type.Ranged && (!movement.HasCommand(id) || attackMove);
-            float range = type.Ranged ? type.Reach : canPursue ? Detection(type) * DefenderMeleeDetectionMultiplier :
+            float range = type.Ranged ? units.RangedReach(id, type) : canPursue ? Detection(id, type) * DefenderMeleeDetectionMultiplier :
                 type.MeleeAttackRadius + units.MaxFootprint + SeparationGap + CombatSystem.MeleeContactTolerance;
             int target = structuresOnly ? -1 : units.Target[id];
             Vector3 position = units.Position[id];
@@ -356,7 +356,7 @@ internal sealed class FortressWaves
             {
                 bool canApproach = !movement.HasCommand(id) || attackMove;
                 float structureRange = canApproach ? type.StructureDetectionRange :
-                    Mathf.Min(type.StructureDetectionRange, StructureCombat.Reach(type));
+                    Mathf.Min(type.StructureDetectionRange, type.Ranged ? units.RangedReach(id, type) : StructureCombat.Reach(type));
                 StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, buildings.MovementField, sight);
                 if (ChooseStructure(id, type, target, structure, sight))
                 {
@@ -397,7 +397,7 @@ internal sealed class FortressWaves
         ref readonly var type = ref units.Catalog[units.Type[id]];
         Vector2 p = ObstacleField.Xz(units.Position[id]);
         Vector2 edge = ClosestEdge(p);
-        float detect = Detection(type);
+        float detect = Detection(id, type);
         int target = units.Target[id];
         bool refresh = id % AcquisitionInterval == tick % AcquisitionInterval;
         if (!type.TargetsStructures && p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
@@ -425,7 +425,7 @@ internal sealed class FortressWaves
         if (target >= 0)
         {
             Vector2 defender = ObstacleField.Xz(units.Position[target]);
-            float range = type.Ranged ? type.Reach * 0.94f :
+            float range = type.Ranged ? units.RangedReach(id, type) * 0.94f :
                 CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector2 offset = p - defender;
             float distance = offset.Length();
@@ -448,12 +448,13 @@ internal sealed class FortressWaves
             units.Target[id] = -1;
         }
 
-        float standOff = type.Ranged ? Mathf.Max(type.MinimumFireRange + 0.05f, type.Reach * 0.94f) :
+        float rangedReach = type.Ranged ? units.RangedReach(id, type) : 0f;
+        float standOff = type.Ranged ? Mathf.Max(type.MinimumFireRange + 0.05f, rangedReach * 0.94f) :
             type.Footprint + ContactTolerance * 0.5f;
         float edgeDistance = p.DistanceTo(edge);
-        bool clearShot = type.Ranged && edgeDistance <= type.Reach &&
+        bool clearShot = type.Ranged && edgeDistance <= rangedReach &&
             Sight(type, field)?.BlocksSightExcept(Ground(p), Ground(edge), buildings.Citadel.Area) != true;
-        if (clearShot && edgeDistance <= type.Reach && edgeDistance >= type.MinimumFireRange)
+        if (clearShot && edgeDistance >= type.MinimumFireRange)
         {
             movement.SetGoal(id, units.Position[id]);
             return;
@@ -473,7 +474,7 @@ internal sealed class FortressWaves
                 normal.Y > 0 ? citadelMax.Y : citadelMin.Y);
             normal = Vector2.Down * Mathf.Sign(normal.Y);
         }
-        if (type.Ranged && !clearShot && edgeDistance <= type.Reach)
+        if (type.Ranged && !clearShot && edgeDistance <= rangedReach)
         {
             // Close along the original approach when cover blocks the firing position.
             standOff = Mathf.Max(type.Footprint + 0.05f, type.MinimumFireRange + 0.05f);
@@ -520,7 +521,7 @@ internal sealed class FortressWaves
         Vector2 from = ObstacleField.Xz(units.Position[id]);
         Vector2 edge = ClosestEdge(from);
         float distance = from.DistanceTo(edge);
-        if (distance > Detection(type)) return;
+        if (distance > Detection(id, type)) return;
         if (!type.Ranged)
         {
             if (distance > type.Footprint + ContactTolerance ||
@@ -530,7 +531,7 @@ internal sealed class FortressWaves
             return;
         }
 
-        if (units.Cooldown[id] > 0 || distance > type.Reach || distance < type.MinimumFireRange ||
+        if (units.Cooldown[id] > 0 || distance > units.RangedReach(id, type) || distance < type.MinimumFireRange ||
             Sight(type, field)?.BlocksSightExcept(Ground(from), Ground(edge), buildings.Citadel.Area) == true) return;
         if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f)) return;
         Vector3 aim = Ground(edge) + Vector3.Up * 1.5f;

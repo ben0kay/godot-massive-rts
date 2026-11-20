@@ -36,7 +36,7 @@ public sealed class GuardGroup
             if (units.Health[id] <= 0f) continue;
             Vector3 post = posts[id - Start];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
-            float engagementRadius = type.Ranged ? type.Reach : radius;
+            float engagementRadius = type.Ranged ? units.RangedReach(id, type) : radius;
             int target = units.Target[id];
             if (!IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
             {
@@ -70,7 +70,8 @@ public sealed class GuardGroup
             Vector2 from = ObstacleField.Xz(position);
             int target = units.Target[id];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
-            float engagementRadiusSquared = type.Ranged ? type.Reach * type.Reach : radiusSquared;
+            float rangedReach = type.Ranged ? units.RangedReach(id, type) : 0f;
+            float engagementRadiusSquared = type.Ranged ? rangedReach * rangedReach : radiusSquared;
             bool engaging = IsEngaging(units, target, anchor, engagementRadiusSquared);
             if (!engaging)
             {
@@ -81,7 +82,7 @@ public sealed class GuardGroup
             float stop = 0f;
             if (engaging)
             {
-                float reach = type.Ranged ? type.Reach :
+                float reach = type.Ranged ? units.RangedReach(id, type) :
                     CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap);
                 bool indirect = type.Ranged &&
                     units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.IndirectFire;
@@ -107,7 +108,7 @@ public sealed class GuardGroup
             float distance = offset.Length();
             if (distance <= Mathf.Max(stop, 0.00001f)) continue;
             Vector2 direction = offset / distance;
-            Vector2 next = from + direction * Mathf.Min(type.Speed * dt, distance - stop);
+            Vector2 next = from + direction * Mathf.Min(units.TravelSpeed(id, type) * dt, distance - stop);
             float currentRadiusSquared = anchor.DistanceSquaredTo(from);
             if (anchor.DistanceSquaredTo(next) > Mathf.Max(radiusSquared, currentRadiusSquared)) continue;
             if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);

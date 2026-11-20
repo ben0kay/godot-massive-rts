@@ -1,0 +1,131 @@
+// Compiles passable forest cells into batched trees and a shared outer boundary.
+using System.Collections.Generic;
+using Godot;
+
+namespace MassiveRts;
+
+internal sealed class ForestCover
+{
+    private static readonly Vector2I[] Neighbors = { Vector2I.Up, Vector2I.Right, Vector2I.Down, Vector2I.Left };
+    private readonly Dictionary<Vector2I, int> trees = new();
+    private readonly HashSet<Vector2I> sampledCells = new();
+    private readonly Rect2I visibilityBounds;
+    private HashSet<int> faded = new(), nearby = new();
+    private readonly MultiMesh trunks, crowns;
+    private float timeUntilRefresh;
+    private static Color Tint(float opacity) => new(1f, 1f, 1f, opacity);
+
+    internal ForestCover(Node3D parent, HashSet<Vector2I> cells, TerrainHeightField surface)
+    {
+        var shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestTree.gdshader");
+        ShaderMaterial Material(Color tint)
+        {
+            var material = new ShaderMaterial { Shader = shader };
+            material.SetShaderParameter("tree_color", tint);
+            return material;
+        }
+
+        trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
+            RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) }, cells.Count);
+        crowns = Batch(parent, new SphereMesh { Radius = 0.56f, Height = 1.18f,
+            RadialSegments = 8, Rings = 4, Material = Material(new Color("#427c3b")) }, cells.Count);
+
+        using var outline = new SurfaceTool();
+        outline.Begin(Mesh.PrimitiveType.Lines);
+        outline.SetMaterial(new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            AlbedoColor = new Color("#668d4d") });
+        float cellSize = WorldPaint.CellSize;
+        float Ground(Vector2 point) => surface?.At(point.X, point.Y) ?? 0f;
+        Vector3 OnGround(Vector2 point) => new(point.X, Ground(point) + 0.06f, point.Y);
+        Vector2I min = new(int.MaxValue, int.MaxValue), max = new(int.MinValue, int.MinValue);
+        foreach (var cell in cells)
+        {
+            min = new Vector2I(System.Math.Min(min.X, cell.X), System.Math.Min(min.Y, cell.Y));
+            max = new Vector2I(System.Math.Max(max.X, cell.X), System.Math.Max(max.Y, cell.Y));
+            int index = trees.Count;
+            trees.Add(cell, index);
+            uint seed = unchecked(((uint)cell.X * 0x9E3779B9u) ^ ((uint)cell.Y * 0x85EBCA6Bu));
+            seed ^= seed >> 16;
+            float height = 0.65f + (seed & 255) / 255f * 0.95f;
+            float width = 0.72f + ((seed >> 8) & 255) / 255f * 0.51f;
+            Vector2 low = (Vector2)cell * cellSize;
+            Vector2 center = low + Vector2.One * (cellSize * 0.5f);
+            float ground = Ground(center);
+            trunks.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, height, width)),
+                new Vector3(center.X, ground + height * 0.5f, center.Y)));
+            crowns.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, 0.6f + height * 0.65f, width)),
+                new Vector3(center.X, ground + height + 0.25f, center.Y)));
+            trunks.SetInstanceColor(index, Colors.White);
+            crowns.SetInstanceColor(index, Colors.White);
+
+            for (int edge = 0; edge < 4; edge++)
+            {
+                if (cells.Contains(cell + Neighbors[edge])) continue;
+                Vector2 a = low + (edge is 1 or 2 ? Vector2.Right * cellSize : Vector2.Zero) +
+                    (edge == 2 ? Vector2.Down * cellSize : Vector2.Zero);
+                Vector2 b = edge switch
+                {
+                    0 => low + Vector2.Right * cellSize,
+                    1 => low + Vector2.One * cellSize,
+                    2 => low + Vector2.Down * cellSize,
+                    _ => low + Vector2.Down * cellSize
+                };
+                outline.AddVertex(OnGround(a));
+                Vector3 midpoint = OnGround((a + b) * 0.5f);
+                outline.AddVertex(midpoint);
+                outline.AddVertex(midpoint);
+                outline.AddVertex(OnGround(b));
+            }
+        }
+        visibilityBounds = new Rect2I(min - Vector2I.One, max - min + Vector2I.One * 3);
+        parent.AddChild(new MeshInstance3D { Mesh = outline.Commit(),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+    }
+
+    private static MultiMesh Batch(Node3D parent, Mesh mesh, int count)
+    {
+        var batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseColors = true, Mesh = mesh, InstanceCount = count };
+        parent.AddChild(new MultiMeshInstance3D { Multimesh = batch,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        return batch;
+    }
+
+    internal bool Contains(Vector3 position) => trees.ContainsKey(Cell(position));
+
+    private static Vector2I Cell(Vector3 position) => new(Mathf.FloorToInt(position.X / WorldPaint.CellSize),
+        Mathf.FloorToInt(position.Z / WorldPaint.CellSize));
+
+    // =========================================================
+    // Sample occupancy only at display cadence and upload changed tree colors.
+    internal void UpdateVisibility(UnitState units, float delta)
+    {
+        timeUntilRefresh -= delta;
+        if (timeUntilRefresh > 0f) return;
+        timeUntilRefresh = 0.1f;
+        nearby.Clear();
+        sampledCells.Clear();
+        for (int id = 0; id < units.Count; id++)
+        {
+            if (units.Health[id] <= 0f) continue;
+            var cell = Cell(units.Position[id]);
+            if (!visibilityBounds.HasPoint(cell) || !sampledCells.Add(cell)) continue;
+            for (int z = -1; z <= 1; z++)
+            for (int x = -1; x <= 1; x++)
+                if (trees.TryGetValue(cell + new Vector2I(x, z), out int index)) nearby.Add(index);
+        }
+        foreach (int index in faded)
+            if (!nearby.Contains(index))
+            {
+                trunks.SetInstanceColor(index, Colors.White);
+                crowns.SetInstanceColor(index, Colors.White);
+            }
+        foreach (int index in nearby)
+            if (!faded.Contains(index))
+            {
+                trunks.SetInstanceColor(index, Tint(0.48f));
+                crowns.SetInstanceColor(index, Tint(0.35f));
+            }
+        (faded, nearby) = (nearby, faded);
+    }
+}

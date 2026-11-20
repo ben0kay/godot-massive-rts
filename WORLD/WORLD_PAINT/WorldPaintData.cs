@@ -1,4 +1,4 @@
-// Stores one level's occupied rock and water cells and their appearance.
+// Stores one level's occupied rock, water and forest cells and their appearance.
 using Godot;
 using Cells = Godot.Collections.Array<Godot.Vector2I>;
 
@@ -13,7 +13,7 @@ public partial class WorldPaintData : Resource
     private Color deepWaterColor = new("#104953"), shorelineColor = new("#506b63");
     private float shorelineWidth = 0.9f, bankHeight = 0.16f, rippleStrength = 0.045f, rippleSpeed = 0.45f;
 
-    private Cells rockCells = new(), waterCells = new();
+    private Cells rockCells = new(), waterCells = new(), forestCells = new();
 
     [Export]
     public Cells RockCells
@@ -27,6 +27,13 @@ public partial class WorldPaintData : Resource
     {
         get => waterCells;
         set { waterCells = value ?? new Cells(); EmitChanged(); }
+    }
+
+    [Export]
+    public Cells ForestCells
+    {
+        get => forestCells;
+        set { forestCells = value ?? new Cells(); EmitChanged(); }
     }
 
     [Export(PropertyHint.Range, "0.5,12,0.1")]

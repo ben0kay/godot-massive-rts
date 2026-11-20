@@ -41,7 +41,7 @@ internal sealed partial class AttackRangeOverlay : MeshInstance3D
         int target = units.Target[hovered];
         bool hasTarget = target >= 0 && units.Health[target] > 0f;
         float defenderRadius = units.Catalog[hasTarget ? units.Type[target] : RuntimeUnitCatalog.Circle].Footprint;
-        float radius = type.Ranged ? type.Reach : ContactRange(type.MeleeAttackRadius, defenderRadius, separationGap);
+        float radius = type.Ranged ? units.RangedReach(hovered, type) : ContactRange(type.MeleeAttackRadius, defenderRadius, separationGap);
         Vector2 facing = units.Facing[hovered];
         float cosineSquared = type.CleaveEnabled ? type.CleaveCosineSquared : type.MeleeFacingCosineSquared;
         bool directional = !type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled) && facing != Vector2.Zero;

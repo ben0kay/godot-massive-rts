@@ -57,7 +57,7 @@ public static class MovementSystem
             if (hasTarget)
             {
                 ref readonly UnitStats defender = ref catalog[units.Type[target]];
-                float reach = type.Ranged ? type.Reach :
+                float reach = type.Ranged ? units.RangedReach(i, type) :
                     CombatSystem.MeleeContact(type.MeleeAttackRadius, defender.Footprint, separationGap);
                 float distanceSquared = offset.LengthSquared();
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
@@ -118,15 +118,16 @@ public static class MovementSystem
                 continue;
             }
             float remaining = distance - stop;
-            float advanceSpeed = type.Speed;
+            float topSpeed = units.TravelSpeed(i, type);
+            float advanceSpeed = topSpeed;
             float speed = advanceSpeed;
             float rampRate = type.Ranged ? rangedRampRate : meleeRampRate;
             float accelerationRate = type.AccelerationRateOverride > 0f ? type.AccelerationRateOverride : rampRate;
             if (!movementMode && accelerationRate > 0f)
             {
-                advanceSpeed = Mathf.Min(type.Speed, units.MoveSpeed[i] + type.Speed * accelerationRate * dt);
+                advanceSpeed = Mathf.Min(topSpeed, units.MoveSpeed[i] + topSpeed * accelerationRate * dt);
                 // Limit speed near the stopping point. Most soldiers can skip the square root.
-                float brakingSpeedSquared = 2f * type.Speed * rampRate * remaining;
+                float brakingSpeedSquared = 2f * topSpeed * rampRate * remaining;
                 speed = !routeCorner && rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
             }

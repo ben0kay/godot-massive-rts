@@ -177,6 +177,7 @@ public partial class CommandSandbox : Node3D
         var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
         var (rocks, water) = paint?.Compile() ??
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
+        units.Forest = paint?.Forest;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
             WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, StartingCarbon);
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
@@ -377,6 +378,7 @@ public partial class CommandSandbox : Node3D
     public override void _Process(double delta)
     {
         if (units == null) return;
+        units.Forest?.UpdateVisibility(units, (float)delta);
         deathFeedback.Advance((float)delta);
         deathRenderer.Sync(deathFeedback);
         buildings.AdvanceDefenseEffects((float)delta);

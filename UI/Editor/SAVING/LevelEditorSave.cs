@@ -173,6 +173,8 @@ internal static class LevelEditorSave
         var paint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         if (paint?.Data is WorldPaintData data && !paint.TryMerge(new(data.RockCells), new(data.WaterCells), out _, out _))
             throw new InvalidOperationException("The rock and water layout exceeds the existing navigation budget. Simplify the painted banks.");
+        if (paint?.Data is WorldPaintData forestData && forestData.ForestCells.Count > WorldPaint.MaxPaintedCells)
+            throw new InvalidOperationException("The forest layout exceeds the map paint budget.");
 
         var roster = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
             .Where(unit => unit != null).Select(unit => unit.Id).ToHashSet();

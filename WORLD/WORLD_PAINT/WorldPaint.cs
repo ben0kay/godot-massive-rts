@@ -17,7 +17,9 @@ public partial class WorldPaint : Node3D
     private WorldPaintData observedData;
     private CommandTerrain terrain;
     private MeshInstance3D rocksView, waterView;
-    private HashSet<Vector2I> draftRocks, draftWater;
+    private HashSet<Vector2I> draftRocks, draftWater, draftForest;
+    private Node3D forestView;
+    internal ForestCover Forest { get; private set; }
     private bool visualDirty;
     private float displayedHalfWidth;
 
@@ -77,6 +79,7 @@ public partial class WorldPaint : Node3D
         displayedHalfWidth = MapHalfWidth;
         RebuildViews(draftRocks ?? new HashSet<Vector2I>(data?.RockCells ?? new Cells()),
             draftWater ?? new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
+        RebuildForest(draftForest);
         UpdateConfigurationWarnings();
     }
 
@@ -87,6 +90,8 @@ public partial class WorldPaint : Node3D
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
         foreach (var cell in data.WaterCells)
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
+        foreach (var cell in data.ForestCells)
+            if (!Contains(cell)) return new[] { "Some forest cells lie beyond this map." };
         return Array.Empty<string>();
     }
 
@@ -97,10 +102,11 @@ public partial class WorldPaint : Node3D
         return cell.X >= -edge && cell.X < edge && cell.Y >= -edge && cell.Y < edge;
     }
 
-    internal void Preview(HashSet<Vector2I> rocks, HashSet<Vector2I> water)
+    internal void Preview(HashSet<Vector2I> rocks, HashSet<Vector2I> water, HashSet<Vector2I> forest)
     {
         draftRocks = rocks;
         draftWater = water;
+        draftForest = forest;
         Invalidate();
     }
 
@@ -140,6 +146,12 @@ public partial class WorldPaint : Node3D
             rockAreas[i] = area with { AirborneHeightRange = new Vector2(low, high + data.RockHeight) };
         }
         RebuildViews(rocks, water);
+        if (visualDirty || displayedHalfWidth != MapHalfWidth)
+        {
+            RebuildForest(null);
+            visualDirty = false;
+            displayedHalfWidth = MapHalfWidth;
+        }
         return (rockAreas, waterAreas);
     }
 
@@ -152,6 +164,26 @@ public partial class WorldPaint : Node3D
         AddChild(view, false, InternalMode.Back);
         view.GlobalTransform = Transform3D.Identity;
         return view;
+    }
+
+    private void RebuildForest(HashSet<Vector2I> draft)
+    {
+        if (forestView != null)
+        {
+            RemoveChild(forestView);
+            forestView.QueueFree();
+            forestView = null;
+        }
+        Forest = null;
+        var cells = new HashSet<Vector2I>(draft ?? (IEnumerable<Vector2I>)(data?.ForestCells ?? new Cells()));
+        cells.RemoveWhere(cell => !Contains(cell));
+        cells.ExceptWith((IEnumerable<Vector2I>)draftRocks ?? (IEnumerable<Vector2I>)(data?.RockCells ?? new Cells()));
+        cells.ExceptWith((IEnumerable<Vector2I>)draftWater ?? (IEnumerable<Vector2I>)(data?.WaterCells ?? new Cells()));
+        if (cells.Count == 0 || cells.Count > MaxPaintedCells) return;
+        forestView = new Node3D { Name = "ForestPreview", TopLevel = true };
+        AddChild(forestView, false, InternalMode.Back);
+        forestView.GlobalTransform = Transform3D.Identity;
+        Forest = new ForestCover(forestView, cells, Surface);
     }
 
     private void RebuildViews(HashSet<Vector2I> rocks, HashSet<Vector2I> water)

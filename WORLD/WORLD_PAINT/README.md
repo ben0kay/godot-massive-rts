@@ -15,3 +15,9 @@ The painter accepts up to 16,384 in-bounds occupied cells and 128 merged rectang
 Select **WorldPaint → Data → Water appearance**. Adjust the surface, deep-water and shoreline colours, the width and height of the visible bank, and the ripple strength and speed. Setting ripple strength to zero gives still water. Paint strokes and Undo/Redo retain the appearance settings.
 
 The water follows the terrain at its existing surface offset. Along exposed cell edges, a raised visual bank slopes inward to that surface. Shore distance darkens deeper-looking areas and shades the bank. The bank and surface share one indexed mesh and one opaque material. The complete visible shoreline sits inside the same painted cells that block movement and construction. Terrain heights, pathfinding, line of sight and shots use the existing gameplay geometry.
+
+## Forest
+
+Choose **Forest** in World Painter or **Paint forest** in the in-game Level Editor. Forests share the paint grid with rock and water and are stored as level-local cells. Adjacent cells share an outline with no internal seams. Trees have a deterministic mix of heights and widths. They are instanced scenery with no physics colliders.
+
+In playable Fortress Defense maps, ranged units standing in forest have half their maximum attack range and units authored as exactly Size Tier 2 move at 75% speed. Forest does not block movement, line of sight or projectiles. Nearby live units fade trunks and canopies using batched instance colors.
