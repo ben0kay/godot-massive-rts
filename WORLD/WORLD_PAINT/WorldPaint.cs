@@ -17,7 +17,6 @@ public partial class WorldPaint : Node3D
     private WorldPaintData observedData;
     private CommandTerrain terrain;
     private MeshInstance3D rocksView, waterView;
-    private HashSet<Vector2I> draftRocks, draftWater, draftForest;
     private Node3D forestView;
     internal ForestCover Forest { get; private set; }
     private bool visualDirty;
@@ -77,9 +76,9 @@ public partial class WorldPaint : Node3D
         if (!visualDirty) return;
         visualDirty = false;
         displayedHalfWidth = MapHalfWidth;
-        RebuildViews(draftRocks ?? new HashSet<Vector2I>(data?.RockCells ?? new Cells()),
-            draftWater ?? new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
-        RebuildForest(draftForest);
+        RebuildViews(new HashSet<Vector2I>(data?.RockCells ?? new Cells()),
+            new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
+        RebuildForest();
         UpdateConfigurationWarnings();
     }
 
@@ -100,14 +99,6 @@ public partial class WorldPaint : Node3D
     {
         int edge = GridEdge;
         return cell.X >= -edge && cell.X < edge && cell.Y >= -edge && cell.Y < edge;
-    }
-
-    internal void Preview(HashSet<Vector2I> rocks, HashSet<Vector2I> water, HashSet<Vector2I> forest)
-    {
-        draftRocks = rocks;
-        draftWater = water;
-        draftForest = forest;
-        Invalidate();
     }
 
     internal bool TryMerge(HashSet<Vector2I> rocks, HashSet<Vector2I> water,
@@ -148,7 +139,7 @@ public partial class WorldPaint : Node3D
         RebuildViews(rocks, water);
         if (visualDirty || displayedHalfWidth != MapHalfWidth)
         {
-            RebuildForest(null);
+            RebuildForest();
             visualDirty = false;
             displayedHalfWidth = MapHalfWidth;
         }
@@ -166,7 +157,7 @@ public partial class WorldPaint : Node3D
         return view;
     }
 
-    private void RebuildForest(HashSet<Vector2I> draft)
+    private void RebuildForest()
     {
         if (forestView != null)
         {
@@ -175,10 +166,10 @@ public partial class WorldPaint : Node3D
             forestView = null;
         }
         Forest = null;
-        var cells = new HashSet<Vector2I>(draft ?? (IEnumerable<Vector2I>)(data?.ForestCells ?? new Cells()));
+        var cells = new HashSet<Vector2I>(data?.ForestCells ?? new Cells());
         cells.RemoveWhere(cell => !Contains(cell));
-        cells.ExceptWith((IEnumerable<Vector2I>)draftRocks ?? (IEnumerable<Vector2I>)(data?.RockCells ?? new Cells()));
-        cells.ExceptWith((IEnumerable<Vector2I>)draftWater ?? (IEnumerable<Vector2I>)(data?.WaterCells ?? new Cells()));
+        cells.ExceptWith(data?.RockCells ?? new Cells());
+        cells.ExceptWith(data?.WaterCells ?? new Cells());
         if (cells.Count == 0 || cells.Count > MaxPaintedCells) return;
         forestView = new Node3D { Name = "ForestPreview", TopLevel = true };
         AddChild(forestView, false, InternalMode.Back);

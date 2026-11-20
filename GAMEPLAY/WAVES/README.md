@@ -2,7 +2,7 @@
 
 Command levels expose `WaveDefinitions`, `BetweenWavesSeconds`, `EnemySpawnEdge`, `EnemySpawnWidth`, and `EnemySpawnRate` on the scene root. Each `WaveDefinition.cs` resource maps stable soldier IDs to counts. `FortressWaves.cs` releases troops just inside the selected boundary and leads them toward the Citadel. South (+Z) is the default. Spawn width is measured in world units along the selected edge, centred near the Citadel and shifted to fit the map. The default on Level 001 is 256 units.
 
-Enable **Wave Editor** in **Project Settings → Plugins** after building the C# project. Open the Command Sandbox or an inherited level and click **Wave Editor** in the right dock beside **World Painter**. Edit the edge, spawn width, time between waves, spawn rate, and counts, or add and remove waves. Save the open scene to keep its settings. The Inspector remains another way to edit the same data.
+Enable **Wave Editor** in **Project Settings → Plugins** after building the C# project. Open the Command Sandbox or an inherited level and click **Wave Editor** in the right dock. Edit the edge, spawn width, time between waves, spawn rate, and counts, or add and remove waves. Save the open scene to keep its settings. The Inspector remains another way to edit the same data.
 
 A centered Citadel is roughly 2,500 world units from an edge. On the current sandbox that means several minutes of travel before contact. EnemySpawn markers from older scenes are obsolete.
 
