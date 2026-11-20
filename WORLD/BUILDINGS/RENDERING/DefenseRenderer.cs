@@ -171,14 +171,15 @@ public partial class DefenseRenderer : Node3D
     }
 
     // =========================================================
-    public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle)
+    public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle, TerrainHeightField terrain = null)
     {
         InitializeBatches();
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount = placements.Count;
         for (int i = 0; i < placements.Count; i++)
         {
             var placement = placements[i];
-            ShowTower(i, placement.Footprint(catalog), placement.Faction, height);
+            var area = placement.Footprint(catalog);
+            ShowTower(i, area, placement.Faction, height, terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f);
         }
         if (battle)
         {

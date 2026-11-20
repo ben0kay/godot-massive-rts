@@ -104,6 +104,17 @@ internal sealed class ForestCover
     private static Vector2I Cell(Vector3 position) => new(Mathf.FloorToInt(position.X / WorldPaint.CellSize),
         Mathf.FloorToInt(position.Z / WorldPaint.CellSize));
 
+    internal void ResetVisibility()
+    {
+        foreach (int index in faded)
+        {
+            trunks.SetInstanceColor(index, Colors.White);
+            crowns.SetInstanceColor(index, Colors.White);
+        }
+        faded.Clear();
+        timeUntilRefresh = 0f;
+    }
+
     // =========================================================
     // Sample occupancy only at display cadence and upload changed tree colors.
     internal void UpdateVisibility(UnitState units, float delta)

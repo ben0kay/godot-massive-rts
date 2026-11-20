@@ -6,7 +6,10 @@ namespace MassiveRts;
 
 public readonly record struct SoldierPlacement(int X, int Z, byte Faction, byte Type, float GridSize = DeploymentLayout.CellSize)
 {
-    public Vector3 Position() => new(
+    internal Vector3? AuthoredPosition { get; init; }
+    internal Vector2 AuthoredFacing { get; init; }
+
+    public Vector3 Position() => AuthoredPosition ?? new Vector3(
         (X / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * GridSize, 0,
         (Z / (float)DeploymentLayout.SoldierSubdivisions + 0.5f) * GridSize);
 }

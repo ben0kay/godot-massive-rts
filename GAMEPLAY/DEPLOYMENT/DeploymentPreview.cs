@@ -9,6 +9,7 @@ internal sealed class DeploymentPreview
 {
     private readonly MultiMesh mesh;
     private readonly float halfHeight;
+    internal TerrainHeightField Terrain { get; set; }
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
 
@@ -59,6 +60,7 @@ internal sealed class DeploymentPreview
     {
         SoldierPlacement placement = placements[slot];
         Vector3 position = placement.Position() + Vector3.Up * halfHeight;
+        position.Y += Terrain?.At(position.X, position.Z) ?? 0f;
         mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
         mesh.SetInstanceColor(slot, ArmyRenderer.FactionColor(placement.Faction));
     }

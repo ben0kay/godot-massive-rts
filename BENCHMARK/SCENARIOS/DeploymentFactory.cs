@@ -84,6 +84,7 @@ public sealed class DeploymentFactory
                 Vector3 p = placement.Position();
                 p.Y = units.Grounding?.Field.At(p.X, p.Z) ?? 0f;
                 units.Position[i] = p;
+                units.Facing[i] = placement.AuthoredFacing;
                 units.Faction[i] = placement.Faction; units.Type[i] = placement.Type;
                 InitializeSoldier(units, i);
                 continue;

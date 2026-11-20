@@ -24,7 +24,9 @@ public partial class LevelEditor : Node
     private LevelEditorMode mode;
     private CampaignDefinition campaign;
     private LevelDefinition[] listed;
-    private CommandSandbox map, runningTest;
+    private CommandSandbox map;
+    private Node runningTest;
+    private Button testButton;
     private IsometricCamera camera;
     private LevelDefinition metadata;
     private string activeId;
@@ -97,7 +99,7 @@ public partial class LevelEditor : Node
         Button(buttons, "Redo", () => ApplyHistory(redo, undo, false));
         Button(buttons, "Map Size…", ShowMapSettings);
         Button(buttons, "Preview Layout", ToggleLayout);
-        Button(buttons, "Test Fortress", TestFortress);
+        testButton = Button(buttons, "Test Fortress", StartTest);
         Button(buttons, "Return from Test", StopTest);
         strength = Heading(toolbar, "", 16);
         status = Heading(toolbar, "", 15);
@@ -221,6 +223,7 @@ public partial class LevelEditor : Node
         cursor = null;
         dirty = previewing = false;
         mode = adapter;
+        testButton.Text = mode.Preset ? "Test Auto Battler" : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
         map = next;
@@ -347,10 +350,9 @@ public partial class LevelEditor : Node
         SetStatus(previewing ? "Opening layout preview · click Preview Layout again to edit" : "");
     }
 
-    private void TestFortress()
+    private void StartTest()
     {
         if (map == null || runningTest != null) return;
-        if (mode.Preset) { SetStatus("Use Preview Layout to inspect a Preset Battle."); return; }
         EndPaint();
         try { LevelEditorSave.ValidateContent(mode, map); }
         catch (Exception error) { SetStatus(error.Message); return; }
@@ -360,18 +362,46 @@ public partial class LevelEditor : Node
             SetStatus("Could not create a temporary test scene.");
             return;
         }
+        if (mode.Preset)
+        {
+            try
+            {
+                var arena = MenuNavigation.LoadScene("res://BENCHMARK/BenchmarkArena.tscn").Instantiate<BenchmarkArena>();
+                arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
+                test.LevelSettings = metadata;
+                arena.ConfigurePresetTest(test);
+                var container = new SubViewportContainer { Stretch = true };
+                var viewport = new SubViewport { OwnWorld3D = true };
+                container.AddChild(viewport);
+                viewport.AddChild(arena);
+                runningTest = container;
+            }
+            catch (Exception error)
+            {
+                test.Free();
+                SetStatus(error.Message);
+                return;
+            }
+        }
+        else runningTest = test;
         map.Hide();
         camera.ProcessMode = ProcessModeEnum.Disabled;
-        runningTest = test;
-        AddChild(test);
+        if (runningTest is SubViewportContainer presetView)
+        {
+            interfaceRoot.AddChild(presetView);
+            presetView.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            presetView.OffsetTop = 124;
+        }
+        else AddChild(runningTest);
         ShowEditor();
-        SetStatus("Temporary Fortress test · use Return from Test to resume editing");
+        SetStatus(mode.Preset ? "Paint Blue troops, then Start painted battle · Return from Test resumes editing" :
+            "Temporary Fortress test · use Return from Test to resume editing");
     }
 
     private void StopTest()
     {
         if (runningTest == null) return;
-        RemoveChild(runningTest);
+        runningTest.GetParent().RemoveChild(runningTest);
         runningTest.QueueFree();
         runningTest = null;
         camera.ProcessMode = ProcessModeEnum.Inherit;

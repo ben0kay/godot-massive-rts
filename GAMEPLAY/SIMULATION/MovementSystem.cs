@@ -9,9 +9,11 @@ public static class MovementSystem
     // =========================================================
     internal static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
-        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, StructureCombat structureCombat = null)
+        ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, StructureCombat structureCombat = null,
+        ObstacleField separateSight = null, bool useSeparateSight = false)
     {
         var catalog = units.Catalog;
+        var sight = useSeparateSight ? separateSight : obstacles;
         var turnSteps = units.TurnSteps(dt);
         bool movementMode = mode == BenchmarkMode.Movement;
         float meleeRampRate = meleeRampSeconds > 0f ? 1f / meleeRampSeconds : 0f;
@@ -46,7 +48,7 @@ public static class MovementSystem
             if (rangedCombat && !hasTarget && !hasStructure && units.MoveSpeed[i] == 0f) continue;
             Vector3 destination = movementMode ? units.Goal[i] : hasStructure
                 ? structureCombat.ApproachGoal(i) : units.Position[target];
-            if (hasStructure && structureCombat.CanHit(i, type, structure, StructureCombat.Sight(type, units, obstacles)))
+            if (hasStructure && structureCombat.CanHit(i, type, structure, StructureCombat.Sight(type, units, sight)))
             {
                 units.MoveSpeed[i] = 0f;
                 continue;
@@ -62,9 +64,9 @@ public static class MovementSystem
                 float distanceSquared = offset.LengthSquared();
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
                 float sightRange = steerMelee ? reach + 0.075f : reach;
-                bool blockedInRange = obstacles != null && distanceSquared <= sightRange * sightRange &&
+                bool blockedInRange = sight != null && distanceSquared <= sightRange * sightRange &&
                     (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
-                    obstacles.BlocksSight(units.Position[i], destination);
+                    sight.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
                 bool holding = false;
                 if (steerMelee)

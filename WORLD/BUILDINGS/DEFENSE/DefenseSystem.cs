@@ -53,7 +53,7 @@ internal sealed class DefenseSystem
     }
 
     public DefenseSystem(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog,
-        float height, DefenseRenderer renderer, DamageRules rules, ObstacleField staticWalls)
+        float height, DefenseRenderer renderer, DamageRules rules, ObstacleField staticWalls, TerrainHeightField terrain = null)
     {
         this.renderer = renderer;
         this.staticWalls = staticWalls;
@@ -67,7 +67,7 @@ internal sealed class DefenseSystem
             var stats = catalog[placement.Type];
             structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour);
             towers[i] = new Tower { Stats = stats, Faction = placement.Faction,
-                Pivot = DefenseRenderer.Pivot(area, height), Footprint = area, Target = -1 };
+                Pivot = DefenseRenderer.Pivot(area, height) + Vector3.Up * (terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f), Footprint = area, Target = -1 };
         }
     }
 

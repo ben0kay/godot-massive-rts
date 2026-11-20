@@ -6,6 +6,15 @@ namespace MassiveRts;
 
 public partial class DeploymentPainter : Node3D
 {
+    internal System.Func<SoldierPlacement, bool> PaintRestriction { get; set; }
+    private TerrainHeightField previewTerrain;
+
+    internal void SetPreviewTerrain(TerrainHeightField surface)
+    {
+        previewTerrain = surface;
+        foreach (var preview in previews) preview.Terrain = surface;
+    }
+
     public DeploymentLayout Layout { get; private set; }
     private RuntimeUnitCatalog catalog;
     private RuntimeBuildingCatalog buildings;
@@ -223,6 +232,9 @@ public partial class DeploymentPainter : Node3D
         Vector3 direction = Camera.ProjectRayNormal(screen);
         if (direction.Y >= 0 || origin.Y < 0) return false;
         ground = origin - direction * (origin.Y / direction.Y);
+        if (previewTerrain != null)
+            for (int i = 0; i < 4; i++)
+                ground = origin + direction * ((previewTerrain.At(ground.X, ground.Z) - origin.Y) / direction.Y);
         return true;
     }
 
@@ -302,7 +314,7 @@ public partial class DeploymentPainter : Node3D
     {
         bool existed = Layout.TryGet(point, out SoldierPlacement previous);
         var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType, Layout.GridSize);
-        if (!Layout.TryPaint(placement, out _)) return false;
+        if (PaintRestriction?.Invoke(placement) == false || !Layout.TryPaint(placement, out _)) return false;
         if (existed) previews[previous.Type].Remove(point);
         previews[placement.Type].Add(placement);
         return true;
