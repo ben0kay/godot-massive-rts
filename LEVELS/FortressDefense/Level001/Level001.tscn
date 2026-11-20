@@ -79,9 +79,6 @@ EnemySpawnRate = 45.0
 WaveDefinitions = Array[ExtResource("2_4crng")]([SubResource("Resource_gfqfu"), SubResource("Resource_bbsqs"), SubResource("Resource_otgem"), SubResource("Resource_on2mr")])
 BetweenWavesSeconds = 30.0
 
-[node name="Ground" parent="." index="0" unique_id=959569258]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -1.1751393, -12.213272)
-
 [node name="UnitPlacement" parent="StartingUnits" parent_id_path=PackedInt32Array(353634270) index="0" unique_id=1555422474 instance=ExtResource("2_uk3k8")]
 Unit = ExtResource("3_uk3k8")
 

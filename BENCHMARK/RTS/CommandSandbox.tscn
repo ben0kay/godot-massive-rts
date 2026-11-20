@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://w4pu5hecl58u" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
 [ext_resource type="Script" uid="uid://nnntsoysrjoj" path="res://GAMEPLAY/WAVES/WaveDefinition.cs" id="2"]
 [ext_resource type="PackedScene" path="res://WORLD/BUILDINGS/CITADEL/Citadel.tscn" id="3"]
-[ext_resource type="Shader" uid="uid://b62y0k2bgcgds" path="res://BENCHMARK/RTS/CommandGround.gdshader" id="4"]
+[ext_resource type="PlaneMesh" path="res://WORLD/TERRAIN/RENDERING/DefaultLevelGround.tres" id="4"]
 [ext_resource type="Script" uid="uid://dax46sgsyvmul" path="res://WORLD/TERRAIN/AUTHORING/CommandTerrain.cs" id="5"]
 
 [sub_resource type="Resource" id="Wave1"]
@@ -26,23 +26,13 @@ Enemies = Dictionary[String, int]({
 "triangle_archer": 18
 })
 
-[sub_resource type="ShaderMaterial" id="GroundMaterial"]
-render_priority = 0
-shader = ExtResource("4")
-shader_parameter/map_half_width = 2500.0
-
-[sub_resource type="PlaneMesh" id="GroundMesh"]
-material = SubResource("GroundMaterial")
-size = Vector2(7500, 7500)
-
 [node name="CommandSandbox" type="Node3D" unique_id=1162740712]
 script = ExtResource("1")
 WaveDefinitions = Array[ExtResource("2")]([SubResource("Wave1"), SubResource("Wave2"), SubResource("Wave3")])
 
 [node name="Ground" type="MeshInstance3D" parent="." unique_id=959569258]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.025, 0)
 cast_shadow = 0
-mesh = SubResource("GroundMesh")
+mesh = ExtResource("4")
 
 [node name="Terrain" type="Node3D" parent="." unique_id=707822236]
 script = ExtResource("5")

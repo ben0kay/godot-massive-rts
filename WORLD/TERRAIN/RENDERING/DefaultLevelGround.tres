@@ -1,0 +1,10 @@
+[gd_resource type="PlaneMesh" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://BENCHMARK/RTS/CommandGround.gdshader" id="1"]
+
+[sub_resource type="ShaderMaterial" id="GroundMaterial"]
+shader = ExtResource("1")
+
+[resource]
+material = SubResource("GroundMaterial")
+size = Vector2(7500, 7500)
