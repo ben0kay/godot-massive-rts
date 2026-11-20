@@ -4,7 +4,7 @@ using Godot;
 
 namespace MassiveRts;
 
-public enum SeparationMode { Off, Normal, Strong }
+public enum SeparationMode { Off, Normal, Strong, Hard }
 
 public readonly record struct AlliedYieldSettings(float ClearanceFraction, float PairCap, float MeleeShare, float ExitCap);
 

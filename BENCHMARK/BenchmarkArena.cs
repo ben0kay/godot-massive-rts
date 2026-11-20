@@ -48,6 +48,7 @@ public partial class BenchmarkArena : Node3D
     private UnitState units;
     private SpatialGrid grid;
     private SeparationSystem separation;
+    private HardSeparation hardSeparation;
     private MeleeSteering meleeSteering;
     private TrampleSystem trample;
     private DreadnaughtCombat dreadnaughts;
@@ -257,7 +258,7 @@ public partial class BenchmarkArena : Node3D
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
         meleeSteering = null;
-        units = null; projectiles = null; grid = null; separation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
+        units = null; projectiles = null; grid = null; separation = null; hardSeparation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         targetingAccumulator = 0; targetingStep = 0;
         accumulator = 0; tick = 0; preparedTargets = 0; skippedSteps = 0; paused = false; panel.PauseButton.Text = "Pause";
         timeSinceArmySync = 0; smoothingWasEnabled = false;
@@ -609,7 +610,7 @@ public partial class BenchmarkArena : Node3D
                     routeBuildMs += Elapsed(routeStart);
                 }
             }
-            bool smooth = panel.SmoothMotion;
+            bool smooth = panel.SmoothMotion && panel.Separation != SeparationMode.Hard;
             if (!smooth && smoothingWasEnabled) armyRenderer.ClearPoseHistory();
             accumulator += delta;
             timeSinceArmySync += delta;
@@ -774,12 +775,40 @@ public partial class BenchmarkArena : Node3D
             combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
+        bool hard = separationMode == SeparationMode.Hard;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
+        float boundary = obstacles?.Boundary ?? (presetTestMap?.MapSize * 0.5f ?? DeploymentLayout.WorldHalfWidth);
+        if (hard && separate)
+        {
+            start = Stamp();
+            hardSeparation ??= new HardSeparation(units.Position.Length);
+            bool first = !hardSeparation.Ready;
+            bool ready = hardSeparation.Begin(units, obstacles, boundary);
+            separationMs += Elapsed(start);
+            if (!ready)
+            {
+                panel.Status.Text = "Hard separation could not make room. Spread units out or switch mode.";
+                tick++;
+                simulationMs += Elapsed(total);
+                return;
+            }
+            if (first)
+            {
+                trample = null;
+                grid?.Rebuild(units);
+            }
+        }
+        else if (hardSeparation != null)
+        {
+            hardSeparation = null;
+            trample = grid == null ? null : TrampleSystem.Create(units, autoAttackCount);
+        }
         bool profileMovement = panel.ProfileMovement;
         int samplePhase = profileMovement ? tick % MovementProfile.SampleStride : -1;
         start = Stamp();
-        trample?.BeginTick(units, dt, obstacles);
-        byte[] movementFlags = separate && panel.AlliedYield
+        var activeTrample = hard ? null : trample;
+        activeTrample?.BeginTick(units, dt, obstacles);
+        byte[] movementFlags = separate && !hard && panel.AlliedYield
             ? (voluntaryMovement ??= new byte[units.Position.Length]) : null;
         bool holdMelee = grid != null && panel.MeleeHold;
         bool sidestepMelee = grid != null && separate && panel.MeleeSidestep;
@@ -787,12 +816,12 @@ public partial class BenchmarkArena : Node3D
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, trample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, units.HasStructureAttackers ? defenseCombat : null,
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, activeTrample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, units.HasStructureAttackers ? defenseCombat : null,
             BattleSight, presetTestMap != null);
         if (guards != null)
             foreach (GuardGroup group in guards)
                 group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
-        float tramplePadding = trample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
+        float tramplePadding = activeTrample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;
         if (profileMovement)
@@ -804,16 +833,24 @@ public partial class BenchmarkArena : Node3D
         if (separate)
         {
             start = Stamp();
-            separation ??= new SeparationSystem(units.Position.Length);
-            separationPadding = separationPushPerStep;
-            separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
+            if (hard)
+            {
+                hardSeparation.End(units, obstacles, boundary);
+                if (grid != null) grid.Rebuild(units);
+            }
+            else
+            {
+                separation ??= new SeparationSystem(units.Position.Length);
+                separationPadding = separationPushPerStep;
+                separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
                 Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles, panel.WeightedSeparation);
+            }
             separationMs += Elapsed(start);
         }
-        if (trample != null)
+        if (activeTrample != null)
         {
             start = Stamp();
-            trample.MeasureRunUp(units, dt);
+            activeTrample.MeasureRunUp(units, dt);
             double runUp = Elapsed(start);
             movementMs += runUp;
             if (profileMovement)
@@ -832,7 +869,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, trample, BattleSight, shockwaves, units.HasStructureAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, activeTrample, BattleSight, shockwaves, units.HasStructureAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null);
             dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.Catalog.MaxSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
             AttackDefenses(dt);
             combatMs += Elapsed(start);
@@ -856,7 +893,7 @@ public partial class BenchmarkArena : Node3D
         double divisor = Math.Max(1, measuredFrames);
         string costPerTick = measuredTicks > 0 ? $"{simulationMs / measuredTicks:F3} ms" : "N/A";
         string separationPerTick = measuredTicks > 0 ? $"{separationMs / measuredTicks:F3} ms" : "N/A";
-        bool separating = panel.Separation != SeparationMode.Off && units?.Alive > 1 && !spawning && mode != BenchmarkMode.RenderingOnly;
+        bool separating = (panel.Separation == SeparationMode.Normal || panel.Separation == SeparationMode.Strong) && units?.Alive > 1 && !spawning && mode != BenchmarkMode.RenderingOnly;
         int overlapPairs = separating ? separation?.OverlapPairs ?? 0 : 0;
         int separationCaps = separating ? separation?.BudgetHits ?? 0 : 0;
         var viewport = GetViewport().GetViewportRid();
@@ -869,6 +906,8 @@ public partial class BenchmarkArena : Node3D
         string yieldStats = separating && panel.AlliedYield && separation != null
             ? $"Yield skip / push / exit  {separation.YieldSkipped:N0} / {separation.YieldPushed:N0} / {separation.ExitCapped:N0}\n"
             : "";
+        if (panel.Separation == SeparationMode.Hard && hardSeparation?.Ready == true)
+            yieldStats = $"Hard separation blocked moves  {hardSeparation.BlockedMoves:N0}\n";
         panel.Summary.Refresh(
             $"BENCH0 · {(painter.Visible ? "DEPLOYMENT" : paused ? "PAUSED" : spawning ? "PREPARING" : mode.ToString())}",
             units, projectiles?.Count ?? 0);

@@ -196,6 +196,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		separationChoice.AddItem("Off", (int)SeparationMode.Off);
 		separationChoice.AddItem("Normal", (int)SeparationMode.Normal);
 		separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
+		separationChoice.AddItem("Hard (no overlap)", (int)SeparationMode.Hard);
 		separationChoice.Select(1);
 		separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
 		Field(separation, "Separation mode", separationChoice);

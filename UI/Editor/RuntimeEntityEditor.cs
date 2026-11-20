@@ -139,7 +139,8 @@ public partial class RuntimeEntityEditor : Control
         fields.AddChild(MenuLayout.Label(current.Unit.Id, muted: true));
         foreach (var field in EditableFields)
         {
-            bool dreadOnly = field.Name.StartsWith("Turret", StringComparison.Ordinal) || field.Name == nameof(UnitDefinition.HullLength);
+            bool dreadOnly = field.Name.StartsWith("Turret", StringComparison.Ordinal) || field.Name == nameof(UnitDefinition.HullLength) ||
+                field.Name == nameof(UnitDefinition.UseLegacyMiniguns);
             if (dreadOnly && current.Unit.Id != RuntimeUnitCatalog.DreadnaughtId) continue;
             if (field.Name == nameof(UnitDefinition.Shape) && current.Unit.Id == RuntimeUnitCatalog.DreadnaughtId) continue;
             AddField(current, field);

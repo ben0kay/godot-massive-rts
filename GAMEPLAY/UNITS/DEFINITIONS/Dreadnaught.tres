@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/MinigunRound/MinigunRound.tres" id="2"]
@@ -15,6 +15,34 @@ IndependentAim = true
 Projectile = ExtResource("3")
 Damage = 24.0
 
+[sub_resource type="Resource" id="FrontLeft"]
+script = ExtResource("4")
+Position = Vector3(-2.72, 1.322222, -2.52)
+ModelScale = Vector3(0.16, 0.16, 1.35)
+TwinMinigunModel = true
+IndependentAim = true
+
+[sub_resource type="Resource" id="FrontRight"]
+script = ExtResource("4")
+Position = Vector3(2.72, 1.322222, -2.52)
+ModelScale = Vector3(0.16, 0.16, 1.35)
+TwinMinigunModel = true
+IndependentAim = true
+
+[sub_resource type="Resource" id="RearLeft"]
+script = ExtResource("4")
+Position = Vector3(-2.72, 1.322222, 4.48)
+ModelScale = Vector3(0.16, 0.16, 1.35)
+TwinMinigunModel = true
+IndependentAim = true
+
+[sub_resource type="Resource" id="RearRight"]
+script = ExtResource("4")
+Position = Vector3(2.72, 1.322222, 4.48)
+ModelScale = Vector3(0.16, 0.16, 1.35)
+TwinMinigunModel = true
+IndependentAim = true
+
 [resource]
 script = ExtResource("1")
 Id = "dreadnaught"
@@ -23,6 +51,7 @@ Role = "Super-heavy melee hull with four miniguns and a deck rocket cannon"
 Shape = 11
 Width = 8.0
 HullLength = 14.0
+UseLegacyMiniguns = false
 TurretShotInterval = 0.1128
 Height = 2.2
 SizeMultiplier = 0.9
@@ -38,4 +67,4 @@ UnitDamagePercent = 100.0
 Interval = 0.5
 Reach = 8.0
 Projectile = ExtResource("2")
-RocketMounts = Array[ExtResource("4")]([SubResource("Deck")])
+RocketMounts = Array[ExtResource("4")]([SubResource("FrontLeft"), SubResource("FrontRight"), SubResource("RearLeft"), SubResource("RearRight"), SubResource("Deck")])

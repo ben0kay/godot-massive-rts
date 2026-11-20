@@ -76,15 +76,16 @@ internal partial class DreadnaughtCombat : Node3D
         {
             byte type = units.Type[ids[i]];
             var rockets = units.Catalog.IndependentRockets(type);
-            var hull = hulls[i] = new Hull(ids[i], type == RuntimeUnitCatalog.Dreadnaught ? GunsPerHull : 0, rockets.Length);
+            bool legacy = type == RuntimeUnitCatalog.Dreadnaught && units.Catalog.Definition(type).UseLegacyMiniguns;
+            var hull = hulls[i] = new Hull(ids[i], legacy ? GunsPerHull : 0, rockets.Length);
             // The reference half-width is 4 for an 8-unit authored hull.
             // Using the compiled outline keeps both the guns and their muzzles
             // in proportion when the Dreadnaught SizeMultiplier changes.
             float visualScale = units.Catalog[type].Outline.RadiusX / 4f;
             for (int slot = 0; slot < hull.Guns.Length; slot++)
             {
-                bool rocket = slot >= hull.Miniguns;
-                MountedRocket? mount = rocket ? rockets[slot - hull.Miniguns] : null;
+                MountedRocket? mount = slot >= hull.Miniguns ? rockets[slot - hull.Miniguns] : null;
+                bool rocket = mount is { TwinMinigunModel: false };
                 var model = new MeshInstance3D { Mesh = rocket ? rocketHousing : housing, Scale = Vector3.One * visualScale };
                 model.AddChild(new MeshInstance3D { Mesh = rocket ? rocketPedestal : basePlate,
                     Position = Vector3.Down * (rocket ? 0.55f : 0.25f) });
@@ -96,6 +97,12 @@ internal partial class DreadnaughtCombat : Node3D
                 }
                 else
                 {
+                    if (mount is MountedRocket minigun)
+                    {
+                        Basis pose = minigun.Pose.Basis;
+                        model.Scale = new Vector3(pose.X.Length() / 0.16f, pose.Y.Length() / 0.16f,
+                            pose.Z.Length() / BarrelLength);
+                    }
                     model.AddChild(new MeshInstance3D { Mesh = topCap, Position = new Vector3(0f, 0.22f, 0.03f) });
                     for (int side = -1; side <= 1; side += 2)
                         model.AddChild(new MeshInstance3D { Mesh = barrel,
@@ -154,7 +161,7 @@ internal partial class DreadnaughtCombat : Node3D
         foreach (var hull in hulls)
         {
             if (units.Health[hull.Id] <= 0) continue;
-            if (hull.Miniguns > 0) Contact(hull, grid, obstacles, padding);
+            if (units.Type[hull.Id] == RuntimeUnitCatalog.Dreadnaught) Contact(hull, grid, obstacles, padding);
             for (int slot = 0; slot < hull.Guns.Length; slot++)
                 StepGun(hull.Id, slot, ref hull.Guns[slot], grid, projectiles, obstacles, dt, padding, fireRate);
         }

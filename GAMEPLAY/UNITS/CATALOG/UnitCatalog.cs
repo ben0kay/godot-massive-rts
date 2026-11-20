@@ -249,7 +249,7 @@ public sealed class RuntimeUnitCatalog
             var independent = new List<MountedRocket>();
             foreach (var mount in d.RocketMounts ?? new())
             {
-                if (mount == null || (mount.IndependentAim && mount.Projectile == null))
+                if (mount == null || (mount.IndependentAim && mount.Projectile == null && !mount.TwinMinigunModel))
                     continue;
                 var destination = mount.IndependentAim ? independent : primary;
                 destination.Add(CompileMount(mount, d, size));
@@ -321,14 +321,16 @@ public sealed class RuntimeUnitCatalog
     {
         int projectile = Projectiles.Register(mount.Projectile ?? unit.Projectile, mount.ProjectileScale,
             mount.SplashRadiusOverride, mount.SplashEdgeFractionOverride);
-        float defaultReach = mount.IndependentAim ? 38f : Positive(unit.Reach, 1.6f);
+        float defaultReach = mount.TwinMinigunModel ? 30f : mount.IndependentAim ? 38f : Positive(unit.Reach, 1.6f);
         float maximum = Positive(mount.MaximumRange, defaultReach);
         float minimum = mount.MinimumRange >= 0f ? mount.MinimumRange :
-            mount.IndependentAim ? 7f : unit.MinimumFireRange;
-        float interval = Positive(mount.Interval, mount.IndependentAim ? 3f : Positive(unit.Interval, 0.9f));
-        float damage = mount.Damage >= 0f ? mount.Damage : Positive(unit.Damage, 20f);
+            mount.TwinMinigunModel ? 3f : mount.IndependentAim ? 7f : unit.MinimumFireRange;
+        float interval = Positive(mount.Interval, mount.TwinMinigunModel ? Positive(unit.TurretShotInterval, 0.15f) :
+            mount.IndependentAim ? 3f : Positive(unit.Interval, 0.9f));
+        float damage = mount.Damage >= 0f ? mount.Damage :
+            mount.TwinMinigunModel ? ClampStat(unit.TurretDamage, 0f, 200f, 3f) : Positive(unit.Damage, 20f);
         return new MountedRocket(MountedRocket.LocalPose(mount, size), projectile,
-            damage, ClampStat(minimum, 0f, maximum, 0f), maximum, interval);
+            damage, ClampStat(minimum, 0f, maximum, 0f), maximum, interval, mount.TwinMinigunModel);
     }
 
     private static float CompileSizeTier(float tier) =>

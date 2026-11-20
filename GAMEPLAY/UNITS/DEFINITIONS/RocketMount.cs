@@ -9,6 +9,7 @@ public partial class RocketMount : Resource
     [Export] public Vector3 Position { get; set; }
     [Export] public float YawDegrees { get; set; }
     [Export] public Vector3 ModelScale { get; set; } = Vector3.One;
+    [Export] public bool TwinMinigunModel { get; set; }
     [Export] public bool IndependentAim { get; set; }
     [Export] public ProjectileDefinition Projectile { get; set; }
     [Export] public float Damage { get; set; } = -1f;
@@ -21,7 +22,7 @@ public partial class RocketMount : Resource
 }
 
 internal readonly record struct MountedRocket(Transform3D Pose, int Projectile, float Damage,
-    float MinimumRange, float MaximumRange, float Interval)
+    float MinimumRange, float MaximumRange, float Interval, bool TwinMinigunModel)
 {
     internal static Transform3D LocalPose(RocketMount mount, float size) =>
         new(new Basis(Vector3.Up, Mathf.DegToRad(mount.YawDegrees)) *

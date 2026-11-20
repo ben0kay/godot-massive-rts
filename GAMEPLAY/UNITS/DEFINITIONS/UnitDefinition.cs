@@ -31,6 +31,7 @@ public partial class UnitDefinition : Resource
 
     [ExportGroup("Dreadnaught")]
     [Export] public float HullLength { get; set; } = 14f;
+    [Export] public bool UseLegacyMiniguns { get; set; } = true;
     [Export] public Vector4 TurretMinimumRanges { get; set; } = new(3, 3, 3, 3);
     [Export] public Vector4 TurretMaximumRanges { get; set; } = new(30, 30, 30, 30);
     [Export] public float TurretShotInterval { get; set; } = 0.15f;
@@ -42,7 +43,7 @@ public partial class UnitDefinition : Resource
     [Export] public float TurretRocketInterval { get; set; } = 3f;
     [Export] public float TurretRocketDamage { get; set; } = 24f;
 
-    [ExportGroup("Rocket mounts")]
+    [ExportGroup("Weapon mounts")]
     [Export] public Godot.Collections.Array<RocketMount> RocketMounts { get; set; } = new();
 
     [ExportGroup("Movement")]
