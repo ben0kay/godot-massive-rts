@@ -43,6 +43,10 @@ Open a definition resource to tune its silhouette, dimensions, speed, health, ar
 
 The catalogue fits each circular collision footprint around the scaled mesh outline. Polygon faces may sit inside that circle. The legacy Diamond `FootprintRadius` property only controls the length of its silhouette. The painter checks the resulting circular clearance against neighbours and battlefield edges. SEP1/SEP2 use the same compiled footprints. Saved layouts still use stable type IDs and the existing format. Loading a layout after increasing a type’s size can reject placements that no longer fit.
 
+## Enhanced unit meshes
+
+Open [UnitVisualConfig.tres](UnitVisualConfig.tres) in the Godot Inspector, set **Use Enhanced Meshes**, and save before running a scene. The switch ships enabled for the Circle Infantry trial. Circle keeps its footprint and height and gets a bright faction-coloured rim around a shallow recessed cap. The shared renderer uses the setting for battles and placement previews. Turn it off and relaunch to compare against the original meshes.
+
 ## Tuning units
 
 Edit the existing definition in the Inspector or enable the [full-screen Entity Editor](../../addons/unit_editor/README.md). UNIT2 exposes the cleave target cap, ordinary melee facing angle and shockwave outer damage. The editor writes the selected unit resource and keeps its stable ID read-only.

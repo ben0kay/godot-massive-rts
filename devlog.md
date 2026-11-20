@@ -375,3 +375,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Forest visibility | Source implemented.** Fade only trees with live units beneath their individual canopies and blend opacity without dithering. Godot visual validation pending.
 
 - **2026-11-20 | Game Editor | Source implemented.** Added Benchmark to the F6 Game Editor launcher.
+
+- **2026-11-20 | Unit visuals | Source implemented.** Added the pre-launch enhanced mesh switch and a recessed, rimmed Circle Infantry mesh on the shared renderer.

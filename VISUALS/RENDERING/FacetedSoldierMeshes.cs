@@ -22,12 +22,13 @@ public static class FacetedSoldierMeshes
             VertexColorUseAsAlbedo = true,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
+        bool enhanced = GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true;
         var meshes = new Mesh[catalog.Count];
         for (int i = 0; i < meshes.Length; i++)
         {
             ref readonly UnitStats type = ref catalog[i];
             UnitOutline outline = type.Outline;
-            meshes[i] = CreateUnitMesh(outline, type.Height, material);
+            meshes[i] = CreateUnitMesh(outline, type.Height, material, enhanced && type.Id == RuntimeUnitCatalog.CircleId);
         }
         return meshes;
     }
@@ -40,10 +41,12 @@ public static class FacetedSoldierMeshes
         float size = UnitOutline.EffectiveSize(unit);
         return CreateUnitMesh(UnitOutline.FromDefinition(unit, size), Mathf.Max(0.01f, unit.Height) * size,
             new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
-                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded });
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
+            unit.Id == RuntimeUnitCatalog.CircleId &&
+            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true);
     }
 
-    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material)
+    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material, bool enhancedCircle)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -71,7 +74,7 @@ public static class FacetedSoldierMeshes
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught ? outline : null, sideShade: SoldierSideShade);
+            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
         if (outline.IsDreadnaught)
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)
@@ -186,7 +189,7 @@ public static class FacetedSoldierMeshes
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
-        UnitOutline? customOutline = null, float sideShade = 1f)
+        UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -227,7 +230,17 @@ public static class FacetedSoldierMeshes
             Vector3 edge = shoulder[next] - shoulder[i];
             Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
 
-            AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint);
+            if (rimmedCap)
+            {
+                Vector3 capCenter = center + Vector3.Up * half;
+                Vector3 recess = Vector3.Down * (height * 0.035f);
+                Vector3 inner = capCenter.Lerp(top[i], 0.84f) + recess;
+                Vector3 innerNext = capCenter.Lerp(top[next], 0.84f) + recess;
+                AddQuad(surface, inner, innerNext, top[next], top[i], Vector3.Up, Colors.White * tint);
+                AddTriangle(surface, capCenter + recess, innerNext, inner, Vector3.Up, tint * 0.68f);
+            }
+            else
+                AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint);
             AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
