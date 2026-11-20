@@ -208,6 +208,7 @@ public partial class LevelEditor : Node
         LevelDefinition nextMetadata;
         try { next = adapter.Open(existing, out nextMetadata); }
         catch (Exception error) { startStatus.Text = error.Message; return; }
+        EndElevation();
         CancelBridge();
         if (map != null)
         {
@@ -338,6 +339,7 @@ public partial class LevelEditor : Node
     {
         if (map == null || runningTest != null) return;
         CancelBridge();
+        EndElevation();
         previewing = !previewing;
         if (previewing)
         {

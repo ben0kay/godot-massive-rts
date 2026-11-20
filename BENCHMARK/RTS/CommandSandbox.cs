@@ -319,6 +319,7 @@ public partial class CommandSandbox : Node3D
         material.SetShaderParameter("map_half_width", MapSize * 0.5f);
         material.SetShaderParameter("editor_grid_size", showEditorGrid ? DeploymentLayout.CellSize : 0f);
         ground.MaterialOverride = material;
+        GetNodeOrNull<CommandTerrain>("Terrain")?.UpdateGroundMaterial(material);
     }
 
     internal void FrameOpening(IsometricCamera camera)

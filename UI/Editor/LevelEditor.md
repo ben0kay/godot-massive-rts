@@ -28,3 +28,10 @@ Fortress Defense uses the existing command scene structure and the shared moveme
 Pick **Draw bridge**, click the first bank, then click the opposite bank. The span snaps to the dominant X or Z axis on the paint grid. Scroll to set the width in grid steps, then left-click to commit, or right-click to cancel. Extend both ends onto dry land so units can enter and leave. **Erase** removes a bridge with a left-click. Placement and removal support undo and redo and save with the map.
 
 The deck follows the terrain and opens only the painted water beneath it. Walls, rocks and structures remain solid. Fortress Defense and the Level Editor's Preset Battle test cache crossing approaches per unit footprint when their navigation graphs are built. A bridge's clear width must exceed the unit's footprint diameter. Oversized units need a wider route or a way around the water.
+
+
+## Paint elevation
+
+Select **Paint elevation** and set the brush radius and strength. Left-click or drag to raise the existing surface. Right-click or drag to lower it, including below the original ground level. Each stroke has a smooth falloff, can be undone or redone as one edit, and saves with the map. Existing authored hills remain editable objects and can also be raised or lowered with the brush.
+
+The ground grid and map edge follow the sculpted terrain. Both playtest modes use the saved height surface for grounding.

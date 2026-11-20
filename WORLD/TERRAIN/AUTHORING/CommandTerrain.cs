@@ -10,6 +10,18 @@ public partial class CommandTerrain : Node3D
 {
     private readonly record struct Hill(Vector2 Center, float Radius, float Rise);
     private Node3D preview;
+    private int elevationRevision;
+    private Godot.Collections.Dictionary<Vector2I, float> elevation = new();
+
+    [Export]
+    public Godot.Collections.Dictionary<Vector2I, float> Elevation
+    {
+        get => elevation;
+        set { elevation = value ?? new(); elevationRevision++; }
+    }
+
+    private MeshInstance3D Ground => GetParent()?.GetNodeOrNull<MeshInstance3D>("Ground");
+
     private int fingerprint;
     private double previewDelay;
     public event Action SurfaceChanged;
@@ -53,6 +65,7 @@ public partial class CommandTerrain : Node3D
             hash.Add(hill);
         }
 
+        hash.Add(elevationRevision);
         int signature = hash.ToHashCode();
         if (!force && signature == fingerprint) return;
         fingerprint = signature;
@@ -63,8 +76,9 @@ public partial class CommandTerrain : Node3D
             preview = null;
         }
         Field = null;
-        if (hills.Count == 0)
+        if (hills.Count == 0 && elevation.Count == 0)
         {
+            Ground?.SetInstanceShaderParameter("terrain_replaces_ground", false);
             SurfaceChanged?.Invoke();
             return;
         }
@@ -78,6 +92,22 @@ public partial class CommandTerrain : Node3D
             regions.Add(new Rect2(hill.Center - size, size * 2f));
             highest = Mathf.Max(highest, hill.Rise);
         }
+        var editedChunks = new HashSet<Vector2I>();
+        int chunkSize = TerrainHeightField.ChunkCells;
+        foreach (var sample in elevation.Keys)
+        {
+            // A changed sample on a chunk edge affects both adjoining meshes.
+            int left = Mathf.FloorToInt((sample.X - 0.5f) / chunkSize);
+            int right = Mathf.FloorToInt((sample.X + 0.5f) / chunkSize);
+            int near = Mathf.FloorToInt((sample.Y - 0.5f) / chunkSize);
+            int far = Mathf.FloorToInt((sample.Y + 0.5f) / chunkSize);
+            for (int z = near; z <= far; z++)
+            for (int x = left; x <= right; x++)
+                editedChunks.Add(new Vector2I(x, z));
+        }
+        foreach (var chunk in editedChunks)
+            regions.Add(new Rect2(((Vector2)chunk + Vector2.One * 0.5f) * (chunkSize * TerrainHeightField.Spacing), Vector2.Zero));
+
         Field = new TerrainHeightField(regions, point =>
         {
             float height = 0f;
@@ -88,13 +118,29 @@ public partial class CommandTerrain : Node3D
                 float factor = 1f - Mathf.Sqrt(distanceSquared) / hill.Radius;
                 height = Mathf.Max(height, hill.Rise * factor * factor * (3f - 2f * factor));
             }
-            return height;
+            var key = (Vector2I)(point / TerrainHeightField.Spacing).Round();
+            return height + (elevation.TryGetValue(key, out float change) ? change : 0f);
         });
-        preview = TerrainRenderer.Build(Field, highest, DeploymentLayout.WorldHalfWidth, includeSurround: false);
+        var ground = Ground;
+        if (ground?.GetActiveMaterial(0) is ShaderMaterial material)
+        {
+            var bounds = ground.GlobalTransform * ground.GetAabb();
+            var flat = new Rect2(ObstacleField.Xz(bounds.Position), ObstacleField.Xz(bounds.Size));
+            preview = TerrainRenderer.BuildCommandGround(Field, material, flat);
+            ground.SetInstanceShaderParameter("terrain_replaces_ground", true);
+        }
+        else preview = TerrainRenderer.Build(Field, highest, DeploymentLayout.WorldHalfWidth, includeSurround: false);
         AddChild(preview, false, InternalMode.Back);
         // Chunks are stored in world coordinates, independent of the authoring node.
         preview.TopLevel = true;
         preview.GlobalTransform = Transform3D.Identity;
         SurfaceChanged?.Invoke();
+    }
+
+    internal void UpdateGroundMaterial(ShaderMaterial material)
+    {
+        if (preview == null) return;
+        foreach (Node child in preview.GetChildren())
+            if (child is MeshInstance3D mesh) mesh.MaterialOverride = material;
     }
 }

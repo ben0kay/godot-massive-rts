@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -20,7 +20,7 @@ public partial class LevelEditor
     private (Cells Rocks, Cells Water, Cells Forest, Cells Blue)? beforePaint;
     private HashSet<Vector2I> rocks, water, forest, deployment;
     private bool paintChanged;
-    private float hillRadius = 16, hillRise = 5;
+    private float elevationRadius = 16f, elevationStrength = 2f;
     private float wallWidth = 10, wallDepth = 4, wallHeight = 2, yaw;
     private int unitIndex, groupSize = 1, depositCarbon = 5000;
     private bool red = true;
@@ -38,7 +38,7 @@ public partial class LevelEditor
             {
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
-                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Hill => "Place hill",
+                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Elevation => "Paint elevation",
                 Tool.Wall => "Place solid wall",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
@@ -149,9 +149,10 @@ public partial class LevelEditor
                 Number(context, "Brush radius (cells)", brushRadius, 1, 14).ValueChanged += value => brushRadius = (int)value;
                 Heading(context, tool == Tool.Erase ? "Click object to remove it.\nDrag over paint to erase it." : "Drag to paint. Right-drag to erase.", 15);
                 break;
-            case Tool.Hill:
-                Number(context, "Radius", hillRadius, 8, 256).ValueChanged += value => hillRadius = (float)value;
-                Number(context, "Rise", hillRise, 0.5, 80, 0.5).ValueChanged += value => hillRise = (float)value;
+            case Tool.Elevation:
+                Number(context, "Radius", elevationRadius, 4, 128).ValueChanged += value => elevationRadius = (float)value;
+                Number(context, "Strength", elevationStrength, 0.5, 20, 0.5).ValueChanged += value => elevationStrength = (float)value;
+                Heading(context, "Left-click or drag to raise. Right-click or drag to lower.", 15);
                 break;
             case Tool.Wall:
                 Number(context, "Width", wallWidth, 1, 500).ValueChanged += value => wallWidth = (float)value;
@@ -188,9 +189,27 @@ public partial class LevelEditor
         }
     }
 
+    private BoxMesh squareCursor;
+    private CylinderMesh elevationCursor;
+
     private void SwitchTool(Tool next)
     {
+        EndElevation();
         CancelBridge();
+        if (cursor?.Mesh is BoxMesh box && squareCursor != box)
+        {
+            squareCursor = box;
+            elevationCursor = new CylinderMesh
+            {
+                TopRadius = 0.5f, BottomRadius = 0.5f, Height = 0.035f,
+                RadialSegments = 48, Material = box.Material
+            };
+        }
+        if (cursor != null)
+        {
+            cursor.Mesh = next == Tool.Elevation ? elevationCursor : squareCursor;
+            cursor.Hide();
+        }
         tool = next;
         toolPicker.Select(toolPicker.GetItemIndex((int)next));
         if (next != Tool.Defense) defensePicker.Select(0);
@@ -251,6 +270,7 @@ public partial class LevelEditor
         }
         if (previewing) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
+        if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
         if (input is InputEventMouseMotion motion)
         {
@@ -294,6 +314,7 @@ public partial class LevelEditor
 
     public override void _Process(double delta)
     {
+        UpdateElevation(delta);
         if (rectangleStart != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
             rectangleStart = null;
         if (beforePaint != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
@@ -402,6 +423,7 @@ public partial class LevelEditor
 
     private void EndPaint()
     {
+        EndElevation();
         if (beforePaint is not { } previous) return;
         beforePaint = null;
         previousCell = null;
@@ -486,12 +508,6 @@ public partial class LevelEditor
         string parent;
         switch (tool)
         {
-            case Tool.Hill:
-                var hill = LoadNode<TerrainHill>("res://WORLD/TERRAIN/AUTHORING/TerrainHill.tscn");
-                hill.Radius = hillRadius;
-                hill.Rise = hillRise;
-                node = hill; parent = "Terrain";
-                break;
             case Tool.Wall:
                 node = LoadNode<MeshInstance3D>("res://WORLD/OBSTACLES/CommandWall.tscn");
                 node.Set("wall_size", new Vector3(wallWidth, wallHeight, wallDepth));

@@ -3,11 +3,13 @@ render_mode unshaded, shadows_disabled;
 
 uniform float map_half_width = 2500.0;
 uniform float editor_grid_size = 0.0;
-varying vec2 ground_position;
+instance uniform bool terrain_replaces_ground = false;
+varying float ground_height;
 varying vec2 world_position;
 
 void vertex() {
-    ground_position = VERTEX.xz;
+    if (terrain_replaces_ground) VERTEX = vec3(0.0);
+    ground_height = VERTEX.y;
     world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
 
@@ -19,9 +21,10 @@ float grid_lines(vec2 position, vec2 pixel_width, float spacing) {
 }
 
 void fragment() {
-    float distance_to_edge = map_half_width - max(abs(ground_position.x), abs(ground_position.y));
+    float distance_to_edge = map_half_width - max(abs(world_position.x), abs(world_position.y));
     vec3 exterior = vec3(0.065, 0.075, 0.095);
     vec3 ground = vec3(0.25, 0.26, 0.29);
+    ground *= 1.0 + 0.24 * clamp(ground_height / 16.0, -1.0, 1.0);
     vec3 edge = vec3(0.64, 0.72, 0.81);
     float transition = max(fwidth(distance_to_edge), 0.05);
     float inside = smoothstep(-transition, transition, distance_to_edge);

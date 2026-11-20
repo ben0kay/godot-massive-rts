@@ -69,20 +69,29 @@ internal static class LevelEditorSave
         var packed = new PackedScene();
         var ground = map.GetNodeOrNull<MeshInstance3D>("Ground");
         var previewMaterial = ground?.MaterialOverride;
+        var terrainPreview = ground?.GetInstanceShaderParameter("terrain_replaces_ground") ?? default;
         var originalName = map.Name;
         try
         {
             // The runtime uses the adjacent LevelDefinition. This avoids references to a staging or source level.
             map.LevelSettings = null;
             map.Name = target.Id;
-            if (ground != null) ground.MaterialOverride = null;
+            if (ground != null)
+            {
+                ground.SetInstanceShaderParameter("terrain_replaces_ground", default);
+                ground.MaterialOverride = null;
+            }
             Check(packed.Pack(map), "pack scene");
         }
         finally
         {
             map.LevelSettings = settings;
             map.Name = originalName;
-            if (ground != null) ground.MaterialOverride = previewMaterial;
+            if (ground != null)
+            {
+                ground.MaterialOverride = previewMaterial;
+                ground.SetInstanceShaderParameter("terrain_replaces_ground", terrainPreview);
+            }
         }
 
         string stagedScene = job + "/level.tscn", stagedLevel = job + "/level.tres";
