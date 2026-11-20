@@ -49,7 +49,15 @@ internal sealed class ForestCover
             float height = 0.65f + (seed & 255) / 255f * 0.95f;
             float width = 0.72f + ((seed >> 8) & 255) / 255f * 0.51f;
             Vector2 low = (Vector2)cell * cellSize;
-            Vector2 center = low + Vector2.One * (cellSize * 0.5f);
+            // Jitter only the tree visuals, not the forest cell or its gameplay effects.
+            // Stable per-cell hashing keeps trees in the same place after save/reload.
+            uint jitter = unchecked(seed * 0x7FEB352Du + 0xA511E9B3u);
+            jitter ^= jitter >> 16;
+            jitter = unchecked(jitter * 0x846CA68Bu);
+            jitter ^= jitter >> 15;
+            Vector2 offset = new((jitter & 0xFFFFu) / 65535f * 2f - 1f,
+                (jitter >> 16) / 65535f * 2f - 1f);
+            Vector2 center = low + Vector2.One * (cellSize * 0.5f) + offset * (cellSize * 0.15f);
             float ground = Ground(center);
             trunks.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, height, width)),
                 new Vector3(center.X, ground + height * 0.5f, center.Y)));

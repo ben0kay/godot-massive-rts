@@ -18,6 +18,6 @@ The water follows the terrain at its existing surface offset. Along exposed cell
 
 ## Forest
 
-Choose **Paint forest** in the in-game Level Editor. Forests share the paint grid with rock and water and are stored as level-local cells. Adjacent cells share an outline with no internal seams. Trees have a deterministic mix of heights and widths. They are instanced scenery with no physics colliders.
+Choose **Paint forest** in the in-game Level Editor. Forests share the paint grid with rock and water and are stored as level-local cells. Adjacent cells share an outline with no internal seams. Trees have a deterministic mix of heights and widths. Each tree's visual centre is also offset up to 0.3 world units on X and Z from its painted cell centre, using a stable per-cell hash; this makes groves less grid-aligned without changing painted forest boundaries or gameplay effects. Trunks and crowns share the same offset and resample the terrain at their actual visual positions. They are instanced scenery with no physics colliders.
 
 In playable Fortress Defense maps, ranged units standing in forest have half their maximum attack range and units authored as exactly Size Tier 2 move at 75% speed. Forest does not block movement, line of sight or projectiles. Nearby live units fade trunks and canopies using batched instance colors.
