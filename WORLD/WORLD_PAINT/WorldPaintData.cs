@@ -36,6 +36,15 @@ public partial class WorldPaintData : Resource
         set { forestCells = value ?? new Cells(); EmitChanged(); }
     }
 
+    private Godot.Collections.Array<Rect2I> bridges = new();
+
+    [Export]
+    public Godot.Collections.Array<Rect2I> Bridges
+    {
+        get => bridges;
+        set { bridges = value ?? new(); EmitChanged(); }
+    }
+
     [Export(PropertyHint.Range, "0.5,12,0.1")]
     public float RockHeight
     {

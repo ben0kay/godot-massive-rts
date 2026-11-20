@@ -172,7 +172,7 @@ internal static class LevelEditorSave
     {
         var paint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         if (paint?.Data is WorldPaintData data && !paint.TryMerge(new(data.RockCells), new(data.WaterCells), out _, out _))
-            throw new InvalidOperationException("The rock and water layout exceeds the existing navigation budget. Simplify the painted banks.");
+            throw new InvalidOperationException("The rock, water and bridge layout exceeds the navigation budget. Simplify the painted banks or bridge layout.");
         if (paint?.Data is WorldPaintData forestData && forestData.ForestCells.Count > WorldPaint.MaxPaintedCells)
             throw new InvalidOperationException("The forest layout exceeds the map paint budget.");
 

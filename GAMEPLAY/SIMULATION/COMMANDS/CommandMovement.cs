@@ -43,6 +43,12 @@ internal sealed class CommandMovement
         navigation = null;
     }
 
+    internal void PrepareBridgeRoutes()
+    {
+        if (field?.Bridges.Length > 0)
+            navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
+    }
+
     public static Vector3 Slot(Vector3 front, Vector3 right, int columns, int index, int count, float spacing)
     {
         int row = index / columns;

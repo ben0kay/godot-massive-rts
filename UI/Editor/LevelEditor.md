@@ -21,3 +21,10 @@ Fortress Defense uses the existing command scene structure and the shared moveme
 - Choose a building from the **Defenses** dropdown, then click the map to place it. Options come from the building catalogue. Fortress Defense starts with the selected faction's towers in combat. Preset Battles saves and previews Red towers for the future campaign battle loop.
 
 **Show grid** displays the same 2-unit cells used by grid snapping and painting, with a heavier line every eight cells. It defaults to on and can be toggled independently of snapping. Layout previews hide the grid.
+
+
+## Draw bridge
+
+Pick **Draw bridge**, click the first bank, then click the opposite bank. The span snaps to the dominant X or Z axis on the paint grid. Scroll to set the width in grid steps, then left-click to commit, or right-click to cancel. Extend both ends onto dry land so units can enter and leave. **Erase** removes a bridge with a left-click. Placement and removal support undo and redo and save with the map.
+
+The deck follows the terrain and opens only the painted water beneath it. Walls, rocks and structures remain solid. Fortress Defense and the Level Editor's Preset Battle test cache crossing approaches per unit footprint when their navigation graphs are built. A bridge's clear width must exceed the unit's footprint diameter. Oversized units need a wider route or a way around the water.

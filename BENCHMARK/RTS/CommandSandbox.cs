@@ -181,7 +181,7 @@ public partial class CommandSandbox : Node3D
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         units.Forest = paint?.Forest;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
-            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, StartingCarbon);
+            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, paint?.MovementWater ?? water, paint?.BridgeAreas ?? System.Array.Empty<Rect2>(), StartingCarbon);
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (Node child in fabricators.GetChildren())
                 if (child is Node3D marker) buildings.AddStartingFabricator(marker.GlobalPosition, Factions.Blue);
@@ -202,6 +202,7 @@ public partial class CommandSandbox : Node3D
         if (GetNodeOrNull<Marker3D>("HostileFabricator") is Marker3D hostile)
             buildings.AddHostileFabricator(hostile.GlobalPosition);
         SpawnAuthoredUnits();
+        movement.PrepareBridgeRoutes();
 
         army = new ArmyRenderer();
         AddChild(army);

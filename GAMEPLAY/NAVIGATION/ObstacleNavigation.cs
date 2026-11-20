@@ -277,6 +277,16 @@ public sealed class ObstacleNavigation
                 AddCorner(corners, field, new Vector2(max.X, min.Y), new Vector2(1, -1));
             }
 
+            foreach (Rect2 bridge in field.Bridges)
+            {
+                Vector2 center = bridge.GetCenter();
+                // Cache only approaches whose cross-section fits this catalogue footprint.
+                if (bridge.Size.X >= bridge.Size.Y)
+                    AddBridgeApproaches(bridge.Size.Y, center, new Vector2(bridge.Size.X * 0.5f, 0f));
+                if (bridge.Size.Y >= bridge.Size.X)
+                    AddBridgeApproaches(bridge.Size.X, center, new Vector2(0f, bridge.Size.Y * 0.5f));
+            }
+
             points = corners.ToArray();
             int count = points.Length;
             edges = new float[count, count];
@@ -290,6 +300,17 @@ public sealed class ObstacleNavigation
             distances = new float[count];
             previous = new int[count];
             visited = new bool[count];
+
+            void AddBridgeApproaches(float width, Vector2 center, Vector2 halfSpan)
+            {
+                if (width <= radius * 2f) return;
+                Vector2 a = center - halfSpan, b = center + halfSpan;
+                float edge = field.Boundary - radius;
+                if (Mathf.Abs(a.X) >= edge || Mathf.Abs(a.Y) >= edge || Mathf.Abs(b.X) >= edge ||
+                    Mathf.Abs(b.Y) >= edge || field.BlocksCorridor(a, b, radius)) return;
+                corners.Add(a);
+                corners.Add(b);
+            }
         }
 
         private void AddCorner(List<Vector2> corners, ObstacleField field, Vector2 corner, Vector2 direction)

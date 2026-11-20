@@ -48,9 +48,11 @@ public sealed class ObstacleField
     }
 
     public float Boundary { get; }
+    internal Rect2[] Bridges { get; }
 
-    public ObstacleField(ObstacleRectangle[] rectangles, float? boundary = null)
+    public ObstacleField(ObstacleRectangle[] rectangles, float? boundary = null, Rect2[] bridges = null)
     {
+        Bridges = bridges ?? Array.Empty<Rect2>();
         float gridSize = rectangles.Length > 0 ? rectangles[0].GridSize : DeploymentLayout.CellSize;
         Boundary = boundary ?? DeploymentLayout.CellHalfWidth(gridSize) * gridSize;
         this.rectangles = (ObstacleRectangle[])rectangles.Clone();

@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Hill, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -36,6 +36,7 @@ public partial class LevelEditor
             if (!mode.Preset && entry is Tool.Deployment or Tool.DeploymentLine) continue;
             toolPicker.AddItem(entry switch
             {
+                Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Hill => "Place hill",
                 Tool.Wall => "Place solid wall",
@@ -137,6 +138,9 @@ public partial class LevelEditor
                     EditSelected(selected);
                 }
                 break;
+            case Tool.Bridge:
+                Heading(context, "Click A, then B. Scroll for width, then click to place. Right-click cancels.", 15);
+                break;
             case Tool.Rock:
             case Tool.Water:
             case Tool.Forest:
@@ -186,6 +190,7 @@ public partial class LevelEditor
 
     private void SwitchTool(Tool next)
     {
+        CancelBridge();
         tool = next;
         toolPicker.Select(toolPicker.GetItemIndex((int)next));
         if (next != Tool.Defense) defensePicker.Select(0);
@@ -245,6 +250,7 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
+        if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
         if (input is InputEventMouseMotion motion)
         {
@@ -262,6 +268,11 @@ public partial class LevelEditor
             return;
         }
         if (!WorldPoint(mouse.Position, out var hit)) return;
+        if (tool == Tool.Erase && mouse.ButtonIndex == MouseButton.Left && EraseBridge(Cell(hit)))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment ||
             (tool == Tool.Erase && (mouse.ButtonIndex == MouseButton.Right || Pick(hit) == null)))
         {
@@ -635,6 +646,7 @@ public partial class LevelEditor
     {
         if (runningTest != null || map == null) return;
         EndPaint();
+        CancelBridge();
         if (!from.TryPop(out var edit)) return;
         if (back) edit.Undo(); else edit.Redo();
         to.Push(edit);

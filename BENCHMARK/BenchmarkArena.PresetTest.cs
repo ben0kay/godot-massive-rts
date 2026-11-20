@@ -14,6 +14,7 @@ public partial class BenchmarkArena
     private readonly List<BuildingPlacement> presetDefenses = new();
     private ObstacleRectangle[] presetCover, presetWater;
     private ForestCover presetForest;
+    private WorldPaint presetPaint;
     private ObstacleField presetSight, presetPaintCollision;
 
     private ObstacleField BattleSight => presetTestMap != null ? presetSight : obstacles;
@@ -31,7 +32,7 @@ public partial class BenchmarkArena
         var map = presetTestMap;
         map.UpdateGroundBounds();
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
-        var paint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
+        var paint = presetPaint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         var (rocks, water) = paint?.Compile() ?? (Array.Empty<ObstacleRectangle>(), Array.Empty<ObstacleRectangle>());
         presetCover = map.ReadAuthoredWalls().Concat(rocks).ToArray();
         presetWater = water;
@@ -77,10 +78,10 @@ public partial class BenchmarkArena
             presetPaintCollision?.IntersectsCircle(ObstacleField.Xz(position), radius) != true;
     }
 
-    private ObstacleField BuildPresetField(IEnumerable<ObstacleRectangle> areas)
+    private ObstacleField BuildPresetField(IEnumerable<ObstacleRectangle> areas, Rect2[] bridges = null)
     {
         var rectangles = areas.ToArray();
-        return rectangles.Length == 0 ? null : new ObstacleField(rectangles, presetTestMap.MapSize * 0.5f);
+        return rectangles.Length == 0 ? null : new ObstacleField(rectangles, presetTestMap.MapSize * 0.5f, bridges);
     }
 
     private void RefreshPresetBattleFields()
@@ -89,6 +90,6 @@ public partial class BenchmarkArena
             .Select(structure => structure.Area) ?? Enumerable.Empty<ObstacleRectangle>();
         var cover = presetCover.Concat(survivingDefenses).ToArray();
         presetSight = BuildPresetField(cover);
-        SetBattleObstacles(BuildPresetField(cover.Concat(presetWater)), null);
+        SetBattleObstacles(BuildPresetField(cover.Concat(presetPaint?.MovementWater ?? presetWater), presetPaint?.BridgeAreas), null);
     }
 }

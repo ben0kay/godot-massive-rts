@@ -24,7 +24,8 @@ internal sealed class CommandBuildings
     private readonly CommandMovement movement;
     private readonly List<CommandStructure> structures = new();
     private readonly BatchRecipe[] recipes;
-    private readonly ObstacleRectangle[] authoredWalls, paintedRocks, paintedWater;
+    private readonly ObstacleRectangle[] authoredWalls, paintedRocks, paintedWater, movementWater;
+    private readonly Rect2[] bridges;
     private readonly List<CarbonDeposit> deposits = new();
     private readonly List<ExtractorJob> extractorJobs = new();
     private readonly CarbonExtractorSettings extractorSettings;
@@ -48,7 +49,8 @@ internal sealed class CommandBuildings
     public bool QueueWorker() => Workers.Enqueue(CanOperateCitadel);
 
     public CommandBuildings(Node3D root, UnitState units, CommandMovement movement, float citadelHealth, ObstacleRectangle[] authoredWalls, Node3D citadelView, CitadelWorkerSettings workerSettings,
-        ObstacleRectangle[] paintedRocks, ObstacleRectangle[] paintedWater, int startingCarbon)
+        ObstacleRectangle[] paintedRocks, ObstacleRectangle[] paintedWater, ObstacleRectangle[] movementWater,
+        Rect2[] bridges, int startingCarbon)
     {
         Carbon = new CarbonBalance(startingCarbon);
         this.root = root;
@@ -57,6 +59,8 @@ internal sealed class CommandBuildings
         this.authoredWalls = authoredWalls;
         this.paintedRocks = paintedRocks;
         this.paintedWater = paintedWater;
+        this.movementWater = movementWater;
+        this.bridges = bridges;
         extractorSettings = GD.Load<CarbonExtractorSettings>(
             "res://WORLD/RESOURCES/CARBON/DefaultCarbonExtractorSettings.tres")
             ?? new CarbonExtractorSettings();
@@ -385,8 +389,9 @@ internal sealed class CommandBuildings
         foreach (var structure in structures)
             if (!structure.Destroyed && structure is not CarbonExtractor) areas.Add(structure.Area);
         CoverField = areas.Count == 0 ? null : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
-        if (paintedWater.Length > 0) areas.AddRange(paintedWater);
-        field = paintedWater.Length == 0 ? CoverField : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
+        areas.AddRange(movementWater);
+        field = areas.Count == 0 ? null : movementWater.Length == 0 && bridges.Length == 0
+            ? CoverField : new ObstacleField(areas.ToArray(), movement.MapHalfWidth, bridges);
         movement.SetObstacles(field);
     }
 

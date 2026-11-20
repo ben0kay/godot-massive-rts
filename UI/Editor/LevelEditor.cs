@@ -208,6 +208,7 @@ public partial class LevelEditor : Node
         LevelDefinition nextMetadata;
         try { next = adapter.Open(existing, out nextMetadata); }
         catch (Exception error) { startStatus.Text = error.Message; return; }
+        CancelBridge();
         if (map != null)
         {
             RemoveChild(map);
@@ -336,6 +337,7 @@ public partial class LevelEditor : Node
     private void ToggleLayout()
     {
         if (map == null || runningTest != null) return;
+        CancelBridge();
         previewing = !previewing;
         if (previewing)
         {
@@ -353,6 +355,7 @@ public partial class LevelEditor : Node
     private void StartTest()
     {
         if (map == null || runningTest != null) return;
+        CancelBridge();
         EndPaint();
         try { LevelEditorSave.ValidateContent(mode, map); }
         catch (Exception error) { SetStatus(error.Message); return; }

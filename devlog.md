@@ -407,3 +407,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | VIS-IDEAS1 | Planning only.** Added a Codex review backlog for eight optional unit and battlefield visual polish ideas under `VISUALS/FEEDBACK/`, indexed in visual-feedback and unit READMEs. Existing FX2 remains source-implemented; no visual or gameplay code changed.
 
 - **2026-11-20 | FX2 tuning | Source implemented.** Thickened and darkened cracks, and tuned crumble deaths to emit six smaller pieces with slightly wider spread under the existing caps.
+
+- **2026-11-20 | Bridges | Source implemented.** Added saved grid-aligned bridge drawing to the Level Editor and cached footprint-aware crossings for Fortress Defense and Preset Battle playtests. Awaiting owner gameplay validation.
