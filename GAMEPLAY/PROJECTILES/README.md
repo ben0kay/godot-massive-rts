@@ -20,3 +20,7 @@ The explosion uses the same XZ enemy-only damage query as the Hexagon shockwave.
 ## PROJ-LASER3 — Two laser-bolt sizes
 
 Basic Triangle Archer now uses a **25% smaller** bolt on every axis. The new Long Triangle Marksman uses `Types/LongLaserBolt/LongLaserBolt.tres` with the same existing 40%-faction-tint shader appearance, but a 0.07 × 0.07 × 0.64-unit bolt (about 25% longer than Triangle's). The basic Triangle retains its authored 45 projectile speed; the Long Triangle Marksman's dedicated bolt now has 67.5 authored speed (50% faster), while both retain the 0.65 arc-height cap, 0.08 arc-per-distance and standard hit/collision behavior. There are no new per-projectile nodes, simulated effects or lights.
+
+## Rocket and artillery launch effects
+
+Enable **Use Projectile Launch Effects** in `GAMEPLAY/UNITS/UnitVisualConfig.tres` before launch. Opted-in projectile resources draw a fading ribbon along the current flight arc and a flash at the recorded muzzle. The shared renderer uses two MultiMesh batches with no particles or lights. Only Twin Rocket and Artillery Shell opt in by default. These effects are visual only.

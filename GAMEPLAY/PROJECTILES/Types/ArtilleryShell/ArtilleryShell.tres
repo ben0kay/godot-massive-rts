@@ -16,6 +16,7 @@ rings = 4
 [resource]
 script = ExtResource("1")
 ObstacleFire = 1
+UseLaunchEffects = true
 VisualMesh = SubResource("2")
 Speed = 34.0
 ArcHeight = 24.0

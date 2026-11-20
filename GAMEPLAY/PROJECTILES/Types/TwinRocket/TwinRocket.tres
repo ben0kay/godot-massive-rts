@@ -8,7 +8,7 @@ shader = ExtResource("2")
 
 [sub_resource type="PrismMesh" id="Rocket"]
 material = SubResource("Material")
-size = Vector3(0.16, 0.14, 0.40)
+size = Vector3(0.20, 0.175, 0.50)
 
 [resource]
 script = ExtResource("1")
@@ -16,6 +16,7 @@ ObstacleFire = 1
 BlocksOnObstacles = true
 VisualMesh = SubResource("Rocket")
 TintByFaction = true
+UseLaunchEffects = true
 Speed = 38.0
 ArcHeight = 12.0
 ArcHeightPerDistance = 0.32

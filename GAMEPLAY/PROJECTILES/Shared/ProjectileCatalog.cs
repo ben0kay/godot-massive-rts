@@ -14,6 +14,8 @@ public sealed class ProjectileCatalog
     private readonly List<bool> factionTints = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
+    private readonly List<bool> launchEffects = new();
+
     private Mesh sharedArrowMesh;
     private readonly float movementScale;
 
@@ -23,6 +25,9 @@ public sealed class ProjectileCatalog
     public ProjectileFlight Flight(int index) => flights[index];
     public Mesh Mesh(int index) => meshes[index];
     public bool TintsByFaction(int index) => factionTints[index];
+
+    internal bool HasLaunchEffects => launchEffects.Contains(true);
+    internal bool UsesLaunchEffects(int index) => launchEffects[index];
 
     public int Register(ProjectileDefinition definition)
     {
@@ -45,6 +50,7 @@ public sealed class ProjectileCatalog
             float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
         meshes.Add(mesh);
         factionTints.Add(definition.TintByFaction);
+        launchEffects.Add(definition.UseLaunchEffects);
         return index;
     }
 }

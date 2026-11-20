@@ -10,10 +10,16 @@ public partial class ProjectileRenderer : Node3D
     private int[] counts;
     private bool[] tintByFaction;
     private int capacity;
+    private ProjectileLaunchEffects launchEffects;
 
     public void Initialize(int maximum, ProjectileCatalog catalog)
     {
         capacity = maximum;
+        if (catalog.HasLaunchEffects &&
+            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseProjectileLaunchEffects == true)
+        {
+            launchEffects = new ProjectileLaunchEffects(this, catalog, maximum);
+        }
         batches = new MultiMesh[catalog.Count];
         counts = new int[catalog.Count];
         tintByFaction = new bool[catalog.Count];
@@ -64,6 +70,7 @@ public partial class ProjectileRenderer : Node3D
             if (tintByFaction[type])
                 batches[type].SetInstanceColor(slot, ArmyRenderer.FactionColor(projectiles.FactionAt(i)));
         }
+        launchEffects?.Sync(projectiles);
         projectiles.Dirty = false;
     }
 }

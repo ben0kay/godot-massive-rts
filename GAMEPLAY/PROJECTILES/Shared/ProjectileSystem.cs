@@ -20,6 +20,17 @@ public sealed class ProjectileSystem
     // Visuals read the source team without exposing mutable projectile pool arrays.
     public byte FactionAt(int index) => sourceFaction[index];
 
+    // The trail uses the same parabola as flight, evaluated backward from the current pose.
+    internal Color TrailCurveAt(int index, float seconds)
+    {
+        float fraction = Mathf.Min(elapsed[index], seconds) / duration[index];
+        Vector3 backward = -Direction[index] * fraction;
+        return new Color(backward.X, backward.Y, backward.Z, 4f * arc[index] * fraction * fraction);
+    }
+
+    internal float AgeAt(int index) => elapsed[index];
+    internal Vector3 MuzzleAt(int index) => origin[index];
+
     public ProjectileSystem(int capacity, ProjectileCatalog catalog, float lifetime)
     {
         this.catalog = catalog;
