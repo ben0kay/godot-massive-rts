@@ -421,3 +421,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Hard separation | Source implemented.** Moved the live 0–10% allowance to Hard pair validation and restored Strong clearance. Tightening the allowance repacks transactionally.
 
 - **2026-11-20 | ROCKET-TOWER1 | Source implemented; awaiting owner testing.** Added heavy 3×3 Rocket Tower with stepped beveled base, rotating two-barrel launcher and alternating pooled arcing rockets. Reused TwinRocket at 1.8× visual scale and 2× splash radius (2.5→5.0) through existing AreaDamage/trajectory/impact systems. Added benchmark/editor and Fortress Defense placement, Ctrl build menu at 1450 Carbon, and rocket stepping in melee-only benchmark compositions. Laser Tower remains unchanged. Source-only validation; owner to check visuals/FPS in Godot.
+
+- **2026-11-20 | Projectile visuals | Source implemented.** Used faction-catalogue colours to tint projectile trails and explosive impacts through the existing shared batches.

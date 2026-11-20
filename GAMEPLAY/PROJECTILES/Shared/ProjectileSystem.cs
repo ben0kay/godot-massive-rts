@@ -193,7 +193,7 @@ public sealed class ProjectileSystem
             damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index]);
         Vector3 burstOrigin = impact;
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
-        rings?.Emit(impact, flight.ExplosionRadius, burstOrigin);
+        rings?.Emit(impact, flight.ExplosionRadius, burstOrigin, sourceFaction[index]);
         return true;
     }
 

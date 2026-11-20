@@ -4,11 +4,13 @@ render_mode unshaded, blend_add, cull_disabled, shadows_disabled, skip_vertex_tr
 
 varying flat float flash;
 varying flat float flash_age;
+varying flat vec3 faction_color;
 
 void vertex() {
     vec3 anchor = MODELVIEW_MATRIX[3].xyz;
     flash = INSTANCE_CUSTOM.w < 0.0 ? 1.0 : 0.0;
     flash_age = INSTANCE_CUSTOM.x;
+    faction_color = COLOR.rgb;
     if (flash > 0.5) {
         VERTEX = anchor + vec3((UV - 0.5) * mix(0.65, 1.15, flash_age), 0.0);
     } else {
@@ -33,7 +35,8 @@ void fragment() {
         float center = 1.0 - abs(UV.y * 2.0 - 1.0);
         float fade = (1.0 - UV.x) * (1.0 - UV.x);
         float wisp = mix(0.58, 1.0, sin(UV.x * 53.0) * 0.5 + 0.5);
-        ALBEDO = mix(vec3(1.0, 0.60, 0.17), vec3(1.0, 0.87, 0.52), fade);
+        vec3 tinted_edge = mix(vec3(1.0, 0.91, 0.78), faction_color, 0.48);
+        ALBEDO = mix(tinted_edge, vec3(1.0, 0.98, 0.92), fade * 0.42);
         ALPHA = center * center * fade * wisp * 0.65;
     }
 }

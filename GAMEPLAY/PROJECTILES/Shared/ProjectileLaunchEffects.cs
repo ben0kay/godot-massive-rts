@@ -17,16 +17,16 @@ internal sealed class ProjectileLaunchEffects
         {
             Shader = GD.Load<Shader>("res://GAMEPLAY/PROJECTILES/Shared/ProjectileLaunchEffects.gdshader")
         };
-        trails = CreateBatch(parent, new QuadMesh { SubdivideWidth = 11, Material = material }, capacity);
+        trails = CreateBatch(parent, new QuadMesh { SubdivideWidth = 11, Material = material }, capacity, useColors: true);
         flashes = CreateBatch(parent, new QuadMesh { Material = material }, capacity);
     }
 
-    private static MultiMesh CreateBatch(Node3D parent, Mesh mesh, int capacity)
+    private static MultiMesh CreateBatch(Node3D parent, Mesh mesh, int capacity, bool useColors = false)
     {
         var batch = new MultiMesh
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseCustomData = true, Mesh = mesh, InstanceCount = capacity, VisibleInstanceCount = 0
+            UseCustomData = true, UseColors = useColors, Mesh = mesh, InstanceCount = capacity, VisibleInstanceCount = 0
         };
         parent.AddChild(new MultiMeshInstance3D
         {
@@ -46,6 +46,7 @@ internal sealed class ProjectileLaunchEffects
             if (age > 0f)
             {
                 trails.SetInstanceTransform(trailCount, new Transform3D(Basis.Identity, projectiles.Position[i]));
+                trails.SetInstanceColor(trailCount, Factions.Color(projectiles.FactionAt(i)));
                 trails.SetInstanceCustomData(trailCount++, projectiles.TrailCurveAt(i, TrailSeconds));
             }
             if (age < FlashSeconds)

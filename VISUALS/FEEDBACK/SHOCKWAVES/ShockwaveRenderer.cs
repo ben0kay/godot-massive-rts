@@ -8,7 +8,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private const int Capacity = 256;
     private const int Segments = 64;
     private const float Duration = 0.35f;
-    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin);
+    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction);
     private readonly Ring[] rings = new Ring[Capacity];
     private MultiMesh bursts;
     private int count;
@@ -54,6 +54,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         {
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             UseCustomData = true,
+            UseColors = true,
             Mesh = new QuadMesh { Material = flashMaterial },
             InstanceCount = Capacity,
             VisibleInstanceCount = 0
@@ -71,10 +72,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
-    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null)
+    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null, byte? faction = null)
     {
         if (count == Capacity) return;
-        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin);
+        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin, faction);
         dirty = true;
     }
 
@@ -100,7 +101,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             float progress = ring.Age / Duration;
             float radius = ring.Radius * Mathf.Lerp(0.08f, 1f, progress);
             Multimesh.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(radius, 1f, radius)), ring.Origin));
-            Multimesh.SetInstanceColor(i, new Color(1f, 1f, 1f, 1f - progress * progress));
+            Color faction = ring.Faction is byte id ? Factions.Color(id) : Colors.White;
+            Color ringColor = Colors.White.Lerp(faction, 0.22f);
+            ringColor.A = 1f - progress * progress;
+            Multimesh.SetInstanceColor(i, ringColor);
             if (ring.BurstOrigin is Vector3 impact)
             {
                 float extent = ring.Radius * 0.88f;
@@ -108,6 +112,8 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
                 bursts.SetInstanceTransform(flashCount, new Transform3D(Basis.Identity.Scaled(Vector3.One * extent), center));
                 float seed = impact.X * 0.173f + impact.Z * 0.271f;
                 seed -= Mathf.Floor(seed);
+                faction.A = ring.Faction.HasValue ? 1f : 0f;
+                bursts.SetInstanceColor(flashCount, faction);
                 bursts.SetInstanceCustomData(flashCount++, new Color(progress, seed, 0f, 0f));
             }
         }
