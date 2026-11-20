@@ -157,10 +157,10 @@ public sealed class RuntimeUnitCatalog
     public ProjectileCatalog Projectiles { get; }
     private readonly MountedRocket[][] primaryRockets = new MountedRocket[OrderedIds.Length][];
     private readonly MountedRocket[][] independentRockets = new MountedRocket[OrderedIds.Length][];
-    private readonly UnitDefinition[] definitions = new UnitDefinition[OrderedIds.Length];
+    private readonly UnitDefinition[] definitionsByType = new UnitDefinition[OrderedIds.Length];
     internal MountedRocket[] PrimaryRockets(int type) => primaryRockets[type];
     internal MountedRocket[] IndependentRockets(int type) => independentRockets[type];
-    internal UnitDefinition Definition(int type) => definitions[type];
+    internal UnitDefinition Definition(int type) => definitionsByType[type];
     internal (int Projectile, Vector4 Min, Vector4 Max, float Interval, float Damage) DreadnaughtGuns { get; }
 
     public int Count => stats.Length;
@@ -244,7 +244,7 @@ public sealed class RuntimeUnitCatalog
             if (i == Dreadnaught)
                 DreadnaughtGuns = (Projectiles.Register(d.Projectile), d.TurretMinimumRanges, d.TurretMaximumRanges,
                     ClampStat(d.TurretShotInterval, 0.05f, 5f, 0.15f), ClampStat(d.TurretDamage, 0f, 200f, 3f));
-            definitions[i] = d;
+            definitionsByType[i] = d;
             var primary = new List<MountedRocket>();
             var independent = new List<MountedRocket>();
             foreach (var mount in d.RocketMounts ?? new())

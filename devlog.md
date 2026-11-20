@@ -393,3 +393,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Benchmark terrain | Source implemented.** Added a world-space steel slate material with subtle stone relief and sheen to the flat Benchmark ground.
 
 - **2026-11-20 | Muzzle smoke | Source implemented.** Added batched, lingering artillery and rocket muzzle smoke with eastward default drift and a per-level wind setting.
+
+- **2026-11-20 | Rocket mounts | Build fix.** Corrected the unit catalogue to populate its indexed definition lookup rather than indexing the constructor input.
