@@ -48,6 +48,10 @@ The catalogue fits each circular collision footprint around the scaled mesh outl
 
 Open [UnitVisualConfig.tres](UnitVisualConfig.tres) in the Godot Inspector, set **Use Enhanced Meshes**, and save before running a scene. The switch ships enabled for the Circle Infantry trial. Circle keeps its footprint and height and gets a bright faction-coloured rim around a shallow recessed cap. The shared renderer uses the setting for battles and placement previews. Turn it off and relaunch to compare against the original meshes.
 
+## Unit fracture
+
+In [UnitVisualConfig.tres](UnitVisualConfig.tres), **Use Unit Fracture** enables health-dependent cracks and crumbling deaths. Save and relaunch the scene after changing it. [Visual feedback](../../VISUALS/FEEDBACK/README.md) describes the crack thresholds and fragment budgets.
+
 ## Tuning units
 
 Edit the existing definition in the Inspector or enable the [full-screen Entity Editor](../../addons/unit_editor/README.md). UNIT2 exposes the cleave target cap, ordinary melee facing angle and shockwave outer damage. The editor writes the selected unit resource and keeps its stable ID read-only.

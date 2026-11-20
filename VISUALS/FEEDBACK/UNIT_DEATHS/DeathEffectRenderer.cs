@@ -1,32 +1,37 @@
-// Draws short-lived faction-colored death puffs and fading ground splats in shared MultiMesh batches.
-using System;
+// Draws faceted fragments and ground splats using bounded shared MultiMesh batches.
 using Godot;
 
 namespace MassiveRts;
 
 public partial class DeathEffectRenderer : Node3D
 {
+    private const int InstanceStride = 16;
+    private const int SparseLimit = 64;
     private RuntimeUnitCatalog catalog;
-    private MultiMesh[] bodies;
-    private int[] bodyCounts;
-    private MultiMesh blobs, groundSplats;
+    private readonly MultiMesh[] pieces = new MultiMesh[2];
+    private readonly float[][] pieceBuffers = new float[2][];
+    private MultiMesh groundSplats;
     private uint syncedRevision;
-    private static readonly Vector3[] PuffDirections =
-    {
-        new(1f, 0f, 0f), new(0f, 0f, 1f),
-        new(-1f, 0f, 0f), new(0f, 0f, -1f)
-    };
 
-    public void Initialize(RuntimeUnitCatalog units, Mesh[] meshes)
+    public void Initialize(RuntimeUnitCatalog units, DeathFeedbackSystem pool)
     {
         catalog = units;
-        bodies = new MultiMesh[meshes.Length];
-        bodyCounts = new int[meshes.Length];
-        for (int type = 0; type < meshes.Length; type++)
-            bodies[type] = CreateBatch(meshes[type], DeathFeedbackSystem.Capacity);
+        if (pool.Capacity > 0)
+        {
+            var material = new ShaderMaterial
+            {
+                Shader = GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_DEATHS/CrumbleFragment.gdshader")
+            };
+            for (int variant = 0; variant < pieces.Length; variant++)
+            {
+                // Every event uses the same count of each mesh, so neither batch can overflow.
+                int capacity = pool.Capacity * ((pool.FragmentsPerDeath + 1 - variant) / 2);
+                pieces[variant] = CreateBatch(BuildFragmentMesh(material, variant), capacity);
+                pieceBuffers[variant] = new float[capacity * InstanceStride];
+            }
+        }
 
-        // One existing unshaded per-instance tint shader is shared by puffs and splats.
-        var tintMaterial = new ShaderMaterial
+        var splatMaterial = new ShaderMaterial
         {
             Shader = new Shader
             {
@@ -37,10 +42,37 @@ void vertex() { tint = COLOR; }
 void fragment() { ALBEDO = tint.rgb; ALPHA = tint.a; }"
             }
         };
-        var puff = new SphereMesh { Radius = 0.5f, Height = 1f, RadialSegments = 5, Rings = 2 };
-        puff.Material = tintMaterial;
-        blobs = CreateBatch(puff, DeathFeedbackSystem.Capacity * DeathFeedbackSystem.BlobsPerDeath);
-        groundSplats = CreateBatch(BuildSplatMesh(tintMaterial), DeathFeedbackSystem.SplatCapacity);
+        groundSplats = CreateBatch(BuildSplatMesh(splatMaterial), DeathFeedbackSystem.SplatCapacity);
+    }
+
+    // =========================================================
+    // Both chunks have a flat base at -0.5 so their resting height matches the terrain.
+    private static Mesh BuildFragmentMesh(Material material, int variant)
+    {
+        using var surface = new SurfaceTool();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetMaterial(material);
+        Vector3 a = new(-0.50f, -0.5f, -0.34f), b = new(0.48f, -0.5f, -0.42f);
+        Vector3 c = new(0.37f, -0.5f, 0.44f), d = new(-0.41f, -0.5f, 0.35f);
+        Vector3 peak = new(variant == 0 ? -0.17f : 0.22f, 0.5f, -0.19f);
+        Vector3 edge = new(0.13f, variant == 0 ? -0.03f : 0.35f, 0.35f);
+        AddFacet(surface, a, peak, b, 0.77f);
+        AddFacet(surface, b, peak, edge, 0.98f);
+        AddFacet(surface, b, edge, c, 0.72f);
+        AddFacet(surface, c, edge, d, 0.61f);
+        AddFacet(surface, d, edge, peak, 0.88f);
+        AddFacet(surface, d, peak, a, 0.66f);
+        AddFacet(surface, a, b, c, 0.54f);
+        AddFacet(surface, a, c, d, 0.54f);
+        return surface.Commit();
+    }
+
+    private static void AddFacet(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c, float shade)
+    {
+        surface.SetColor(new Color(shade, shade, shade));
+        surface.AddVertex(a);
+        surface.AddVertex(c);
+        surface.AddVertex(b);
     }
 
     // =========================================================
@@ -82,55 +114,83 @@ void fragment() { ALBEDO = tint.rgb; ALPHA = tint.a; }"
         return batch;
     }
 
+    // =========================================================
+    private void SyncFragments(DeathFeedbackSystem pool)
+    {
+        if (pool.Capacity == 0) return;
+        float halfGravity = pool.Gravity * 0.5f;
+        for (int variant = 0; variant < pieces.Length; variant++)
+        {
+            MultiMesh batch = pieces[variant];
+            int visible = pool.Count * ((pool.FragmentsPerDeath + 1 - variant) / 2);
+            bool dense = visible > SparseLimit;
+            int slot = 0;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                float age = pool.GetAge(i);
+                float fade = Mathf.Min(1f, (pool.Lifetime - age) / pool.FadeDuration);
+                for (int j = variant; j < pool.FragmentsPerDeath; j += 2)
+                {
+                    ref readonly var fragment = ref pool.GetFragment(i, j);
+                    Transform3D pose = FragmentPose(fragment, age, halfGravity);
+                    Color color = fragment.Tint;
+                    color.A = fade;
+                    if (dense) WriteFragment(pieceBuffers[variant], slot, pose, color);
+                    else
+                    {
+                        batch.SetInstanceTransform(slot, pose);
+                        batch.SetInstanceColor(slot, color);
+                    }
+                    slot++;
+                }
+            }
+            if (dense) batch.Buffer = pieceBuffers[variant];
+            if (batch.VisibleInstanceCount != visible) batch.VisibleInstanceCount = visible;
+        }
+    }
+
+    private static Transform3D FragmentPose(in DeathFeedbackSystem.Fragment fragment, float age, float halfGravity)
+    {
+        float progress = Mathf.Min(age / fragment.Flight, 1f);
+        // Ease the travel to a stop and follow the cached terrain profile.
+        float travel = progress * (2f - progress);
+        float floorAtStart = fragment.Start.Y - fragment.Lift;
+        float floorAtMiddle = fragment.MiddleGround + fragment.Size.Y * 0.5f;
+        float floorAtEnd = fragment.EndGround + fragment.Size.Y * 0.5f;
+        float y = travel < 0.5f
+            ? Mathf.Lerp(floorAtStart, floorAtMiddle, travel * 2f)
+            : Mathf.Lerp(floorAtMiddle, floorAtEnd, travel * 2f - 1f);
+        float arc = fragment.Lift * (1f - progress) +
+            halfGravity * age * (fragment.Flight - age);
+        float afterLanding = Mathf.Max(0f, age - fragment.Flight);
+        float rebound = Mathf.Max(0f, afterLanding * (fragment.Bounce - halfGravity * afterLanding));
+        y += progress < 1f ? arc : rebound;
+        Vector3 point = new(fragment.Start.X + fragment.Travel.X * travel, y,
+            fragment.Start.Z + fragment.Travel.Y * travel);
+        Basis basis = new Basis(Vector3.Up, fragment.Yaw + fragment.Spin * travel);
+        return new Transform3D(new Basis(basis.X * fragment.Size.X, basis.Y * fragment.Size.Y,
+            basis.Z * fragment.Size.Z), point);
+    }
+
+    // Packed MultiMesh transforms are affine rows, while Basis exposes columns.
+    private static void WriteFragment(float[] buffer, int slot, Transform3D pose, Color color)
+    {
+        int i = slot * InstanceStride;
+        buffer[i] = pose.Basis.X.X;      buffer[i + 1] = pose.Basis.Y.X;
+        buffer[i + 2] = pose.Basis.Z.X;  buffer[i + 3] = pose.Origin.X;
+        buffer[i + 4] = pose.Basis.X.Y;  buffer[i + 5] = pose.Basis.Y.Y;
+        buffer[i + 6] = pose.Basis.Z.Y;  buffer[i + 7] = pose.Origin.Y;
+        buffer[i + 8] = pose.Basis.X.Z;  buffer[i + 9] = pose.Basis.Y.Z;
+        buffer[i + 10] = pose.Basis.Z.Z; buffer[i + 11] = pose.Origin.Z;
+        buffer[i + 12] = color.R; buffer[i + 13] = color.G;
+        buffer[i + 14] = color.B; buffer[i + 15] = color.A;
+    }
+
     public void Sync(DeathFeedbackSystem pool)
     {
         if (syncedRevision == pool.Revision) return;
         syncedRevision = pool.Revision;
-        Array.Clear(bodyCounts);
-        int blobCount = 0;
-        for (int i = 0; i < pool.Count; i++)
-        {
-            var effect = pool[i];
-            ref readonly UnitStats type = ref catalog[effect.Type];
-            if (effect.Age < DeathFeedbackSystem.ShrinkSeconds)
-            {
-                float progress = effect.Age / DeathFeedbackSystem.ShrinkSeconds;
-                float scale = 1f - progress * progress;
-                Vector2 facing = effect.Facing;
-                bool positiveX = type.Shape == UnitShape.Diamond;
-                float yaw = facing == Vector2.Zero || type.Shape == UnitShape.Circle ? 0f :
-                    Mathf.Atan2(positiveX ? -facing.Y : -facing.X, positiveX ? facing.X : -facing.Y);
-                var pose = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale),
-                    effect.Ground + Vector3.Up * (type.Height * 0.5f * scale));
-                int slot = bodyCounts[effect.Type]++;
-                bodies[effect.Type].SetInstanceTransform(slot, pose);
-                bodies[effect.Type].SetInstanceColor(slot, ArmyRenderer.FactionColor(effect.Faction));
-            }
-
-            Color factionColor = ArmyRenderer.FactionColor(effect.Faction);
-            float time = effect.Age / DeathFeedbackSystem.BlobSeconds;
-            float outward = time * (2f - time);
-            float angle = (effect.Seed & 255u) * (Mathf.Tau / 256f);
-            var rotation = new Basis(Vector3.Up, angle);
-            for (int j = 0; j < DeathFeedbackSystem.BlobsPerDeath; j++)
-            {
-                float variation = ((effect.Seed >> (8 + j * 4)) & 15u) / 15f;
-                // A slightly wider spread; normalized lifetime also slows travel to the edge.
-                float distance = (0.25f + 0.32f * variation) * outward;
-                float height = 0.035f + 0.16f * time * (1f - time);
-                Vector3 point = effect.Ground + rotation * PuffDirections[j] * distance + Vector3.Up * height;
-                // Preserve the larger DEATH1-B puffs, now in the defeated unit's team color.
-                float scale = (0.09f + 0.065f * variation) * (1f + time * 0.45f);
-                blobs.SetInstanceTransform(blobCount, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), point));
-                float shade = 0.85f + 0.15f * variation;
-                blobs.SetInstanceColor(blobCount++, new Color(factionColor.R * shade,
-                    factionColor.G * shade, factionColor.B * shade, 1f - time * time));
-            }
-        }
-        for (int type = 0; type < bodies.Length; type++)
-            if (bodies[type].VisibleInstanceCount != bodyCounts[type]) bodies[type].VisibleInstanceCount = bodyCounts[type];
-        blobs.VisibleInstanceCount = blobCount;
-
+        SyncFragments(pool);
         for (int i = 0; i < pool.SplatCount; i++)
         {
             var splat = pool.GetSplat(i);

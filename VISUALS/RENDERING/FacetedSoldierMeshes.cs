@@ -14,7 +14,7 @@ public static class FacetedSoldierMeshes
 
     // =========================================================
     // Construct one reusable mesh per unit type. No per-soldier geometry or lighting work.
-    public static Mesh[] Create(RuntimeUnitCatalog catalog)
+    public static Mesh[] Create(RuntimeUnitCatalog catalog, UnitVisualConfig visuals)
     {
         var material = new StandardMaterial3D
         {
@@ -22,13 +22,26 @@ public static class FacetedSoldierMeshes
             VertexColorUseAsAlbedo = true,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
-        bool enhanced = GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true;
+        bool enhanced = visuals.UseEnhancedMeshes;
+        var crackShader = visuals.UseUnitFracture
+            ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
+        var crackMask = crackShader != null
+            ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
         var meshes = new Mesh[catalog.Count];
         for (int i = 0; i < meshes.Length; i++)
         {
             ref readonly UnitStats type = ref catalog[i];
             UnitOutline outline = type.Outline;
-            meshes[i] = CreateUnitMesh(outline, type.Height, material, enhanced && type.Id == RuntimeUnitCatalog.CircleId,
+            Material unitMaterial = material;
+            if (crackShader != null && crackMask != null)
+            {
+                var cracked = new ShaderMaterial { Shader = crackShader };
+                cracked.SetShaderParameter("crack_mask", crackMask);
+                cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
+                cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
+                unitMaterial = cracked;
+            }
+            meshes[i] = CreateUnitMesh(outline, type.Height, unitMaterial, enhanced && type.Id == RuntimeUnitCatalog.CircleId,
                 catalog.Definition(i), includeIndependent: false);
         }
         return meshes;

@@ -11,4 +11,26 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseEnhancedMeshes { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
+
+    [ExportGroup("Unit Fracture (FX2)")]
+    [Export] public bool UseUnitFracture { get; set; }
+    [Export(PropertyHint.Range, "0,1,0.01")] public float FirstCrackHealth { get; set; } = 0.75f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float HeavyCrackHealth { get; set; } = 0.25f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float CrackDarkness { get; set; } = 0.62f;
+
+    [ExportGroup("Crumble")]
+    [Export(PropertyHint.Range, "4,6,1")] public int FragmentsPerDeath { get; set; } = 5;
+    [Export(PropertyHint.Range, "0,2,0.01")] public float FragmentSpread { get; set; } = 0.72f;
+    [Export(PropertyHint.Range, "0,4,0.01")] public float FragmentUpwardVelocity { get; set; } = 1.1f;
+    [Export(PropertyHint.Range, "1,30,0.1")] public float FragmentGravity { get; set; } = 11f;
+    [Export(PropertyHint.Range, "0,0.5,0.01")] public float FragmentBounce { get; set; } = 0.18f;
+    [Export(PropertyHint.Range, "0.3,2,0.01")] public float FragmentLifetime { get; set; } = 0.9f;
+    [Export(PropertyHint.Range, "0.05,1,0.01")] public float FragmentFadeDuration { get; set; } = 0.35f;
+
+    [ExportGroup("Crumble Budget")]
+    [Export(PropertyHint.Range, "0,512,1")] public int MaxDetailedDeaths { get; set; } = 256;
+    [Export(PropertyHint.Range, "0,3000,1")] public int MaxActiveFragments { get; set; } = 1500;
+    [Export(PropertyHint.Range, "0,128,1")] public int MaxDetailedDeathsPerTick { get; set; } = 48;
+
+    internal static UnitVisualConfig Load() => GD.Load<UnitVisualConfig>(DefaultPath) ?? new();
 }

@@ -169,7 +169,8 @@ public partial class CommandSandbox : Node3D
         int capacity = NonWaveUnitCapacity + CountWaveSlots();
         var hitSettings = GD.Load<HitFeedbackSettings>("res://VISUALS/FEEDBACK/UNIT_HITS/HitFeedbackSettings.tres")
             ?? new HitFeedbackSettings();
-        deathFeedback = new DeathFeedbackSystem();
+        var unitVisuals = UnitVisualConfig.Load();
+        deathFeedback = new DeathFeedbackSystem(unitVisuals);
         units = new UnitState(capacity, catalog, new HitFeedbackSystem(capacity, hitSettings), terrain)
         {
             DeathFeedback = deathFeedback
@@ -204,11 +205,11 @@ public partial class CommandSandbox : Node3D
 
         army = new ArmyRenderer();
         AddChild(army);
-        var soldierMeshes = FacetedSoldierMeshes.Create(catalog);
-        army.Initialize(units, soldierMeshes, ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows);
+        var soldierMeshes = FacetedSoldierMeshes.Create(catalog, unitVisuals);
+        army.Initialize(units, soldierMeshes, ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows, unitVisuals);
         deathRenderer = new DeathEffectRenderer();
         AddChild(deathRenderer);
-        deathRenderer.Initialize(catalog, soldierMeshes);
+        deathRenderer.Initialize(catalog, deathFeedback);
 
         impactRings = new ShockwaveRenderer();
         AddChild(impactRings);
@@ -421,6 +422,7 @@ public partial class CommandSandbox : Node3D
             if (feedbackChanged) SyncArmy();
             return;
         }
+        deathFeedback.BeginTick();
         int previousCount = units.Count;
         buildings.Step((float)delta);
         bool changed = waves.Step((float)delta);

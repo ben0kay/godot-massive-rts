@@ -1,6 +1,6 @@
 # FEEDBACK — Visual and Camera Response Systems
 
-**Status:** FB0 source implemented and awaiting owner visual validation.
+**Status:** FB0 and FX2 are source implemented and await owner visual validation.
 
 This major root folder houses reusable **presentation-only** effects. The first family is [UNIT_HITS / FB0](UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md): centralizes the white damage flash and adds a fast, subtle 6% size pulse, with a shared settings resource and no per-unit nodes or materials.
 
@@ -14,7 +14,7 @@ FEEDBACK/
     HitFeedbackSystem.cs
     HitFeedbackSettings.cs
     HitFeedbackSettings.tres
-  UNIT_DEATHS/                  # Pooled shrink and puff visuals
+  UNIT_DEATHS/                  # Pooled fragments and ground splats
   CAMERA_SHAKE/                 # Future camera effects — do not create yet
   IMPACTS/                      # Future impact flashes / particles — do not create yet
 ```
@@ -29,6 +29,10 @@ The shared `UNIT_HITS/HitFeedbackSettings.tres` is used by Fortress Defense and 
 
 [UNIT_RECOIL/RangedRecoilSystem.cs](UNIT_RECOIL/RangedRecoilSystem.cs) tracks only active shooters after successful projectile spawns. A small backwards world-space offset is applied to the rendered MultiMesh transforms, then eased to zero over the configured per-unit recovery duration. Authoritative positions, navigation, collisions and projectile origins are unchanged. The controller is allocated only in ranged battles if at least one catalogue type enables recoil. No per-soldier scene nodes or physics bodies.
 
-## Soldier deaths
+## FX2 — Unit fracture
 
-[UNIT_DEATHS](UNIT_DEATHS/README.md) captures the final grounded pose on lethal damage and batches short-lived shrink/faction-colored puff effects alongside small fading faction-colored ground splats, separately from the living army.
+Open [UnitVisualConfig.tres](../../GAMEPLAY/UNITS/UnitVisualConfig.tres) in the Godot Inspector. **Use Unit Fracture** ships enabled and applies to cracks and crumbling on scene reload. Turning it off gives units their original surface material and preserves hit flash, pulse and ground splats.
+
+First Crack Health and Heavy Crack Health default to 75% and 25%. The intermediate threshold is halfway between them. The shared crack mask adds progressive dark fractures to upper facets in mesh-local space, with a stable orientation derived from each unit ID. Crack Darkness sets the maximum shading. The existing opaque MultiMesh alpha channel carries stage and orientation, retaining the 16-float instance stride. The white hit flash temporarily hides the cracks.
+
+[UNIT_DEATHS](UNIT_DEATHS/README.md) owns fragments and splats. Benchmark, Fortress Defense and the Level Editor's combat tests use these shared visuals. The Preset Battles campaign layout view is static.

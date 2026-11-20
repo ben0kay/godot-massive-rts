@@ -58,7 +58,8 @@ public partial class BenchmarkArena : Node3D
     private ArmyRenderer armyRenderer;
     private ProjectileRenderer projectileRenderer;
     private ShockwaveRenderer shockwaves;
-    private readonly DeathFeedbackSystem deathFeedback = new();
+    private DeathFeedbackSystem deathFeedback;
+    private UnitVisualConfig unitVisuals;
     private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
     private AttackRangeOverlay attackRanges;
@@ -108,7 +109,8 @@ public partial class BenchmarkArena : Node3D
         catalog = editorCatalog ?? (SoldierCatalog ?? GD.Load<UnitCatalog>(UnitCatalogPath)).Compile(movementScale);
         // Keep the distance cap implied by the authored projectile lifetime.
         projectileLifetime = Config.ProjectileLifetime / movementScale;
-        soldierMeshes = FacetedSoldierMeshes.Create(catalog);
+        unitVisuals = UnitVisualConfig.Load();
+        soldierMeshes = FacetedSoldierMeshes.Create(catalog, unitVisuals);
         soldierShadow = GroundShadowMeshes.Soldier();
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
@@ -202,9 +204,10 @@ public partial class BenchmarkArena : Node3D
         panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         shockwaves = new ShockwaveRenderer();
         AddChild(shockwaves);
+        deathFeedback = new DeathFeedbackSystem(unitVisuals);
         deathRenderer = new DeathEffectRenderer();
         AddChild(deathRenderer);
-        deathRenderer.Initialize(catalog, soldierMeshes);
+        deathRenderer.Initialize(catalog, deathFeedback);
         panel.DeathEffects.Toggled += enabled =>
         {
             deathFeedback.Enabled = enabled;
@@ -583,7 +586,7 @@ public partial class BenchmarkArena : Node3D
                 if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
-                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows);
+                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows, unitVisuals);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
                     presetTestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
@@ -747,6 +750,7 @@ public partial class BenchmarkArena : Node3D
 
     private void Step(float dt)
     {
+        deathFeedback.BeginTick();
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {

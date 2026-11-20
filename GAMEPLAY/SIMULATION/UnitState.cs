@@ -127,9 +127,9 @@ public sealed class UnitState
         ref readonly var defender = ref Catalog[Type[id]];
         Health[id] = Mathf.Max(0, previous - Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken));
         if (Health[id] == 0) RecordDeath(id);
-        else if (Health[id] < previous && HitFeedback != null)
+        else if (Health[id] < previous)
         {
-            HitFeedback.OnHit(id);
+            HitFeedback?.OnHit(id);
             Dirty[id] = true;
         }
     }
@@ -145,7 +145,7 @@ public sealed class UnitState
     {
         FactionAlive[Faction[id]]--;
         Alive--;
-        DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id]);
+        DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id], Catalog[Type[id]], Grounding?.Field);
         Dirty[id] = true;
     }
 }

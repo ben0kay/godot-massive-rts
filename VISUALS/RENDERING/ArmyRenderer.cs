@@ -28,6 +28,8 @@ public partial class ArmyRenderer : Node3D
     private float[] halfHeights;
     private bool[] facesPositiveX;
     private UnitState units;
+    private bool cracksEnabled;
+    private float firstCrackHealth, middleCrackHealth, heavyCrackHealth;
     private Vector3[] previousPositions;
     private Vector2[] previousFacing;
     private bool[] unsettled;
@@ -40,8 +42,12 @@ public partial class ArmyRenderer : Node3D
     public double UploadMilliseconds { get; private set; }
     public int InstanceCount { get; private set; }
     // =========================================================
-    public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows)
+    public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows, UnitVisualConfig visuals)
     {
+        cracksEnabled = visuals.UseUnitFracture;
+        firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
+        heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
+        middleCrackHealth = (firstCrackHealth + heavyCrackHealth) * 0.5f;
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
         typeCount = state.Catalog.Count;
         int batchCount = typeCount * Factions.Count;
@@ -270,6 +276,16 @@ public partial class ArmyRenderer : Node3D
         buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
         Color color = white ? Colors.White : FactionColor(units.Faction[id]);
+        if (cracksEnabled && !white)
+        {
+            float health = units.Health[id];
+            int stage = health >= stats.Health * firstCrackHealth ? 0
+                : health >= stats.Health * middleCrackHealth ? 1
+                : health >= stats.Health * heavyCrackHealth ? 2 : 3;
+            // Opaque unit shader reads the existing alpha byte as stage and stable orientation.
+            uint variant = unchecked((uint)id * 2654435761u) >> 30;
+            color.A = stage == 0 ? 1f : (stage * 4 + variant) / 255f;
+        }
         if (buffer[offset + 12] != color.R || buffer[offset + 13] != color.G ||
             buffer[offset + 14] != color.B || buffer[offset + 15] != color.A)
             StoreColor(buffer, offset, color);

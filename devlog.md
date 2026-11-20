@@ -401,3 +401,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Explosive impacts | Source implemented.** Added batched flash and sparks sized by the resolved projectile splash radius.
 
 - **2026-11-20 | Benchmark hard separation | Source implemented.** Added bounded sideways yielding for allied ranged units and local sidesteps under hard footprint checks.
+
+- **2026-11-20 | FX2 | Source implemented.** Added progressive cracks using the existing instance stride, terrain-grounded pooled fragments with per-tick and active caps, and an FX2 toggle in UnitVisualConfig. Awaiting owner visual and FPS validation.
