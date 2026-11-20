@@ -191,8 +191,9 @@ public sealed class ProjectileSystem
         Vector3 impact = from + segment * Mathf.Min(hit, 1f);
         AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
             damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index]);
+        Vector3 burstOrigin = impact;
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
-        rings?.Emit(impact, flight.ExplosionRadius);
+        rings?.Emit(impact, flight.ExplosionRadius, burstOrigin);
         return true;
     }
 

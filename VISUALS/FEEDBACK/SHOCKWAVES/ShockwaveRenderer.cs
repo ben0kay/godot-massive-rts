@@ -1,4 +1,4 @@
-// Batches short-lived expanding impact rings in one MultiMesh.
+// Batches expanding impact rings and warm explosive flashes.
 using Godot;
 
 namespace MassiveRts;
@@ -8,8 +8,9 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private const int Capacity = 256;
     private const int Segments = 64;
     private const float Duration = 0.35f;
-    private readonly record struct Ring(Vector3 Origin, float Radius, float Age);
+    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin);
     private readonly Ring[] rings = new Ring[Capacity];
+    private MultiMesh bursts;
     private int count;
     private bool dirty;
 
@@ -45,6 +46,23 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             VisibleInstanceCount = 0
         };
         CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        var flashMaterial = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://VISUALS/FEEDBACK/SHOCKWAVES/ExplosionBurst.gdshader")
+        };
+        bursts = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseCustomData = true,
+            Mesh = new QuadMesh { Material = flashMaterial },
+            InstanceCount = Capacity,
+            VisibleInstanceCount = 0
+        };
+        AddChild(new MultiMeshInstance3D
+        {
+            Multimesh = bursts, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 64f
+        });
     }
 
     private static Vector3 Direction(int index)
@@ -53,10 +71,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
-    public void Emit(Vector3 origin, float radius)
+    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null)
     {
         if (count == Capacity) return;
-        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f);
+        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin);
         dirty = true;
     }
 
@@ -75,6 +93,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     public void Sync()
     {
         if (!dirty) return;
+        int flashCount = 0;
         for (int i = 0; i < count; i++)
         {
             Ring ring = rings[i];
@@ -82,8 +101,18 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             float radius = ring.Radius * Mathf.Lerp(0.08f, 1f, progress);
             Multimesh.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(radius, 1f, radius)), ring.Origin));
             Multimesh.SetInstanceColor(i, new Color(1f, 1f, 1f, 1f - progress * progress));
+            if (ring.BurstOrigin is Vector3 impact)
+            {
+                float extent = ring.Radius * 0.88f;
+                Vector3 center = impact + Vector3.Up * (extent * 0.16f);
+                bursts.SetInstanceTransform(flashCount, new Transform3D(Basis.Identity.Scaled(Vector3.One * extent), center));
+                float seed = impact.X * 0.173f + impact.Z * 0.271f;
+                seed -= Mathf.Floor(seed);
+                bursts.SetInstanceCustomData(flashCount++, new Color(progress, seed, 0f, 0f));
+            }
         }
         Multimesh.VisibleInstanceCount = count;
+        bursts.VisibleInstanceCount = flashCount;
         dirty = false;
     }
 

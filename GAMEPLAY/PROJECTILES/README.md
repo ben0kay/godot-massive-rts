@@ -26,3 +26,5 @@ Basic Triangle Archer now uses a **25% smaller** bolt on every axis. The new Lon
 Enable **Use Projectile Launch Effects** in `GAMEPLAY/UNITS/UnitVisualConfig.tres` before launch. Opted-in projectile resources draw a fading ribbon along the current flight arc and a flash at the recorded muzzle. The shared renderer uses two MultiMesh batches with no particles or lights. Only Twin Rocket and Artillery Shell opt in by default. These effects are visual only.
 
 Artillery and rockets also leave a brief cloud at the muzzle after a successful launch. It billows, rises, drifts, and fades over about 2.4 seconds, independently of projectile impact. Disable **Use Muzzle Smoke** in `GAMEPLAY/UNITS/UnitVisualConfig.tres` before launch to hide it. Wind defaults to east (+X). To change it for an authored map, edit **Smoke Wind** in its level `.tres`. The components are world X and Z drift in units per second. Use `(0, 0)` for still air.
+
+Explosive impacts add a short warm flash with radial sparks on top of the existing ground ring. Both scale with the resolved splash radius, including weapon-mount overrides. The shared visual pool remains capped at 256 effects.

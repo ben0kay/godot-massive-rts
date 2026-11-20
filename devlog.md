@@ -397,3 +397,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Rocket mounts | Build fix.** Corrected the unit catalogue to populate its indexed definition lookup rather than indexing the constructor input.
 
 - **2026-11-20 | Benchmark and DREAD1 | Source implemented.** Added opt-in hard footprint separation and migrated the Dreadnaught corner miniguns to configurable weapon mounts.
+
+- **2026-11-20 | Explosive impacts | Source implemented.** Added batched flash and sparks sized by the resolved projectile splash radius.
