@@ -1,6 +1,6 @@
 # Godot Massive RTS
 
-> **Status:** BENCH0 — **Source Implemented / Awaiting Owner Validation**. F5 opens the FRONT0 profile picker. F6 runs the standalone benchmark with its arena scene open. See [BENCHMARK/README.md](BENCHMARK/README.md) for launch instructions, controls, architecture and measurement limitations. No hardware performance targets have been validated.
+> **Status:** BENCH0 — **Source Implemented / Awaiting Owner Validation**. F5 opens the FRONT0 profile picker. Open `UI/Editor/GameEditor.tscn` and press F6 to launch the Level Editor, Entity Editor, or Benchmark. See [BENCHMARK/README.md](BENCHMARK/README.md) for launch instructions, controls, architecture and measurement limitations. No hardware performance targets have been validated.
 
 ## Vision
 

@@ -20,6 +20,8 @@ public partial class GameEditor : Control
         content.AddChild(levels);
         content.AddChild(UIButtonFactory.Create("Entity Editor", () =>
             MenuNavigation.Change(this, new RuntimeEntityEditor()), UIButtonStyle.Primary));
+        content.AddChild(UIButtonFactory.Create("Benchmark", () =>
+            MenuNavigation.Open(this, "res://BENCHMARK/BenchmarkArena.tscn"), UIButtonStyle.Primary));
         levels.GrabFocus();
     }
 }
