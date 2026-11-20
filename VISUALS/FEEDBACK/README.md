@@ -35,6 +35,6 @@ The shared `UNIT_HITS/HitFeedbackSettings.tres` is used by Fortress Defense and 
 
 Open [UnitVisualConfig.tres](../../GAMEPLAY/UNITS/UnitVisualConfig.tres) in the Godot Inspector. **Use Unit Fracture** ships enabled and applies to cracks and crumbling on scene reload. Turning it off gives units their original surface material and preserves hit flash, pulse and ground splats.
 
-First Crack Health and Heavy Crack Health default to 75% and 25%. The intermediate threshold is halfway between them. The shared crack mask adds progressive dark fractures to upper facets in mesh-local space, with a stable orientation derived from each unit ID. Crack Darkness sets the maximum shading. The existing opaque MultiMesh alpha channel carries stage and orientation, retaining the 16-float instance stride. The white hit flash temporarily hides the cracks.
+First Crack Health and Heavy Crack Health default to 75% and 25%. The intermediate threshold is halfway between them. The shared crack mask adds progressive dark fractures to upper facets in mesh-local space, with a stable orientation derived from each unit ID. Crack Darkness sets the maximum shading and defaults to 0.84. The existing opaque MultiMesh alpha channel carries stage and orientation, retaining the 16-float instance stride. The white hit flash temporarily hides the cracks.
 
 [UNIT_DEATHS](UNIT_DEATHS/README.md) owns fragments and splats. Benchmark, Fortress Defense and the Level Editor's combat tests use these shared visuals. The Preset Battles campaign layout view is static.

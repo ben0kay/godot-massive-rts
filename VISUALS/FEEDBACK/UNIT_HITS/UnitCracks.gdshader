@@ -4,7 +4,7 @@ render_mode unshaded;
 
 uniform sampler2D crack_mask : filter_linear_mipmap, repeat_disable;
 uniform vec2 half_extent = vec2(0.5);
-uniform float darkness : hint_range(0.0, 1.0) = 0.62;
+uniform float darkness : hint_range(0.0, 1.0) = 0.84;
 varying vec2 surface_point;
 varying float upper_facet;
 varying flat float fracture;

@@ -43,7 +43,7 @@ public sealed class DeathFeedbackSystem
         ages = new float[capacity];
         fragments = new Fragment[capacity * FragmentsPerDeath];
         deathsPerTick = Mathf.Clamp(settings.MaxDetailedDeathsPerTick, 0, 128);
-        spread = FiniteRange(settings.FragmentSpread, 0f, 2f, 0.72f);
+        spread = FiniteRange(settings.FragmentSpread, 0f, 2f, 0.86f);
         upward = FiniteRange(settings.FragmentUpwardVelocity, 0f, 4f, 1.1f);
         Gravity = FiniteRange(settings.FragmentGravity, 1f, 30f, 11f);
         bounce = FiniteRange(settings.FragmentBounce, 0f, 0.5f, 0.18f);
@@ -100,7 +100,7 @@ public sealed class DeathFeedbackSystem
             Vector3 origin = ground + offset;
             origin.Y = terrain?.At(origin.X, origin.Z) ?? ground.Y;
 
-            float scale = Mathf.Lerp(0.75f, 1.15f, Next(ref seed));
+            float scale = Mathf.Lerp(0.75f, 1.15f, Next(ref seed)) * 0.85f;
             var size = new Vector3(stats.Outline.RadiusX * 0.96f * scale,
                 stats.Height * 0.66f * scale, stats.Outline.RadiusZ * 0.96f * scale);
             float lift = stats.Height * Mathf.Lerp(0.13f, 0.25f, Next(ref seed));

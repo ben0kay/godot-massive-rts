@@ -16,11 +16,11 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseUnitFracture { get; set; }
     [Export(PropertyHint.Range, "0,1,0.01")] public float FirstCrackHealth { get; set; } = 0.75f;
     [Export(PropertyHint.Range, "0,1,0.01")] public float HeavyCrackHealth { get; set; } = 0.25f;
-    [Export(PropertyHint.Range, "0,1,0.01")] public float CrackDarkness { get; set; } = 0.62f;
+    [Export(PropertyHint.Range, "0,1,0.01")] public float CrackDarkness { get; set; } = 0.84f;
 
     [ExportGroup("Crumble")]
-    [Export(PropertyHint.Range, "4,6,1")] public int FragmentsPerDeath { get; set; } = 5;
-    [Export(PropertyHint.Range, "0,2,0.01")] public float FragmentSpread { get; set; } = 0.72f;
+    [Export(PropertyHint.Range, "4,6,1")] public int FragmentsPerDeath { get; set; } = 6;
+    [Export(PropertyHint.Range, "0,2,0.01")] public float FragmentSpread { get; set; } = 0.86f;
     [Export(PropertyHint.Range, "0,4,0.01")] public float FragmentUpwardVelocity { get; set; } = 1.1f;
     [Export(PropertyHint.Range, "1,30,0.1")] public float FragmentGravity { get; set; } = 11f;
     [Export(PropertyHint.Range, "0,0.5,0.01")] public float FragmentBounce { get; set; } = 0.18f;
