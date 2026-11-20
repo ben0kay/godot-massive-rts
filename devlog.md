@@ -425,3 +425,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Projectile visuals | Source implemented.** Used faction-catalogue colours to tint projectile trails and explosive impacts through the existing shared batches.
 
 - **2026-11-20 | Railgun Tower | Source implemented.** Converted the legacy laser tower to a three-second sweeping, piercing beam and added weapon-specific recoil for the rail barrel and individual rocket tubes. Preserved the tower resource path and save ID.
+
+- **2026-11-20 | Defense catalogue compile fix.** Passed the draft projectile catalogue when restoring Entity Editor test layouts and reused the compiled building catalogue on startup.

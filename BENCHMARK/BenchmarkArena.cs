@@ -27,8 +27,9 @@ public partial class BenchmarkArena : Node3D
         editorCatalog = drafts.Compile(simulation.EffectiveMovementSpeedMultiplier);
         if (previous != null)
         {
-            var editorBuildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), editorCatalog.DamageRules);
-            editorLayout = new DeploymentLayout(editorCatalog, editorBuildings, previous.GridSize);
+            buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath),
+                editorCatalog.DamageRules, editorCatalog.Projectiles);
+            editorLayout = new DeploymentLayout(editorCatalog, buildings, previous.GridSize);
             editorLayout.SetLoadedObstacles(previous.Obstacles);
             foreach (var defense in previous.Defenses)
                 if (!editorLayout.TryPlaceDefense(defense))
@@ -147,7 +148,7 @@ public partial class BenchmarkArena : Node3D
             Material = GD.Load<ShaderMaterial>("res://WORLD/TERRAIN/RENDERING/SteelSlate.tres") } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
+        buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, PresetTest = presetTestMap != null }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         attackRanges = new AttackRangeOverlay();
