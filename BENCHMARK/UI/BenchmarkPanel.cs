@@ -31,12 +31,12 @@ public partial class BenchmarkPanel : CanvasLayer
 	private readonly Label cameraRotationValue = new() { Text = "45° (original diagonal)" };
 	public bool SmoothMotion => smoothMotion.ButtonPressed;
 	private readonly OptionButton separationChoice = new();
-	private readonly HSlider strongOverlap = new()
+	private readonly HSlider hardOverlap = new()
 	{
-		MaxValue = SeparationSystem.MaxOverlapPercent, Step = 1, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-		TooltipText = "Overlap allowance for Strong separation, relative to the combined footprint radii."
+		MaxValue = HardSeparation.MaxOverlapPercent, Step = 1, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+		TooltipText = "Overlap allowance for Hard separation, relative to the combined footprint radii."
 	};
-	internal float StrongOverlap => (float)strongOverlap.Value * 0.01f;
+	internal float HardOverlap => (float)hardOverlap.Value * 0.01f;
 	private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
 	private readonly CheckButton meleeSidestep = new() { Text = "Melee sidestep", ButtonPressed = true };
 	private readonly CheckButton meleeHold = new() { Text = "Hold melee contact", ButtonPressed = true };
@@ -202,20 +202,20 @@ public partial class BenchmarkPanel : CanvasLayer
 		separationChoice.AddItem("Off", (int)SeparationMode.Off);
 		separationChoice.AddItem("Normal", (int)SeparationMode.Normal);
 		separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
-		separationChoice.AddItem("Hard (no overlap)", (int)SeparationMode.Hard);
+		separationChoice.AddItem("Hard", (int)SeparationMode.Hard);
 		separationChoice.Select(1);
 		Field(separation, "Separation mode", separationChoice);
 		var overlapControls = new HBoxContainer();
 		var overlapValue = new Label { Text = "0%", CustomMinimumSize = new Vector2(32f, 0f) };
-		overlapControls.AddChild(strongOverlap);
+		overlapControls.AddChild(hardOverlap);
 		overlapControls.AddChild(overlapValue);
-		var overlapRow = Field(separation, "Strong overlap", overlapControls);
+		var overlapRow = Field(separation, "Hard overlap", overlapControls);
 		overlapRow.Hide();
-		strongOverlap.ValueChanged += value => overlapValue.Text = $"{value:0}%";
+		hardOverlap.ValueChanged += value => overlapValue.Text = $"{value:0}%";
 		separationChoice.ItemSelected += index =>
 		{
 			Separation = (SeparationMode)separationChoice.GetItemId((int)index);
-			overlapRow.Visible = Separation == SeparationMode.Strong;
+			overlapRow.Visible = Separation == SeparationMode.Hard;
 		};
 		separation.AddChild(alliedYield);
 		separation.AddChild(meleeSidestep);

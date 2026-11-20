@@ -6,6 +6,7 @@ namespace MassiveRts;
 
 internal sealed class HardSeparation
 {
+    internal const int MaxOverlapPercent = 10;
     private const int SearchRings = 32;
     private const int MaxYieldChain = 4;
     private readonly record struct YieldMove(int Id, Vector2 From);
@@ -16,6 +17,7 @@ internal sealed class HardSeparation
     private readonly Vector2[] accepted;
     private readonly int[] next;
     private float cellWidth;
+    private float clearanceScale = 1f;
 
     internal bool Ready { get; private set; }
     private bool placementFailed;
@@ -29,8 +31,17 @@ internal sealed class HardSeparation
     }
 
     // Build a valid starting layout transactionally when entering the mode.
-    internal bool Begin(UnitState units, ObstacleField obstacles, float boundary)
+    internal bool Begin(UnitState units, ObstacleField obstacles, float boundary, float overlap, out bool repacked)
     {
+        repacked = false;
+        float nextScale = 1f - Mathf.Clamp(overlap, 0f, MaxOverlapPercent * 0.01f);
+        if (nextScale != clearanceScale)
+        {
+            // Existing placements stay valid when relaxing. Tightening may need to make room again.
+            if (nextScale > clearanceScale) Ready = false;
+            clearanceScale = nextScale;
+            placementFailed = false;
+        }
         if (placementFailed) return false;
         cells.Clear();
         cellWidth = Mathf.Max(0.1f, units.MaxFootprint * 2f);
@@ -56,7 +67,7 @@ internal sealed class HardSeparation
         }
         for (int id = 0; id < units.Count; id++)
             if (units.Health[id] > 0) Apply(units, id, accepted[id]);
-        Ready = true;
+        Ready = repacked = true;
         return true;
     }
 
@@ -171,7 +182,7 @@ internal sealed class HardSeparation
 
     private bool FindRoom(UnitState units, int id, Vector2 origin, float radius, ObstacleField obstacles, float boundary)
     {
-        float spacing = Mathf.Max(radius * 2f, 0.1f);
+        float spacing = Mathf.Max(radius * 2f * clearanceScale, 0.1f);
         for (int ring = 1; ring <= SearchRings; ring++)
         for (int edge = 0; edge < 4; edge++)
         for (int along = -ring; along < ring; along++)
@@ -200,7 +211,7 @@ internal sealed class HardSeparation
             if (!cells.TryGetValue(cell + new Vector2I(x, z), out int other)) continue;
             while (other >= 0)
             {
-                float clearance = radius + units.Catalog[units.Type[other]].Footprint;
+                float clearance = (radius + units.Catalog[units.Type[other]].Footprint) * clearanceScale;
                 if (point.DistanceSquaredTo(accepted[other]) < clearance * clearance)
                 {
                     blocker = other;

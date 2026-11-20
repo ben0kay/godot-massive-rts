@@ -29,10 +29,7 @@ public sealed class SeparationSystem
 
     private int[] cellStart = Array.Empty<int>();
     private bool weighted;
-    public const int MaxOverlapPercent = 10;
     private float[] footprintByType = Array.Empty<float>();
-    private float[] clearanceByType;
-    private float cachedClearanceScale = 1f;
     private int gridWidth, gridCells;
     private long candidateTotal;
     private double penetrationSum;
@@ -62,7 +59,7 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true, float overlap = 0f)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true)
     {
         MovedSoldiers = false;
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
@@ -74,26 +71,16 @@ public sealed class SeparationSystem
         candidateTotal = 0;
         if (units.Count == 0 || passes <= 0) return;
 
-        const float maxOverlap = MaxOverlapPercent * 0.01f;
-        overlap = Mathf.Clamp(overlap, 0f, maxOverlap);
-        float clearanceScale = 1f - overlap;
-        CacheFootprints(units, clearanceScale);
+        CacheFootprints(units);
         if (yieldEnabled)
         {
             slotFlags ??= new byte[cellOfId.Length];
             yieldPush ??= new Vector2[cellOfId.Length];
-            yieldSettings = settings with
-            {
-                PairCap = settings.PairCap / passes,
-                ExitCap = settings.ExitCap / passes,
-                ClearanceFraction = settings.ClearanceFraction / clearanceScale
-            };
+            yieldSettings = settings with { PairCap = settings.PairCap / passes, ExitCap = settings.ExitCap / passes };
         }
         float cellWidth = Mathf.Max(0.1f, units.MaxFootprint * 2f + gap);
         float passCap = tickPushCap / passes;
-        // Relax the original gap as well as the radii so the slider's endpoint
-        // targets 90% of the combined footprints even when a positive gap is configured.
-        float gapLimit = (gap - Slop) * (1f - overlap / maxOverlap);
+        float gapLimit = gap - Slop;
         int aliveTotal = 0;
 
         for (int pass = 0; pass < passes; pass++)
@@ -111,25 +98,17 @@ public sealed class SeparationSystem
         if (aliveTotal > 0) CandidatesPerSoldier = (float)candidateTotal / aliveTotal;
     }
 
-    private void CacheFootprints(UnitState units, float clearanceScale)
+    private void CacheFootprints(UnitState units)
     {
         int types = units.Catalog.Count;
-        if (footprintByType.Length != types)
-        {
-            footprintByType = new float[types];
-            clearanceByType = new float[types];
-            rangedByType = new bool[types];
-            for (int t = 0; t < types; t++)
-            {
-                footprintByType[t] = units.Catalog[t].Footprint;
-                rangedByType[t] = units.Catalog[t].Ranged;
-            }
-            cachedClearanceScale = float.NaN;
-        }
-        if (cachedClearanceScale == clearanceScale) return;
+        if (footprintByType.Length == types) return;
+        footprintByType = new float[types];
+        rangedByType = new bool[types];
         for (int t = 0; t < types; t++)
-            clearanceByType[t] = footprintByType[t] * clearanceScale;
-        cachedClearanceScale = clearanceScale;
+        {
+            footprintByType[t] = units.Catalog[t].Footprint;
+            rangedByType[t] = units.Catalog[t].Ranged;
+        }
     }
 
     // Counting sort of living soldiers into a dense, padded row-major grid.
@@ -203,7 +182,7 @@ public sealed class SeparationSystem
             slotId[slot] = id;
             slotX[slot] = p.X;
             slotZ[slot] = p.Z;
-            slotRadius[slot] = clearanceByType[type[id]];
+            slotRadius[slot] = footprintByType[type[id]];
             if (voluntaryMovement != null)
             {
                 slotFlags[slot] = (byte)((units.Faction[id] << 1) |

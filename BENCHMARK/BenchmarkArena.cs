@@ -786,18 +786,19 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp();
             hardSeparation ??= new HardSeparation(units.Position.Length);
-            bool first = !hardSeparation.Ready;
-            bool ready = hardSeparation.Begin(units, obstacles, boundary);
+            const string packingFailure = "Hard separation could not make room. Allow more overlap, spread units out, or switch mode.";
+            bool ready = hardSeparation.Begin(units, obstacles, boundary, panel.HardOverlap, out bool repacked);
             separationMs += Elapsed(start);
             if (!ready)
             {
-                panel.Status.Text = "Hard separation could not make room. Spread units out or switch mode.";
+                panel.Status.Text = packingFailure;
                 tick++;
                 simulationMs += Elapsed(total);
                 return;
             }
-            if (first)
+            if (repacked)
             {
+                if (panel.Status.Text == packingFailure) panel.Status.Text = "Hard separation ready.";
                 trample = null;
                 grid?.Rebuild(units);
             }
@@ -846,10 +847,9 @@ public partial class BenchmarkArena : Node3D
             {
                 separation ??= new SeparationSystem(units.Position.Length);
                 separationPadding = separationPushPerStep;
-                bool strong = separationMode == SeparationMode.Strong;
-                separation.Step(units, strong ? 2 : 1, Config.SeparationGap, Config.SeparationNeighbourBudget,
-                    separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles,
-                    panel.WeightedSeparation, overlap: strong ? panel.StrongOverlap : 0f);
+                separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
+                    Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings,
+                    trample, obstacles, panel.WeightedSeparation);
             }
             separationMs += Elapsed(start);
         }
