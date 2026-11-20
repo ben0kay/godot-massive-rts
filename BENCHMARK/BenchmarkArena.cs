@@ -583,7 +583,9 @@ public partial class BenchmarkArena : Node3D
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows);
-                projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer); projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles);
+                projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
+                projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
+                    presetTestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
                 dreadnaughts = DreadnaughtCombat.Create(units);
                 if (dreadnaughts != null)
                 {
@@ -647,6 +649,7 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
         }
+        if (!paused) projectileRenderer?.AdvanceSmoke((float)delta);
         attackRanges.Refresh(units, camera, panel.Separation != SeparationMode.Off && units?.Alive > 1
             ? Config.SeparationGap : 0f, panel.ShowAttackRanges && !spawning);
         shockwaves.Sync();

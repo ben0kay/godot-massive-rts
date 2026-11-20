@@ -10,4 +10,5 @@ public partial class UnitVisualConfig : Resource
 
     [Export] public bool UseEnhancedMeshes { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
+    [Export] public bool UseMuzzleSmoke { get; set; }
 }

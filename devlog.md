@@ -391,3 +391,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Rocket mounts | Source implemented.** Migrated Twin Rocket Launcher and Dreadnaught cannon to configurable mounts with projectile scale and splash overrides.
 
 - **2026-11-20 | Benchmark terrain | Source implemented.** Added a world-space steel slate material with subtle stone relief and sheen to the flat Benchmark ground.
+
+- **2026-11-20 | Muzzle smoke | Source implemented.** Added batched, lingering artillery and rocket muzzle smoke with eastward default drift and a per-level wind setting.

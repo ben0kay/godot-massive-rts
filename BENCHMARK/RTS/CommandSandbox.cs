@@ -217,7 +217,7 @@ public partial class CommandSandbox : Node3D
             EnemiesPerRow, EnemyRowDelay, EnemySpawnRate, impactRings);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);
-        projectileRenderer.Initialize(2048, catalog.Projectiles);
+        projectileRenderer.Initialize(2048, catalog.Projectiles, waves.Projectiles, LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
 
         var hud = new CanvasLayer();
         AddChild(hud);
@@ -412,6 +412,7 @@ public partial class CommandSandbox : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (units == null) return;
+        projectileRenderer.AdvanceSmoke((float)delta);
         impactRings.Advance((float)delta);
         bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
         if (waves.Defeat || waves.Victory)

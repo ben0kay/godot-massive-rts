@@ -17,6 +17,7 @@ public sealed class ProjectileSystem
     public int Count { get; private set; }
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
+    internal event System.Action<Vector3, int> ShotLaunched;
     // Visuals read the source team without exposing mutable projectile pool arrays.
     public byte FactionAt(int index) => sourceFaction[index];
 
@@ -108,6 +109,7 @@ public sealed class ProjectileSystem
         Type[i] = projectileType;
         sourceFaction[i] = faction;
         Dirty = true;
+        ShotLaunched?.Invoke(muzzle, projectileType);
         return true;
     }
 

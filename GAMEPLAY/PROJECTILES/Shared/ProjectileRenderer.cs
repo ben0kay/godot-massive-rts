@@ -12,14 +12,24 @@ public partial class ProjectileRenderer : Node3D
     private float[] visualScales;
     private int capacity;
     private ProjectileLaunchEffects launchEffects;
+    private MuzzleSmoke smoke;
+    private ProjectileSystem smokeSource;
+    private ProjectileCatalog smokeCatalog;
 
-    public void Initialize(int maximum, ProjectileCatalog catalog)
+    public void Initialize(int maximum, ProjectileCatalog catalog, ProjectileSystem projectiles, Vector2 smokeWind)
     {
         capacity = maximum;
-        if (catalog.HasLaunchEffects &&
-            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseProjectileLaunchEffects == true)
+        var visuals = catalog.HasLaunchEffects ? GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath) : null;
+        if (visuals?.UseProjectileLaunchEffects == true)
         {
             launchEffects = new ProjectileLaunchEffects(this, catalog, maximum);
+        }
+        if (visuals?.UseMuzzleSmoke == true)
+        {
+            smoke = new MuzzleSmoke(this, smokeWind);
+            smokeSource = projectiles;
+            smokeCatalog = catalog;
+            smokeSource.ShotLaunched += OnShotLaunched;
         }
         batches = new MultiMesh[catalog.Count];
         counts = new int[catalog.Count];
@@ -42,6 +52,18 @@ public partial class ProjectileRenderer : Node3D
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
             });
         }
+    }
+
+    private void OnShotLaunched(Vector3 muzzle, int projectileType)
+    {
+        if (smokeCatalog.UsesLaunchEffects(projectileType)) smoke.Emit(muzzle);
+    }
+
+    internal void AdvanceSmoke(float delta) => smoke?.Advance(delta);
+
+    public override void _ExitTree()
+    {
+        if (smokeSource != null) smokeSource.ShotLaunched -= OnShotLaunched;
     }
 
     public void Sync(ProjectileSystem projectiles)

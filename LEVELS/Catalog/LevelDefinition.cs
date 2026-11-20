@@ -14,6 +14,9 @@ public partial class LevelDefinition : Resource
     [Export(PropertyHint.File, "*.tscn,*.scn")] public string ScenePath { get; set; } = "";
     [Export] public bool Enabled { get; set; } = true;
 
+    // Visual smoke velocity in world X/Z units per second. Positive X is east.
+    [Export] public Vector2 SmokeWind { get; set; } = MuzzleSmoke.DefaultWind;
+
     internal string CustomName
     {
         get

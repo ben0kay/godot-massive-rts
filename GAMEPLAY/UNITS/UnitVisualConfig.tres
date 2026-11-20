@@ -6,3 +6,4 @@
 script = ExtResource("1")
 UseEnhancedMeshes = true
 UseProjectileLaunchEffects = true
+UseMuzzleSmoke = true
