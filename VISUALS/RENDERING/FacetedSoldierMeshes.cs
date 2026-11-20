@@ -74,7 +74,18 @@ public static class FacetedSoldierMeshes
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
+            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught || outline.IsDeepFork ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
+        if (outline.IsDeepFork)
+        {
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector3 muzzle = outline.ForkMuzzle(height, side);
+                float length = outline.RadiusZ * 0.62f;
+                AppendBeveledRectangle(surface, new Vector3(muzzle.X, muzzle.Y - height * 0.50f,
+                    muzzle.Z + length * 0.5f), new Vector3(outline.RadiusX * 0.29f, height * 0.28f, length),
+                    new Color(0.77f, 0.77f, 0.77f), SoldierSideShade);
+            }
+        }
         if (outline.IsDreadnaught)
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)
@@ -207,7 +218,8 @@ public static class FacetedSoldierMeshes
 
         // Each concave outline uses an interior point that sees every edge of its cap.
         Vector3 cap = Vector3.Zero;
-        if (customOutline is UnitOutline outline)
+        bool concaveFork = customOutline?.IsDeepFork == true;
+        if (!concaveFork && customOutline is UnitOutline outline)
             cap.Z = outline.IsDreadnaught ? 0f : outline.IsPike ? radiusZ * 0.32f : -radiusZ * 0.44f;
         for (int i = 0; i < sides; i++)
         {
@@ -224,6 +236,7 @@ public static class FacetedSoldierMeshes
             bottom[i] = center + new Vector3(x, -half, z);
         }
 
+        if (concaveFork) AppendForkCaps(surface, top, bottom, tint);
         for (int i = 0; i < sides; i++)
         {
             int next = (i + 1) % sides;
@@ -239,15 +252,30 @@ public static class FacetedSoldierMeshes
                 AddQuad(surface, inner, innerNext, top[next], top[i], Vector3.Up, Colors.White * tint);
                 AddTriangle(surface, capCenter + recess, innerNext, inner, Vector3.Up, tint * 0.68f);
             }
-            else
+            else if (!concaveFork)
                 AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint);
-            AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
+            if (!concaveFork) AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
                 outward, SideTint(outward) * tint * sideShade);
             Vector3 bevelNormal = (outward * bevelRise + Vector3.Up * insetDistance).Normalized();
             AddQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
                 bevelNormal, BevelTint(outward) * tint * Mathf.Lerp(1f, sideShade, 0.5f));
+        }
+    }
+
+    // Triangulate the concave cap once per shared mesh so the notch stays open.
+    private static void AppendForkCaps(SurfaceTool surface, Vector3[] top, Vector3[] bottom, Color tint)
+    {
+        var outline = new Vector2[bottom.Length];
+        for (int i = 0; i < outline.Length; i++) outline[i] = new Vector2(bottom[i].X, bottom[i].Z);
+        int[] triangles = Geometry2D.TriangulatePolygon(outline);
+        for (int i = 0; i < triangles.Length; i += 3)
+        {
+            int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
+            if ((top[b] - top[a]).Cross(top[c] - top[a]).Y < 0f) (b, c) = (c, b);
+            AddTriangle(surface, top[a], top[b], top[c], Vector3.Up, tint);
+            AddTriangle(surface, bottom[a], bottom[c], bottom[b], Vector3.Down, BottomTint * tint);
         }
     }
 

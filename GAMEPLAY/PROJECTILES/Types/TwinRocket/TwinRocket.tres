@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
+[ext_resource type="Shader" path="res://GAMEPLAY/PROJECTILES/Types/TwinRocket/RocketTint.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="Material"]
+shader = ExtResource("2")
+
+[sub_resource type="PrismMesh" id="Rocket"]
+material = SubResource("Material")
+size = Vector3(0.16, 0.14, 0.40)
+
+[resource]
+script = ExtResource("1")
+ObstacleFire = 1
+BlocksOnObstacles = true
+VisualMesh = SubResource("Rocket")
+TintByFaction = true
+Speed = 38.0
+ArcHeight = 12.0
+ArcHeightPerDistance = 0.32
+ExplodesOnImpact = true
+ExplosionRadius = 2.5
+ExplosionEdgeFraction = 0.35

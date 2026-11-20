@@ -379,3 +379,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Unit visuals | Source implemented.** Added the pre-launch enhanced mesh switch and a recessed, rimmed Circle Infantry mesh on the shared renderer.
 
 - **2026-11-20 | ROCKET1 | Planned only.** Added `GAMEPLAY/UNITS/ROCKET1_IMPLEMENTATION_PLAN.md` as a Codex handoff for a wider, abstract deep-fork rocket launcher with one tube per prong, alternating shared-target rocket shots, smaller arcing `AreaDamage.Radial` explosions than Chevron Artillery, performance and editor/game-mode integration notes. No gameplay implementation authorized or changed.
+
+- **2026-11-20 | ROCKET1 | Source implemented.** Added the Twin Rocket Launcher, alternating pooled rockets, and editable splash settings. Registered it for painting and Fortress production. Godot gameplay and visual validation pending.

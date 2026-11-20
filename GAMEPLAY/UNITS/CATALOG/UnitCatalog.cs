@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false, bool IsDeepFork = false)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -40,9 +40,20 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         new(0, -1), new(1, -0.48f), new(1, 1), new(-1, 1), new(-1, -0.48f)
     };
 
+    private static readonly Vector2[] DeepForkVertices =
+    {
+        new(0.44f, -1f), new(0.82f, -1f), new(1f, -0.70f), new(1f, 0.72f),
+        new(0.80f, 1f), new(-0.80f, 1f), new(-1f, 0.72f), new(-1f, -0.70f),
+        new(-0.82f, -1f), new(-0.44f, -1f), new(-0.34f, 0.20f), new(0.34f, 0.20f)
+    };
+
+    internal Vector3 ForkMuzzle(float height, float side) =>
+        new(side * RadiusX * 0.66f, height * 1.08f, -RadiusZ * 0.91f);
+
     public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
 
-    public float Footprint => IsDreadnaught ? 1f : IsDrillRig
+    public float Footprint => IsDeepFork ? Mathf.Max(
+        new Vector2(RadiusX * 0.82f, RadiusZ).Length(), new Vector2(RadiusX, RadiusZ * 0.72f).Length()) : IsDreadnaught ? 1f : IsDrillRig
         ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
         : IsPike ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.82f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
@@ -52,6 +63,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 
     public Vector2 Vertex(int index)
     {
+        if (IsDeepFork) return DeepForkVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsDreadnaught) return DreadnaughtVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsPike) return PikeVertices[index] * new Vector2(RadiusX, RadiusZ);
         if (IsDrillRig) return DrillRigVertices[index] * new Vector2(RadiusX, RadiusZ);
@@ -94,6 +106,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
+            UnitShape.DeepFork => new(DeepForkVertices.Length, halfWidth, width * 0.38f, 0f, IsDeepFork: true),
             UnitShape.Pike => new(PikeVertices.Length, halfWidth, width * 0.74f, 0f, IsPike: true),
             UnitShape.DrillRig => new(DrillRigVertices.Length, halfWidth, width * 0.70f, 0f, IsDrillRig: true),
             UnitShape.HFrame => new(12, halfWidth, width * 0.57f, 0f, IsHFrame: true),
@@ -136,10 +149,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
@@ -207,6 +220,11 @@ public sealed class RuntimeUnitCatalog
         {
             var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Dreadnaught.tres");
             if (definition != null) byId.Add(DreadnaughtId, definition);
+        }
+        if (!byId.ContainsKey(TwinRocketLauncherId))
+        {
+            var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/TwinRocketLauncher.tres");
+            if (definition != null) byId.Add(TwinRocketLauncherId, definition);
         }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;

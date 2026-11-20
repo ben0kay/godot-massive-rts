@@ -13,6 +13,11 @@ public sealed class UnitState
     public readonly bool[] Dirty;
     public readonly int[] FactionAlive = new int[Factions.Count];
     private byte[] completedAttacks;
+    private bool[] nextRocketRight;
+
+    internal float RocketMuzzleSide(int id) => nextRocketRight?[id] == true ? 1f : -1f;
+
+    internal void AdvanceRocketMuzzle(int id) => nextRocketRight[id] = !nextRocketRight[id];
     private Vector2[] turnSteps;
     private float turnStepSeconds;
 
@@ -83,6 +88,7 @@ public sealed class UnitState
         FactionAlive[faction]++;
         Alive++;
         ref readonly var stats = ref Catalog[type];
+        if (stats.Outline.IsDeepFork) nextRocketRight ??= new bool[Health.Length];
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
         MaxFootprint = Mathf.Max(MaxFootprint, stats.Footprint);

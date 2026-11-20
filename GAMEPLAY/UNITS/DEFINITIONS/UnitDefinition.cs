@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught, DeepFork }
 [System.Flags]
 public enum TargetCategory { None = 0, Units = 1, Structures = 2, Both = Units | Structures }
 public enum TargetPreference { Units, Structures }

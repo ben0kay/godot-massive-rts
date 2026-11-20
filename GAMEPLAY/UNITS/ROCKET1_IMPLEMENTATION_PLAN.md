@@ -1,6 +1,6 @@
 # ROCKET1 — Wide Deep-Fork Twin-Rocket Launcher
 
-**Status:** Planned — Codex implementation handoff, **not yet implemented**.  
+**Status:** Source implemented. Godot gameplay and visual validation pending.
 **Repository:** `ben0kay/godot-massive-rts`  
 **Branch:** `main` · **Engine:** Godot 4 C#  
 **Working name:** Twin Rocket Launcher (owner has not finalized the display name).  

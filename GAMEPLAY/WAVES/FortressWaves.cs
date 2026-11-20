@@ -29,6 +29,7 @@ internal sealed class FortressWaves
     private readonly BenchmarkConfig combat = new();
     private readonly SpatialGrid grid;
     private readonly StructureCombat structures;
+    private readonly ShockwaveRenderer impactRings;
     private bool structureVisualChanged;
     private readonly SeparationSystem separation;
     public bool NormalSeparation { get; set; } = true;
@@ -54,11 +55,12 @@ internal sealed class FortressWaves
 
     public FortressWaves(UnitState units, CommandBuildings buildings, CommandMovement movement, WaveSpawnEdge edge,
         Godot.Collections.Array<WaveDefinition> definitions, float intermission, WaveSpawnPattern pattern,
-        float width, int enemiesPerRow, float secondsBetweenRows, float unitsPerSecond)
+        float width, int enemiesPerRow, float secondsBetweenRows, float unitsPerSecond, ShockwaveRenderer impactRings)
     {
         this.units = units;
         this.buildings = buildings;
         this.movement = movement;
+        this.impactRings = impactRings;
         structures = new StructureCombat(units, buildings.Structures, buildings.MapHalfWidth);
         SpawnEdge = edge;
         spawnPattern = pattern;
@@ -166,7 +168,7 @@ internal sealed class FortressWaves
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
             if (Projectiles.Count > 0 || towerTargets) RebuildGrid();
             if (towerTargets) buildings.StepDefenses(grid, delta, tick);
-            if (Projectiles.Count > 0) Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField);
+            if (Projectiles.Count > 0) Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField, impactRings);
             if (Countdown > 0 && !Defeat)
             {
                 Countdown = Mathf.Max(0, Countdown - delta);
@@ -213,7 +215,7 @@ internal sealed class FortressWaves
             if (type.TargetsStructures) structures.Attack(id, Projectiles, delta, Sight(type, field));
             else if (type.TargetsUnits) AttackCitadel(id, field, delta);
         }
-        Projectiles.Step(units, grid, combat, delta, SeparationPadding, field);
+        Projectiles.Step(units, grid, combat, delta, SeparationPadding, field, impactRings);
         if (!Defeat && Remaining == 0)
         {
             for (int id = 0; id < units.Count; id++)

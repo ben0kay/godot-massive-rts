@@ -55,14 +55,25 @@ public sealed class ProjectileSystem
     private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type)
     {
         Vector3 muzzle = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
-        if (type.Outline.IsChevron)
+        if (type.Outline.IsDeepFork)
+        {
+            Vector2 forward = units.Facing[shooter];
+            if (forward == Vector2.Zero) forward = Vector2.Up;
+            Vector2 right = new(-forward.Y, forward.X);
+            Vector3 local = type.Outline.ForkMuzzle(type.Height, units.RocketMuzzleSide(shooter));
+            Vector2 offset = right * local.X - forward * local.Z;
+            muzzle = units.Position[shooter] + new Vector3(offset.X, local.Y, offset.Y);
+        }
+        else if (type.Outline.IsChevron)
         {
             Vector2 heading = units.Facing[shooter];
             muzzle = units.Position[shooter] +
                 new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
         }
-        return LaunchFrom(muzzle, aim, units.Faction[shooter], type.ProjectileType,
+        bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], type.ProjectileType,
             type.AgainstUnits(type.Damage), type.UnitDamageType);
+        if (launched && type.Outline.IsDeepFork) units.AdvanceRocketMuzzle(shooter);
+        return launched;
     }
 
     internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType)

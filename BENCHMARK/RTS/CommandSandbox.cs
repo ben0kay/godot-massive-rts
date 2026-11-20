@@ -31,6 +31,7 @@ public partial class CommandSandbox : Node3D
     private FortressWaves waves;
     private WaveHud waveHud;
     private ProjectileRenderer projectileRenderer;
+    private ShockwaveRenderer impactRings;
     private LevelDefinition levelSettings;
     private float lastMapSize;
     private bool reducedMapSize;
@@ -209,9 +210,11 @@ public partial class CommandSandbox : Node3D
         AddChild(deathRenderer);
         deathRenderer.Initialize(catalog, soldierMeshes);
 
+        impactRings = new ShockwaveRenderer();
+        AddChild(impactRings);
         waves = new FortressWaves(units, buildings, movement, EnemySpawnEdge,
             WaveDefinitions, Mathf.Max(1f, BetweenWavesSeconds), EnemySpawnPattern, EnemySpawnWidth,
-            EnemiesPerRow, EnemyRowDelay, EnemySpawnRate);
+            EnemiesPerRow, EnemyRowDelay, EnemySpawnRate, impactRings);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);
         projectileRenderer.Initialize(2048, catalog.Projectiles);
@@ -409,9 +412,11 @@ public partial class CommandSandbox : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (units == null) return;
+        impactRings.Advance((float)delta);
         bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
         if (waves.Defeat || waves.Victory)
         {
+            impactRings.Sync();
             if (feedbackChanged) SyncArmy();
             return;
         }
@@ -422,6 +427,7 @@ public partial class CommandSandbox : Node3D
         buildings.RemoveDestroyed();
         if (feedbackChanged || changed || previousCount != units.Count) SyncArmy();
         projectileRenderer.Sync(waves.Projectiles);
+        impactRings.Sync();
     }
 
     private void SyncArmy()

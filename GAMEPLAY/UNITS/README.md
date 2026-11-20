@@ -7,7 +7,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — per-type size tuning and owner checks.
 - **[SKIRM1 Skirmisher implementation plan](SKIRM1_IMPLEMENTATION_PLAN.md)** — **planned only**: closest-enemy ranged targeting, bounded all-direction retreat AI, and shared benchmark/Command Sandbox integration.
-- **[ROCKET1 Wide Deep-Fork Twin-Rocket Launcher plan](ROCKET1_IMPLEMENTATION_PLAN.md)** — **planned only**: wide fork silhouette, two prong-mounted launchers firing alternating arcing rockets, small splash via existing artillery code.
+- **[ROCKET1 Wide Deep-Fork Twin-Rocket Launcher plan](ROCKET1_IMPLEMENTATION_PLAN.md)** — **source implemented**: wide fork silhouette, two prong-mounted launchers firing alternating arcing rockets, small splash via existing artillery code.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 super-heavy hull with 4 independent miniguns, nearest-target pursuit and front-only crush damage; includes large-footprint separation safeguards.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 pointed super-heavy hull, four independent nearest-target miniguns with individual min/max ranges, and front-only crush damage.
 - **[Starting roster and stats](DEFINITIONS/STARTING_ROSTER.md)** — the initial circle, square, triangle, diamond and pentagon with roles and tuning values.
@@ -73,3 +73,7 @@ The Pikeman (`pikeman`, index 10) uses Strong Infantry's base stats and a T silh
 Edit **Size tier** under **Appearance and size** in Entity Editor or the unit resource Inspector. It is an authored physical size class, starting at 1 in half-tier increments and allowing values beyond 5. The catalogue exposes it as `UnitStats.SizeTier` for each unit type. Older resources default to Tier 1.
 
 Size multiplier still controls visual and collision scaling. Size tier currently has no gameplay effects. The Worker starts at Tier 3 because its enlarged drill gives it a 2.205-unit collision radius, compared with 1.6 units for Hexagon Siege. The Worker's Battle Rating remains zero.
+
+## ROCKET1 — Twin Rocket Launcher
+
+Select **Twin Rocket Launcher** in the Benchmark painter or Level Editor, or queue four at the Fortress Defense Fabricator for 220 Carbon and 15 seconds. The Tier 2 fork has two visible launchers and fires one rocket every 0.75 seconds, alternating sides on successful shots with the normal ranged target and cooldown. The 5–35 unit weapon reaches over obstacles using standard artillery flight and deals 12 damage at the center of a 2.5-unit splash. Edit `DEFINITIONS/TwinRocketLauncher.tres` for unit stats and `../PROJECTILES/Types/TwinRocket/TwinRocket.tres` for flight and blast settings. Preset army compositions retain their existing rosters. The fork's circular clearance encloses the whole hull, including the open notch.
