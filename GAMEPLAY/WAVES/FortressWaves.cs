@@ -167,7 +167,7 @@ internal sealed class FortressWaves
             }
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
             if (Projectiles.Count > 0 || towerTargets) RebuildGrid();
-            if (towerTargets) buildings.StepDefenses(grid, delta, tick);
+            if (towerTargets) buildings.StepDefenses(grid, Projectiles, delta, tick);
             if (Projectiles.Count > 0) Projectiles.Step(units, grid, combat, delta, SeparationPadding, idleField, impactRings);
             if (Countdown > 0 && !Defeat)
             {
@@ -181,7 +181,7 @@ internal sealed class FortressWaves
         RebuildGrid();
         TryRelease(delta);
         var field = buildings.CoverField;
-        if (buildings.HasDefenses) buildings.StepDefenses(grid, delta, tick);
+        if (buildings.HasDefenses) buildings.StepDefenses(grid, Projectiles, delta, tick);
         AcquireDefenderTargets(field);
         for (int i = 0; i < enemyCount; i++)
         {

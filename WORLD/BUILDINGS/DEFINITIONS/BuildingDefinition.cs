@@ -21,6 +21,12 @@ public partial class BuildingDefinition : Resource
     [Export] public float ShotsPerSecond { get; set; } = 2f;
     [Export] public float TurretDegreesPerSecond { get; set; } = 360f;
     [Export] public float BeamSeconds { get; set; } = 0.08f;
+
+    [ExportGroup("Projectile weapon")]
+    // Null retains hitscan lasers; rocket towers use the existing pooled projectile.
+    [Export] public ProjectileDefinition Projectile { get; set; }
+    [Export(PropertyHint.Range, "0.5,4,0.05")] public float ProjectileVisualScale { get; set; } = 1f;
+    [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;
     [Export] public bool AttacksSoldiers { get; set; } = true;
     [Export] public bool RequiresLineOfSight { get; set; } = true;
 }

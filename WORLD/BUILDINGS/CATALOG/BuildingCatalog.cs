@@ -24,7 +24,7 @@ public sealed class RuntimeBuildingCatalog
         return id != null && ids.TryGetValue(id, out type);
     }
 
-    public RuntimeBuildingCatalog(BuildingCatalog catalog, DamageRules rules)
+    public RuntimeBuildingCatalog(BuildingCatalog catalog, DamageRules rules, ProjectileCatalog projectiles)
     {
         foreach (var definition in catalog.Definitions)
         {
@@ -32,6 +32,17 @@ public sealed class RuntimeBuildingCatalog
                 !ids.TryAdd(definition.Id, types.Count))
                 throw new ArgumentException("Building definitions require unique, nonempty IDs.");
             float range = Clamp(definition.MaximumRange, 0.1f, 100f, 30f);
+            int projectileType = -1;
+            if (definition.Projectile != null)
+            {
+                if (projectiles == null) throw new ArgumentNullException(nameof(projectiles));
+                var shot = definition.Projectile;
+                float splash = shot.ExplodesOnImpact
+                    ? Clamp(shot.ExplosionRadius * Clamp(definition.ExplosionRadiusMultiplier, 0.5f, 8f, 1f),
+                        0.1f, 64f, 5f) : -1f;
+                projectileType = projectiles.Register(shot,
+                    Clamp(definition.ProjectileVisualScale, 0.5f, 4f, 1f), splash: splash);
+            }
             types.Add(new BuildingStats(definition.Id, definition.DisplayName,
                 Mathf.Clamp(definition.Width, 1, 16), Mathf.Clamp(definition.Depth, 1, 16),
                 Clamp(definition.MinimumRange, 0f, range, Mathf.Min(4f, range)), range,
@@ -39,7 +50,7 @@ public sealed class RuntimeBuildingCatalog
                 1f / Clamp(definition.ShotsPerSecond, 0.05f, 60f, 2f),
                 Mathf.DegToRad(Clamp(definition.TurretDegreesPerSecond, 1f, 3600f, 360f)),
                 Clamp(definition.BeamSeconds, 0.01f, 2f, 0.08f), definition.RequiresLineOfSight, definition.AttacksSoldiers, rules.DamageType(definition.DamageType),
-                Clamp(definition.Health, 1f, 1000000f, 1000f), rules.ArmourClass(definition.ArmourClass), definition.Armour));
+                Clamp(definition.Health, 1f, 1000000f, 1000f), rules.ArmourClass(definition.ArmourClass), definition.Armour, projectileType));
         }
     }
 
@@ -48,7 +59,7 @@ public sealed class RuntimeBuildingCatalog
 }
 
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
-    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour);
+    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType);
 
 public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type, float GridSize = DeploymentLayout.CellSize)
 {

@@ -147,7 +147,7 @@ public partial class BenchmarkArena : Node3D
             Material = GD.Load<ShaderMaterial>("res://WORLD/TERRAIN/RENDERING/SteelSlate.tres") } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules);
+        buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, PresetTest = presetTestMap != null }; AddChild(panel);
         panel.CameraRotationChanged += camera.SetYawDegrees;
         attackRanges = new AttackRangeOverlay();
@@ -775,7 +775,7 @@ public partial class BenchmarkArena : Node3D
             start = Stamp();
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
-            defenseSystem?.Step(units, grid, BattleSight, dt, acquisitionStep, targetingStepSeconds);
+            defenseSystem?.Step(units, grid, BattleSight, projectiles, dt, acquisitionStep, targetingStepSeconds);
             combatMs += Elapsed(start);
         }
         SeparationMode separationMode = panel.Separation;
@@ -879,7 +879,7 @@ public partial class BenchmarkArena : Node3D
             dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.Catalog.MaxSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
             AttackDefenses(dt);
             combatMs += Elapsed(start);
-            if (mode == BenchmarkMode.Ranged || dreadnaughts != null) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, BattleSight, shockwaves); projectileMs += Elapsed(start); }
+            if (mode == BenchmarkMode.Ranged || dreadnaughts != null || projectiles.Count > 0) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, BattleSight, shockwaves); projectileMs += Elapsed(start); }
         }
         if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
         {

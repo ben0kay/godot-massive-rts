@@ -14,6 +14,7 @@ internal sealed class DefenseSystem
         public ObstacleRectangle Footprint;
         public int Target;
         public float Yaw, Cooldown;
+        public byte NextRocketMuzzle;
     }
 
     private readonly Tower[] towers;
@@ -39,7 +40,7 @@ internal sealed class DefenseSystem
         structures[slot] = structure;
         towers[slot] = new Tower { Stats = stats, Faction = structure.Faction, Footprint = structure.Area,
             Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1 };
-        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground);
+        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0);
         ActiveCount++;
     }
 
@@ -99,7 +100,7 @@ internal sealed class DefenseSystem
 
     // =========================================================
     // Run before soldiers move so range queries use the positions indexed this tick.
-    public void Step(UnitState units, SpatialGrid grid, ObstacleField obstacles, float dt, int acquisitionStep, float acquisitionSeconds)
+    public void Step(UnitState units, SpatialGrid grid, ObstacleField obstacles, ProjectileSystem projectiles, float dt, int acquisitionStep, float acquisitionSeconds)
     {
         int refreshInterval = Mathf.Max(1, Mathf.RoundToInt(0.2f / acquisitionSeconds));
         for (int i = 0; i < towers.Length; i++)
@@ -138,10 +139,23 @@ internal sealed class DefenseSystem
             }
 
             if (tower.Cooldown > 0f || Mathf.Abs(error) > step) continue;
-            units.Damage(target, tower.Stats.Damage, tower.Stats.DamageType);
-            Vector3 end = units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f);
-            renderer.Fire(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw), end, tower.Faction,
-                tower.Stats.BeamSeconds, tower.Yaw);
+            if (tower.Stats.ProjectileType >= 0)
+            {
+                // Real arcing shot: the shared projectile pool owns splash and impacts.
+                // Alternate barrels only when a rocket was actually launched.
+                if (projectiles == null || !projectiles.LaunchFrom(
+                    DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw, tower.NextRocketMuzzle),
+                    units.Position[target], tower.Faction, tower.Stats.ProjectileType,
+                    tower.Stats.Damage, tower.Stats.DamageType)) continue;
+                tower.NextRocketMuzzle ^= 1;
+            }
+            else
+            {
+                units.Damage(target, tower.Stats.Damage, tower.Stats.DamageType);
+                Vector3 end = units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f);
+                renderer.Fire(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw), end, tower.Faction,
+                    tower.Stats.BeamSeconds, tower.Yaw);
+            }
             tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
         }
     }

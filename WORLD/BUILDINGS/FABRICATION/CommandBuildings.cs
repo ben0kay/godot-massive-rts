@@ -6,16 +6,17 @@ using Godot;
 
 namespace MassiveRts;
 
-internal enum CommandBuildType { Fabricator, LaserTower, Extractor }
+internal enum CommandBuildType { Fabricator, LaserTower, Extractor, RocketTower }
 
 internal sealed class CommandBuildings
 {
     private const int FabricatorLimit = 32;
     private const int LaserTowerLimit = CommandSandbox.MaxStartingTowers;
     internal const int LaserTowerCost = 750;
+    internal const int RocketTowerCost = 1450;
     private const float TowerBaseHeight = CommandLaserPlacement.BaseHeight;
-    private readonly BuildingDefinition laserDefinition;
-    private readonly BuildingStats laserStats;
+    private readonly BuildingDefinition laserDefinition, rocketDefinition;
+    private readonly BuildingStats laserStats, rocketStats;
     private readonly RuntimeBuildingCatalog defenseCatalog;
     private DefenseRenderer defenseRenderer;
     private DefenseSystem defenses;
@@ -71,10 +72,14 @@ internal sealed class CommandBuildings
         fabricatorDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Fabricator001.tres");
         var defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres");
         laserDefinition = GD.Load<BuildingDefinition>(CommandLaserPlacement.DefinitionPath);
-        defenseCatalog = new RuntimeBuildingCatalog(defenseDefinitions, units.Catalog.DamageRules);
+        rocketDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/RocketTower001.tres");
+        defenseCatalog = new RuntimeBuildingCatalog(defenseDefinitions, units.Catalog.DamageRules, units.Catalog.Projectiles);
         if (!defenseCatalog.TryResolve(laserDefinition.Id, out int laserType))
             throw new InvalidOperationException("The Laser Tower is missing from the building catalogue.");
+        if (!defenseCatalog.TryResolve(rocketDefinition.Id, out int rocketType))
+            throw new InvalidOperationException("The Rocket Tower is missing from the building catalogue.");
         laserStats = defenseCatalog[laserType];
+        rocketStats = defenseCatalog[rocketType];
         var footprint = new ObstacleRectangle(-4, -9, 5, 5);
         if (citadelView != null)
         {
@@ -226,8 +231,10 @@ internal sealed class CommandBuildings
 
     public ObstacleRectangle Snap(Vector3 point, CommandBuildType type = CommandBuildType.Fabricator)
     {
-        int width = type == CommandBuildType.LaserTower ? laserStats.Width : CommandStructure.FabricatorCells;
-        int depth = type == CommandBuildType.LaserTower ? laserStats.Depth : CommandStructure.FabricatorCells;
+        int width = type == CommandBuildType.LaserTower ? laserStats.Width :
+            type == CommandBuildType.RocketTower ? rocketStats.Width : CommandStructure.FabricatorCells;
+        int depth = type == CommandBuildType.LaserTower ? laserStats.Depth :
+            type == CommandBuildType.RocketTower ? rocketStats.Depth : CommandStructure.FabricatorCells;
         const float grid = DeploymentLayout.CellSize;
         return new ObstacleRectangle(Mathf.RoundToInt(point.X / grid - width * 0.5f),
             Mathf.RoundToInt(point.Z / grid - depth * 0.5f), width, depth);
@@ -252,7 +259,8 @@ internal sealed class CommandBuildings
     {
         if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type) || OverlapsPaint(area)) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
-        if (type == CommandBuildType.LaserTower && towerCount >= LaserTowerLimit) return false;
+        if ((type == CommandBuildType.LaserTower || type == CommandBuildType.RocketTower) &&
+            towerCount >= LaserTowerLimit) return false;
 
         FoundationHeight(area, out float relief);
         if (relief > 0.5f) return false;
@@ -297,7 +305,8 @@ internal sealed class CommandBuildings
     }
 
     private static int Cost(CommandBuildType type) =>
-        type == CommandBuildType.LaserTower ? LaserTowerCost : CommandStructure.FabricatorCost;
+        type == CommandBuildType.LaserTower ? LaserTowerCost :
+        type == CommandBuildType.RocketTower ? RocketTowerCost : CommandStructure.FabricatorCost;
 
     public bool Place(ObstacleRectangle area, CommandBuildType type)
     {
@@ -305,6 +314,8 @@ internal sealed class CommandBuildings
         float height = FoundationHeight(area, out _);
         if (type == CommandBuildType.LaserTower)
             AddTower(area, Factions.Blue, height, laserDefinition, laserStats);
+        else if (type == CommandBuildType.RocketTower)
+            AddTower(area, Factions.Blue, height, rocketDefinition, rocketStats);
         else
             Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition,
                 units.Catalog.DamageRules, Release, groundHeight: height));
@@ -342,14 +353,14 @@ internal sealed class CommandBuildings
             defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
         }
         var tower = new CommandStructure(area, stats.Health, faction, definition,
-            units.Catalog.DamageRules, readyView: new Node3D { Name = "LaserTower" }, groundHeight: height);
+            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ProjectileType >= 0 ? "RocketTower" : "LaserTower" }, groundHeight: height);
         defenses.AddTower(tower, stats, TowerBaseHeight, height);
         Add(tower);
     }
 
     public bool HasDefenses => defenses?.ActiveCount > 0;
-    public void StepDefenses(SpatialGrid grid, float delta, int tick) =>
-        defenses?.Step(units, grid, CoverField, delta, tick, 1f / 60f);
+    public void StepDefenses(SpatialGrid grid, ProjectileSystem projectiles, float delta, int tick) =>
+        defenses?.Step(units, grid, CoverField, projectiles, delta, tick, 1f / 60f);
     public void AdvanceDefenseEffects(float delta) => defenseRenderer?.Advance(delta);
 
     public void AddHostileFabricator(Vector3 point) => AddStartingFabricator(point, Factions.Red);
