@@ -83,3 +83,5 @@ In `UnitVisualConfig.tres`, set **Use Projectile Launch Effects** before launchi
 ## Dreadnaught turret cadence
 
 The Dreadnaught's four independent miniguns use `TurretShotInterval` from `DEFINITIONS/Dreadnaught.tres`, currently **0.1128 s** per gun (formerly the `UnitDefinition` default of 0.15 s). This is approximately **33% more shots per second** per gun. Its ordinary `Interval` controls hull contact damage and remains unchanged; bullet speed, damage, range, and targeting are unchanged. This interval is shared by all four guns, each with its own targeting and cooldown.
+
+The Dreadnaught's center-deck rocket cannon has its own target and cooldown in the Benchmark. It uses Twin Rocket flight, splash and launch effects. Edit **Turret Rocket Projectile**, range, interval and damage in `DEFINITIONS/Dreadnaught.tres`. Clearing the projectile removes the cannon from the battle.

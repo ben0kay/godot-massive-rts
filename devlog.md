@@ -385,3 +385,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | ROCKET1 tuning | Source implemented.** Halved firing cadence, increased launcher and rocket mesh linear scale, and added optional batched rocket and artillery trails and flashes.
 
 - **2026-11-20 | Dreadnaught minigun cadence | Source implemented.** Set the shared per-gun `TurretShotInterval` override to 0.1128 s (from 0.15 s), increasing each of the four miniguns' nominal firing rate by ~33%; left hull contact interval, projectile velocity, damage and targeting untouched. Godot playtest pending.
+
+- **2026-11-20 | DREAD1 deck cannon | Source implemented.** Added an optional center-mounted rocket cannon with its own target and cadence in the existing Benchmark Dreadnaught system.

@@ -36,6 +36,12 @@ public partial class UnitDefinition : Resource
     [Export] public float TurretShotInterval { get; set; } = 0.15f;
     [Export] public float TurretDamage { get; set; } = 3f;
 
+    [Export] public ProjectileDefinition TurretRocketProjectile { get; set; }
+    [Export] public float TurretRocketMinimumRange { get; set; } = 7f;
+    [Export] public float TurretRocketMaximumRange { get; set; } = 38f;
+    [Export] public float TurretRocketInterval { get; set; } = 3f;
+    [Export] public float TurretRocketDamage { get; set; } = 24f;
+
     [ExportGroup("Movement")]
     [Export] public float Speed { get; set; } = 5f;
     [Export(PropertyHint.Range, "0,5,0.05,suffix:s")] public float AccelerationSecondsOverride { get; set; }

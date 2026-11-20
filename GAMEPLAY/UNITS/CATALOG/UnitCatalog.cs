@@ -158,6 +158,7 @@ public sealed class RuntimeUnitCatalog
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
     public DamageRules DamageRules { get; }
     public ProjectileCatalog Projectiles { get; }
+    internal (int Projectile, float Min, float Max, float Interval, float Damage)? DreadnaughtRocket { get; }
     internal (int Projectile, Vector4 Min, Vector4 Max, float Interval, float Damage) DreadnaughtGuns { get; }
 
     public int Count => stats.Length;
@@ -241,6 +242,14 @@ public sealed class RuntimeUnitCatalog
             if (i == Dreadnaught)
                 DreadnaughtGuns = (Projectiles.Register(d.Projectile), d.TurretMinimumRanges, d.TurretMaximumRanges,
                     ClampStat(d.TurretShotInterval, 0.05f, 5f, 0.15f), ClampStat(d.TurretDamage, 0f, 200f, 3f));
+            if (i == Dreadnaught && d.TurretRocketProjectile != null)
+            {
+                float rocketMax = ClampStat(d.TurretRocketMaximumRange, 1f, 100f, 38f);
+                DreadnaughtRocket = (Projectiles.Register(d.TurretRocketProjectile),
+                    ClampStat(d.TurretRocketMinimumRange, 0f, rocketMax, Mathf.Min(7f, rocketMax)),
+                    rocketMax, ClampStat(d.TurretRocketInterval, 0.05f, 30f, 3f),
+                    ClampStat(d.TurretRocketDamage, 0f, 200f, 24f));
+            }
             bool combat = d.AllowedTargets != TargetCategory.None;
             bool ranged = combat && d.Style == AttackStyle.Ranged;
             float reach = Positive(d.Reach, 1.6f);
