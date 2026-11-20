@@ -28,7 +28,8 @@ public static class FacetedSoldierMeshes
         {
             ref readonly UnitStats type = ref catalog[i];
             UnitOutline outline = type.Outline;
-            meshes[i] = CreateUnitMesh(outline, type.Height, material, enhanced && type.Id == RuntimeUnitCatalog.CircleId);
+            meshes[i] = CreateUnitMesh(outline, type.Height, material, enhanced && type.Id == RuntimeUnitCatalog.CircleId,
+                catalog.Definition(i), includeIndependent: false);
         }
         return meshes;
     }
@@ -43,14 +44,20 @@ public static class FacetedSoldierMeshes
             new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
             unit.Id == RuntimeUnitCatalog.CircleId &&
-            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true);
+            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true, unit, includeIndependent: true);
     }
 
-    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material, bool enhancedCircle)
+    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material, bool enhancedCircle, UnitDefinition unit, bool includeIndependent)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
+
+        foreach (var mount in unit.RocketMounts ?? new())
+        {
+            if (mount == null || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
+            AppendRocketBarrel(surface, MountedRocket.LocalPose(mount, UnitOutline.EffectiveSize(unit)));
+        }
 
         if (outline.IsHFrame)
         {
@@ -75,17 +82,6 @@ public static class FacetedSoldierMeshes
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
             Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught || outline.IsDeepFork ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
-        if (outline.IsDeepFork)
-        {
-            for (int side = -1; side <= 1; side += 2)
-            {
-                Vector3 muzzle = outline.ForkMuzzle(height, side);
-                float length = outline.RadiusZ * 0.62f;
-                AppendBeveledRectangle(surface, new Vector3(muzzle.X, muzzle.Y - height * 0.50f,
-                    muzzle.Z + length * 0.5f), new Vector3(outline.RadiusX * 0.29f, height * 0.28f, length),
-                    new Color(0.77f, 0.77f, 0.77f), SoldierSideShade);
-            }
-        }
         if (outline.IsDreadnaught)
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)
@@ -198,9 +194,18 @@ public static class FacetedSoldierMeshes
             size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f, sideShade: sideShade);
     }
 
+    internal static void AppendRocketBarrel(SurfaceTool surface, Transform3D pose)
+    {
+        const float inverseSqrtTwo = 0.70710678f;
+        Vector3 size = new(pose.Basis.X.Length(), pose.Basis.Y.Length(), pose.Basis.Z.Length());
+        float rotation = Mathf.Atan2(pose.Basis.X.Z, pose.Basis.X.X);
+        AppendPrism(surface, 4, size.X * inverseSqrtTwo, size.Z * inverseSqrtTwo, size.Y, Mathf.Pi * 0.25f,
+            pose * (MountedRocket.Muzzle * 0.5f), new Color(0.77f, 0.77f, 0.77f), sideShade: SoldierSideShade, yaw: rotation);
+    }
+
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
-        UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false)
+        UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false, float yaw = 0f)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -230,6 +235,12 @@ public static class FacetedSoldierMeshes
                 Vector2 vertex = customOutline.Value.Vertex(i);
                 x = vertex.X;
                 z = vertex.Y;
+            }
+            if (yaw != 0f)
+            {
+                Vector2 rotated = new Vector2(x, z).Rotated(yaw);
+                x = rotated.X;
+                z = rotated.Y;
             }
             top[i] = center + new Vector3(Mathf.Lerp(x, cap.X, insetX), half, Mathf.Lerp(z, cap.Z, insetZ));
             shoulder[i] = center + new Vector3(x, half - bevelRise, z);

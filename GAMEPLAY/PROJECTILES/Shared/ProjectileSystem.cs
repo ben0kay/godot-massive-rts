@@ -46,34 +46,35 @@ public sealed class ProjectileSystem
     {
         ref readonly UnitStats target = ref units.Catalog[units.Type[victim]];
         ref readonly UnitStats type = ref units.Catalog[units.Type[shooter]];
+        var mounts = units.Catalog.PrimaryRockets(units.Type[shooter]);
+        int projectile = mounts.Length == 0 ? type.ProjectileType : mounts[units.RocketMountIndex(shooter)].Projectile;
         Vector3 aim = units.Position[victim];
-        if (catalog.Flight(type.ProjectileType).ExplosionRadius <= 0f) aim.Y += target.Height * 0.5f;
-        Launch(shooter, units, aim, type);
+        if (catalog.Flight(projectile).ExplosionRadius <= 0f) aim.Y += target.Height * 0.5f;
+        Launch(shooter, units, aim, type, againstStructure: false);
     }
 
     internal bool FireAtStructure(int shooter, UnitState units, Vector3 aim, StructureHealth target)
     {
         int index = Count;
-        if (!Launch(shooter, units, aim, units.Catalog[units.Type[shooter]])) return false;
+        if (!Launch(shooter, units, aim, units.Catalog[units.Type[shooter]], againstStructure: true)) return false;
         structureTargets ??= new StructureHealth[Position.Length];
         structureTargets[index] = target;
-        ref readonly var type = ref units.Catalog[units.Type[shooter]];
-        damage[index] = type.AgainstStructures(type.Damage);
-        damageTypes[index] = type.StructureDamageType;
         return true;
     }
 
-    private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type)
+    private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type, bool againstStructure)
     {
+        var mounts = units.Catalog.PrimaryRockets(units.Type[shooter]);
+        int projectile = type.ProjectileType;
+        float shotDamage = type.Damage;
         Vector3 muzzle = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
-        if (type.Outline.IsDeepFork)
+        if (mounts.Length > 0)
         {
-            Vector2 forward = units.Facing[shooter];
-            if (forward == Vector2.Zero) forward = Vector2.Up;
-            Vector2 right = new(-forward.Y, forward.X);
-            Vector3 local = type.Outline.ForkMuzzle(type.Height, units.RocketMuzzleSide(shooter));
-            Vector2 offset = right * local.X - forward * local.Z;
-            muzzle = units.Position[shooter] + new Vector3(offset.X, local.Y, offset.Y);
+            var mount = mounts[units.RocketMountIndex(shooter)];
+            var hull = MountedRocket.HullBasis(units.Facing[shooter], type.Shape);
+            muzzle += hull * (mount.Pose * MountedRocket.Muzzle);
+            projectile = mount.Projectile;
+            shotDamage = mount.Damage;
         }
         else if (type.Outline.IsChevron)
         {
@@ -81,9 +82,10 @@ public sealed class ProjectileSystem
             muzzle = units.Position[shooter] +
                 new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
         }
-        bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], type.ProjectileType,
-            type.AgainstUnits(type.Damage), type.UnitDamageType);
-        if (launched && type.Outline.IsDeepFork) units.AdvanceRocketMuzzle(shooter);
+        bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
+            againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage),
+            againstStructure ? type.StructureDamageType : type.UnitDamageType);
+        if (launched && mounts.Length > 1) units.AdvanceRocketMount(shooter, mounts.Length);
         return launched;
     }
 

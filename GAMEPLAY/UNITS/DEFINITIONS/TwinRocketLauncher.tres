@@ -1,7 +1,19 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/TwinRocket/TwinRocket.tres" id="2"]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/RocketMount.cs" id="3"]
+
+[sub_resource type="Resource" id="Left"]
+script = ExtResource("3")
+Position = Vector3(-0.561, 0.3132, -0.187272)
+ModelScale = Vector3(0.2465, 0.1512, 0.40052)
+
+[sub_resource type="Resource" id="Right"]
+script = ExtResource("3")
+Position = Vector3(0.561, 0.3132, -0.187272)
+ModelScale = Vector3(0.2465, 0.1512, 0.40052)
 
 [resource]
 script = ExtResource("1")
@@ -23,3 +35,4 @@ Interval = 1.5
 Reach = 35.0
 MinimumFireRange = 5.0
 Projectile = ExtResource("2")
+RocketMounts = Array[ExtResource("3")]([SubResource("Left"), SubResource("Right")])

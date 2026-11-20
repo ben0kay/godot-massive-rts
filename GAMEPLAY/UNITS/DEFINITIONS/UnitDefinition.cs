@@ -42,6 +42,9 @@ public partial class UnitDefinition : Resource
     [Export] public float TurretRocketInterval { get; set; } = 3f;
     [Export] public float TurretRocketDamage { get; set; } = 24f;
 
+    [ExportGroup("Rocket mounts")]
+    [Export] public Godot.Collections.Array<RocketMount> RocketMounts { get; set; } = new();
+
     [ExportGroup("Movement")]
     [Export] public float Speed { get; set; } = 5f;
     [Export(PropertyHint.Range, "0,5,0.05,suffix:s")] public float AccelerationSecondsOverride { get; set; }

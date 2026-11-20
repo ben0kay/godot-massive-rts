@@ -9,6 +9,7 @@ public partial class ProjectileRenderer : Node3D
     private MultiMesh[] batches;
     private int[] counts;
     private bool[] tintByFaction;
+    private float[] visualScales;
     private int capacity;
     private ProjectileLaunchEffects launchEffects;
 
@@ -22,9 +23,11 @@ public partial class ProjectileRenderer : Node3D
         }
         batches = new MultiMesh[catalog.Count];
         counts = new int[catalog.Count];
+        visualScales = new float[catalog.Count];
         tintByFaction = new bool[catalog.Count];
         for (int i = 0; i < batches.Length; i++)
         {
+            visualScales[i] = catalog.VisualScale(i);
             tintByFaction[i] = catalog.TintsByFaction(i);
             // Colors are enabled only for definitions that use them (such as Laser Bolt).
             var mesh = new MultiMesh
@@ -65,6 +68,7 @@ public partial class ProjectileRenderer : Node3D
                 Vector3 up = Mathf.Abs(direction.Y) > 0.99f ? Vector3.Right : Vector3.Up;
                 basis = Basis.LookingAt(direction, up);
             }
+            if (visualScales[type] != 1f) basis = basis.Scaled(Vector3.One * visualScales[type]);
             int slot = counts[type]++;
             batches[type].SetInstanceTransform(slot, new Transform3D(basis, projectiles.Position[i]));
             if (tintByFaction[type])

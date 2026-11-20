@@ -8,9 +8,10 @@ namespace MassiveRts;
 public sealed class ProjectileCatalog
 {
     internal const string BasicArrowPath = "res://GAMEPLAY/PROJECTILES/Types/BasicArrow/BasicArrow.tres";
-    private readonly Dictionary<ProjectileDefinition, int> indices = new();
+    private readonly Dictionary<(ProjectileDefinition, float, float, float), int> indices = new();
     private readonly List<ProjectileFlight> flights = new();
     private readonly List<Mesh> meshes = new();
+    private readonly List<float> scales = new();
     private readonly List<bool> factionTints = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
@@ -24,31 +25,37 @@ public sealed class ProjectileCatalog
     public int Count => flights.Count;
     public ProjectileFlight Flight(int index) => flights[index];
     public Mesh Mesh(int index) => meshes[index];
+    internal float VisualScale(int index) => scales[index];
     public bool TintsByFaction(int index) => factionTints[index];
 
     internal bool HasLaunchEffects => launchEffects.Contains(true);
     internal bool UsesLaunchEffects(int index) => launchEffects[index];
 
-    public int Register(ProjectileDefinition definition)
+    public int Register(ProjectileDefinition definition, float scale = 1f, float splash = -1f, float edge = -1f)
     {
         definition ??= basicArrow;
         if (definition == null) throw new InvalidOperationException("The basic arrow definition could not be loaded.");
-        if (indices.TryGetValue(definition, out int index)) return index;
+        scale = float.IsFinite(scale) && scale > 0f ? scale : 1f;
+        splash = float.IsFinite(splash) && splash >= 0f ? Mathf.Clamp(splash, 0f, 64f) : -1f;
+        edge = float.IsFinite(edge) && edge >= 0f ? Mathf.Clamp(edge, 0f, 1f) : -1f;
+        var key = (definition, scale, splash, edge);
+        if (indices.TryGetValue(key, out int index)) return index;
 
         Mesh mesh = definition.VisualMesh ?? (sharedArrowMesh ??= BasicArrowMesh.Create());
 
         index = flights.Count;
-        indices.Add(definition, index);
+        indices.Add(key, index);
         flights.Add(new ProjectileFlight(
             (float.IsFinite(definition.Speed) && definition.Speed > 0 ? definition.Speed : 45f) * movementScale,
             float.IsFinite(definition.ArcHeight) ? Mathf.Max(0, definition.ArcHeight) : 0f,
             float.IsFinite(definition.ArcHeightPerDistance) ? Mathf.Clamp(definition.ArcHeightPerDistance, 0, 1) : 0f,
             definition.ObstacleFire, definition.BlocksOnObstacles,
-            definition.ExplodesOnImpact
+            splash >= 0f ? splash : definition.ExplodesOnImpact
                 ? (float.IsFinite(definition.ExplosionRadius) ? Mathf.Clamp(definition.ExplosionRadius, 0.1f, 64f) : 7f)
                 : 0f,
-            float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
+            edge >= 0f ? edge : float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
         meshes.Add(mesh);
+        scales.Add(scale);
         factionTints.Add(definition.TintByFaction);
         launchEffects.Add(definition.UseLaunchEffects);
         return index;

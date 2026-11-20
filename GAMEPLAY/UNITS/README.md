@@ -84,4 +84,8 @@ In `UnitVisualConfig.tres`, set **Use Projectile Launch Effects** before launchi
 
 The Dreadnaught's four independent miniguns use `TurretShotInterval` from `DEFINITIONS/Dreadnaught.tres`, currently **0.1128 s** per gun (formerly the `UnitDefinition` default of 0.15 s). This is approximately **33% more shots per second** per gun. Its ordinary `Interval` controls hull contact damage and remains unchanged; bullet speed, damage, range, and targeting are unchanged. This interval is shared by all four guns, each with its own targeting and cooldown.
 
-The Dreadnaught's center-deck rocket cannon has its own target and cooldown in the Benchmark. It uses Twin Rocket flight, splash and launch effects. Edit **Turret Rocket Projectile**, range, interval and damage in `DEFINITIONS/Dreadnaught.tres`. Clearing the projectile removes the cannon from the battle.
+### Rocket mounts
+
+Open a unit definition in the Godot Inspector and expand **Rocket Mounts**. Each entry has a hull-local position (relative to the mesh center), yaw, barrel dimensions, damage and projectile. Local forward is −Z. The unit's Size Multiplier also scales the mount. **Projectile Scale** only scales the projectile model. Use the splash radius and edge fraction overrides to tune one mount without editing the shared projectile. Negative override values inherit defaults.
+
+Fixed mounts on a ranged unit fire in array order using one primary target and cooldown. They default to the unit's range, interval, damage and projectile. The first fixed mount can override the group's range and interval. Use the same obstacle-fire mode for all mounts in a fixed group. Independent mounts acquire their own targets and use their own range and interval in the Benchmark. The Dreadnaught's center-deck cannon is an independent mount and uses Twin Rocket flight, splash and launch effects. Remove that entry from Rocket Mounts to remove the cannon.

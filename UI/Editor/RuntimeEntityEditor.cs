@@ -19,6 +19,8 @@ public partial class RuntimeEntityEditor : Control
 
     private static readonly PropertyInfo[] EditableFields = typeof(UnitDefinition).GetProperties()
         .Where(field => field.GetCustomAttribute<ExportAttribute>() != null && field.Name != nameof(UnitDefinition.Id)
+            && field.Name != nameof(UnitDefinition.RocketMounts)
+            && !field.Name.StartsWith("TurretRocket", StringComparison.Ordinal)
             && field.Name != nameof(UnitDefinition.Projectile)).ToArray();
 
     private readonly List<Draft> drafts = new();

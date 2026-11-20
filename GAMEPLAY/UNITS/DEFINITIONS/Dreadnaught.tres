@@ -1,9 +1,19 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/MinigunRound/MinigunRound.tres" id="2"]
 
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/TwinRocket/TwinRocket.tres" id="3"]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/RocketMount.cs" id="4"]
+
+[sub_resource type="Resource" id="Deck"]
+script = ExtResource("4")
+Position = Vector3(0, 1.98, 0)
+ModelScale = Vector3(0.52, 0.48, 2.05)
+IndependentAim = true
+Projectile = ExtResource("3")
+Damage = 24.0
 
 [resource]
 script = ExtResource("1")
@@ -14,11 +24,6 @@ Shape = 11
 Width = 8.0
 HullLength = 14.0
 TurretShotInterval = 0.1128
-TurretRocketProjectile = ExtResource("3")
-TurretRocketMinimumRange = 7.0
-TurretRocketMaximumRange = 38.0
-TurretRocketInterval = 3.0
-TurretRocketDamage = 24.0
 Height = 2.2
 SizeMultiplier = 0.9
 SizeTier = 5.0
@@ -33,3 +38,4 @@ UnitDamagePercent = 100.0
 Interval = 0.5
 Reach = 8.0
 Projectile = ExtResource("2")
+RocketMounts = Array[ExtResource("4")]([SubResource("Deck")])
