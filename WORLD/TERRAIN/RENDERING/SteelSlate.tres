@@ -1,0 +1,38 @@
+[gd_resource type="ShaderMaterial" load_steps=6 format=3]
+
+[ext_resource type="Shader" path="res://WORLD/TERRAIN/RENDERING/SteelSlate.gdshader" id="1"]
+
+[sub_resource type="FastNoiseLite" id="Patches"]
+seed = 142
+frequency = 0.047
+fractal_octaves = 4
+
+[sub_resource type="NoiseTexture2D" id="StoneTone"]
+width = 256
+height = 256
+seamless = true
+noise = SubResource("Patches")
+
+[sub_resource type="FastNoiseLite" id="Grain"]
+seed = 529
+frequency = 0.094
+fractal_octaves = 3
+
+[sub_resource type="NoiseTexture2D" id="StoneRelief"]
+width = 256
+height = 256
+seamless = true
+as_normal_map = true
+bump_strength = 3.0
+noise = SubResource("Grain")
+
+[resource]
+shader = ExtResource("1")
+shader_parameter/stone_noise = SubResource("StoneTone")
+shader_parameter/stone_normal = SubResource("StoneRelief")
+shader_parameter/slate_color = Color(0.31, 0.34, 0.39, 1)
+shader_parameter/patch_scale = 0.035
+shader_parameter/grain_scale = 0.21
+shader_parameter/relief = 0.23
+shader_parameter/sheen = 0.25
+shader_parameter/seam_strength = 0.13

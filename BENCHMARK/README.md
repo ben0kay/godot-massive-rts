@@ -2,6 +2,8 @@
 
 Standalone 3D army workload arena. No performance target is claimed. No campaign, economy, research, final combat rules or advanced formation system is included.
 
+The default Benchmark ground uses [Steel Slate](../WORLD/TERRAIN/RENDERING/SteelSlate.tres). Tune the tint, relief, seams and sheen in the material Inspector. The material shades the existing flat ground plane. Preset Tests use their authored battlefield instead.
+
 ## Launch and controls
 
 1. Import root `project.godot` in **Godot 4.7 .NET** with its required .NET SDK installed. The standard non-.NET Godot editor cannot compile C#.

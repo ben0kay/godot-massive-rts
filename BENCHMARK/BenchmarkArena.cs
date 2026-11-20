@@ -141,7 +141,7 @@ public partial class BenchmarkArena : Node3D
             ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f) * correctionScale);
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
         flatGround = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
-            Material = new StandardMaterial3D { AlbedoColor = new Color(0.29f, 0.30f, 0.32f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded } } };
+            Material = GD.Load<ShaderMaterial>("res://WORLD/TERRAIN/RENDERING/SteelSlate.tres") } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings = new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules);
