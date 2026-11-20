@@ -150,7 +150,7 @@ public partial class WorldPaint : Node3D
         for (int i = 0; i < rockAreas.Length; i++)
         {
             var area = rockAreas[i];
-            // Use the same sample lattice as the generated rock top.
+            // Include cell corners and centres in the conservative terrain-relative cover bounds.
             float low = float.PositiveInfinity, high = float.NegativeInfinity;
             for (float z = area.Min.Y; z <= area.Max.Y; z += WorldPaintMeshBuilder.Step)
             for (float x = area.Min.X; x <= area.Max.X; x += WorldPaintMeshBuilder.Step)
@@ -159,7 +159,7 @@ public partial class WorldPaint : Node3D
                 low = Mathf.Min(low, height);
                 high = Mathf.Max(high, height);
             }
-            rockAreas[i] = area with { AirborneHeightRange = new Vector2(low, high + data.RockHeight) };
+            rockAreas[i] = area with { AirborneHeightRange = new Vector2(low, high + data.RockHeight * WorldPaintMeshBuilder.MaxRockHeightScale) };
         }
         RebuildViews(rocks, water);
         if (visualDirty || displayedHalfWidth != MapHalfWidth)

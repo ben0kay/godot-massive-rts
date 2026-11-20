@@ -409,3 +409,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | FX2 tuning | Source implemented.** Thickened and darkened cracks, and tuned crumble deaths to emit six smaller pieces with slightly wider spread under the existing caps.
 
 - **2026-11-20 | Bridges | Source implemented.** Added saved grid-aligned bridge drawing to the Level Editor and cached footprint-aware crossings for Fortress Defense and Preset Battle playtests. Awaiting owner gameplay validation.
+
+- **2026-11-20 | Painted rock formations | Source implemented.** Replaced the flat rock mesh with deterministic, faceted columns on a shared rubble shelf. Kept painted-cell blocking and updated the height bounds used for airborne impacts.

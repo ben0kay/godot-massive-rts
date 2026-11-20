@@ -10,6 +10,12 @@ The painter accepts up to 16,384 in-bounds occupied cells and 128 merged rectang
 
 `CommandBuildings` composes painted footprints with existing obstacles and updates the movement and cover fields when structure footprints change. The two fields share one instance on maps without painted water. Painted rock tops set terrain-relative shell impact bounds per footprint. On steep terrain those bounds conservatively enclose the rock mesh.
 
+## Rock formations
+
+**Paint rocks** builds clusters of tall, low-poly columns with chipped caps. Cell coordinates seed each column's shape, width, orientation, height and shade, so reopening a map reproduces the same rocks. Adjacent strokes join into one rubble shelf with no wall at the shared edge. Columns near a join gain a little height as they become part of the larger formation.
+
+The full painted footprint remains impassable. Existing rock paint automatically uses the new mesh, and **WorldPaint → Data → Rock Height / Rock Color** still control the formation's scale and palette.
+
 ## WATER2 appearance
 
 Select **WorldPaint → Data → Water appearance**. Adjust the surface, deep-water and shoreline colours, the width and height of the visible bank, and the ripple strength and speed. Setting ripple strength to zero gives still water. Paint strokes and Undo/Redo retain the appearance settings.
