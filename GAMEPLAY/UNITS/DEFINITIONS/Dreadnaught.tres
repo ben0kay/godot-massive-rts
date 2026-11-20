@@ -11,6 +11,7 @@ Role = "Super-heavy melee hull with four independent miniguns"
 Shape = 11
 Width = 8.0
 HullLength = 14.0
+TurretShotInterval = 0.1128
 Height = 2.2
 SizeMultiplier = 0.9
 SizeTier = 5.0
