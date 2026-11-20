@@ -67,6 +67,9 @@ public partial class UnitEditorPanel
         Number(nameof(Unit.FootprintRadius), "Diamond length input", () => Unit.FootprintRadius, v => Unit.FootprintRadius = v,
             0.001, 100, 0.001, " u", () => Unit.Shape == UnitShape.Diamond,
             "Legacy Diamond silhouette input. The collision radius is derived from the visible outline.", true);
+        Number(nameof(Unit.ArtilleryBarrelLengthMultiplier), "Artillery barrel length", () => Unit.ArtilleryBarrelLengthMultiplier,
+            v => Unit.ArtilleryBarrelLengthMultiplier = v, 0.5, 4, 0.1, "×", () => Unit.Shape == UnitShape.Chevron,
+            "Scales the barrel's forward length from the rear mount. The projectile muzzle and circular clearance follow the tip.");
 
         Section("Movement");
         Number(nameof(Unit.Speed), "Base speed", () => Unit.Speed, v => Unit.Speed = v, 0.001, 100, 0.001, " u/s", unbounded: true);

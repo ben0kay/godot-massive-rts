@@ -29,6 +29,11 @@ public partial class UnitDefinition : Resource
     // Serialized legacy input for Diamond mesh length. Collision uses the compiled outline.
     [Export] public float FootprintRadius { get; set; } = 0.57f;
 
+    [ExportGroup("Chevron artillery")]
+    // Multiplies barrel length from its fixed rear anchor; affects mesh, muzzle and clearance.
+    // Unchanged legacy art keeps the default value of one.
+    [Export(PropertyHint.Range, "0.5,4,0.1")] public float ArtilleryBarrelLengthMultiplier { get; set; } = 1f;
+
     [ExportGroup("Dreadnaught")]
     [Export] public float HullLength { get; set; } = 14f;
     [Export] public bool UseLegacyMiniguns { get; set; } = true;

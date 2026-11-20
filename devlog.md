@@ -427,3 +427,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Railgun Tower | Source implemented.** Converted the legacy laser tower to a three-second sweeping, piercing beam and added weapon-specific recoil for the rail barrel and individual rocket tubes. Preserved the tower resource path and save ID.
 
 - **2026-11-20 | Defense catalogue compile fix.** Passed the draft projectile catalogue when restoring Entity Editor test layouts and reused the compiled building catalogue on startup.
+
+- **2026-11-20 | Chevron Heavy Artillery Tier 3 | Source implemented, owner testing pending.** Increased size multiplier to 1.25×, changed physical SizeTier 2 → 3, reduced authored speed 1.5 → 1.2, raised HP 350 → 500. Added editable Chevron-only artillery barrel length multiplier set to 2.0×, compiled into shared UnitOutline so the beveled barrel, real projectile muzzle, editor preview and circular clearance all follow the same extended tip. Other artillery targeting, shell splash, recoil, damage and cadence unchanged. Updated Entity Editor and unit/rendering docs; no Godot runtime or FPS testing performed.

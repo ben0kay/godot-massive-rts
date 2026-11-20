@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false, bool IsDeepFork = false)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false, bool IsDeepFork = false, float ChevronBarrelScale = 1f)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -49,14 +49,15 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 
     public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
 
-    public float Footprint => IsDeepFork ? Mathf.Max(
+    public float Footprint => IsChevron ? Mathf.Max(RadiusX, BarrelFront) : IsDeepFork ? Mathf.Max(
         new Vector2(RadiusX * 0.82f, RadiusZ).Length(), new Vector2(RadiusX, RadiusZ * 0.72f).Length()) : IsDreadnaught ? 1f : IsDrillRig
         ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
         : IsPike ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.82f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
     public float BarrelWidth => RadiusX * 0.25f;
-    public float BarrelFront => RadiusZ;
     public float BarrelBack => RadiusZ * 0.38f;
+    public float BarrelFront => IsChevron
+        ? BarrelBack + (RadiusZ - BarrelBack) * ChevronBarrelScale : RadiusZ;
 
     public Vector2 Vertex(int index)
     {
@@ -84,7 +85,14 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         if (definition.Shape == UnitShape.Dreadnaught)
             return new UnitOutline(5, Mathf.Clamp(width, 2f, 20f) * size * 0.5f,
                 (float.IsFinite(definition.HullLength) ? Mathf.Clamp(definition.HullLength, 3f, 30f) : 14f) * size * 0.5f, 0f, IsDreadnaught: true);
-        return FromDimensions(definition.Shape, width * size, diamondLongRadius);
+        UnitOutline outline = FromDimensions(definition.Shape, width * size, diamondLongRadius);
+        if (outline.IsChevron)
+        {
+            float scale = float.IsFinite(definition.ArtilleryBarrelLengthMultiplier)
+                ? Mathf.Clamp(definition.ArtilleryBarrelLengthMultiplier, 0.5f, 4f) : 1f;
+            return outline with { ChevronBarrelScale = scale };
+        }
+        return outline;
     }
 
     private static UnitOutline FromDimensions(UnitShape shape, float width, float diamondLongRadius)

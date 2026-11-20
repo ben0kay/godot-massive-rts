@@ -18,7 +18,7 @@ Circle Infantry bypasses visual yaw interpolation and rotation calculations beca
 
 Ranged recoil applies a visual-only XZ displacement to the packed MultiMesh transform after normal pose interpolation. An active-ID feedback list marks only recoiling soldiers dirty during recovery. No changes to simulation positions or projectile origins.
 
-Heavy Artillery adds one shared beveled mesh containing the concave chevron and its centered barrel. Both pieces turn and recoil together in the same instance.
+Heavy Artillery adds one shared beveled mesh containing the concave chevron and its centered barrel. Both pieces turn and recoil together in the same instance. Its Tier 3 upgrade scales the hull by 1.25× and doubles the barrel length relative to the scaled hull; `UnitOutline.BarrelFront` drives both the baked barrel tip and the projectile muzzle. The derived separation footprint encloses the extended barrel.
 
 ## SHADOW1 — Ground shadows
 
