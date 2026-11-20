@@ -31,6 +31,12 @@ public partial class BenchmarkPanel : CanvasLayer
 	private readonly Label cameraRotationValue = new() { Text = "45° (original diagonal)" };
 	public bool SmoothMotion => smoothMotion.ButtonPressed;
 	private readonly OptionButton separationChoice = new();
+	private readonly HSlider strongOverlap = new()
+	{
+		MaxValue = SeparationSystem.MaxOverlapPercent, Step = 1, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+		TooltipText = "Overlap allowance for Strong separation, relative to the combined footprint radii."
+	};
+	internal float StrongOverlap => (float)strongOverlap.Value * 0.01f;
 	private readonly CheckButton alliedYield = new() { Text = "Allied archer yielding", ButtonPressed = true };
 	private readonly CheckButton meleeSidestep = new() { Text = "Melee sidestep", ButtonPressed = true };
 	private readonly CheckButton meleeHold = new() { Text = "Hold melee contact", ButtonPressed = true };
@@ -198,8 +204,19 @@ public partial class BenchmarkPanel : CanvasLayer
 		separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
 		separationChoice.AddItem("Hard (no overlap)", (int)SeparationMode.Hard);
 		separationChoice.Select(1);
-		separationChoice.ItemSelected += index => Separation = (SeparationMode)separationChoice.GetItemId((int)index);
 		Field(separation, "Separation mode", separationChoice);
+		var overlapControls = new HBoxContainer();
+		var overlapValue = new Label { Text = "0%", CustomMinimumSize = new Vector2(32f, 0f) };
+		overlapControls.AddChild(strongOverlap);
+		overlapControls.AddChild(overlapValue);
+		var overlapRow = Field(separation, "Strong overlap", overlapControls);
+		overlapRow.Hide();
+		strongOverlap.ValueChanged += value => overlapValue.Text = $"{value:0}%";
+		separationChoice.ItemSelected += index =>
+		{
+			Separation = (SeparationMode)separationChoice.GetItemId((int)index);
+			overlapRow.Visible = Separation == SeparationMode.Strong;
+		};
 		separation.AddChild(alliedYield);
 		separation.AddChild(meleeSidestep);
 		separation.AddChild(meleeHold);

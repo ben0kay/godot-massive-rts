@@ -846,8 +846,10 @@ public partial class BenchmarkArena : Node3D
             {
                 separation ??= new SeparationSystem(units.Position.Length);
                 separationPadding = separationPushPerStep;
-                separation.Step(units, separationMode == SeparationMode.Strong ? 2 : 1, Config.SeparationGap,
-                Config.SeparationNeighbourBudget, separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles, panel.WeightedSeparation);
+                bool strong = separationMode == SeparationMode.Strong;
+                separation.Step(units, strong ? 2 : 1, Config.SeparationGap, Config.SeparationNeighbourBudget,
+                    separationPadding, tick, movementFlags, alliedYieldSettings, trample, obstacles,
+                    panel.WeightedSeparation, overlap: strong ? panel.StrongOverlap : 0f);
             }
             separationMs += Elapsed(start);
         }
