@@ -294,18 +294,6 @@ public static class FacetedSoldierMeshes
             pose * (MountedRocket.Muzzle * 0.5f), new Color(0.77f, 0.77f, 0.77f), sideShade: SoldierSideShade, yaw: rotation);
     }
 
-    internal static Mesh CreateShieldShell(in UnitStats stats)
-    {
-        UnitOutline outline = stats.Outline;
-        float height = stats.Id == RuntimeUnitCatalog.MobileGeneratorId ? stats.Height * 1.56f : stats.Height;
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        UnitOutline? contour = outline.IsChevron || outline.IsDreadnaught || outline.IsDeepFork || outline.IsPike ? outline : null;
-        AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height,
-            outline.Rotation, Vector3.Up * ((height - stats.Height) * 0.5f), Colors.White, customOutline: contour);
-        return surface.Commit();
-    }
-
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
         UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,

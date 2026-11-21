@@ -400,7 +400,7 @@ public partial class ArmyRenderer : Node3D
             return;
         }
         if (shieldShells == null && (shields.ShieldedCount > 0 || shields.HasFlashes))
-            shieldShells = new ShieldShellRenderer(this, units, maxShieldShells);
+            shieldShells = new ShieldShellRenderer(this, units, batchShapes, maxShieldShells);
         if (shieldShells == null) return;
         long start = Stopwatch.GetTimestamp();
         shieldShells.Sync(shields, slots, buffers, InstanceStride);

@@ -449,3 +449,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — SHIELD1 — Enlarged shield shells slightly and increased cyan opacity at low charge so shields read at battlefield zoom. Source reviewed.
 
 - 2026-11-21 — SHIELD1 — Tinted shield shells and impact flashes from the faction palette and brightened the shell edges. Source reviewed.
+
+- 2026-11-21 — SHIELD1 — Replaced faceted shells with fitted round plasma bubbles in one shared MultiMesh. Added drifting faction-tinted rims. Source reviewed.
