@@ -20,7 +20,7 @@ public sealed class ObstacleNavigation
         public float Stop;
         public bool Valid, Clear, HasMargin;
     }
-    private readonly record struct RouteKey(Vector2I From, Vector2I To, byte Type, bool Fine);
+    private readonly record struct RouteKey(Vector2I From, Vector2I To, byte Type, int Detail, int Soldier);
     private readonly record struct Request(RouteKey Key, Vector2 Start, Vector2 Goal, float Stop, int Frame);
     private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, float Stop, int Frame);
     private struct Follower
@@ -145,11 +145,11 @@ public sealed class ObstacleNavigation
         }
         follower = default;
 
-        for (int detail = 0; detail < 2; detail++)
+        for (int detail = 0; detail < 3; detail++)
         {
-            bool fine = detail != 0;
-            float cell = fine ? 0.5f : sectorSize;
-            var key = new RouteKey(Sector(start, cell), Sector(goal, cell), type, fine);
+            bool individual = detail == 2;
+            float cell = detail == 0 ? sectorSize : 0.5f;
+            var key = new RouteKey(Sector(start, cell), Sector(goal, cell), type, detail, individual ? id : -1);
             if (routes.TryGetValue(key, out Route route))
             {
                 Vector2[] points = route.Points;
@@ -168,7 +168,9 @@ public sealed class ObstacleNavigation
                         return points[next];
                     }
                 }
-                if (!fine) continue;
+                // Even a half-unit sector can straddle a rock corner or shoreline.
+                // An unusable shared result must not freeze another soldier in that sector.
+                if (!individual) continue;
                 if (frame - route.Frame < RetryFrames ||
                     (start.DistanceSquaredTo(route.Start) < 0.0064f && goal.DistanceSquaredTo(route.Goal) < 0.0064f &&
                     Mathf.Abs(stop - route.Stop) < 0.08f))

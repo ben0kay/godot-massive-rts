@@ -457,3 +457,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — BENCH0 — Added playtest orthographic tilt and perspective free roam with right-drag look and keyboard flight. Source reviewed.
 
 - 2026-11-21 — NAV — Use movement obstacles for melee contact across painted water so units can pursue a route around the bank. Projectile sight retains its existing rules. Source reviewed.
+
+- 2026-11-21 — NAV — Fall back to a budgeted individual route when both shared route resolutions are unusable, avoiding permanent shared-cache stalls at obstacle corners. Source reviewed.
