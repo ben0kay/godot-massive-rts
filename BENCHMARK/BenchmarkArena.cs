@@ -154,6 +154,12 @@ public partial class BenchmarkArena : Node3D
         weather = new BattlefieldWeather(camera);
         panel.WeatherChanged += weather.Configure;
         panel.CameraRotationChanged += camera.SetYawDegrees;
+        panel.CameraTiltChanged += camera.SetTiltDegrees;
+        panel.CameraFreeRoamChanged += enabled =>
+        {
+            painter?.CancelDrag();
+            camera.SetFreeRoam(enabled);
+        };
         attackRanges = new AttackRangeOverlay();
         AddChild(attackRanges);
         shieldRanges = new AttackRangeOverlay();

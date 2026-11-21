@@ -115,6 +115,8 @@ public partial class DeploymentPainter : Node3D
     public override void _UnhandledInput(InputEvent input)
     {
         if (!Visible) return;
+        if (Camera is IsometricCamera { FreeRoam: true } &&
+            input is InputEventMouseButton { ButtonIndex: MouseButton.Right }) return;
         if (paintTool == 2)
         {
             HandleDefenseInput(input);

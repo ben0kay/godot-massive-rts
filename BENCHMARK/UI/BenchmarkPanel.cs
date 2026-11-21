@@ -11,6 +11,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly LineEdit PresetName = new() { PlaceholderText = "Name this battle", MaxLength = 48 };
 	public event Action PaintRequested, BattleRequested, SaveRequested, LoadRequested;
 	public event Action<float> CameraRotationChanged;
+	public event Action<float> CameraTiltChanged;
+	public event Action<bool> CameraFreeRoamChanged;
 	public event Action<bool> GroundShadowsChanged;
 	public event Action<bool> PlacementGridChanged;
 	public event Action<long> PaintToolSelected;
@@ -188,18 +190,45 @@ public partial class BenchmarkPanel : CanvasLayer
 		}
 
 		var cameraControls = Section(column, "Camera", true, out _);
+		var freeRoam = new CheckButton { Text = "Perspective free roam" };
+		cameraControls.AddChild(freeRoam);
+		var orbitControls = new VBoxContainer();
+		cameraControls.AddChild(orbitControls);
 		cameraRotation.TooltipText = "0° = straight, 45° = original diagonal view";
 		cameraRotationValue.Text = "45°";
 		cameraRotationValue.CustomMinimumSize = new Vector2(46f, 0f);
 		cameraRotationValue.HorizontalAlignment = HorizontalAlignment.Right;
-		var rotationRow = Field(cameraControls, "Camera yaw", cameraRotation);
+		var rotationRow = Field(orbitControls, "Camera yaw", cameraRotation);
 		rotationRow.AddChild(cameraRotationValue);
 		cameraRotation.ValueChanged += degrees =>
 		{
 			cameraRotationValue.Text = $"{degrees:0}°";
 			CameraRotationChanged?.Invoke((float)degrees);
 		};
-		AddButton(cameraControls, "Reset camera rotation (45°)", () => cameraRotation.Value = 45);
+		var tilt = new HSlider { MinValue = 15, MaxValue = 85, Step = 0.1, Value = IsometricCamera.DefaultTilt,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		var tiltValue = new Label { Text = $"{tilt.Value:0.#}°", CustomMinimumSize = new Vector2(46f, 0f),
+			HorizontalAlignment = HorizontalAlignment.Right };
+		Field(orbitControls, "Camera tilt", tilt).AddChild(tiltValue);
+		tilt.ValueChanged += degrees =>
+		{
+			tiltValue.Text = $"{degrees:0.#}°";
+			CameraTiltChanged?.Invoke((float)degrees);
+		};
+		AddButton(orbitControls, "Reset yaw and tilt", () =>
+		{
+			cameraRotation.Value = 45;
+			tilt.Value = IsometricCamera.DefaultTilt;
+		});
+		var flyHelp = new Label { Text = "Arrows / WASD to fly · Hold right-click to look\nE / Q to rise or descend · Shift to speed up",
+			AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
+		cameraControls.AddChild(flyHelp);
+		freeRoam.Toggled += enabled =>
+		{
+			orbitControls.Visible = !enabled;
+			flyHelp.Visible = enabled;
+			CameraFreeRoamChanged?.Invoke(enabled);
+		};
 
 		var combat = Section(column, "Live combat", false, out _);
 		FireRate.TooltipText = "Live multiplier applied to ranged attacks";

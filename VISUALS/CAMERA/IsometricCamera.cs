@@ -1,9 +1,15 @@
-// Orthographic camera with adjustable battlefield yaw, screen-relative pan and wheel zoom.
+// Orthographic orbit with screen-relative pan and an optional perspective fly camera.
 using Godot;
 namespace MassiveRts;
 
 public partial class IsometricCamera : Camera3D
 {
+    internal static readonly float DefaultTilt = Mathf.RadToDeg(Mathf.Atan2(850f, 989.9495f));
+    private float tiltDegrees = DefaultTilt;
+    private bool looking;
+    private Input.MouseModeEnum previousMouseMode;
+    internal bool FreeRoam { get; private set; }
+
     private Vector3 focus = Vector3.Zero;
     private Vector3 velocity;
     private float targetSize = 180;
@@ -33,9 +39,74 @@ public partial class IsometricCamera : Camera3D
         float sine = Mathf.Sin(radians), cosine = Mathf.Cos(radians);
         screenRight = new Vector3(cosine, 0f, -sine);
         screenBack = new Vector3(sine, 0f, cosine);
-        // Original offset was (700, 850, 700); preserve radius and viewing pitch.
-        orbitOffset = screenBack * 989.9495f + Vector3.Up * 850f;
-        Reposition();
+        UpdateOrbit();
+    }
+
+    internal void SetTiltDegrees(float degrees)
+    {
+        if (!float.IsFinite(degrees)) return;
+        tiltDegrees = Mathf.Clamp(degrees, 15f, 85f);
+        UpdateOrbit();
+    }
+
+    private void UpdateOrbit()
+    {
+        float radians = Mathf.DegToRad(tiltDegrees);
+        const float distance = 1304.7988f;
+        orbitOffset = distance * (screenBack * Mathf.Cos(radians) + Vector3.Up * Mathf.Sin(radians));
+        if (!FreeRoam) Reposition();
+    }
+
+    internal void SetFreeRoam(bool enabled)
+    {
+        if (FreeRoam == enabled) return;
+        FreeRoam = enabled;
+        velocity = Vector3.Zero;
+        if (enabled)
+        {
+            float distance = Size * 0.5f / Mathf.Tan(Mathf.DegToRad(Fov * 0.5f));
+            Position = focus + Basis.Z * distance;
+            Projection = ProjectionType.Perspective;
+        }
+        else
+        {
+            ReleaseLook();
+            Projection = ProjectionType.Orthogonal;
+            Size = targetSize;
+            Reposition();
+        }
+    }
+
+    private void ReleaseLook()
+    {
+        if (!looking) return;
+        looking = false;
+        Input.MouseMode = previousMouseMode;
+    }
+
+    public override void _ExitTree() => ReleaseLook();
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationApplicationFocusOut) ReleaseLook();
+    }
+
+    public override void _Input(InputEvent input)
+    {
+        if (!looking) return;
+        if (input is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: false })
+        {
+            ReleaseLook();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (input is InputEventMouseMotion motion)
+        {
+            const float sensitivity = 0.003f;
+            Rotation = new Vector3(
+                Mathf.Clamp(Rotation.X - motion.Relative.Y * sensitivity, -1.55f, 1.55f),
+                Rotation.Y - motion.Relative.X * sensitivity, 0f);
+            GetViewport().SetInputAsHandled();
+        }
     }
     // =========================================================
     public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, Mathf.Min(1800f, MaximumZoomSize)); }
@@ -51,6 +122,17 @@ public partial class IsometricCamera : Camera3D
 
     public override void _UnhandledInput(InputEvent input)
     {
+        if (FreeRoam)
+        {
+            if (input is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true })
+            {
+                previousMouseMode = Input.MouseMode;
+                Input.MouseMode = Input.MouseModeEnum.Captured;
+                looking = true;
+                GetViewport().SetInputAsHandled();
+            }
+            return;
+        }
         if (MapOverviewEnabled && input is InputEventKey key && key.Pressed && !key.Echo && key.PhysicalKeycode == Key.Home)
         {
             focus = velocity = Vector3.Zero;
@@ -75,6 +157,16 @@ public partial class IsometricCamera : Camera3D
             (Input.IsPhysicalKeyPressed(Key.S) ? 1 : 0) - (Input.IsPhysicalKeyPressed(Key.W) ? 1 : 0));
         bool focused = SuspendPanWhileEditingText && GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit or Button;
         Vector2 input = focused ? (ArrowsAlwaysPan ? arrows : Vector2.Zero) : (arrows + letters).Clamp(-Vector2.One, Vector2.One);
+        if (FreeRoam)
+        {
+            if (GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
+            float climb = (Input.IsPhysicalKeyPressed(Key.E) ? 1f : 0f) - (Input.IsPhysicalKeyPressed(Key.Q) ? 1f : 0f);
+            Vector3 direction = Basis.X * input.X + Basis.Z * input.Y + Vector3.Up * climb;
+            float speed = Mathf.Clamp(Size * 0.5f, 12f, 160f);
+            if (Input.IsPhysicalKeyPressed(Key.Shift)) speed *= 3f;
+            Position += direction.LimitLength() * speed * dt;
+            return;
+        }
         Vector3 desired = (screenRight * input.X + screenBack * input.Y).LimitLength() * Size;
         velocity = velocity.Lerp(desired, 1 - Mathf.Exp(-10 * dt)); focus += velocity * dt;
         Size = Mathf.Lerp(Size, targetSize, 1 - Mathf.Exp(-10 * dt)); Reposition();

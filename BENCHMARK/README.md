@@ -245,3 +245,5 @@ Open **Weather** in the left panel of Benchmark or the Level Editor's Auto Battl
 ### Shield diagnostics
 
 Open **Shields** in the left panel to toggle gameplay shields, shells and generator radii or to adjust the coverage interval. See the [shield system](../GAMEPLAY/SHIELDS/README.md) for tuning and the CPU panel metrics.
+
+The playtest **Camera** panel has yaw and tilt controls for the default orthographic view. Turn on **Perspective free roam** to fly with arrows or WASD, hold right-click to look, use E/Q to rise or descend, and hold Shift to fly faster. Turning free roam off returns to the saved orthographic framing. Use the orthographic mode for right-click terrain or deployment erasing in the playtest painter.

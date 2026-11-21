@@ -453,3 +453,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — SHIELD1 — Replaced faceted shells with fitted round plasma bubbles in one shared MultiMesh. Added drifting faction-tinted rims. Source reviewed.
 
 - 2026-11-21 — LEVEL-EDITOR — Added absolute Set Height painting with adaptive curved transitions, finer manual strength steps, and per-click undo. Source and falloff reviewed.
+
+- 2026-11-21 — BENCH0 — Added playtest orthographic tilt and perspective free roam with right-drag look and keyboard flight. Source reviewed.
