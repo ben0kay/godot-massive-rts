@@ -136,7 +136,7 @@ public partial class BenchmarkArena : Node3D
         for (int i = 0; i < catalog.Count; i++)
         {
             ref readonly UnitStats type = ref catalog[i];
-            if (type.Id != RuntimeUnitCatalog.MobileGeneratorId && !type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
+            if (!type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
         }
         Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
         alliedYieldSettings = new AlliedYieldSettings(
