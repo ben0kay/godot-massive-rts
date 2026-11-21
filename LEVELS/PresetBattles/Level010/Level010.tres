@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3]
+
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_qnjs1"]
+
+[resource]
+script = ExtResource("1_qnjs1")
+Id = "Level010"
+DisplayName = "Level010"
+Order = 3
+ScenePath = "res://LEVELS/PresetBattles/Level010/Level010.tscn"
+MapSize = 256.0

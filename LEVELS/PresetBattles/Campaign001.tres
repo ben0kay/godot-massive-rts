@@ -1,12 +1,13 @@
 [gd_resource type="Resource" script_class="CampaignDefinition" format=3]
 
-[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_dm7q7"]
-[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Level001/Level001.tres" id="2_qh5qm"]
-[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Level002/Level002.tres" id="3_4oah7"]
-[ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="4_7lfic"]
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_wnkjq"]
+[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Level001/Level001.tres" id="2_u6acm"]
+[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Level002/Level002.tres" id="3_j46p3"]
+[ext_resource type="Resource" path="res://LEVELS/PresetBattles/Level010/Level010.tres" id="4_n2yvy"]
+[ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="5_7sdpp"]
 
 [resource]
-script = ExtResource("4_7lfic")
+script = ExtResource("5_7sdpp")
 Id = "Campaign001"
 DisplayName = "Preset Battles"
-Levels = Array[ExtResource("1_dm7q7")]([ExtResource("2_qh5qm"), ExtResource("3_4oah7")])
+Levels = Array[ExtResource("1_wnkjq")]([ExtResource("2_u6acm"), ExtResource("3_j46p3"), ExtResource("4_n2yvy")])
