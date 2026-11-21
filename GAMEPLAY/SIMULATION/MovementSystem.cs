@@ -64,9 +64,11 @@ public static class MovementSystem
                 float distanceSquared = offset.LengthSquared();
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
                 float sightRange = steerMelee ? reach + 0.075f : reach;
-                bool blockedInRange = sight != null && distanceSquared <= sightRange * sightRange &&
+                // Water is transparent to projectile sight but still separates melee targets.
+                var attackSight = type.Ranged ? sight : obstacles ?? sight;
+                bool blockedInRange = attackSight != null && distanceSquared <= sightRange * sightRange &&
                     (type.DirectFire(units.Catalog.Projectiles)) &&
-                    sight.BlocksSight(units.Position[i], destination);
+                    attackSight.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
                 bool holding = false;
                 if (steerMelee)

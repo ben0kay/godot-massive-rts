@@ -455,3 +455,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — LEVEL-EDITOR — Added absolute Set Height painting with adaptive curved transitions, finer manual strength steps, and per-click undo. Source and falloff reviewed.
 
 - 2026-11-21 — BENCH0 — Added playtest orthographic tilt and perspective free roam with right-drag look and keyboard flight. Source reviewed.
+
+- 2026-11-21 — NAV — Use movement obstacles for melee contact across painted water so units can pursue a route around the bank. Projectile sight retains its existing rules. Source reviewed.

@@ -150,7 +150,8 @@ public static class CombatSystem
 
     // =========================================================
     internal static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
-        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null, bool useDreadnaughtContact = false, CommandMovement commands = null)
+        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null, bool useDreadnaughtContact = false, CommandMovement commands = null,
+        ObstacleField meleeObstacles = null)
     {
         var turnSteps = units.TurnSteps(dt);
         bool visualsChanged = false;
@@ -189,9 +190,9 @@ public static class CombatSystem
             else if (offset.LengthSquared() > radius * radius) continue;
             if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
                 type.MinimumFireRange * type.MinimumFireRange) continue;
-            if (obstacles != null &&
-                (type.DirectFire(units.Catalog.Projectiles)) &&
-                obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
+            var attackSight = type.Ranged ? obstacles : meleeObstacles ?? obstacles;
+            if (attackSight != null && type.DirectFire(units.Catalog.Projectiles) &&
+                attackSight.BlocksSight(units.Position[i], units.Position[target])) continue;
             Vector2 facing = units.Facing[i];
             if (!type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled))
             {
@@ -233,7 +234,7 @@ public static class CombatSystem
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
-                AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.MaximumTravelSpeed * dt + separationPadding, obstacles);
+                AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.MaximumTravelSpeed * dt + separationPadding, attackSight);
             else
             {
                 float damage = type.AgainstUnits(type.Damage);
