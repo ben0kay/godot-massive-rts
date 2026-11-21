@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught, DeepFork }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught, DeepFork, Prism }
 [System.Flags]
 public enum TargetCategory { None = 0, Units = 1, Structures = 2, Both = Units | Structures }
 public enum TargetPreference { Units, Structures }
@@ -28,6 +28,13 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "1,5,0.5,or_greater")] public float SizeTier { get; set; } = 1f;
     // Serialized legacy input for Diamond mesh length. Collision uses the compiled outline.
     [Export] public float FootprintRadius { get; set; } = 0.57f;
+
+    [ExportGroup("Prism Beam")]
+    [Export] public bool PrismBeamEnabled { get; set; }
+    [Export] public float PrismChargeSeconds { get; set; } = 3f;
+    [Export] public float PrismBeamRadius { get; set; } = 0.25f;
+    [Export] public int PrismMaxHits { get; set; } = 24;
+    [Export] public float PrismFlashSeconds { get; set; } = 0.18f;
 
     [ExportGroup("Chevron artillery")]
     // Multiplies barrel length from its fixed rear anchor; affects mesh, muzzle and clearance.

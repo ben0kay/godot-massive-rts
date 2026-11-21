@@ -95,6 +95,14 @@ public static class FacetedSoldierMeshes
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
             Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught || outline.IsDeepFork ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
+        if (unit.Shape == UnitShape.Prism)
+        {
+            for (int side = -1; side <= 1; side += 2)
+                AppendBeveledRectangle(surface, new Vector3(side * outline.RadiusX * 0.44f, height * 0.50f, -outline.RadiusZ * 0.10f),
+                    new Vector3(outline.RadiusX * 0.38f, height * 0.34f, outline.RadiusZ * 1.25f), new Color(0.77f, 0.92f, 1f));
+            AppendBeveledRectangle(surface, new Vector3(0f, height * 0.35f, -outline.RadiusZ * 0.82f),
+                new Vector3(outline.RadiusX * 0.40f, height * 0.30f, outline.RadiusZ * 0.20f), new Color(0.70f, 0.96f, 1f));
+        }
         if (outline.IsDreadnaught)
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)

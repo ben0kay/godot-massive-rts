@@ -77,10 +77,43 @@ public sealed class UnitState
         return 1f - amount * cap;
     }
 
+    private float[] prismCharge;
+    private int[] chargingIds, chargingSlots;
+    internal int ChargingCount { get; private set; }
+    internal int ChargingId(int slot) => chargingIds[slot];
+    internal float PrismCharge(int id) => prismCharge?[id] ?? 0f;
+
+    internal bool SetPrismCharge(int id, float seconds)
+    {
+        if (PrismCharge(id) == seconds) return false;
+        if (prismCharge == null)
+        {
+            prismCharge = new float[Health.Length];
+            chargingIds = new int[Health.Length];
+            chargingSlots = new int[Health.Length];
+        }
+        if (seconds == 0f)
+        {
+            int slot = chargingSlots[id];
+            int moved = chargingIds[--ChargingCount];
+            chargingIds[slot] = moved;
+            chargingSlots[moved] = slot;
+        }
+        else if (prismCharge[id] == 0f)
+        {
+            chargingSlots[id] = ChargingCount;
+            chargingIds[ChargingCount++] = id;
+        }
+        prismCharge[id] = seconds;
+        return Dirty[id] = true;
+    }
+
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
     internal bool HasStructureAttackers { get; private set; }
     internal bool HasMeleeLunge { get; private set; }
+    private int prismAlive;
+    internal bool HasPrism => prismAlive > 0;
 
     // Appends a stable soldier ID when the preallocated state has room.
     public int TrySpawn(byte type, byte faction, Vector3 position)
@@ -111,6 +144,7 @@ public sealed class UnitState
         if (Catalog.PrimaryRockets(type).Length > 1) nextRocketMount ??= new int[Health.Length];
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
+        if (stats.PrismBeam.Enabled) prismAlive++;
         MaxFootprint = Mathf.Max(MaxFootprint, stats.Footprint);
     }
     public RuntimeUnitCatalog Catalog { get; }
@@ -165,6 +199,11 @@ public sealed class UnitState
     {
         FactionAlive[Faction[id]]--;
         Alive--;
+        if (Catalog[Type[id]].PrismBeam.Enabled)
+        {
+            prismAlive--;
+            SetPrismCharge(id, 0f);
+        }
         DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id], Catalog[Type[id]], Grounding?.Field);
         Dirty[id] = true;
     }

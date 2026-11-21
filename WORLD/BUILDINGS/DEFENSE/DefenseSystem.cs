@@ -199,10 +199,7 @@ internal sealed class DefenseSystem
         float length = Mathf.Max(0f, tower.Stats.MaximumRange - (from - tower.Pivot).Dot(forward));
         Vector3 segment = (forward + Vector3.Up * tower.BeamSlope) * length;
         float end = obstacles?.FirstSightHitExcept(from, segment, tower.Footprint) ?? 1f;
-        var terrain = units.Grounding?.Field;
-        if (terrain != null) end = Mathf.Min(end, terrain.SurfaceHit(from, segment, end));
-        else if (segment.Y < 0f && from.Y + segment.Y < 0f)
-            end = Mathf.Min(end, Mathf.Clamp(-from.Y / segment.Y, 0f, 1f));
+        end = PiercingBeam.ClipTerrain(units.Grounding?.Field, from, segment, end);
         segment *= end;
         renderer.ShowBeam(index, from, from + segment, tower.Faction);
 
@@ -218,19 +215,8 @@ internal sealed class DefenseSystem
             int id = candidates.Current;
             if (units.Health[id] <= 0f) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
-            Vector3 offset = units.Position[id] - from;
-            Vector2 cross = ObstacleField.Xz(offset);
-            float projection = cross.Dot(along);
-            float perpendicular = cross.X * along.Y - cross.Y * along.X;
-            float radius = type.Footprint + beamRadius;
-            float chord = radius * radius - perpendicular * perpendicular;
-            if (chord < 0f) continue;
-            float half = Mathf.Sqrt(chord);
-            float enter = Mathf.Max(0f, projection - half), exit = Mathf.Min(reach, projection + half);
-            if (enter > exit) continue;
-            float a = enter * slope, b = exit * slope;
-            if (Mathf.Max(a, b) + beamRadius < offset.Y || Mathf.Min(a, b) - beamRadius > offset.Y + type.Height)
-                continue;
+            if (!PiercingBeam.Intersect(units.Position[id] - from, along, reach, slope,
+                type.Footprint, type.Height, beamRadius, out _)) continue;
             units.Damage(id, damage, tower.Stats.DamageType);
         }
     }

@@ -156,14 +156,18 @@ internal sealed class FortressWaves
             // Allow structure engagements and in-flight shots even between waves.
             var idleField = buildings.CoverField;
             bool engageStructures = units.HasStructureAttackers;
-            if (engageStructures) AcquireDefenderTargets(idleField, structuresOnly: true);
+            bool engagePrism = units.HasPrism && units.FactionAlive[Factions.Red] > 0;
+            if (engagePrism) RebuildGrid();
+            if (engageStructures || engagePrism) AcquireDefenderTargets(idleField, structuresOnly: true);
             bool idleMoved = MoveAndSeparate(delta);
-            bool lungeChanged = false;
+            bool attackVisualsChanged = false;
             int before = units.Alive;
-            if (engageStructures)
+            if (engageStructures || units.HasPrism)
             {
-                lungeChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: idleField);
-                AttackStructures(delta, idleField, Factions.Blue);
+                if (engagePrism && idleMoved) RebuildGrid();
+                attackVisualsChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
+                    obstacles: idleField, commands: movement);
+                if (engageStructures) AttackStructures(delta, idleField, Factions.Blue);
             }
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
             if (Projectiles.Count > 0 || towerTargets) RebuildGrid();
@@ -175,7 +179,7 @@ internal sealed class FortressWaves
                 Countdown = Mathf.Max(0, Countdown - delta);
                 if (Countdown == 0) BeginNext();
             }
-            return idleMoved || lungeChanged || structureVisualChanged || units.Alive != before;
+            return idleMoved || attackVisualsChanged || structureVisualChanged || units.Alive != before;
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
@@ -196,7 +200,7 @@ internal sealed class FortressWaves
         {
             int id = enemies[i];
             if (units.Health[id] <= 0 || units.Target[id] < 0 ||
-                units.Catalog[units.Type[id]].TargetsStructures) continue;
+                (units.Catalog[units.Type[id]].TargetsStructures || units.Catalog[units.Type[id]].PrismBeam.Enabled)) continue;
             Vector2 position = ObstacleField.Xz(units.Position[id]);
             float radius = Detection(id, units.Catalog[units.Type[id]]);
             int target = units.Target[id];
@@ -205,7 +209,8 @@ internal sealed class FortressWaves
                 units.Position[id].DistanceSquaredTo(units.Position[target]) > radius * radius)
                 units.Target[id] = -1;
         }
-        CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap, obstacles: field);
+        bool weaponChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
+            obstacles: field, commands: movement);
 
         if (units.HasStructureAttackers) AttackStructures(delta, field, Factions.Blue);
         for (int i = 0; i < enemyCount && !Defeat; i++)
@@ -226,7 +231,7 @@ internal sealed class FortressWaves
         }
 
         // Shared combat can turn a soldier even when no one moves or dies.
-        return moved || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
+        return moved || weaponChanged || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
     }
 
     private void TryRelease(float delta)
@@ -306,8 +311,7 @@ internal sealed class FortressWaves
         type.Ranged ? units.RangedReach(id, type) : Mathf.Max(combat.CellSize * 2f, type.MeleeDetectionReach + units.MaxFootprint);
 
     private ObstacleField Sight(in UnitStats type, ObstacleField field) =>
-        !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
-            ObstacleFireMode.RequiresDirectLineOfSight ? field : null;
+        type.DirectFire(units.Catalog.Projectiles) ? field : null;
 
     private void AttackStructures(float delta, ObstacleField field, byte faction)
     {
@@ -336,12 +340,13 @@ internal sealed class FortressWaves
         {
             if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
-            if (structuresOnly && !type.TargetsStructures) continue;
+            bool onlyStructures = structuresOnly && !type.PrismBeam.Enabled;
+            if (onlyStructures && !type.TargetsStructures) continue;
             bool attackMove = movement.IsAttackMove(id);
             bool canPursue = !type.Ranged && (!movement.HasCommand(id) || attackMove);
             float range = type.Ranged ? units.RangedReach(id, type) : canPursue ? Detection(id, type) * DefenderMeleeDetectionMultiplier :
                 type.MeleeAttackRadius + units.MaxFootprint + SeparationGap + CombatSystem.MeleeContactTolerance;
-            int target = structuresOnly ? -1 : units.Target[id];
+            int target = onlyStructures ? -1 : units.Target[id];
             Vector3 position = units.Position[id];
             var sight = Sight(type, field);
             if (attackMove && target >= 0 &&
@@ -351,7 +356,7 @@ internal sealed class FortressWaves
                 target = -1;
 
             bool refresh = id % AcquisitionInterval == tick % AcquisitionInterval;
-            if (!structuresOnly && (!attackMove || target < 0) && refresh)
+            if (!onlyStructures && (!attackMove || target < 0 || type.PrismBeam.Enabled) && refresh)
                 target = grid.FindEnemy(units, id, range, combat.QueryCandidateLimit, tick, sight,
                     minimumRange: type.MinimumFireRange,
                     meleeReachPadding: type.Ranged || canPursue ? -1f : SeparationGap + CombatSystem.MeleeContactTolerance);
@@ -403,13 +408,13 @@ internal sealed class FortressWaves
         float detect = Detection(id, type);
         int target = units.Target[id];
         bool refresh = id % AcquisitionInterval == tick % AcquisitionInterval;
-        if (!type.TargetsStructures && p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
+        if (!type.TargetsStructures && !type.PrismBeam.Enabled && p.DistanceSquaredTo(edge) <= detect * detect) target = -1;
         else
         {
             if (target >= 0 && (units.Health[target] <= 0 ||
                 units.Position[id].DistanceSquaredTo(units.Position[target]) > detect * detect)) target = -1;
-            if (target < 0 && refresh)
-                target = grid.FindEnemy(units, id, detect, combat.QueryCandidateLimit, tick, Sight(type, field));
+            if ((target < 0 || type.PrismBeam.Enabled) && refresh)
+                target = grid.FindEnemy(units, id, detect, combat.QueryCandidateLimit, tick, Sight(type, field), minimumRange: type.PrismBeam.Enabled ? type.MinimumFireRange : 0f);
         }
 
         if (type.TargetsStructures)
@@ -432,7 +437,7 @@ internal sealed class FortressWaves
                 CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, SeparationGap);
             Vector2 offset = p - defender;
             float distance = offset.Length();
-            if (distance <= range && distance >= type.MinimumFireRange)
+            if (distance <= (type.PrismBeam.Enabled ? units.RangedReach(id, type) : range) && distance >= type.MinimumFireRange)
             {
                 movement.SetGoal(id, units.Position[id]);
                 return;
@@ -534,7 +539,7 @@ internal sealed class FortressWaves
             return;
         }
 
-        if (units.Cooldown[id] > 0 || distance > units.RangedReach(id, type) || distance < type.MinimumFireRange ||
+        if (type.PrismBeam.Enabled || units.Cooldown[id] > 0 || distance > units.RangedReach(id, type) || distance < type.MinimumFireRange ||
             Sight(type, field)?.BlocksSightExcept(Ground(from), Ground(edge), buildings.Citadel.Area) == true) return;
         if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f)) return;
         Vector3 aim = Ground(edge) + Vector3.Up * 1.5f;

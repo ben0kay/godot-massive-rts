@@ -65,7 +65,7 @@ public static class MovementSystem
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
                 float sightRange = steerMelee ? reach + 0.075f : reach;
                 bool blockedInRange = sight != null && distanceSquared <= sightRange * sightRange &&
-                    (!type.Ranged || catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
+                    (type.DirectFire(units.Catalog.Projectiles)) &&
                     sight.BlocksSight(units.Position[i], destination);
                 hasClearShot = inRange && !blockedInRange;
                 bool holding = false;
@@ -77,6 +77,11 @@ public static class MovementSystem
                     if (sample) profile.HoldTicks += Stopwatch.GetTimestamp() - start;
                 }
                 if (holding)
+                {
+                    units.MoveSpeed[i] = 0f;
+                    continue;
+                }
+                if (type.PrismBeam.Enabled && rangedCombat && hasClearShot && units.PrismCharge(i) > 0f)
                 {
                     units.MoveSpeed[i] = 0f;
                     continue;

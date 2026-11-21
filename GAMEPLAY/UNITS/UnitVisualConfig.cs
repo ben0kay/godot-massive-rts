@@ -12,6 +12,8 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
 
+    [Export(PropertyHint.Range, "0,512,1")] public int MaxPrismBeamEffects { get; set; } = 128;
+
     [ExportGroup("Unit Fracture (FX2)")]
     [Export] public bool UseUnitFracture { get; set; }
     [Export(PropertyHint.Range, "0,1,0.01")] public float FirstCrackHealth { get; set; } = 0.75f;

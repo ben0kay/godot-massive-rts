@@ -18,6 +18,9 @@ public sealed class ProjectileSystem
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
     internal event System.Action<Vector3, int> ShotLaunched;
+    internal event System.Action<Vector3, Vector3, byte, float> PrismBeamFired;
+    internal void EmitPrismBeam(Vector3 from, Vector3 to, byte faction, float seconds) =>
+        PrismBeamFired?.Invoke(from, to, faction, seconds);
     // Visuals read the source team without exposing mutable projectile pool arrays.
     public byte FactionAt(int index) => sourceFaction[index];
 

@@ -171,7 +171,8 @@ public partial class CommandSandbox : Node3D
             ?? new HitFeedbackSettings();
         var unitVisuals = UnitVisualConfig.Load();
         deathFeedback = new DeathFeedbackSystem(unitVisuals);
-        units = new UnitState(capacity, catalog, new HitFeedbackSystem(capacity, hitSettings), terrain)
+        units = new UnitState(capacity, catalog, new HitFeedbackSystem(capacity, hitSettings), terrain,
+            catalog.HasRangedRecoil ? new RangedRecoilSystem(capacity) : null)
         {
             DeathFeedback = deathFeedback
         };
@@ -415,9 +416,14 @@ public partial class CommandSandbox : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (units == null) return;
-        projectileRenderer.AdvanceSmoke((float)delta);
+        projectileRenderer.AdvanceEffects((float)delta);
         impactRings.Advance((float)delta);
         bool feedbackChanged = units.HitFeedback.Advance(units, (float)delta);
+        if (units.RangedRecoil?.Active == true)
+        {
+            units.RangedRecoil.Advance(units, (float)delta);
+            feedbackChanged = true;
+        }
         if (waves.Defeat || waves.Victory)
         {
             buildings.FinishDefenseEffects((float)delta);

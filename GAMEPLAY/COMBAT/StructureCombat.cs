@@ -53,8 +53,7 @@ internal sealed class StructureCombat
     public Vector3 ApproachGoal(int id) => approachGoals[id];
 
     public static ObstacleField Sight(in UnitStats type, UnitState units, ObstacleField field) =>
-        !type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire ==
-            ObstacleFireMode.RequiresDirectLineOfSight ? field : null;
+        type.DirectFire(units.Catalog.Projectiles) ? field : null;
 
     public static Vector2 Edge(ObstacleRectangle area, Vector2 position) => position.Max(area.Min).Min(area.Max);
 

@@ -15,10 +15,15 @@ public partial class ProjectileRenderer : Node3D
     private MuzzleSmoke smoke;
     private ProjectileSystem smokeSource;
     private ProjectileCatalog smokeCatalog;
+    private ProjectileSystem beamSource;
+    private PrismBeamEffects prismBeams;
+    private int prismEffectCap = -1;
 
     public void Initialize(int maximum, ProjectileCatalog catalog, ProjectileSystem projectiles, Vector2 smokeWind)
     {
         capacity = maximum;
+        beamSource = projectiles;
+        beamSource.PrismBeamFired += OnPrismBeam;
         var visuals = catalog.HasLaunchEffects ? GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath) : null;
         if (visuals?.UseProjectileLaunchEffects == true)
         {
@@ -59,11 +64,24 @@ public partial class ProjectileRenderer : Node3D
         if (smokeCatalog.UsesLaunchEffects(projectileType)) smoke.Emit(muzzle);
     }
 
-    internal void AdvanceSmoke(float delta) => smoke?.Advance(delta);
+    private void OnPrismBeam(Vector3 from, Vector3 to, byte faction, float seconds)
+    {
+        if (prismEffectCap < 0) prismEffectCap = Mathf.Clamp(UnitVisualConfig.Load().MaxPrismBeamEffects, 0, 512);
+        if (prismEffectCap == 0) return;
+        prismBeams ??= new PrismBeamEffects(this, prismEffectCap);
+        prismBeams.Emit(from, to, faction, seconds);
+    }
+
+    internal void AdvanceEffects(float delta)
+    {
+        smoke?.Advance(delta);
+        prismBeams?.Advance(delta);
+    }
 
     public override void _ExitTree()
     {
         if (smokeSource != null) smokeSource.ShotLaunched -= OnShotLaunched;
+        if (beamSource != null) beamSource.PrismBeamFired -= OnPrismBeam;
     }
 
     public void Sync(ProjectileSystem projectiles)

@@ -166,7 +166,8 @@ public sealed class SpatialGrid
         int cells = Mathf.CeilToInt(searchRadius / cellSize), examined = 0, best = -1;
         float bestDistance = radius * radius;
         float minimumSquared = minimumRange * minimumRange;
-        bool varied = rank > 1;
+        ref readonly var seeker = ref units.Catalog[units.Type[id]];
+        bool varied = rank > 1 && !seeker.PrismBeam.Enabled;
         Span<(int Id, float Distance)> ranked = varied ? stackalloc (int, float)[3] : Span<(int, float)>.Empty;
         int rankedCount = 0;
         if (varied && incumbent >= 0)
@@ -221,7 +222,9 @@ public sealed class SpatialGrid
                         }
                         if (!varied)
                         {
-                            if (distance < bestDistance && clearSight?.BlocksSight(position, units.Position[other]) != true)
+                            if (distance < bestDistance && (seeker.PrismBeam.Enabled
+                                ? PrismLanceCombat.HasClearAim(units, id, other, seeker, clearSight)
+                                : clearSight?.BlocksSight(position, units.Position[other]) != true))
                             { bestDistance = distance; best = other; }
                             continue;
                         }

@@ -111,6 +111,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
+            UnitShape.Prism => new(6, halfWidth, width * 0.88f, -Mathf.Pi * 0.5f),
             UnitShape.DeepFork => new(DeepForkVertices.Length, halfWidth, width * 0.38f, 0f, IsDeepFork: true),
             UnitShape.Pike => new(PikeVertices.Length, halfWidth, width * 0.74f, 0f, IsPike: true),
             UnitShape.DrillRig => new(DrillRigVertices.Length, halfWidth, width * 0.70f, 0f, IsDrillRig: true),
@@ -127,8 +128,11 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     bool CleaveEnabled, float CleaveExtraReach, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
     float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent,
-    int MeleeBonusTarget, float MeleeBonusMultiplier, float SizeTier)
+    int MeleeBonusTarget, float MeleeBonusMultiplier, float SizeTier, PrismBeamStats PrismBeam)
 {
+    internal bool DirectFire(ProjectileCatalog projectiles) =>
+        !Ranged || PrismBeam.Enabled || projectiles.Flight(ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight;
+
     public float AgainstUnits(float amount) => UnitDamagePercent < 0f ? amount : amount * (UnitDamagePercent * 0.01f);
     public float AgainstStructures(float amount) => StructureDamagePercent < 0f ? amount : amount * (StructureDamagePercent * 0.01f);
     public int UnitDamageType => UnitDamagePercent < 0f ? DamageType : DamageRules.NeutralType;
@@ -154,10 +158,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher", PrismLanceId = "prism_lance";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12, PrismLance = 13;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId, PrismLanceId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
@@ -237,6 +241,11 @@ public sealed class RuntimeUnitCatalog
             var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/TwinRocketLauncher.tres");
             if (definition != null) byId.Add(TwinRocketLauncherId, definition);
         }
+        if (!byId.ContainsKey(PrismLanceId))
+        {
+            var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/PrismLance.tres");
+            if (definition != null) byId.Add(PrismLanceId, definition);
+        }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
@@ -278,7 +287,13 @@ public sealed class RuntimeUnitCatalog
             independentRockets[i] = independent.ToArray();
             bool combat = d.AllowedTargets != TargetCategory.None;
             bool ranged = combat && d.Style == AttackStyle.Ranged;
-            float reach = ranged && primary.Count > 0 ? primary[0].MaximumRange : Positive(d.Reach, 1.6f);
+            bool beam = ranged && d.PrismBeamEnabled;
+            var prism = new PrismBeamStats(beam,
+                ClampStat(d.PrismChargeSeconds, 0.05f, 20f, 3f),
+                ClampStat(d.PrismBeamRadius, 0.01f, 2f, 0.25f),
+                Mathf.Clamp(d.PrismMaxHits, 1, PrismBeamStats.MaxHitCapacity),
+                ClampStat(d.PrismFlashSeconds, 0.02f, 1f, 0.18f));
+            float reach = !beam && ranged && primary.Count > 0 ? primary[0].MaximumRange : Positive(d.Reach, 1.6f);
             if (!ranged) reach *= size;
             float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
             float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
@@ -304,18 +319,18 @@ public sealed class RuntimeUnitCatalog
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 outline, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
                 combat ? Positive(d.Damage, 20f) : 0f,
-                ranged && primary.Count > 0 ? primary[0].Interval : Positive(d.Interval, 0.9f), reach,
+                !beam && ranged && primary.Count > 0 ? primary[0].Interval : Positive(d.Interval, 0.9f), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
-                ranged ? (primary.Count == 0 ? Projectiles.Register(d.Projectile) : primary[0].Projectile) : -1,
-                ranged ? (primary.Count > 0 ? primary[0].MinimumRange : ClampStat(d.MinimumFireRange, 0f, reach, 0f)) : 0f,
+                ranged && !beam ? (primary.Count == 0 ? Projectiles.Register(d.Projectile) : primary[0].Projectile) : -1,
+                ranged ? (!beam && primary.Count > 0 ? primary[0].MinimumRange : ClampStat(d.MinimumFireRange, 0f, reach, 0f)) : 0f,
                 d.CleaveEnabled && d.Style == AttackStyle.Melee, d.EffectiveCleaveExtraReach, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
                 facingCosine * facingCosine, trample,
                 accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave, recoil,
-                DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), d.AllowedTargets, d.PreferredTarget,
+                DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), beam ? d.AllowedTargets & TargetCategory.Units : d.AllowedTargets, d.PreferredTarget,
                 ClampStat(d.StructureDetectionRange, 0f, 100f, 12f), ClampStat(d.TurnDegreesPerSecond, 0f, 720f, 0f),
                 ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
                 ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
-                Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f), CompileSizeTier(d.SizeTier));
+                Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f), CompileSizeTier(d.SizeTier), prism);
             battleRatings[i] = Mathf.Clamp(d.BattleRating, 0, UnitDefinition.MaxBattleRating);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);

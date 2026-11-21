@@ -9,6 +9,7 @@ public sealed class RangedRecoilSystem
     private readonly Vector2[] shotDirections;
     private readonly int[] activeIds;
     private int activeCount;
+    internal bool Active => activeCount > 0;
 
     public RangedRecoilSystem(int capacity)
     {

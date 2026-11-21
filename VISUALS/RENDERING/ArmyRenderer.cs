@@ -276,6 +276,8 @@ public partial class ArmyRenderer : Node3D
         buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
         Color color = white ? Colors.White : FactionColor(units.Faction[id]);
+        if (!white && stats.PrismBeam.Enabled)
+            color = color.Lerp(new Color(0.70f, 0.94f, 1f), units.PrismCharge(id) / stats.PrismBeam.ChargeSeconds * 0.25f);
         if (cracksEnabled && !white)
         {
             float health = units.Health[id];
@@ -332,6 +334,49 @@ public partial class ArmyRenderer : Node3D
     }
 
     // =========================================================
+    private MultiMesh prismChargeLights;
+
+    // Uses the packed charging list, so settled and non-Prism soldiers add no work.
+    private void SyncPrismCharge()
+    {
+        const int capacity = 256;
+        int count = Mathf.Min(units.ChargingCount, capacity);
+        if (prismChargeLights == null)
+        {
+            if (count == 0) return;
+            var material = new StandardMaterial3D
+            {
+                VertexColorUseAsAlbedo = true, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+            };
+            prismChargeLights = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
+                Mesh = new SphereMesh { RadialSegments = 8, Rings = 4, Material = material },
+                InstanceCount = capacity
+            };
+            AddChild(new MultiMeshInstance3D
+            {
+                Multimesh = prismChargeLights, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+            });
+        }
+        if (count == 0 && prismChargeLights.VisibleInstanceCount == 0) return;
+        for (int i = 0; i < count; i++)
+        {
+            int id = units.ChargingId(i);
+            ref readonly var type = ref units.Catalog[units.Type[id]];
+            float charge = units.PrismCharge(id) / type.PrismBeam.ChargeSeconds;
+            Vector2 facing = units.Facing[id];
+            if (type.Shape == UnitShape.Circle || facing == Vector2.Zero) facing = Vector2.Up;
+            float scale = Mathf.Lerp(0.12f, 0.65f, charge);
+            float forward = type.Outline.RadiusZ * 0.86f;
+            Vector3 point = GroundPose(id) + new Vector3(facing.X * forward, type.Height * 0.90f, facing.Y * forward);
+            prismChargeLights.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), point));
+            prismChargeLights.SetInstanceColor(i, new Color(0.68f, 0.94f, 1f, 0.30f + 0.70f * charge));
+        }
+        prismChargeLights.VisibleInstanceCount = count;
+    }
+
     public void Sync(float blend = 1f)
     {
         poseBlend = blend;
@@ -369,6 +414,7 @@ public partial class ArmyRenderer : Node3D
                 Write(id, batch, slot);
             }
         }
+        SyncPrismCharge();
         DenseUploads = SparseUploads = ChangedWrites = 0;
         long uploadStart = Stopwatch.GetTimestamp();
         for (int b = 0; b < batches.Length; b++) Upload(b);

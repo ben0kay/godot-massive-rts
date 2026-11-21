@@ -217,10 +217,21 @@ public partial class UnitEditorPanel
         };
         refreshFields.Add(() =>
         {
-            picker.Editable = !IsMelee;
-            editProjectile.Disabled = IsMelee || Unit.Projectile is not null &&
+            picker.Editable = !IsMelee && !Unit.PrismBeamEnabled;
+            editProjectile.Disabled = IsMelee || Unit.PrismBeamEnabled || Unit.Projectile is not null &&
                 !Unit.Projectile.ResourcePath.EndsWith(".tres", StringComparison.OrdinalIgnoreCase);
         });
+
+        AbilitySection("Prism Beam", nameof(Unit.PrismBeamEnabled), Unit.PrismBeamEnabled,
+            value => Unit.PrismBeamEnabled = value, () => !IsMelee, () => !IsMelee && Unit.PrismBeamEnabled);
+        Number(nameof(Unit.PrismChargeSeconds), "Charge duration", () => Unit.PrismChargeSeconds,
+            value => Unit.PrismChargeSeconds = value, 0.05, 20, 0.05, " s", () => Unit.PrismBeamEnabled);
+        Number(nameof(Unit.PrismBeamRadius), "Beam radius", () => Unit.PrismBeamRadius,
+            value => Unit.PrismBeamRadius = value, 0.01, 2, 0.01, " u", () => Unit.PrismBeamEnabled);
+        Number(nameof(Unit.PrismMaxHits), "Maximum targets", () => Unit.PrismMaxHits,
+            value => Unit.PrismMaxHits = (int)value, 1, 64, 1, "", () => Unit.PrismBeamEnabled);
+        Number(nameof(Unit.PrismFlashSeconds), "Beam flash duration", () => Unit.PrismFlashSeconds,
+            value => Unit.PrismFlashSeconds = value, 0.02, 1, 0.01, " s", () => Unit.PrismBeamEnabled);
 
         var recoilSection = AbilitySection("Ranged recoil", nameof(Unit.RangedRecoilEnabled), Unit.RangedRecoilEnabled,
             v => Unit.RangedRecoilEnabled = v, () => !IsMelee, () => !IsMelee && Unit.RangedRecoilEnabled);

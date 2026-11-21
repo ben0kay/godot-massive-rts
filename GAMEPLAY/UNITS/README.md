@@ -96,3 +96,10 @@ Open a unit definition in the Godot Inspector and expand **Rocket Mounts**. Each
 Fixed mounts on a ranged unit fire in array order using one primary target and cooldown. They default to the unit's range, interval, damage and projectile. The first fixed mount can override the group's range and interval. Use the same obstacle-fire mode for all mounts in a fixed group. Independent mounts acquire their own targets and use their own range and interval in the Benchmark. The Dreadnaught's center-deck cannon is an independent mount and uses Twin Rocket flight, splash and launch effects. Remove that entry from Rocket Mounts to remove the cannon.
 
 In `Dreadnaught.tres`, the **Weapon Mounts** group contains four independent twin minigun mounts and the center rocket cannon. Each minigun can change position, model scale, range, projectile, damage and interval. Its default damage, interval and projectile come from the Dreadnaught's shared minigun settings. Enable **Use Legacy Miniguns** only for definitions that still use the original fixed four mounts.
+
+
+## PRISM1 — Prism Lance
+
+Prism Lance is a Tier 2 ranged unit with a narrow six-sided hull, twin rails and a cyan charging lens. It charges for 3 seconds, deals 65 damage to up to 24 hostile soldiers in a straight line, then recovers for 6 seconds. Its starting range is 8–58 units. It uses the existing nearest-target search and fires through its target until it meets cover, terrain or the range limit. Damage and recovery use the unit's ordinary Damage and Interval fields. The **Prism Beam** section in Entity Editor exposes the remaining weapon settings.
+
+Paint it in the Benchmark or Level Editor. In Fortress Defense the Fabricator produces two for 240 Carbon in 18 seconds. A plain move order interrupts a charge. Attack-move can hold to fire and resumes the order when no target remains.

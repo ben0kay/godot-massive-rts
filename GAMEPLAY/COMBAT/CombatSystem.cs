@@ -58,10 +58,10 @@ public static class CombatSystem
                 if (refreshLocal)
                 {
                     int rank = rangedVariety && type.Ranged && type.MinimumFireRange == 0f ? RangedRank(i, battleSeed) : 1;
-                    if (type.MinimumFireRange > 0f)
+                    if (type.MinimumFireRange > 0f || type.PrismBeam.Enabled)
                     {
                         ObstacleField cover = obstacles != null &&
-                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
+                            type.DirectFire(units.Catalog.Projectiles)
                             ? obstacles : null;
                         int found = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, cover,
                             minimumRange: type.MinimumFireRange);
@@ -74,7 +74,7 @@ public static class CombatSystem
                     else if (rank > 1)
                     {
                         ObstacleField cover = obstacles != null &&
-                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight
+                            type.DirectFire(units.Catalog.Projectiles)
                             ? obstacles : null;
                         int varied = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, cover, rank, target);
                         if (varied >= 0)
@@ -96,7 +96,7 @@ public static class CombatSystem
                             }
                         }
                         if (obstacles != null && type.Ranged && target >= 0 && distance <= radius * radius &&
-                            units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight &&
+                            type.DirectFire(units.Catalog.Projectiles) &&
                             obstacles.BlocksSight(units.Position[i], units.Position[target]))
                         {
                             int visible = grid.FindEnemy(units, i, radius, config.QueryCandidateLimit, tick, obstacles);
@@ -150,25 +150,33 @@ public static class CombatSystem
 
     // =========================================================
     internal static bool Step(UnitState units, SpatialGrid grid, ProjectileSystem projectiles, float fireRateMultiplier, float dt, float separationPadding, float separationGap, TrampleSystem trample = null, ObstacleField obstacles = null,
-        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null, bool useDreadnaughtContact = false)
+        ShockwaveRenderer shockwaves = null, StructureCombat structureCombat = null, bool useDreadnaughtContact = false, CommandMovement commands = null)
     {
         var turnSteps = units.TurnSteps(dt);
-        bool lungeChanged = false;
+        bool visualsChanged = false;
+        int beamBudget = PrismLanceCombat.ShotsPerTick;
         for (int i = 0; i < units.Count; i++)
         {
             if (units.Health[i] <= 0) continue;
             float beforeCooldown = units.Cooldown[i];
             units.Cooldown[i] = Mathf.Max(0, beforeCooldown - dt);
+            ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
+            if (type.PrismBeam.Enabled)
+            {
+                bool interrupted = commands?.HasCommand(i) == true && !commands.IsAttackMove(i);
+                visualsChanged |= PrismLanceCombat.Step(units, grid, projectiles, obstacles, i, type, dt,
+                    units.MaximumTravelSpeed * dt + separationPadding, interrupted, ref beamBudget);
+                continue;
+            }
             if (units.HasMeleeLunge && beforeCooldown > 0f)
             {
                 ref readonly var animation = ref units.Catalog[units.Type[i]];
                 if (animation.MeleeLungeDistance > 0f && animation.Interval - beforeCooldown < MeleeLungeSeconds)
-                    lungeChanged = units.Dirty[i] = true;
+                    visualsChanged = units.Dirty[i] = true;
             }
             if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];
             if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
-            ref readonly UnitStats type = ref units.Catalog[units.Type[i]];
             if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? units.RangedReach(i, type) :
@@ -182,7 +190,7 @@ public static class CombatSystem
             if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
                 type.MinimumFireRange * type.MinimumFireRange) continue;
             if (obstacles != null &&
-                (!type.Ranged || units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight) &&
+                (type.DirectFire(units.Catalog.Projectiles)) &&
                 obstacles.BlocksSight(units.Position[i], units.Position[target])) continue;
             Vector2 facing = units.Facing[i];
             if (!type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled))
@@ -232,9 +240,9 @@ public static class CombatSystem
                 if (units.Type[target] == type.MeleeBonusTarget) damage *= type.MeleeBonusMultiplier;
                 units.Damage(target, damage, type.UnitDamageType);
             }
-            if (type.MeleeLungeDistance > 0f) lungeChanged = units.Dirty[i] = true;
+            if (type.MeleeLungeDistance > 0f) visualsChanged = units.Dirty[i] = true;
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
         }
-        return lungeChanged;
+        return visualsChanged;
     }
 }

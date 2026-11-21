@@ -38,10 +38,11 @@ public sealed class GuardGroup
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             float engagementRadius = type.Ranged ? units.RangedReach(id, type) : radius;
             int target = units.Target[id];
-            if (!IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
+            if (type.PrismBeam.Enabled || !IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
             {
                 units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
-                    counterattack ? int.MaxValue : config.QueryCandidateLimit, tick,
+                    counterattack && !type.PrismBeam.Enabled ? int.MaxValue : config.QueryCandidateLimit, tick,
+                    type.PrismBeam.Enabled ? obstacles : null, minimumRange: type.PrismBeam.Enabled ? type.MinimumFireRange : 0f,
                     guardPost: post, guardRadius: type.Ranged ? engagementRadius * 0.5f : engagementRadius);
             }
             if (units.Target[id] >= 0) lastContact = tick;
@@ -84,7 +85,7 @@ public sealed class GuardGroup
             {
                 float reach = type.Ranged ? units.RangedReach(id, type) :
                     CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap);
-                bool indirect = type.Ranged &&
+                bool indirect = type.Ranged && !type.PrismBeam.Enabled &&
                     units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.IndirectFire;
                 bool clear = indirect || obstacles?.BlocksSight(position, units.Position[target]) != true;
                 float minimum = type.MinimumFireRange;

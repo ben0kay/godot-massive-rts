@@ -313,7 +313,7 @@ public partial class BenchmarkArena : Node3D
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(targetCount, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
-        var recoil = mode == BenchmarkMode.Ranged && catalog.HasRangedRecoil
+        var recoil = (mode is BenchmarkMode.Ranged or BenchmarkMode.Melee) && catalog.HasRangedRecoil
             ? new RangedRecoilSystem(targetCount) : null;
         return new UnitState(targetCount, catalog, feedback, terrain, recoil)
         {
@@ -656,7 +656,7 @@ public partial class BenchmarkArena : Node3D
         }
         if (!paused)
         {
-            projectileRenderer?.AdvanceSmoke((float)delta);
+            projectileRenderer?.AdvanceEffects((float)delta);
             if (!spawning && units?.Alive == 0 && projectiles?.Count == 0)
                 defenseSystem?.Step(units, null, BattleSight, null, (float)delta, -1, targetingStepSeconds);
         }
