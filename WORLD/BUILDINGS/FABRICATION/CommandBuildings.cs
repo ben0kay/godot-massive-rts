@@ -6,7 +6,7 @@ using Godot;
 
 namespace MassiveRts;
 
-internal enum CommandBuildType { Fabricator, LaserTower, Extractor, RocketTower }
+internal enum CommandBuildType { Fabricator, LaserTower, Extractor, RocketTower, ShieldGenerator }
 
 internal sealed class CommandBuildings
 {
@@ -14,9 +14,10 @@ internal sealed class CommandBuildings
     private const int LaserTowerLimit = CommandSandbox.MaxStartingTowers;
     internal const int LaserTowerCost = 750;
     internal const int RocketTowerCost = 1450;
+    internal int ShieldGeneratorCost => Mathf.Max(0, shieldDefinition.BuildCost);
     private const float TowerBaseHeight = CommandLaserPlacement.BaseHeight;
-    private readonly BuildingDefinition laserDefinition, rocketDefinition;
-    private readonly BuildingStats laserStats, rocketStats;
+    private readonly BuildingDefinition laserDefinition, rocketDefinition, shieldDefinition;
+    private readonly BuildingStats laserStats, rocketStats, shieldStats;
     private readonly RuntimeBuildingCatalog defenseCatalog;
     private DefenseRenderer defenseRenderer;
     private DefenseSystem defenses;
@@ -73,6 +74,7 @@ internal sealed class CommandBuildings
         var defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres");
         laserDefinition = GD.Load<BuildingDefinition>(CommandLaserPlacement.DefinitionPath);
         rocketDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/RocketTower001.tres");
+        shieldDefinition = GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/ShieldGeneratorTower.tres");
         defenseCatalog = new RuntimeBuildingCatalog(defenseDefinitions, units.Catalog.DamageRules, units.Catalog.Projectiles);
         if (!defenseCatalog.TryResolve(laserDefinition.Id, out int laserType))
             throw new InvalidOperationException("The Railgun Tower is missing from the building catalogue.");
@@ -80,6 +82,9 @@ internal sealed class CommandBuildings
             throw new InvalidOperationException("The Rocket Tower is missing from the building catalogue.");
         laserStats = defenseCatalog[laserType];
         rocketStats = defenseCatalog[rocketType];
+        if (!defenseCatalog.TryResolve(shieldDefinition.Id, out int shieldType))
+            throw new InvalidOperationException("The Shield Generator is missing from the building catalogue.");
+        shieldStats = defenseCatalog[shieldType];
         var footprint = new ObstacleRectangle(-4, -9, 5, 5);
         if (citadelView != null)
         {
@@ -232,9 +237,11 @@ internal sealed class CommandBuildings
     public ObstacleRectangle Snap(Vector3 point, CommandBuildType type = CommandBuildType.Fabricator)
     {
         int width = type == CommandBuildType.LaserTower ? laserStats.Width :
-            type == CommandBuildType.RocketTower ? rocketStats.Width : CommandStructure.FabricatorCells;
+            type == CommandBuildType.RocketTower ? rocketStats.Width :
+            type == CommandBuildType.ShieldGenerator ? shieldStats.Width : CommandStructure.FabricatorCells;
         int depth = type == CommandBuildType.LaserTower ? laserStats.Depth :
-            type == CommandBuildType.RocketTower ? rocketStats.Depth : CommandStructure.FabricatorCells;
+            type == CommandBuildType.RocketTower ? rocketStats.Depth :
+            type == CommandBuildType.ShieldGenerator ? shieldStats.Depth : CommandStructure.FabricatorCells;
         const float grid = DeploymentLayout.CellSize;
         return new ObstacleRectangle(Mathf.RoundToInt(point.X / grid - width * 0.5f),
             Mathf.RoundToInt(point.Z / grid - depth * 0.5f), width, depth);
@@ -259,7 +266,7 @@ internal sealed class CommandBuildings
     {
         if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type) || OverlapsPaint(area)) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
-        if ((type == CommandBuildType.LaserTower || type == CommandBuildType.RocketTower) &&
+        if ((type is CommandBuildType.LaserTower or CommandBuildType.RocketTower or CommandBuildType.ShieldGenerator) &&
             towerCount >= LaserTowerLimit) return false;
 
         FoundationHeight(area, out float relief);
@@ -304,9 +311,10 @@ internal sealed class CommandBuildings
         return min.X < otherMax.X && max.X > otherMin.X && min.Y < otherMax.Y && max.Y > otherMin.Y;
     }
 
-    private static int Cost(CommandBuildType type) =>
+    private int Cost(CommandBuildType type) =>
         type == CommandBuildType.LaserTower ? LaserTowerCost :
-        type == CommandBuildType.RocketTower ? RocketTowerCost : CommandStructure.FabricatorCost;
+        type == CommandBuildType.RocketTower ? RocketTowerCost :
+        type == CommandBuildType.ShieldGenerator ? ShieldGeneratorCost : CommandStructure.FabricatorCost;
 
     public bool Place(ObstacleRectangle area, CommandBuildType type)
     {
@@ -316,6 +324,8 @@ internal sealed class CommandBuildings
             AddTower(area, Factions.Blue, height, laserDefinition, laserStats);
         else if (type == CommandBuildType.RocketTower)
             AddTower(area, Factions.Blue, height, rocketDefinition, rocketStats);
+        else if (type == CommandBuildType.ShieldGenerator)
+            AddTower(area, Factions.Blue, height, shieldDefinition, shieldStats);
         else
             Add(new CommandStructure(area, fabricatorDefinition.Health, Factions.Blue, fabricatorDefinition,
                 units.Catalog.DamageRules, Release, groundHeight: height));
@@ -353,8 +363,9 @@ internal sealed class CommandBuildings
             defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
         }
         var tower = new CommandStructure(area, stats.Health, faction, definition,
-            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height);
+            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ShieldEmitter.Enabled ? "ShieldGenerator" : stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height);
         defenses.AddTower(tower, stats, TowerBaseHeight, height);
+        if (stats.ShieldEmitter.Enabled) units.AddShieldTower(tower, stats.ShieldEmitter);
         Add(tower);
     }
 

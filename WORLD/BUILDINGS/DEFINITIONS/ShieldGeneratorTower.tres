@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFINITIONS/BuildingDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "shield_generator"
+DisplayName = "Shield Generator"
+Width = 2
+Depth = 2
+Health = 1250.0
+AttacksSoldiers = false
+ShieldEmitterEnabled = true
+ShieldRadius = 21.0

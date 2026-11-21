@@ -102,6 +102,7 @@ public partial class CommandSandbox : Node3D
     private const string SummaryTitle = "Fortress Defense · Command Sandbox";
     private double hudClock;
     private double selectionClock;
+    private AttackRangeOverlay shieldRanges;
 
     public override string[] _GetConfigurationWarnings()
     {
@@ -224,6 +225,8 @@ public partial class CommandSandbox : Node3D
 
         var hud = new CanvasLayer();
         AddChild(hud);
+        shieldRanges = new AttackRangeOverlay();
+        AddChild(shieldRanges);
         overlay = new CommandOverlay { View = camera, Units = units };
         hud.AddChild(overlay);
         var input = new SquadCommandInput();
@@ -410,6 +413,7 @@ public partial class CommandSandbox : Node3D
 
     private void RefreshSelection()
     {
+        shieldRanges.RefreshShields(units, false, overlay.Selection, overlay.Building);
         bottomHud.Refresh(buildings, units, CollectionsMarshal.AsSpan(overlay.Selection), overlay.Building, overlay.Deposit);
     }
 
@@ -428,7 +432,7 @@ public partial class CommandSandbox : Node3D
         {
             buildings.FinishDefenseEffects((float)delta);
             impactRings.Sync();
-            if (feedbackChanged) SyncArmy();
+            if (units.Shields?.AdvanceFlash((float)delta) == true || feedbackChanged) SyncArmy();
             return;
         }
         deathFeedback.BeginTick();

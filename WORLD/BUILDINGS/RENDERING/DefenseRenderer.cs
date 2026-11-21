@@ -39,6 +39,8 @@ public partial class DefenseRenderer : Node3D
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
     private int liveBeams, liveFlashes;
+    private MultiMesh shieldTowers;
+    private static readonly Transform3D Hidden = new(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
 
     // =========================================================
     private static Basis RailBarrelBasis(Basis yaw, float slope) =>
@@ -246,7 +248,7 @@ public partial class DefenseRenderer : Node3D
             var placement = placements[i];
             var area = placement.Footprint(catalog);
             ShowTower(i, area, placement.Faction, height, terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f,
-                catalog[placement.Type].ProjectileType >= 0);
+                catalog[placement.Type].ProjectileType >= 0, catalog[placement.Type].ShieldEmitter.Enabled);
         }
         if (battle)
         {
@@ -270,8 +272,15 @@ public partial class DefenseRenderer : Node3D
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
-        bool rocket = false)
+        bool rocket = false, bool shield = false)
     {
+        if (shield)
+        {
+            HideTower(index);
+            ShowShieldTower(index, area, faction, height, ground);
+            return;
+        }
+        shieldTowers?.SetInstanceTransform(index, Hidden);
         rocketSlots[index] = rocket;
         Vector2 size = area.Max - area.Min;
         Vector3 pivot = Pivot(area, height) + Vector3.Up * ground;
@@ -300,6 +309,34 @@ public partial class DefenseRenderer : Node3D
                 rocketBarrels.VisibleInstanceCount = rightRocketBarrels.VisibleInstanceCount = count;
     }
 
+    private void ShowShieldTower(int index, ObstacleRectangle area, byte faction, float height, float ground)
+    {
+        if (shieldTowers == null)
+        {
+            using var surface = new SurfaceTool();
+            surface.Begin(Mesh.PrimitiveType.Triangles);
+            surface.SetMaterial(Material);
+            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.26f, 0f),
+                new Vector3(0.95f, 0.52f, 0.95f), new Color(0.52f, 0.63f, 0.67f));
+            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.63f, 0f),
+                new Vector3(0.74f, 0.29f, 0.74f), new Color(0.79f, 0.93f, 0.96f));
+            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.97f, 0f),
+                new Vector3(0.31f, 0.58f, 0.31f), new Color(0.78f, 1f, 1f));
+            for (int side = -1; side <= 1; side += 2)
+                FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(side * 0.29f, 0.83f, 0f),
+                    new Vector3(0.13f, 0.53f, 0.37f), new Color(0.50f, 0.65f, 0.71f));
+            shieldTowers = Batch(surface.Commit(), DeploymentLayout.MaxBuildings);
+            for (int i = 0; i < shieldTowers.InstanceCount; i++) shieldTowers.SetInstanceTransform(i, Hidden);
+            shieldTowers.VisibleInstanceCount = 0;
+        }
+        Vector2 size = area.Max - area.Min;
+        Vector3 pivot = Pivot(area, height);
+        shieldTowers.SetInstanceTransform(index, new Transform3D(
+            Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)), new Vector3(pivot.X, ground, pivot.Z)));
+        shieldTowers.SetInstanceColor(index, Factions.Color(faction).Lightened(0.24f));
+        shieldTowers.VisibleInstanceCount = Mathf.Max(shieldTowers.VisibleInstanceCount, index + 1);
+    }
+
     public static Vector3 Pivot(ObstacleRectangle area, float height)
     {
         Vector2 center = (area.Min + area.Max) * 0.5f;
@@ -316,6 +353,7 @@ public partial class DefenseRenderer : Node3D
         rocketHeads.SetInstanceTransform(index, hidden);
         rocketBarrels.SetInstanceTransform(index, hidden);
         rightRocketBarrels.SetInstanceTransform(index, hidden);
+        shieldTowers?.SetInstanceTransform(index, Hidden);
         HideBeam(index);
     }
 

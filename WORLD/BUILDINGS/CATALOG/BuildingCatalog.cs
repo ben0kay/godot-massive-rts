@@ -50,7 +50,9 @@ public sealed class RuntimeBuildingCatalog
                 1f / Clamp(definition.ShotsPerSecond, 0.05f, 60f, 2f),
                 Mathf.DegToRad(Clamp(definition.TurretDegreesPerSecond, 1f, 3600f, 360f)),
                 Clamp(definition.BeamSeconds, 0.01f, 10f, 3f), definition.RequiresLineOfSight, definition.AttacksSoldiers, rules.DamageType(definition.DamageType),
-                Clamp(definition.Health, 1f, 1000000f, 1000f), rules.ArmourClass(definition.ArmourClass), definition.Armour, projectileType));
+                Clamp(definition.Health, 1f, 1000000f, 1000f), rules.ArmourClass(definition.ArmourClass), definition.Armour, projectileType,
+                ShieldEmitterStats.Compile(definition.ShieldEmitterEnabled, definition.ShieldRadius, definition.ShieldCapacity,
+                    definition.ShieldRegenerationPerSecond, definition.ShieldDecayPerSecond)));
         }
     }
 
@@ -59,7 +61,7 @@ public sealed class RuntimeBuildingCatalog
 }
 
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
-    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType);
+    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType, ShieldEmitterStats ShieldEmitter);
 
 public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type, float GridSize = DeploymentLayout.CellSize)
 {

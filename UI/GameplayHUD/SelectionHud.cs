@@ -46,7 +46,7 @@ public partial class SelectionHud : VBoxContainer
         }
         Array.Clear(typeCounts);
         int living = 0;
-        double current = 0, maximum = 0;
+        double current = 0, maximum = 0, shield = 0;
         foreach (int id in selected)
         {
             if ((uint)id >= (uint)units.Count || units.Health[id] <= 0f) continue;
@@ -54,6 +54,7 @@ public partial class SelectionHud : VBoxContainer
             float maxHealth = units.Catalog[type].Health;
             current += Mathf.Min(units.Health[id], maxHealth);
             maximum += maxHealth;
+            shield += units.Shields?.Amount(id) ?? 0f;
             typeCounts[type]++;
             living++;
         }
@@ -67,6 +68,7 @@ public partial class SelectionHud : VBoxContainer
 
         double percentage = maximum > 0 ? current / maximum * 100 : 0;
         heading.Text = $"{living:N0} selected   ·   {percentage:0.#}% HP";
+        if (shield > 0) heading.Text += $"   ·   {shield:0.#} shield";
         health.Value = percentage;
         description.Clear();
         int onlyType = -1;
@@ -77,7 +79,12 @@ public partial class SelectionHud : VBoxContainer
             if (description.Length > 0) description.Append("   ·   ");
             description.Append(typeCounts[type]).Append(" × ").Append(units.Catalog[type].Name);
         }
-        if (onlyType >= 0) description.Append('\n').Append(combatInfo[onlyType]);
+        if (onlyType >= 0)
+        {
+            description.Append('\n').Append(combatInfo[onlyType]);
+            var emitter = units.Catalog[onlyType].ShieldEmitter;
+            if (emitter.Enabled) description.Append($" · {emitter.Radius:0.#} u shield field");
+        }
         counts.Text = description.ToString();
     }
 }

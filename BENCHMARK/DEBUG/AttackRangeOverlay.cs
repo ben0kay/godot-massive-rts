@@ -5,6 +5,7 @@ namespace MassiveRts;
 // Shows the hovered soldier's attack range using simulation positions and facing.
 internal sealed partial class AttackRangeOverlay : MeshInstance3D
 {
+    private static readonly Color ShieldColor = new("#78e7f9");
     private const float HoverRadiusSquared = 32f * 32f;
     private const int ArcSegments = 64;
     private static readonly Color RangeColor = new("#ffd166");
@@ -77,6 +78,29 @@ internal sealed partial class AttackRangeOverlay : MeshInstance3D
 
         lines.SurfaceEnd();
         Show();
+    }
+
+    internal void RefreshShields(UnitState units, bool showAll, System.Collections.Generic.List<int> selected = null,
+        StructureHealth selectedTower = null)
+    {
+        var shields = units?.Shields;
+        if (shields == null || (!showAll && (selected == null || selected.Count == 0) && selectedTower == null))
+        {
+            Hide();
+            return;
+        }
+
+        lines.ClearSurfaces();
+        int drawn = 0;
+        for (int i = 0; i < shields.SourceCount && drawn < 64; i++)
+        {
+            if (!shields.TryGetSource(i, units, out Vector3 center, out float radius, out int soldier, out var tower)) continue;
+            if (!showAll && (soldier >= 0 ? selected?.Contains(soldier) != true : tower != selectedTower)) continue;
+            if (drawn++ == 0) lines.SurfaceBegin(Godot.Mesh.PrimitiveType.Lines);
+            Arc(center + Vector3.Up * 0.14f, radius, 0f, Mathf.Pi, ShieldColor);
+        }
+        if (drawn > 0) lines.SurfaceEnd();
+        Visible = drawn > 0;
     }
 
     private static float ContactRange(float attacker, float defender, float separationGap) =>

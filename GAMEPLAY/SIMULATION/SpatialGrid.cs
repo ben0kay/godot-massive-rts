@@ -335,6 +335,13 @@ public sealed class SpatialGrid
         return new CandidateCursor(this, Cell(center - extent), Cell(center + extent), occupiedFactions);
     }
 
+    internal CandidateCursor GetNearbyAllies(Vector2 center, float radius, byte faction)
+    {
+        Vector3 position = new(center.X, 0f, center.Y);
+        Vector3 extent = new(radius, 0f, radius);
+        return new CandidateCursor(this, Cell(position - extent), Cell(position + extent), occupiedFactions & (1 << faction));
+    }
+
     public struct CandidateCursor
     {
         private readonly SpatialGrid grid;

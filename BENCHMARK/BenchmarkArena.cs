@@ -64,7 +64,7 @@ public partial class BenchmarkArena : Node3D
     private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
     private BattlefieldWeather weather;
-    private AttackRangeOverlay attackRanges;
+    private AttackRangeOverlay attackRanges, shieldRanges;
     private BenchmarkPanel panel;
     private ArmyBalanceHud armyBalanceHud;
     private DeploymentStrengthBar deploymentStrengthBar;
@@ -136,7 +136,7 @@ public partial class BenchmarkArena : Node3D
         for (int i = 0; i < catalog.Count; i++)
         {
             ref readonly UnitStats type = ref catalog[i];
-            if (!type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
+            if (type.Id != RuntimeUnitCatalog.MobileGeneratorId && !type.Ranged) maximumGap = Mathf.Min(maximumGap, Mathf.Max(0, type.Reach - type.Footprint - 0.02f));
         }
         Config.SeparationGap = Mathf.Clamp(float.IsFinite(Config.SeparationGap) ? Config.SeparationGap : 0.05f, 0, maximumGap);
         alliedYieldSettings = new AlliedYieldSettings(
@@ -156,6 +156,8 @@ public partial class BenchmarkArena : Node3D
         panel.CameraRotationChanged += camera.SetYawDegrees;
         attackRanges = new AttackRangeOverlay();
         AddChild(attackRanges);
+        shieldRanges = new AttackRangeOverlay();
+        AddChild(shieldRanges);
         // Keep the gameplay bar separate from BENCHMARK's developer panels.
         var gameplayHudLayer = new CanvasLayer { Layer = 2 };
         AddChild(gameplayHudLayer);
@@ -181,6 +183,7 @@ public partial class BenchmarkArena : Node3D
         AddChild(battleWalls);
         battleObstacleShadows = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleObstacleShadows);
+        panel.ShieldShellsChanged += enabled => armyRenderer?.SetShieldShellsVisible(enabled);
         panel.GroundShadowsChanged += enabled =>
         {
             battleObstacleShadows.Visible = enabled;
@@ -533,6 +536,7 @@ public partial class BenchmarkArena : Node3D
         }
         if (presetTestMap != null) RefreshPresetBattleFields();
         units = CreateUnitState((uint)settings.Seed);
+        defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = presetForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
         grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
@@ -592,6 +596,7 @@ public partial class BenchmarkArena : Node3D
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
                 armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows, unitVisuals);
+                armyRenderer.SetShieldShellsVisible(panel.ShowShieldShells);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
                     presetTestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
@@ -664,6 +669,7 @@ public partial class BenchmarkArena : Node3D
             if (!spawning && units?.Alive == 0 && projectiles?.Count == 0)
                 defenseSystem?.Step(units, null, BattleSight, null, (float)delta, -1, targetingStepSeconds);
         }
+        shieldRanges.RefreshShields(units, panel.ShowShieldRadii && panel.ShieldsEnabled && !spawning);
         attackRanges.Refresh(units, camera, panel.Separation != SeparationMode.Off && units?.Alive > 1
             ? Config.SeparationGap : 0f, panel.ShowAttackRanges && !spawning);
         shockwaves.Sync();
@@ -765,6 +771,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
+            units.Shields?.Step(units, grid, dt, panel.ShieldInterval, 0f, panel.ShieldsEnabled);
             // Keep expensive searches together so pursuit still builds at most one index per acquisition step.
             // Movement and attack execution check target health on every core tick.
             targetingAccumulator += dt;
@@ -952,7 +959,12 @@ public partial class BenchmarkArena : Node3D
         int pursuitQueries = (grid?.PursuitTiming(PursuitReason.LiveRefresh).Queries ?? 0) +
             (grid?.PursuitTiming(PursuitReason.ScheduledAcquisition).Queries ?? 0) +
             (grid?.PursuitTiming(PursuitReason.ExtraReplacement).Queries ?? 0);
-        panel.CpuMetrics.Text =
+        string shieldStats = units?.Shields is { } shields
+            ? $"\nShields · {shields.SourceCount} emitters · {shields.ShieldedCount} shielded\n" +
+              $"Last coverage / update  {shields.CoverageMilliseconds:F3} / {shields.UpdateMilliseconds:F3} ms\n" +
+              $"Visible shells  {armyRenderer?.ShieldVisualCount ?? 0} · sync {(armyRenderer?.ShieldVisualMilliseconds ?? 0):F3} ms\n"
+            : "";
+        panel.CpuMetrics.Text = shieldStats +
             $"Simulation rate  {achievedRate:F1} / {1f / Config.TickSeconds:F0} Hz\nSimulation / tick  {costPerTick}\nWorst tick  {worstTickMs:F2} ms\nSeparation / tick  {separationPerTick}\n" +
             $"Ticks / frame  {measuredTicks / divisor:F2} · peak {maxTicksInFrame}\nSkipped ticks  {skippedSteps:N0}\n\n" +
             $"CPU time / rendered frame (ms)\nSimulation  {simulationMs / divisor:F3}\nMovement  {movementMs / divisor:F3}\n" +

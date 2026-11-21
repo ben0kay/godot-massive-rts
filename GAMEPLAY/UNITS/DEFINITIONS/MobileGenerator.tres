@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "mobile_generator"
+DisplayName = "Mobile Generator"
+Role = "Moves with the army and charges nearby allied shields"
+BattleRating = 165
+Shape = 5
+Width = 1.65
+Height = 0.55
+SizeTier = 2.0
+Speed = 2.4
+TurnDegreesPerSecond = 135.0
+Health = 110.0
+AllowedTargets = 0
+ShieldEmitterEnabled = true
+ShieldRadius = 14.0

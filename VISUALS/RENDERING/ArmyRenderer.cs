@@ -29,6 +29,17 @@ public partial class ArmyRenderer : Node3D
     private bool[] facesPositiveX;
     private UnitState units;
     private bool cracksEnabled;
+    private int maxShieldShells;
+    private bool showShieldShells = true;
+    internal double ShieldVisualMilliseconds { get; private set; }
+    internal int ShieldVisualCount => shieldShells?.VisibleCount ?? 0;
+
+    internal void SetShieldShellsVisible(bool visible)
+    {
+        showShieldShells = visible;
+        SyncShieldShells();
+    }
+    private ShieldShellRenderer shieldShells;
     private float firstCrackHealth, middleCrackHealth, heavyCrackHealth;
     private Vector3[] previousPositions;
     private Vector2[] previousFacing;
@@ -44,6 +55,8 @@ public partial class ArmyRenderer : Node3D
     // =========================================================
     public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows, UnitVisualConfig visuals)
     {
+        maxShieldShells = Mathf.Clamp(visuals.MaxShieldShells, 0, 2048);
+        if (!visuals.ShowShieldShells) maxShieldShells = 0;
         cracksEnabled = visuals.UseUnitFracture;
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
         heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
@@ -377,6 +390,23 @@ public partial class ArmyRenderer : Node3D
         prismChargeLights.VisibleInstanceCount = count;
     }
 
+    private void SyncShieldShells()
+    {
+        ShieldVisualMilliseconds = 0;
+        if (maxShieldShells == 0 || units.Shields is not { } shields) return;
+        if (!showShieldShells)
+        {
+            shieldShells?.Hide();
+            return;
+        }
+        if (shieldShells == null && (shields.ShieldedCount > 0 || shields.HasFlashes))
+            shieldShells = new ShieldShellRenderer(this, units, maxShieldShells);
+        if (shieldShells == null) return;
+        long start = Stopwatch.GetTimestamp();
+        shieldShells.Sync(shields, slots, buffers, InstanceStride);
+        ShieldVisualMilliseconds = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+    }
+
     public void Sync(float blend = 1f)
     {
         poseBlend = blend;
@@ -415,6 +445,7 @@ public partial class ArmyRenderer : Node3D
             }
         }
         SyncPrismCharge();
+        SyncShieldShells();
         DenseUploads = SparseUploads = ChangedWrites = 0;
         long uploadStart = Stopwatch.GetTimestamp();
         for (int b = 0; b < batches.Length; b++) Upload(b);

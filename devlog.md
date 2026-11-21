@@ -441,3 +441,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Battlefield weather | Source implemented.** Added live mist density, drift speed and haze controls to Benchmark and Preset Battle playtests. The weather uses one optional depth-aware camera pass.
 
 - **2026-11-21 | Battlefield weather | Source implemented.** Blended drifting cloud layers and added feathered river mist from the compiled water footprint within the existing camera pass.
+
+- 2026-11-21 — SHIELD1 — Implemented shared ally shields, the buildable Shield Generator and trainable Mobile Generator, batched shield-hit shells, and playtest controls. Catalogue references checked; Godot gameplay and performance await owner validation.

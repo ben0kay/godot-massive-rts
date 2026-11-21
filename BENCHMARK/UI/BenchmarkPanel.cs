@@ -111,6 +111,15 @@ public partial class BenchmarkPanel : CanvasLayer
 	private PanelContainer left, overlay;
 	private VBoxContainer right;
 	private CheckButton performanceToggle;
+	private readonly CheckButton shieldsEnabled = new() { Text = "Enable shields", ButtonPressed = true };
+	internal event Action<bool> ShieldShellsChanged;
+	private readonly CheckButton shieldShells = new() { Text = "Show shield shells", ButtonPressed = true };
+	internal bool ShowShieldShells => shieldShells.ButtonPressed;
+	private readonly CheckButton shieldRadii = new() { Text = "Show generator radii" };
+	internal bool ShowShieldRadii => shieldRadii.ButtonPressed;
+	internal bool ShieldsEnabled => shieldsEnabled.ButtonPressed;
+	private readonly SpinBox shieldInterval = new() { MinValue = 0.1, MaxValue = 1, Step = 0.05, Value = ShieldSystem.DefaultInterval };
+	internal float ShieldInterval => (float)shieldInterval.Value;
 	private readonly CheckButton attackRangesToggle = new() { Text = "Attack ranges on hover" };
 	public bool ShowAttackRanges => attackRangesToggle.ButtonPressed;
 	private bool leftPanelVisible = true, rightPanelVisible = true;
@@ -223,6 +232,13 @@ public partial class BenchmarkPanel : CanvasLayer
 		separation.AddChild(meleeSidestep);
 		separation.AddChild(meleeHold);
 		separation.AddChild(weightedSeparation);
+
+		var shields = Section(column, "Shields", false, out _);
+		shields.AddChild(shieldsEnabled);
+		shields.AddChild(shieldRadii);
+		shields.AddChild(shieldShells);
+		shieldShells.Toggled += enabled => ShieldShellsChanged?.Invoke(enabled);
+		Field(shields, "Coverage refresh (s)", shieldInterval);
 
 		var weather = Section(column, "Weather", false, out _);
 		var weatherToggle = new CheckButton { Text = "Enable weather" };

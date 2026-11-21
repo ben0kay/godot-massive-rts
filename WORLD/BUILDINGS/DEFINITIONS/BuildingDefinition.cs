@@ -30,4 +30,12 @@ public partial class BuildingDefinition : Resource
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;
     [Export] public bool AttacksSoldiers { get; set; } = true;
     [Export] public bool RequiresLineOfSight { get; set; } = true;
+    [ExportGroup("Shield field")]
+    [Export] public int BuildCost { get; set; } = 1000;
+    [Export] public bool ShieldEmitterEnabled { get; set; }
+    [Export] public float ShieldRadius { get; set; } = 14f;
+    [Export] public float ShieldCapacity { get; set; } = 20f;
+    [Export] public float ShieldRegenerationPerSecond { get; set; } = 4f;
+    [Export] public float ShieldDecayPerSecond { get; set; } = 2f;
+
 }

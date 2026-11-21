@@ -52,7 +52,7 @@ internal static class LevelLayoutPreview
                     var area = tower.Footprint(tower.GlobalPosition);
                     float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;
                     renderer.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground,
-                        tower.EffectiveDefinition.Projectile != null);
+                        tower.EffectiveDefinition.Projectile != null, tower.EffectiveDefinition.ShieldEmitterEnabled);
                 }
         }
 

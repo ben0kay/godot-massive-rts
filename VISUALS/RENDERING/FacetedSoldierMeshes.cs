@@ -103,6 +103,13 @@ public static class FacetedSoldierMeshes
             sideShade: SoldierSideShade, rimmedCap: enhancedCircle, topCapBrightness: enhancedHexagon ? 0.55f : 1f);
         if (enhancedHexagon)
             AppendHexagonSiegeArmor(surface, outline, height);
+        if (unit.Id == RuntimeUnitCatalog.MobileGeneratorId)
+        {
+            AppendPrism(surface, 6, outline.RadiusX * 0.68f, outline.RadiusZ * 0.68f,
+                height * 0.24f, outline.Rotation, Vector3.Up * height * 0.50f, new Color(0.37f, 0.53f, 0.58f));
+            AppendPrism(surface, 6, outline.RadiusX * 0.39f, outline.RadiusZ * 0.39f,
+                height * 0.68f, outline.Rotation, Vector3.Up * height * 0.69f, new Color(0.72f, 1f, 1f));
+        }
         if (unit.Shape == UnitShape.Prism)
         {
             for (int side = -1; side <= 1; side += 2)
@@ -285,6 +292,18 @@ public static class FacetedSoldierMeshes
         float rotation = Mathf.Atan2(pose.Basis.X.Z, pose.Basis.X.X);
         AppendPrism(surface, 4, size.X * inverseSqrtTwo, size.Z * inverseSqrtTwo, size.Y, Mathf.Pi * 0.25f,
             pose * (MountedRocket.Muzzle * 0.5f), new Color(0.77f, 0.77f, 0.77f), sideShade: SoldierSideShade, yaw: rotation);
+    }
+
+    internal static Mesh CreateShieldShell(in UnitStats stats)
+    {
+        UnitOutline outline = stats.Outline;
+        float height = stats.Id == RuntimeUnitCatalog.MobileGeneratorId ? stats.Height * 1.56f : stats.Height;
+        using var surface = new SurfaceTool();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        UnitOutline? contour = outline.IsChevron || outline.IsDreadnaught || outline.IsDeepFork || outline.IsPike ? outline : null;
+        AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height,
+            outline.Rotation, Vector3.Up * ((height - stats.Height) * 0.5f), Colors.White, customOutline: contour);
+        return surface.Commit();
     }
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,

@@ -241,3 +241,7 @@ On maps with elevation, units adjust movement speed to the grade in their travel
 ### Weather
 
 Open **Weather** in the left panel of Benchmark or the Level Editor's Auto Battler playtest. Enable it to adjust **Mist density**, **Drift speed**, and **Haze** while the battle runs. Broken cloud patches drift across the map, with softer haze toward the far side. Painted rivers have a denser drifting mist that feathers onto their banks. **Mist density** controls both ground and river mist. Weather is off by default and applies only to the current test session. It uses one camera pass and affects presentation only.
+
+### Shield diagnostics
+
+Open **Shields** in the left panel to toggle gameplay shields, shells and generator radii or to adjust the coverage interval. See the [shield system](../GAMEPLAY/SHIELDS/README.md) for tuning and the CPU panel metrics.

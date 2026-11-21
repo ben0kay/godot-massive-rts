@@ -126,7 +126,7 @@ public sealed class UnitState
         Health[id] = Catalog[type].Health;
         Target[id] = -1;
         Dirty[id] = true;
-        RegisterSpawn(faction, type);
+        RegisterSpawn(id, faction, type);
         return id;
     }
 
@@ -136,7 +136,7 @@ public sealed class UnitState
         return point;
     }
 
-    public void RegisterSpawn(byte faction, byte type)
+    public void RegisterSpawn(int id, byte faction, byte type)
     {
         FactionAlive[faction]++;
         Alive++;
@@ -145,6 +145,11 @@ public sealed class UnitState
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
         if (stats.PrismBeam.Enabled) prismAlive++;
+        if (stats.ShieldEmitter.Enabled)
+        {
+            Shields ??= new ShieldSystem(Health.Length);
+            Shields.AddMobile(id, stats.ShieldEmitter);
+        }
         MaxFootprint = Mathf.Max(MaxFootprint, stats.Footprint);
     }
     public RuntimeUnitCatalog Catalog { get; }
@@ -173,13 +178,22 @@ public sealed class UnitState
     }
 
     public DeathFeedbackSystem DeathFeedback { get; set; }
+    internal ShieldSystem Shields { get; private set; }
+
+    internal void AddShieldTower(StructureHealth tower, ShieldEmitterStats stats)
+    {
+        Shields ??= new ShieldSystem(Health.Length);
+        Shields.AddTower(tower, stats);
+    }
 
     public void Damage(int id, float damage, int damageType = 0)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
         float previous = Health[id];
         ref readonly var defender = ref Catalog[Type[id]];
-        Health[id] = Mathf.Max(0, previous - Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken));
+        float resolved = Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken);
+        resolved = Shields?.Absorb(id, resolved) ?? resolved;
+        Health[id] = Mathf.Max(0, previous - resolved);
         if (Health[id] == 0) RecordDeath(id);
         else if (Health[id] < previous)
         {
@@ -199,6 +213,7 @@ public sealed class UnitState
     {
         FactionAlive[Faction[id]]--;
         Alive--;
+        Shields?.RemoveRecipient(id);
         if (Catalog[Type[id]].PrismBeam.Enabled)
         {
             prismAlive--;

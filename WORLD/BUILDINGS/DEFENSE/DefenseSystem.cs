@@ -40,8 +40,15 @@ internal sealed class DefenseSystem
         structures[slot] = structure;
         towers[slot] = new Tower { Stats = stats, Faction = structure.Faction, Footprint = structure.Area,
             Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1 };
-        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0);
+        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled);
         ActiveCount++;
+    }
+
+    internal void RegisterShieldEmitters(UnitState units)
+    {
+        for (int i = 0; i < towers.Length; i++)
+            if (structures[i]?.Destroyed == false && towers[i].Stats.ShieldEmitter.Enabled)
+                units.AddShieldTower(structures[i], towers[i].Stats.ShieldEmitter);
     }
 
     public void RemoveTower(StructureHealth structure)

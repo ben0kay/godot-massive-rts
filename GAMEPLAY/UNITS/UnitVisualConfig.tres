@@ -9,3 +9,5 @@ UseEnhancedHexagonMesh = true
 UseProjectileLaunchEffects = true
 UseMuzzleSmoke = true
 UseUnitFracture = true
+ShowShieldShells = true
+MaxShieldShells = 512

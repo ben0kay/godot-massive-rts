@@ -243,6 +243,17 @@ public partial class UnitEditorPanel
             v => Unit.RangedRecoilReturnSeconds = v, 0.05, 2, 0.01, " s", () => !IsMelee && Unit.RangedRecoilEnabled,
             "Time for the ranged unit to settle back after firing.");
 
+        AbilitySection("Shield emitter", nameof(Unit.ShieldEmitterEnabled), Unit.ShieldEmitterEnabled,
+            value => Unit.ShieldEmitterEnabled = value, () => true, () => Unit.ShieldEmitterEnabled);
+        Number(nameof(Unit.ShieldRadius), "Radius", () => Unit.ShieldRadius,
+            value => Unit.ShieldRadius = value, 1, 64, 0.1, " u");
+        Number(nameof(Unit.ShieldCapacity), "Capacity", () => Unit.ShieldCapacity,
+            value => Unit.ShieldCapacity = value, 1, 500, 1, " HP");
+        Number(nameof(Unit.ShieldRegenerationPerSecond), "Recharge", () => Unit.ShieldRegenerationPerSecond,
+            value => Unit.ShieldRegenerationPerSecond = value, 0, 100, 0.1, " HP/s");
+        Number(nameof(Unit.ShieldDecayPerSecond), "Decay", () => Unit.ShieldDecayPerSecond,
+            value => Unit.ShieldDecayPerSecond = value, 0.1, 100, 0.1, " HP/s");
+
         var unsupported = typeof(UnitDefinition).GetProperties()
             .Where(p => Attribute.IsDefined(p, typeof(ExportAttribute)) && !represented.Contains(p.Name))
             .Select(p => p.Name).ToArray();
@@ -288,6 +299,19 @@ public partial class UnitEditorPanel
         if (beam) Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 10, 0.01, " s");
         Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
             value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
+
+        AbilitySection("Shield emitter", nameof(defense.ShieldEmitterEnabled), defense.ShieldEmitterEnabled,
+            value => defense.ShieldEmitterEnabled = value, () => true, () => defense.ShieldEmitterEnabled);
+        Number(nameof(defense.ShieldRadius), "Radius", () => defense.ShieldRadius,
+            value => defense.ShieldRadius = value, 1, 64, 0.1, " u");
+        Number(nameof(defense.ShieldCapacity), "Capacity", () => defense.ShieldCapacity,
+            value => defense.ShieldCapacity = value, 1, 500, 1, " HP");
+        Number(nameof(defense.ShieldRegenerationPerSecond), "Recharge", () => defense.ShieldRegenerationPerSecond,
+            value => defense.ShieldRegenerationPerSecond = value, 0, 100, 0.1, " HP/s");
+        Number(nameof(defense.ShieldDecayPerSecond), "Decay", () => defense.ShieldDecayPerSecond,
+            value => defense.ShieldDecayPerSecond = value, 0.1, 100, 0.1, " HP/s");
+        Number(nameof(defense.BuildCost), "Build cost", () => defense.BuildCost,
+            value => defense.BuildCost = (int)value, 0, 100000, 1, " Carbon");
     }
 
     private void BuildProjectileForm()

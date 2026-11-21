@@ -151,6 +151,8 @@ internal sealed class FortressWaves
         SampleTicks++;
         tick++;
         structureVisualChanged = false;
+        var shields = units.Shields;
+        uint shieldRevision = shields?.Revision ?? 0;
         if (WaitingToStart || Countdown > 0)
         {
             // Allow structure engagements and in-flight shots even between waves.
@@ -160,6 +162,8 @@ internal sealed class FortressWaves
             if (engagePrism) RebuildGrid();
             if (engageStructures || engagePrism) AcquireDefenderTargets(idleField, structuresOnly: true);
             bool idleMoved = MoveAndSeparate(delta);
+            if (shields?.NeedsRefresh(delta, ShieldSystem.DefaultInterval) == true) RebuildGrid();
+            bool shieldChanged = shields?.Step(units, grid, delta, ShieldSystem.DefaultInterval, 0f, true) == true;
             bool attackVisualsChanged = false;
             int before = units.Alive;
             if (engageStructures || units.HasPrism)
@@ -179,11 +183,12 @@ internal sealed class FortressWaves
                 Countdown = Mathf.Max(0, Countdown - delta);
                 if (Countdown == 0) BeginNext();
             }
-            return idleMoved || attackVisualsChanged || structureVisualChanged || units.Alive != before;
+            return shieldChanged || (shields?.Revision ?? 0) != shieldRevision || idleMoved || attackVisualsChanged || structureVisualChanged || units.Alive != before;
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
         RebuildGrid();
+        bool activeShieldChanged = shields?.Step(units, grid, delta, ShieldSystem.DefaultInterval, 0f, true) == true;
         TryRelease(delta);
         var field = buildings.CoverField;
         if (buildings.HasDefenses) buildings.StepDefenses(grid, Projectiles, delta, tick);
@@ -231,7 +236,7 @@ internal sealed class FortressWaves
         }
 
         // Shared combat can turn a soldier even when no one moves or dies.
-        return moved || weaponChanged || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
+        return activeShieldChanged || (shields?.Revision ?? 0) != shieldRevision || moved || weaponChanged || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
     }
 
     private void TryRelease(float delta)

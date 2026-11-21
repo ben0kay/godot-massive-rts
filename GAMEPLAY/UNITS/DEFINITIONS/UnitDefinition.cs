@@ -138,4 +138,11 @@ public partial class UnitDefinition : Resource
         if (property["name"].AsString() != nameof(ShockwaveEdgeDamageFraction)) return;
         property["usage"] = (long)(PropertyUsageFlags.Storage | PropertyUsageFlags.ScriptVariable);
     }
+    [ExportGroup("Shield field")]
+    [Export] public bool ShieldEmitterEnabled { get; set; }
+    [Export] public float ShieldRadius { get; set; } = 14f;
+    [Export] public float ShieldCapacity { get; set; } = 20f;
+    [Export] public float ShieldRegenerationPerSecond { get; set; } = 4f;
+    [Export] public float ShieldDecayPerSecond { get; set; } = 2f;
+
 }

@@ -15,6 +15,10 @@ public partial class UnitVisualConfig : Resource
 
     [Export(PropertyHint.Range, "0,512,1")] public int MaxPrismBeamEffects { get; set; } = 128;
 
+    [ExportGroup("Shields")]
+    [Export] public bool ShowShieldShells { get; set; } = true;
+    [Export(PropertyHint.Range, "0,2048,1")] public int MaxShieldShells { get; set; } = 512;
+
     [ExportGroup("Unit Fracture (FX2)")]
     [Export] public bool UseUnitFracture { get; set; }
     [Export(PropertyHint.Range, "0,1,0.01")] public float FirstCrackHealth { get; set; } = 0.75f;
