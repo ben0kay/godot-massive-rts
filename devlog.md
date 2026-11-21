@@ -445,3 +445,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — SHIELD1 — Implemented shared ally shields, the buildable Shield Generator and trainable Mobile Generator, batched shield-hit shells, and playtest controls. Catalogue references checked; Godot gameplay and performance await owner validation.
 
 - 2026-11-21 — SHIELD1 — Enabled standard melee targeting and light attacks for the Mobile Generator, and reduced its base movement speed from 2.4 to 1.8. Source reviewed.
+
+- 2026-11-21 — SHIELD1 — Enlarged shield shells slightly and increased cyan opacity at low charge so shields read at battlefield zoom. Source reviewed.

@@ -41,11 +41,12 @@ internal sealed class ShieldShellRenderer(Node3D owner, UnitState units, int lim
 
             var mesh = meshes[type] ??= CreateBatch(type);
             int index = counts[type]++;
-            float scale = 1.08f + 0.04f * flash;
+            float width = 1.20f + 0.04f * flash;
+            float height = 1.15f + 0.04f * flash;
             Basis basis = new(
-                new Vector3(buffer[offset], 0f, buffer[offset + 8]) * scale,
-                new Vector3(0f, buffer[offset + 5], 0f) * scale,
-                new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]) * scale);
+                new Vector3(buffer[offset], 0f, buffer[offset + 8]) * width,
+                new Vector3(0f, buffer[offset + 5], 0f) * height,
+                new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]) * width);
             mesh.SetInstanceTransform(index, new Transform3D(basis, center));
             mesh.SetInstanceColor(index, Factions.Color(units.Faction[id]));
             mesh.SetInstanceCustomData(index, new Color(strength, flash, 0f, 0f));
