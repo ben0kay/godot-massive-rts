@@ -1011,6 +1011,8 @@ public partial class BenchmarkArena : Node3D
                 $"Route cache hit / miss  {navigation.CacheHits:N0} / {navigation.CacheMisses:N0}\n" +
                 $"Routes built / queued  {navigation.RoutesBuilt:N0} / {navigation.QueueDepth:N0}\n" +
                 $"Longest route wait  {navigation.MaxWaitFrames} frames\n" +
+                $"Route waits / cached stalls / queue full  {navigation.RouteWaits:N0} / {navigation.CachedRouteStalls:N0} / {navigation.QueueFullWaits:N0}\n" +
+                (navigation.LastIndividualFailure.Length > 0 ? $"Last failed individual route  {navigation.LastIndividualFailure}\n" : "") +
                 $"Corridor results reused  {navigation.CorridorReuses:N0}\n" +
                 $"Route waypoints reused  {navigation.WaypointReuses:N0}\n";
         }

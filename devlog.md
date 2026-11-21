@@ -461,3 +461,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — NAV — Fall back to a budgeted individual route when both shared route resolutions are unusable, avoiding permanent shared-cache stalls at obstacle corners. Source reviewed.
 
 - 2026-11-21 — Terrain — Apply the Benchmark steel-slate material to campaign ground and painted elevation, with the map outline and editor grid. Source reviewed.
+
+- 2026-11-21 — NAV — Hold for a verified detour instead of advancing into a blocked corridor. Added playtest counters for route waits and cached stalls, plus individual route failure details. Source reviewed.

@@ -9,7 +9,6 @@ public sealed class ObstacleNavigation
 {
     private const float CornerClearance = 0.35f;
     private const float ArrivalDistance = 0.004f;
-    private const float WaitingClearance = 0.15f;
     private const int RetryFrames = 30;
     private const float CorridorMargin = 0.5f;
     private const float ProofInset = CorridorMargin + 0.005f;
@@ -52,6 +51,10 @@ public sealed class ObstacleNavigation
     public int CacheMisses { get; private set; }
     public int RoutesBuilt { get; private set; }
     public int MaxWaitFrames { get; private set; }
+    public int RouteWaits { get; private set; }
+    public int CachedRouteStalls { get; private set; }
+    public int QueueFullWaits { get; private set; }
+    public string LastIndividualFailure { get; private set; } = "";
 
     public ObstacleNavigation(ObstacleField field, RuntimeUnitCatalog catalog, int soldiers,
         float sectorSize, int capacity, int budget)
@@ -70,6 +73,7 @@ public sealed class ObstacleNavigation
     public void ResetCounters()
     {
         CacheHits = CacheMisses = RoutesBuilt = MaxWaitFrames = CorridorReuses = WaypointReuses = 0;
+        RouteWaits = CachedRouteStalls = QueueFullWaits = 0;
     }
 
     public void AdvanceFrame() => frame++;
@@ -80,7 +84,13 @@ public sealed class ObstacleNavigation
         for (int i = 0; i < budget && requests.TryDequeue(out Request request); i++)
         {
             pending.Remove(request.Key);
-            Vector2[] points = graphs[request.Key.Type].FindRoute(field, request.Start, request.Goal, request.Stop);
+            var graph = graphs[request.Key.Type];
+            Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner);
+            if (points == null && request.Key.Soldier >= 0)
+            {
+                bool overlaps = field.IntersectsCircle(request.Start, graph.Radius);
+                LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · reachable corner {hasReachableCorner}";
+            }
             if (!routes.ContainsKey(request.Key))
             {
                 if (routes.Count == capacity) routes.Remove(cacheOrder.Dequeue());
@@ -92,7 +102,7 @@ public sealed class ObstacleNavigation
         }
     }
 
-    // Approach cover while waiting for a shared route, and carry speed through route corners.
+    // Hold for a verified route when the direct corridor is blocked.
     public Vector2 Steer(int id, byte type, Vector2 start, Vector2 goal, float stop,
         out bool detouring, out bool routeCorner)
     {
@@ -176,6 +186,7 @@ public sealed class ObstacleNavigation
                     Mathf.Abs(stop - route.Stop) < 0.08f))
                 {
                     CacheMisses++;
+                    CachedRouteStalls++;
                     return start;
                 }
 
@@ -187,11 +198,8 @@ public sealed class ObstacleNavigation
             break;
         }
         CacheMisses++;
-        Vector2 offset = goal - start;
-        float distance = offset.Length();
-        if (distance == 0f || !field.FirstHit(start, goal, radius, out float hit)) return start;
-        float advance = Mathf.Max(0f, distance * hit - WaitingClearance);
-        return start + offset * (advance / distance);
+        RouteWaits++;
+        return start;
     }
 
     private static bool CanReuseWaypoint(Follower follower, Vector2 start, Vector2 waypoint)
@@ -250,7 +258,13 @@ public sealed class ObstacleNavigation
 
     private void QueueRoute(RouteKey key, Vector2 start, Vector2 goal, float stop)
     {
-        if (requests.Count >= capacity || !pending.Add(key)) return;
+        if (pending.Contains(key)) return;
+        if (requests.Count >= capacity)
+        {
+            QueueFullWaits++;
+            return;
+        }
+        pending.Add(key);
         requests.Enqueue(new Request(key, start, goal, stop, frame));
     }
 
@@ -331,13 +345,19 @@ public sealed class ObstacleNavigation
         }
 
         // Solve once for a shared request. Distances are seeded by all corners reachable from the start.
-        public Vector2[] FindRoute(ObstacleField field, Vector2 start, Vector2 goal, float stop)
+        public Vector2[] FindRoute(ObstacleField field, Vector2 start, Vector2 goal, float stop,
+            out bool hasReachableCorner)
         {
             Array.Clear(visited);
             Array.Fill(previous, -1);
+            hasReachableCorner = false;
             for (int i = 0; i < points.Length; i++)
-                distances[i] = field.BlocksCorridor(start, points[i], Radius)
-                    ? float.PositiveInfinity : start.DistanceTo(points[i]);
+            {
+                bool blocked = field.BlocksCorridor(start, points[i], Radius);
+                distances[i] = blocked ? float.PositiveInfinity : start.DistanceTo(points[i]);
+                hasReachableCorner |= !blocked;
+            }
+            if (!hasReachableCorner) return null;
 
             float bestDistance = float.PositiveInfinity;
             int end = -1;
