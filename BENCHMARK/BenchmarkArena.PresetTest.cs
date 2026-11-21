@@ -36,6 +36,7 @@ public partial class BenchmarkArena
         var (rocks, water) = paint?.Compile() ?? (Array.Empty<ObstacleRectangle>(), Array.Empty<ObstacleRectangle>());
         presetCover = map.ReadAuthoredWalls().Concat(rocks).ToArray();
         presetWater = water;
+        weather.SetWater(paint?.MovementWater ?? water);
         presetForest = paint?.Forest;
 
         var red = new List<SoldierPlacement>();
