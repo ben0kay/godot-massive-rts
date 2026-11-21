@@ -19,6 +19,6 @@ ChargeResistance = 0.18
 Style = 1
 Damage = 9.0
 Interval = 1.25
-Reach = 32.0
+Reach = 25.6
 Projectile = ExtResource("2")
 RangedRecoilEnabled = true
