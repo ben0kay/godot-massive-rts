@@ -49,6 +49,10 @@ The catalogue fits each circular collision footprint around the scaled mesh outl
 
 Open [UnitVisualConfig.tres](UnitVisualConfig.tres) in the Godot Inspector, set **Use Enhanced Meshes**, and save before running a scene. The switch ships enabled for the Circle Infantry trial. Circle keeps its footprint and height and gets a bright faction-coloured rim around a shallow recessed cap. The shared renderer uses the setting for battles and placement previews. Turn it off and relaunch to compare against the original meshes.
 
+## Enhanced Hexagon Siege mesh
+
+**Use Enhanced Hexagon Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) is a separate, default-on toggle from Circle's **Use Enhanced Meshes**. It adds six raised faction-coloured armour wedges, narrow dark radial seams and a recessed central hexagon to the Hexagon Siege Infantry. The details are built into one shared MultiMesh-compatible mesh, including deployment and Entity Editor previews. No combat size, circular clearance, balance or AI parameters change; FX2 cracks and white hit flashes still work. Turn the toggle off and relaunch the battle/editor preview for the original beveled hexagon. The additional triangles warrant a like-for-like high-count FPS comparison.
+
 ## Unit fracture
 
 In [UnitVisualConfig.tres](UnitVisualConfig.tres), **Use Unit Fracture** enables health-dependent cracks and crumbling deaths. Save and relaunch the scene after changing it. [Visual feedback](../../VISUALS/FEEDBACK/README.md) describes the crack thresholds and fragment budgets.

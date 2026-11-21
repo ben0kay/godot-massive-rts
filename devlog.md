@@ -435,3 +435,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - **2026-11-20 | Default level terrain.** Shared the sculptable ground resource across Preset Battles, Fortress Defense and the Level Editor template, and initialized the empty Preset Battle Level 001 with that terrain.
 
 - **2026-11-20 | PRISM1 | Source implemented.** Added the Tier 2 Prism Lance, batched charge and discharge visuals, a nearest-first piercing shot with a per-tick budget, and Fabricator production. Awaiting owner gameplay and FPS validation.
+
+- **2026-11-20 | Hexagon armour mesh | Source implemented, owner visual/FPS validation pending.** Added optional six-panel raised armour and a dark central inset to the shared Hexagon mesh, independent of Circle's enhancement toggle. Preserved MultiMesh rendering, previews, FX2 cracks, unit stats and collision footprint; no runtime Godot or FPS tests performed.

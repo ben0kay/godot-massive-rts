@@ -20,6 +20,10 @@ Ranged recoil applies a visual-only XZ displacement to the packed MultiMesh tran
 
 Heavy Artillery adds one shared beveled mesh containing the concave chevron and its centered barrel. Both pieces turn and recoil together in the same instance. Its Tier 3 upgrade scales the hull by 1.25× and doubles the barrel length relative to the scaled hull; `UnitOutline.BarrelFront` drives both the baked barrel tip and the projectile muzzle. The derived separation footprint encloses the extended barrel.
 
+## Enhanced Hexagon Siege armour
+
+The optional **Use Enhanced Hexagon Mesh** toggle in `GAMEPLAY/UNITS/UnitVisualConfig.tres` independently controls a heavier-looking Hexagon. The normal prism cap is darkened under six raised, trimmed armour wedges and a restrained central inset. All panels are generated once in the same mesh and use existing vertex colours, instance tint and optional FX2 crack material. Circle enhancement remains independently configurable. No per-unit nodes/materials/animation, footprint changes or extra draw calls per batch are introduced; the additional geometry still increases GPU triangles per visible Hexagon. Both the runtime and unit previews use the same toggle after scene reload.
+
 ## SHADOW1 — Ground shadows
 
 The benchmark draws optional translucent oval shadows beneath soldiers and offset rectangular shadows for walls and defense footprints. Soldier batches share one oval mesh and reuse the army renderer's live slots, dirty updates and interpolated ground positions. Recoil and hit pulses affect the soldier mesh only. Static obstacle shadows are built with the battle layout. **Display and controls → Ground shadows** is enabled by default and stops shadow drawing and soldier shadow uploads when switched off.

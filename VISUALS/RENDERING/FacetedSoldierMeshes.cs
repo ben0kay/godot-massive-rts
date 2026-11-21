@@ -41,7 +41,9 @@ public static class FacetedSoldierMeshes
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
                 unitMaterial = cracked;
             }
-            meshes[i] = CreateUnitMesh(outline, type.Height, unitMaterial, enhanced && type.Id == RuntimeUnitCatalog.CircleId,
+            meshes[i] = CreateUnitMesh(outline, type.Height, unitMaterial,
+                enhanced && type.Id == RuntimeUnitCatalog.CircleId,
+                visuals.UseEnhancedHexagonMesh && type.Id == RuntimeUnitCatalog.HexagonId,
                 catalog.Definition(i), includeIndependent: false);
         }
         return meshes;
@@ -53,14 +55,17 @@ public static class FacetedSoldierMeshes
     internal static Mesh CreatePlacementPreview(UnitDefinition unit, Color tint)
     {
         float size = UnitOutline.EffectiveSize(unit);
+        UnitVisualConfig visuals = UnitVisualConfig.Load();
         return CreateUnitMesh(UnitOutline.FromDefinition(unit, size), Mathf.Max(0.01f, unit.Height) * size,
             new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
-            unit.Id == RuntimeUnitCatalog.CircleId &&
-            GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath)?.UseEnhancedMeshes == true, unit, includeIndependent: true);
+            visuals.UseEnhancedMeshes && unit.Id == RuntimeUnitCatalog.CircleId,
+            visuals.UseEnhancedHexagonMesh && unit.Id == RuntimeUnitCatalog.HexagonId,
+            unit, includeIndependent: true);
     }
 
-    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material, bool enhancedCircle, UnitDefinition unit, bool includeIndependent)
+    private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material,
+        bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -94,7 +99,10 @@ public static class FacetedSoldierMeshes
         }
 
         AppendPrism(surface, outline.Sides, outline.RadiusX, outline.RadiusZ, height, outline.Rotation,
-            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught || outline.IsDeepFork ? outline : null, sideShade: SoldierSideShade, rimmedCap: enhancedCircle);
+            Vector3.Zero, Colors.White, customOutline: outline.IsChevron || outline.IsPike || outline.IsDreadnaught || outline.IsDeepFork ? outline : null,
+            sideShade: SoldierSideShade, rimmedCap: enhancedCircle, topCapBrightness: enhancedHexagon ? 0.55f : 1f);
+        if (enhancedHexagon)
+            AppendHexagonSiegeArmor(surface, outline, height);
         if (unit.Shape == UnitShape.Prism)
         {
             for (int side = -1; side <= 1; side += 2)
@@ -113,6 +121,61 @@ public static class FacetedSoldierMeshes
                 new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f), SoldierSideShade);
         }
         return surface.Commit();
+    }
+
+    // =========================================================
+    // Six beveled-look deck plates sit over a darkened cap. Built once per type
+    // so the existing faction MultiMesh, FX2 cracks and hit colours still work.
+    // All detail stays inside the original hexagonal footprint.
+    private static void AppendHexagonSiegeArmor(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float deck = height * 0.5f;
+        float plateBaseY = deck + height * 0.008f;
+        float plateTopY = deck + height * 0.050f;
+        var sideTint = new Color(0.57f, 0.57f, 0.57f);
+        var innerTint = new Color(0.68f, 0.68f, 0.68f);
+        var centerTint = new Color(0.66f, 0.66f, 0.66f);
+
+        for (int i = 0; i < 6; i++)
+        {
+            Vector2 cornerA = outline.Vertex(i);
+            Vector2 cornerB = outline.Vertex((i + 1) % 6);
+            // Trim each wedge on both spoke edges, leaving six readable dark seams.
+            Vector2 innerA = (cornerA * 0.37f).Lerp(cornerB * 0.37f, 0.11f);
+            Vector2 innerB = (cornerB * 0.37f).Lerp(cornerA * 0.37f, 0.11f);
+            Vector2 outerA = (cornerA * 0.81f).Lerp(cornerB * 0.81f, 0.055f);
+            Vector2 outerB = (cornerB * 0.81f).Lerp(cornerA * 0.81f, 0.055f);
+
+            Vector3 topInnerA = new(innerA.X, plateTopY, innerA.Y);
+            Vector3 topInnerB = new(innerB.X, plateTopY, innerB.Y);
+            Vector3 topOuterA = new(outerA.X, plateTopY, outerA.Y);
+            Vector3 topOuterB = new(outerB.X, plateTopY, outerB.Y);
+            Vector3 lowInnerA = new(innerA.X, plateBaseY, innerA.Y);
+            Vector3 lowInnerB = new(innerB.X, plateBaseY, innerB.Y);
+            Vector3 lowOuterA = new(outerA.X, plateBaseY, outerA.Y);
+            Vector3 lowOuterB = new(outerB.X, plateBaseY, outerB.Y);
+
+            // The two forward plates catch a little more light to indicate facing.
+            Color topTint = i == 0 || i == 5
+                ? Colors.White : new Color(0.92f, 0.92f, 0.92f);
+            AddQuad(surface, topInnerA, topInnerB, topOuterB, topOuterA, Vector3.Up, topTint);
+
+            Vector3 edge = topOuterB - topOuterA;
+            Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
+            AddQuad(surface, lowOuterA, topOuterA, topOuterB, lowOuterB, outward, sideTint);
+            AddQuad(surface, lowInnerB, topInnerB, topInnerA, lowInnerA, -outward, innerTint);
+        }
+
+        // Shallow darker central hexagon, without glow or an extra material.
+        Vector3 center = new(0f, deck + height * 0.014f, 0f);
+        for (int i = 0; i < 6; i++)
+        {
+            Vector2 a = outline.Vertex(i) * 0.29f;
+            Vector2 b = outline.Vertex((i + 1) % 6) * 0.29f;
+            AddTriangle(surface, center,
+                new Vector3(b.X, center.Y, b.Y), new Vector3(a.X, center.Y, a.Y),
+                Vector3.Up, centerTint);
+        }
     }
 
     // =========================================================
@@ -226,7 +289,8 @@ public static class FacetedSoldierMeshes
 
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
-        UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false, float yaw = 0f)
+        UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,
+        float yaw = 0f, float topCapBrightness = 1f)
     {
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
@@ -285,7 +349,7 @@ public static class FacetedSoldierMeshes
                 AddTriangle(surface, capCenter + recess, innerNext, inner, Vector3.Up, tint * 0.68f);
             }
             else if (!concaveFork)
-                AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint);
+                AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint * topCapBrightness);
             if (!concaveFork) AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
             AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
