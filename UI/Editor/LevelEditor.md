@@ -32,6 +32,11 @@ The deck follows the terrain and opens only the painted water beneath it. Walls,
 
 ## Paint elevation
 
-Select **Paint elevation** and set the brush radius and strength. Left-click or drag to raise the existing surface. Right-click or drag to lower it, including below the original ground level. Each stroke has a smooth falloff, can be undone or redone as one edit, and saves with the map. Existing authored hills remain editable objects and can also be raised or lowered with the brush.
+Select **Paint elevation** and choose a brush radius.
+
+- **Raise / Lower** uses left-click or drag to raise the surface and right-click or drag to lower it. Strength can be as small as 0.1.
+- **Set Height** accepts an absolute height from −80 to 80 in 0.1-unit steps. Zero is the flat map baseline. Left-click to level the brush interior to that height. The surrounding terrain blends back into the existing surface, using a wider transition for larger height differences. The transition stops at the map edge and is capped at 128 world units.
+
+Each stroke or Set Height click can be undone or redone as one edit and saves with the map. The brush works on the combined terrain surface, including authored hills.
 
 The ground grid and map edge follow the sculpted terrain. Both playtest modes use the saved height surface for grounding.

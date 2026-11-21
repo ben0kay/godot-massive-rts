@@ -7,6 +7,7 @@ namespace MassiveRts;
 public partial class LevelEditor
 {
     private CommandTerrain elevationTerrain;
+    private TerrainHeightField beforeElevationField;
     private Samples beforeElevation, workingElevation;
     private MouseButton elevationButton;
     private Vector2? lastElevationPoint;
@@ -37,16 +38,26 @@ public partial class LevelEditor
         {
             if (mouse.ButtonIndex == elevationButton) EndElevation();
         }
-        else if (workingElevation == null && ElevationPoint(mouse.Position, out var point) &&
+        else if (workingElevation == null && (!setElevationHeight || mouse.ButtonIndex == MouseButton.Left) &&
+            ElevationPoint(mouse.Position, out var point) &&
             map.GetNodeOrNull<CommandTerrain>("Terrain") is CommandTerrain terrain)
         {
             elevationTerrain = terrain;
             beforeElevation = terrain.Elevation;
+            beforeElevationField = terrain.Field;
             workingElevation = new();
             foreach (var entry in beforeElevation) workingElevation.Add(entry.Key, entry.Value);
             elevationButton = mouse.ButtonIndex;
-            PaintElevation(ObstacleField.Xz(point));
-            FlushElevation();
+            if (setElevationHeight)
+            {
+                SetElevationHeight(ObstacleField.Xz(point));
+                EndElevation();
+            }
+            else
+            {
+                PaintElevation(ObstacleField.Xz(point));
+                FlushElevation();
+            }
         }
         GetViewport().SetInputAsHandled();
         return true;
@@ -57,7 +68,7 @@ public partial class LevelEditor
         var field = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         if (field == null) return WorldPoint(screen, out point);
         Vector3 from = camera.ProjectRayOrigin(screen), direction = camera.ProjectRayNormal(screen);
-        // Legacy hills reach 80 and painted offsets are clamped to +/-80.
+        // Legacy maps can combine a hill of 80 with a painted offset of 80.
         float start = Mathf.Max(0f, (161f - from.Y) / direction.Y);
         float end = (-81f - from.Y) / direction.Y;
         from += direction * start;
@@ -97,10 +108,66 @@ public partial class LevelEditor
             beforeElevation.TryGetValue(key, out float original);
             workingElevation.TryGetValue(key, out float current);
             float change = elevationStrength * weight * weight * (3f - 2f * weight);
-            float next = Mathf.Clamp(original + (lower ? -change : change), -80f, 80f);
+            float originalHeight = beforeElevationField?.At(x * spacing, z * spacing) ?? 0f;
+            float limit = lower ? Mathf.Min(-80f, originalHeight) : Mathf.Max(80f, originalHeight);
+            float nextHeight = lower ? Mathf.Max(limit, originalHeight - change) : Mathf.Min(limit, originalHeight + change);
+            float next = original + (nextHeight - originalHeight);
             if (lower ? next >= current : next <= current) continue;
             if (Mathf.Abs(next) < 0.0001f) workingElevation.Remove(key);
             else workingElevation[key] = next;
+            elevationDirty = true;
+        }
+    }
+
+    private void SetElevationHeight(Vector2 center)
+    {
+        const float spacing = TerrainHeightField.Spacing;
+        const float maxSlopeWidth = 128f;
+        float half = map.MapSize * 0.5f;
+        // Include boundary triangles so interpolation preserves the target inside the cursor.
+        float plateauRadius = elevationRadius + spacing * Mathf.Sqrt(2f);
+        float slopeWidth = spacing * 2f;
+        for (int pass = 0; pass < 3; pass++)
+        {
+            float requiredWidth = slopeWidth;
+            for (int i = 0; i < 16; i++)
+            {
+                Vector2 edge = Vector2.Right.Rotated(Mathf.Tau * i / 16f);
+                for (int ring = 0; ring <= 2; ring++)
+                {
+                    Vector2 sample = center + edge * (plateauRadius + slopeWidth * ring * 0.5f);
+                    if (Mathf.Abs(sample.X) > half || Mathf.Abs(sample.Y) > half) continue;
+                    float height = beforeElevationField?.At(sample.X, sample.Y) ?? 0f;
+                    requiredWidth = Mathf.Max(requiredWidth, 2.5f * Mathf.Abs(elevationTarget - height));
+                }
+            }
+            if (requiredWidth <= slopeWidth) break;
+            slopeWidth = Mathf.Min(requiredWidth, maxSlopeWidth);
+            if (slopeWidth == maxSlopeWidth) break;
+        }
+
+        float outer = plateauRadius + slopeWidth;
+        int left = Mathf.CeilToInt(Mathf.Max(-half, center.X - outer) / spacing);
+        int right = Mathf.FloorToInt(Mathf.Min(half, center.X + outer) / spacing);
+        int near = Mathf.CeilToInt(Mathf.Max(-half, center.Y - outer) / spacing);
+        int far = Mathf.FloorToInt(Mathf.Min(half, center.Y + outer) / spacing);
+        for (int z = near; z <= far; z++)
+        for (int x = left; x <= right; x++)
+        {
+            Vector2 point = new Vector2(x, z) * spacing;
+            float distance = center.DistanceTo(point);
+            if (distance >= outer) continue;
+            float t = Mathf.Clamp((distance - plateauRadius) / slopeWidth, 0f, 1f);
+            float weight = 1f - t * t * (3f - 2f * t);
+            float height = beforeElevationField?.At(point.X, point.Y) ?? 0f;
+            float delta = (elevationTarget - height) * weight;
+            if (Mathf.Abs(delta) < 0.0001f) continue;
+
+            var key = new Vector2I(x, z);
+            beforeElevation.TryGetValue(key, out float original);
+            float offset = original + delta;
+            if (Mathf.Abs(offset) < 0.0001f) workingElevation.Remove(key);
+            else workingElevation[key] = offset;
             elevationDirty = true;
         }
     }
@@ -134,6 +201,8 @@ public partial class LevelEditor
         var before = beforeElevation;
         var after = workingElevation;
         elevationTerrain = null;
+        beforeElevationField = null;
+        lastElevationPoint = null;
         beforeElevation = workingElevation = null;
         if (terrain.Elevation != after) return;
 

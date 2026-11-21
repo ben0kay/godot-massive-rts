@@ -20,7 +20,8 @@ public partial class LevelEditor
     private (Cells Rocks, Cells Water, Cells Forest, Cells Blue)? beforePaint;
     private HashSet<Vector2I> rocks, water, forest, deployment;
     private bool paintChanged;
-    private float elevationRadius = 16f, elevationStrength = 2f;
+    private float elevationRadius = 16f, elevationStrength = 2f, elevationTarget;
+    private bool setElevationHeight;
     private float wallWidth = 10, wallDepth = 4, wallHeight = 2, yaw;
     private int unitIndex, groupSize = 1, depositCarbon = 5000;
     private bool red = true;
@@ -150,9 +151,29 @@ public partial class LevelEditor
                 Heading(context, tool == Tool.Erase ? "Click object to remove it.\nDrag over paint to erase it." : "Drag to paint. Right-drag to erase.", 15);
                 break;
             case Tool.Elevation:
+                var elevationMode = new OptionButton();
+                elevationMode.AddItem("Raise / Lower");
+                elevationMode.AddItem("Set Height");
+                elevationMode.Select(setElevationHeight ? 1 : 0);
+                context.AddChild(elevationMode);
+                elevationMode.ItemSelected += choice =>
+                {
+                    EndElevation();
+                    setElevationHeight = choice == 1;
+                    UpdateTool();
+                };
                 Number(context, "Radius", elevationRadius, 4, 128).ValueChanged += value => elevationRadius = (float)value;
-                Number(context, "Strength", elevationStrength, 0.5, 20, 0.5).ValueChanged += value => elevationStrength = (float)value;
-                Heading(context, "Left-click or drag to raise. Right-click or drag to lower.", 15);
+                if (setElevationHeight)
+                {
+                    Number(context, "Target height (0 = map baseline)", elevationTarget, -80, 80, 0.1)
+                        .ValueChanged += value => elevationTarget = (float)value;
+                    Heading(context, "Left-click to level the brush area with a smooth slope around it.", 15);
+                }
+                else
+                {
+                    Number(context, "Strength", elevationStrength, 0.1, 20, 0.1).ValueChanged += value => elevationStrength = (float)value;
+                    Heading(context, "Left-click or drag to raise. Right-click or drag to lower.", 15);
+                }
                 break;
             case Tool.Wall:
                 Number(context, "Width", wallWidth, 1, 500).ValueChanged += value => wallWidth = (float)value;

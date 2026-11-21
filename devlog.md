@@ -451,3 +451,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — SHIELD1 — Tinted shield shells and impact flashes from the faction palette and brightened the shell edges. Source reviewed.
 
 - 2026-11-21 — SHIELD1 — Replaced faceted shells with fitted round plasma bubbles in one shared MultiMesh. Added drifting faction-tinted rims. Source reviewed.
+
+- 2026-11-21 — LEVEL-EDITOR — Added absolute Set Height painting with adaptive curved transitions, finer manual strength steps, and per-click undo. Source and falloff reviewed.
