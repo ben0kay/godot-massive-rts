@@ -145,8 +145,10 @@ public partial class BenchmarkArena : Node3D
             ClampFiniteSetting(Config.AlliedRangedYieldMeleeShare, 1f, 0.7f),
             ClampFiniteSetting(Config.AlliedRangedExitPairCap, 0.25f, 0.06f) * correctionScale);
         Config.MaxProjectiles = Mathf.Clamp(Config.MaxProjectiles, 100, 100000);
+        var benchmarkGround = (ShaderMaterial)GD.Load<ShaderMaterial>("res://WORLD/TERRAIN/RENDERING/SteelSlate.tres").Duplicate();
+        benchmarkGround.SetShaderParameter("show_map_boundary", false);
         flatGround = new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(5000, 5000),
-            Material = GD.Load<ShaderMaterial>("res://WORLD/TERRAIN/RENDERING/SteelSlate.tres") } };
+            Material = benchmarkGround } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);

@@ -19,7 +19,7 @@ For exports that use a selected-resource filter, include the menu scenes, UI con
 
 ## Authoring playable command maps
 
-The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. The Ground node uses the shared `WORLD/TERRAIN/RENDERING/DefaultLevelGround.tres` in both campaign modes. New maps start flat at ground level and can be sculpted with **Paint elevation**. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
+The Command Sandbox uses a 5,000 × 5,000 world-unit square centered on the origin. The Ground node uses the shared `WORLD/TERRAIN/RENDERING/DefaultLevelGround.tres` in both campaign modes, with the same steel-slate texture as the flat Benchmark arena. New maps start flat at ground level and can be sculpted with **Paint elevation**. Its light outline marks X/Z ±2,500, with dark ground beyond. Zoom out and pan toward the edge to see it.
 
 1. For a playable map, create a new Godot scene inherited from `BENCHMARK/RTS/CommandSandbox.tscn` and save it in your level folder. Existing Fortress Defense Level 001 already inherits the command scene.
 2. Drag `WORLD/OBSTACLES/CommandWall.tscn` into the scene as a child of `Obstacles`. Move or resize the wall in the editor with no rotation. Each wall has its own box dimensions, including duplicates, so the red mesh handles resize one wall at a time. You can also set **Wall Size** directly in the Inspector. Save the level scene to keep those dimensions in play. Walls block movement and line of sight at their actual X/Z mesh bounds. Grid snapping is optional for walls.
