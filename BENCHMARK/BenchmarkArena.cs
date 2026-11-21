@@ -63,6 +63,7 @@ public partial class BenchmarkArena : Node3D
     private UnitVisualConfig unitVisuals;
     private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
+    private BattlefieldWeather weather;
     private AttackRangeOverlay attackRanges;
     private BenchmarkPanel panel;
     private ArmyBalanceHud armyBalanceHud;
@@ -150,6 +151,8 @@ public partial class BenchmarkArena : Node3D
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, PresetTest = presetTestMap != null }; AddChild(panel);
+        weather = new BattlefieldWeather(camera);
+        panel.WeatherChanged += weather.Configure;
         panel.CameraRotationChanged += camera.SetYawDegrees;
         attackRanges = new AttackRangeOverlay();
         AddChild(attackRanges);
@@ -541,6 +544,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Process(double delta)
     {
+        if (!paused) weather.Advance((float)delta);
         units?.Forest?.UpdateVisibility(units, (float)delta);
         if (obstacles != null) obstacles.ProfileQueries = panel.ProfileObstacles;
         if (navigation != null)

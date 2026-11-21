@@ -236,3 +236,8 @@ Blocked units try short sidesteps, and melee pressure can nudge up to four allie
 ### Terrain speed
 
 On maps with elevation, units adjust movement speed to the grade in their travel direction. Changes ramp from a 2% grade to full strength at a 35% grade. Downhill movement gains up to 10%. Uphill penalties follow Size Tier, capped at 3% for Tier 1, 8% for Tier 2, 15% for Tier 3 and 22% from Tier 5 onward. Intermediate tiers interpolate. Benchmark, Preset Battle playtests and Fortress Defense share the rule. Route selection keeps its existing costs.
+
+
+### Weather
+
+Open **Weather** in the left panel of Benchmark or the Level Editor's Auto Battler playtest. Enable it to adjust **Mist density**, **Drift speed**, and **Haze** while the battle runs. Mist drifts diagonally across the ground and fades with height. Haze softens the more distant part of the view. Weather is off by default and applies only to the current test session. It uses one camera pass and affects presentation only.

@@ -30,6 +30,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 	private readonly Label cameraRotationValue = new() { Text = "45° (original diagonal)" };
 	public bool SmoothMotion => smoothMotion.ButtonPressed;
+	internal event Action<bool, float, float, float> WeatherChanged;
+
 	private readonly OptionButton separationChoice = new();
 	private readonly HSlider hardOverlap = new()
 	{
@@ -222,6 +224,19 @@ public partial class BenchmarkPanel : CanvasLayer
 		separation.AddChild(meleeHold);
 		separation.AddChild(weightedSeparation);
 
+		var weather = Section(column, "Weather", false, out _);
+		var weatherToggle = new CheckButton { Text = "Enable weather" };
+		weather.AddChild(weatherToggle);
+		var mist = WeatherSlider(weather, "Mist density", 100, 45, 1, "%");
+		var drift = WeatherSlider(weather, "Drift speed", 6, 2, 0.1, " u/s");
+		var haze = WeatherSlider(weather, "Haze", 100, 25, 1, "%");
+		void UpdateWeather() => WeatherChanged?.Invoke(weatherToggle.ButtonPressed,
+			(float)mist.Value / 100f, (float)drift.Value, (float)haze.Value / 100f);
+		weatherToggle.Toggled += _ => UpdateWeather();
+		mist.ValueChanged += _ => UpdateWeather();
+		drift.ValueChanged += _ => UpdateWeather();
+		haze.ValueChanged += _ => UpdateWeather();
+
 		AddButton(column, PresetTest ? "Edit Blue deployment" : "Edit painted deployment", () => PaintRequested?.Invoke());
 		paintSection = new VBoxContainer { Visible = false };
 		column.AddChild(paintSection);
@@ -380,6 +395,18 @@ public partial class BenchmarkPanel : CanvasLayer
 		if (unitBar == null) return;
 		unitBar.Visible = leftPanelVisible && editingDeployment && placingSoldiers;
 		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -unitBar.BarHeight - 24 : -12;
+	}
+
+	private static HSlider WeatherSlider(VBoxContainer column, string title, double max, double initial, double step, string suffix)
+	{
+		var slider = new HSlider { MaxValue = max, Value = initial, Step = step, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		var controls = new HBoxContainer();
+		var value = new Label { Text = $"{initial:0.#}{suffix}", CustomMinimumSize = new Vector2(52f, 0f) };
+		controls.AddChild(slider);
+		controls.AddChild(value);
+		slider.ValueChanged += amount => value.Text = $"{amount:0.#}{suffix}";
+		Field(column, title, controls);
+		return slider;
 	}
 
 	private static Label DebugLabel()
