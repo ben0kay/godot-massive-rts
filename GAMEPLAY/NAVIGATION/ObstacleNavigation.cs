@@ -29,6 +29,7 @@ public sealed class ObstacleNavigation
         public Vector2I GoalSector;
         public Vector2 VerifiedStart;
         public bool WaypointVerified, WaypointHasMargin;
+        public Vector2? ClearanceExit;
     }
 
     private readonly ObstacleField field;
@@ -90,6 +91,8 @@ public sealed class ObstacleNavigation
             if (points == null && request.Key.Soldier >= 0)
             {
                 bool overlaps = field.IntersectsCircle(request.Start, graph.Radius);
+                if (overlaps && field.TryFindClearanceExit(request.Start, graph.Radius, out Vector2 exit))
+                    followers[request.Key.Soldier].ClearanceExit = exit;
                 LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · reachable corner {hasReachableCorner} · valid attack points {validAttackPoints}";
             }
             if (!routes.ContainsKey(request.Key))
@@ -110,6 +113,15 @@ public sealed class ObstacleNavigation
         float radius = graphs[type].Radius;
         ref Follower follower = ref followers[id];
         routeCorner = false;
+        if (follower.ClearanceExit is Vector2 exit)
+        {
+            if (field.IntersectsCircle(start, radius) && field.CanExitClearance(start, exit, radius))
+            {
+                detouring = routeCorner = true;
+                return exit;
+            }
+            follower = default;
+        }
         if (CanApproachSoldier(id, start, goal, radius, stop))
         {
             follower = default;

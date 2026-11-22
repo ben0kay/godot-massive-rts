@@ -186,6 +186,7 @@ public sealed class ObstacleField
             BoundaryFraction(from.Y, to.Y, delta.Y, edge));
         bool hitWall = Trace(from, to, radius, false, out float hit) && hit <= limit;
         if (!hitWall && limit >= 1f) return to;
+        if (hitWall && hit == 0f && limit >= 1f && CanExitClearance(from, to, radius)) return to;
 
         ClippedMoves++;
         float fraction = Mathf.Max(0f, Mathf.Min(hit, limit) - 0.002f / delta.Length());
@@ -265,14 +266,36 @@ public sealed class ObstacleField
             CrossesWallInterior(node.Right, from, delta, margin);
     }
 
-    private bool Trace(Vector2 from, Vector2 to, float radius, bool anyHit, out float fraction)
+    internal bool TryFindClearanceExit(Vector2 from, float radius, out Vector2 exit)
+    {
+        exit = from;
+        for (int ring = 0; ring < 2; ring++)
+        for (int direction = 0; direction < 8; direction++)
+        {
+            float step = ring == 0 ? 0.05f : radius + 0.05f;
+            Vector2 to = from + Vector2.FromAngle(direction * (Mathf.Tau / 8f)) * step;
+            if (IntersectsCircle(to, radius) || !CanExitClearance(from, to, radius)) continue;
+            exit = to;
+            return true;
+        }
+        return false;
+    }
+
+    internal bool CanExitClearance(Vector2 from, Vector2 to, float radius)
+    {
+        float edge = Boundary - radius;
+        return Mathf.Abs(to.X) <= edge && Mathf.Abs(to.Y) <= edge &&
+            !Trace(from, to, radius, true, out _, allowExit: true);
+    }
+
+    private bool Trace(Vector2 from, Vector2 to, float radius, bool anyHit, out float fraction, bool allowExit = false)
     {
         fraction = float.PositiveInfinity;
-        Search(0, from, to - from, radius, anyHit, ref fraction);
+        Search(0, from, to - from, radius, anyHit, ref fraction, allowExit);
         return fraction <= 1f;
     }
 
-    private void Search(int index, Vector2 from, Vector2 delta, float radius, bool anyHit, ref float first)
+    private void Search(int index, Vector2 from, Vector2 delta, float radius, bool anyHit, ref float first, bool allowExit)
     {
         ref readonly Node node = ref nodes[index];
         Box box = node.Bounds;
@@ -280,15 +303,23 @@ public sealed class ObstacleField
         if (!EnterBox(from, delta, box.Min - padding, box.Max + padding, out float entry) || entry >= first) return;
         if (node.Left >= 0)
         {
-            Search(node.Left, from, delta, radius, anyHit, ref first);
+            Search(node.Left, from, delta, radius, anyHit, ref first, allowExit);
             if (!anyHit || first > 1f)
-                Search(node.Right, from, delta, radius, anyHit, ref first);
+                Search(node.Right, from, delta, radius, anyHit, ref first, allowExit);
             return;
         }
         if (radius == 0f)
         {
             first = entry;
             return;
+        }
+
+        if (allowExit)
+        {
+            Vector2 away = from - from.Max(box.Min).Min(box.Max);
+            float distanceSquared = away.LengthSquared();
+            // Ignore only the initial clearance overlap while moving away from its solid.
+            if (distanceSquared > 0f && distanceSquared <= radius * radius && away.Dot(delta) > 0f) return;
         }
 
         // Two rectangular strips and four circles form the exact rounded Minkowski expansion.
