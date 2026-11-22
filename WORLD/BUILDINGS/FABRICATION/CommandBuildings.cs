@@ -18,6 +18,7 @@ internal sealed class CommandBuildings
     private const float TowerBaseHeight = CommandLaserPlacement.BaseHeight;
     private readonly BuildingDefinition laserDefinition, rocketDefinition, shieldDefinition;
     private readonly BuildingStats laserStats, rocketStats, shieldStats;
+    internal string RocketTowerName => rocketStats.Name;
     private readonly RuntimeBuildingCatalog defenseCatalog;
     private DefenseRenderer defenseRenderer;
     private DefenseSystem defenses;
@@ -79,7 +80,7 @@ internal sealed class CommandBuildings
         if (!defenseCatalog.TryResolve(laserDefinition.Id, out int laserType))
             throw new InvalidOperationException("The Railgun Tower is missing from the building catalogue.");
         if (!defenseCatalog.TryResolve(rocketDefinition.Id, out int rocketType))
-            throw new InvalidOperationException("The Rocket Tower is missing from the building catalogue.");
+            throw new InvalidOperationException("The Broadside Artillery Tower is missing from the building catalogue.");
         laserStats = defenseCatalog[laserType];
         rocketStats = defenseCatalog[rocketType];
         if (!defenseCatalog.TryResolve(shieldDefinition.Id, out int shieldType))

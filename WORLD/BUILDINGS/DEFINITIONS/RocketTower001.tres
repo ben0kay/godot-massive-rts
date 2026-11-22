@@ -6,11 +6,11 @@
 [resource]
 script = ExtResource("1")
 Id = "rocket_tower_001"
-DisplayName = "Rocket Tower 001"
+DisplayName = "Broadside Artillery Tower"
 Width = 3
 Depth = 3
-MinimumRange = 9.0
-MaximumRange = 48.0
+MinimumRange = 18.0
+MaximumRange = 72.0
 Health = 1800.0
 ArmourClass = "Fortified"
 Damage = 36.0
@@ -19,4 +19,5 @@ TurretDegreesPerSecond = 125.0
 RequiresLineOfSight = false
 Projectile = ExtResource("2")
 ProjectileVisualScale = 1.8
+ProjectileArcScale = 1.5
 ExplosionRadiusMultiplier = 2.0
