@@ -21,7 +21,7 @@ public sealed class ObstacleNavigation
     }
     private readonly record struct RouteKey(Vector2I From, Vector2I To, byte Type, int Detail, int Soldier);
     private readonly record struct Request(RouteKey Key, Vector2 Start, Vector2 Goal, float Stop, int Frame);
-    private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, float Stop, int Frame);
+    private sealed record Route(Vector2[] Points, Vector2 Start, Vector2 Goal, float Stop, int Frame, bool EndsAtAttackPoint);
     private struct Follower
     {
         public Route Route;
@@ -85,18 +85,19 @@ public sealed class ObstacleNavigation
         {
             pending.Remove(request.Key);
             var graph = graphs[request.Key.Type];
-            Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner);
+            Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner,
+                out bool endsAtAttackPoint, out int validAttackPoints);
             if (points == null && request.Key.Soldier >= 0)
             {
                 bool overlaps = field.IntersectsCircle(request.Start, graph.Radius);
-                LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · reachable corner {hasReachableCorner}";
+                LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · reachable corner {hasReachableCorner} · valid attack points {validAttackPoints}";
             }
             if (!routes.ContainsKey(request.Key))
             {
                 if (routes.Count == capacity) routes.Remove(cacheOrder.Dequeue());
                 cacheOrder.Enqueue(request.Key);
             }
-            routes[request.Key] = new Route(points, request.Start, request.Goal, request.Stop, frame);
+            routes[request.Key] = new Route(points, request.Start, request.Goal, request.Stop, frame, endsAtAttackPoint);
             RoutesBuilt++;
             MaxWaitFrames = Math.Max(MaxWaitFrames, frame - request.Frame);
         }
@@ -118,8 +119,9 @@ public sealed class ObstacleNavigation
 
         detouring = true;
         Vector2I goalSector = Sector(goal, sectorSize);
-        if (follower.Route != null && (follower.GoalSector == goalSector ||
-            CanApproach(field, follower.Route.Points[^1], goal, radius, stop)))
+        if (follower.Route != null && (follower.Route.EndsAtAttackPoint
+            ? CanFinish(follower.Route, goal, radius, stop)
+            : follower.GoalSector == goalSector || CanFinish(follower.Route, goal, radius, stop)))
         {
             follower.GoalSector = goalSector;
             Vector2[] points = follower.Route.Points;
@@ -163,7 +165,7 @@ public sealed class ObstacleNavigation
             if (routes.TryGetValue(key, out Route route))
             {
                 Vector2[] points = route.Points;
-                if (points != null && points.Length != 0 && CanApproach(field, points[^1], goal, radius, stop))
+                if (points != null && points.Length != 0 && CanFinish(route, goal, radius, stop))
                 {
                     int next = 0;
                     while (next < points.Length &&
@@ -182,7 +184,7 @@ public sealed class ObstacleNavigation
                 // An unusable shared result must not freeze another soldier in that sector.
                 if (!individual) continue;
                 if (frame - route.Frame < RetryFrames ||
-                    (start.DistanceSquaredTo(route.Start) < 0.0064f && goal.DistanceSquaredTo(route.Goal) < 0.0064f &&
+                    (points == null && start.DistanceSquaredTo(route.Start) < 0.0064f && goal.DistanceSquaredTo(route.Goal) < 0.0064f &&
                     Mathf.Abs(stop - route.Stop) < 0.08f))
                 {
                     CacheMisses++;
@@ -200,6 +202,14 @@ public sealed class ObstacleNavigation
         CacheMisses++;
         RouteWaits++;
         return start;
+    }
+
+    private bool CanFinish(Route route, Vector2 goal, float radius, float stop)
+    {
+        Vector2 last = route.Points[^1];
+        if (!route.EndsAtAttackPoint) return CanApproach(field, last, goal, radius, stop);
+        if (stop <= 0f || last.DistanceSquaredTo(goal) > stop * stop) return false;
+        return goal == route.Goal || !field.BlocksCorridor(last, goal, 0f);
     }
 
     private static bool CanReuseWaypoint(Follower follower, Vector2 start, Vector2 waypoint)
@@ -346,8 +356,10 @@ public sealed class ObstacleNavigation
 
         // Solve once for a shared request. Distances are seeded by all corners reachable from the start.
         public Vector2[] FindRoute(ObstacleField field, Vector2 start, Vector2 goal, float stop,
-            out bool hasReachableCorner)
+            out bool hasReachableCorner, out bool endsAtAttackPoint, out int validAttackPoints)
         {
+            endsAtAttackPoint = false;
+            validAttackPoints = 0;
             Array.Clear(visited);
             Array.Fill(previous, -1);
             hasReachableCorner = false;
@@ -357,8 +369,6 @@ public sealed class ObstacleNavigation
                 distances[i] = blocked ? float.PositiveInfinity : start.DistanceTo(points[i]);
                 hasReachableCorner |= !blocked;
             }
-            if (!hasReachableCorner) return null;
-
             float bestDistance = float.PositiveInfinity;
             int end = -1;
             for (int step = 0; step < points.Length; step++)
@@ -387,10 +397,64 @@ public sealed class ObstacleNavigation
                     previous[i] = current;
                 }
             }
-            if (end < 0) return null;
-            int length = 0;
+            if (end < 0)
+            {
+                if (stop <= 0.01f) return null;
+                if (!TryFindAttackPoint(field, start, goal, stop, out end, out Vector2 attackPoint,
+                    out validAttackPoints)) return null;
+                endsAtAttackPoint = true;
+                return BuildPath(end, attackPoint);
+            }
+            return BuildPath(end);
+        }
+
+        // The ordinary search already settled the reachable corners when it found no finish.
+        // Only those failed requests pay for the eight alternate bearings.
+        private bool TryFindAttackPoint(ObstacleField field, Vector2 start, Vector2 goal, float stop,
+            out int end, out Vector2 attackPoint, out int validAttackPoints)
+        {
+            const int bearings = 8;
+            float angle = (start - goal).Angle();
+            float edge = field.Boundary - Radius;
+            float best = float.PositiveInfinity;
+            end = -1;
+            attackPoint = default;
+            validAttackPoints = 0;
+            for (int a = 0; a < bearings; a++)
+            {
+                Vector2 point = goal + Vector2.FromAngle(angle + a * (Mathf.Tau / bearings)) * (stop - 0.01f);
+                if (Mathf.Abs(point.X) > edge || Mathf.Abs(point.Y) > edge ||
+                    field.IntersectsCircle(point, Radius) || field.BlocksCorridor(point, goal, 0f)) continue;
+                validAttackPoints++;
+
+                float direct = start.DistanceTo(point);
+                if (direct >= best) continue;
+                if (!field.BlocksCorridor(start, point, Radius))
+                {
+                    best = direct;
+                    end = -1;
+                    attackPoint = point;
+                    continue;
+                }
+                for (int i = 0; i < points.Length; i++)
+                {
+                    if (!visited[i] || distances[i] >= best) continue;
+                    float cost = distances[i] + points[i].DistanceTo(point);
+                    if (cost >= best || field.BlocksCorridor(points[i], point, Radius)) continue;
+                    best = cost;
+                    end = i;
+                    attackPoint = point;
+                }
+            }
+            return float.IsFinite(best);
+        }
+
+        private Vector2[] BuildPath(int end, Vector2? attackPoint = null)
+        {
+            int length = attackPoint.HasValue ? 1 : 0;
             for (int i = end; i >= 0; i = previous[i]) length++;
             var path = new Vector2[length];
+            if (attackPoint.HasValue) path[--length] = attackPoint.Value;
             for (int i = end; i >= 0; i = previous[i]) path[--length] = points[i];
             return path;
         }
