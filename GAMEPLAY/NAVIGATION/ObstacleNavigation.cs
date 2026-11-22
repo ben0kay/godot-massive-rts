@@ -91,9 +91,14 @@ public sealed class ObstacleNavigation
             if (points == null && request.Key.Soldier >= 0)
             {
                 bool overlaps = field.IntersectsCircle(request.Start, graph.Radius);
-                if (overlaps && field.TryFindClearanceExit(request.Start, graph.Radius, out Vector2 exit))
+                bool contact = overlaps || field.HasClearanceContact(request.Start, graph.Radius);
+                bool foundExit = false;
+                if (contact && field.TryFindClearanceExit(request.Start, graph.Radius, out Vector2 exit))
+                {
                     followers[request.Key.Soldier].ClearanceExit = exit;
-                LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · reachable corner {hasReachableCorner} · valid attack points {validAttackPoints}";
+                    foundExit = true;
+                }
+                LastIndividualFailure = $"Unit {request.Key.Soldier} {request.Start} → {request.Goal} · overlap {overlaps} · edge contact {contact} · exit found {foundExit} · reachable corner {hasReachableCorner} · valid attack points {validAttackPoints}";
             }
             if (!routes.ContainsKey(request.Key))
             {
@@ -115,7 +120,7 @@ public sealed class ObstacleNavigation
         routeCorner = false;
         if (follower.ClearanceExit is Vector2 exit)
         {
-            if (field.IntersectsCircle(start, radius) && field.CanExitClearance(start, exit, radius))
+            if (field.HasClearanceContact(start, radius) && field.CanExitClearance(start, exit, radius))
             {
                 detouring = routeCorner = true;
                 return exit;

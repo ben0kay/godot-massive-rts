@@ -266,6 +266,12 @@ public sealed class ObstacleField
             CrossesWallInterior(node.Right, from, delta, margin);
     }
 
+    // Rectangle expansion and closest-point distance round differently in float XZ.
+    private const float ClearanceContactSkin = 0.0001f;
+
+    internal bool HasClearanceContact(Vector2 point, float radius) =>
+        IntersectsCircle(point, radius + ClearanceContactSkin);
+
     internal bool TryFindClearanceExit(Vector2 from, float radius, out Vector2 exit)
     {
         exit = from;
@@ -274,7 +280,7 @@ public sealed class ObstacleField
         {
             float step = ring == 0 ? 0.05f : radius + 0.05f;
             Vector2 to = from + Vector2.FromAngle(direction * (Mathf.Tau / 8f)) * step;
-            if (IntersectsCircle(to, radius) || !CanExitClearance(from, to, radius)) continue;
+            if (HasClearanceContact(to, radius) || !CanExitClearance(from, to, radius)) continue;
             exit = to;
             return true;
         }
@@ -319,7 +325,9 @@ public sealed class ObstacleField
             Vector2 away = from - from.Max(box.Min).Min(box.Max);
             float distanceSquared = away.LengthSquared();
             // Ignore only the initial clearance overlap while moving away from its solid.
-            if (distanceSquared > 0f && distanceSquared <= radius * radius && away.Dot(delta) > 0f) return;
+            float contactRadius = radius + ClearanceContactSkin;
+            if (entry == 0f && distanceSquared > 0f && distanceSquared <= contactRadius * contactRadius &&
+                away.Dot(delta) > 0f) return;
         }
 
         // Two rectangular strips and four circles form the exact rounded Minkowski expansion.
