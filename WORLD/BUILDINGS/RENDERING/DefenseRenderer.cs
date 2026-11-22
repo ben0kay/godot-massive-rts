@@ -50,10 +50,18 @@ public partial class DefenseRenderer : Node3D
     public static Vector3 Muzzle(Vector3 pivot, float yaw, float recoil, float slope) =>
         pivot + RailBarrelBasis(new Basis(Vector3.Up, yaw), slope) * new Vector3(0f, 0f, recoil - BarrelLength);
 
-    // The twin muzzle ends lie beyond the 3x3 footprint even at a diagonal yaw,
-    // preventing the arcing projectiles from immediately hitting their own tower.
+    private static readonly Basis RocketBarrelPitch = new(Vector3.Right, Mathf.DegToRad(15f));
+
+    // Share the barrel transform so the shot and recoil follow the same raised axis.
+    private static Transform3D RocketBarrelTransform(Vector3 pivot, Basis yaw, int side, float recoil)
+    {
+        Basis barrel = yaw * RocketBarrelPitch;
+        Vector3 mount = new(side == 0 ? -0.7f : 0.7f, 0.9f, 0f);
+        return new Transform3D(barrel, pivot + yaw * mount + barrel * (Vector3.Back * recoil));
+    }
+
     public static Vector3 RocketMuzzle(Vector3 pivot, float yaw, int side, float recoil = 0f) =>
-        pivot + new Vector3(side == 0 ? -0.7f : 0.7f, 0.9f, recoil - 4.7f).Rotated(Vector3.Up, yaw);
+        RocketBarrelTransform(pivot, new Basis(Vector3.Up, yaw), side, recoil) * (Vector3.Forward * 4.7f);
 
     // =========================================================
     // Shared beveled chassis: darker outer plinth, recessed side faces, bright inset
@@ -175,9 +183,9 @@ public partial class DefenseRenderer : Node3D
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.90f, -3.12f),
+        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0f, -3.12f),
             new Vector3(0.37f, 0.31f, 3.16f), new Color(0.84f, 0.84f, 0.84f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.90f, -4.48f),
+        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0f, -4.48f),
             new Vector3(0.54f, 0.42f, 0.44f), Colors.White);
         return surface.Commit();
     }
@@ -363,8 +371,8 @@ public partial class DefenseRenderer : Node3D
         if (rocketSlots[index])
         {
             rocketHeads.SetInstanceTransform(index, new Transform3D(basis, pivot));
-            rocketBarrels.SetInstanceTransform(index, new Transform3D(basis, pivot + basis * new Vector3(-0.7f, 0f, leftRecoil)));
-            rightRocketBarrels.SetInstanceTransform(index, new Transform3D(basis, pivot + basis * new Vector3(0.7f, 0f, rightRecoil)));
+            rocketBarrels.SetInstanceTransform(index, RocketBarrelTransform(pivot, basis, 0, leftRecoil));
+            rightRocketBarrels.SetInstanceTransform(index, RocketBarrelTransform(pivot, basis, 1, rightRecoil));
         }
         else
         {
