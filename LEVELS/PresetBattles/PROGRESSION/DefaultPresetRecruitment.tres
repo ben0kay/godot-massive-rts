@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="PresetRecruitmentConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://LEVELS/PresetBattles/PROGRESSION/PresetRecruitmentConfig.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Prices = Dictionary[String, int]({
+"circle_infantry": 5,
+"square_infantry": 12,
+"triangle_archer": 10,
+"pikeman": 14,
+"diamond_cavalry": 22,
+"long_triangle_marksman": 24,
+"pentagon_elite": 40,
+"h_breacher": 25,
+"twin_rocket_launcher": 45,
+"prism_lance": 85,
+"hexagon_siege": 100,
+"chevron_artillery": 120,
+"dreadnaught": 500
+})
+InitiallyAvailable = PackedStringArray("circle_infantry", "square_infantry", "triangle_archer")

@@ -1,5 +1,6 @@
 // Centralizes scene changes, including pause restoration on a failed transition.
 using System;
+using System.Linq;
 using Godot;
 
 namespace MassiveRts;
@@ -21,10 +22,21 @@ internal static class MenuNavigation
     public static void ReturnToCampaign(Node source, string campaignId)
     {
         if (!source.IsInsideTree()) return;
+        if (campaignId == PresetCampaignStore.CampaignId)
+        {
+            var campaign = CampaignCatalog.Load().Campaigns.FirstOrDefault(entry => entry.Id == campaignId)
+                ?? throw new InvalidOperationException("Preset Battles is unavailable.");
+            OpenHeadquarters(source, campaign);
+            return;
+        }
+
         var menu = LoadScene(Campaign).Instantiate<FrontMenu>();
         menu.ReturnCampaignId = campaignId;
         Change(source, menu);
     }
+
+    public static void OpenHeadquarters(Node source, CampaignDefinition campaign, bool recruitment = false) =>
+        Change(source, new PresetCampaignHeadquarters { Campaign = campaign, OpenRecruitment = recruitment });
 
     // =========================================================
     // Surface missing or invalid references before touching the active scene.

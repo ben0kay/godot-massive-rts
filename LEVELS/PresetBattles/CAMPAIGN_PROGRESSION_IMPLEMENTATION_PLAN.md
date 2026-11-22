@@ -1,6 +1,6 @@
 # Preset Battles — Persistent Campaign Progression Implementation Plan
 
-> **Status:** PLANNED — owner-approved design; not source-implemented by this document.
+> **Status:** CAMPAIGN1-A source implemented and awaiting owner validation. Later stages are planned.
 > **Date:** 2026-11-22
 > **Repository:** ben0kay/godot-massive-rts
 > **Branch:** main
@@ -254,7 +254,7 @@ Tasks:
 
 | Stage | Status | Commit | Owner validation |
 | --- | --- | --- | --- |
-| CAMPAIGN1-A — Economy & HQ | **Planned** | — | Pending |
+| CAMPAIGN1-A — Economy & HQ | **Source Implemented / Awaiting Owner Validation** | See implementation commit | Pending |
 | CAMPAIGN1-B — Deployment & battle | **Planned** | — | Pending |
 | CAMPAIGN2 — Rewards & unlocks | **Planned** | — | Pending |
 | CAMPAIGN3-A — Research | **Planned** | — | Pending |

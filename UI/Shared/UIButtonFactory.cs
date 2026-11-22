@@ -57,6 +57,7 @@ internal static class UIButtonFactory
         button.AddThemeStyleboxOverride("normal", boxes[0]);
         button.AddThemeStyleboxOverride("hover", boxes[1]);
         button.AddThemeStyleboxOverride("pressed", boxes[2]);
+        button.AddThemeStyleboxOverride("hover_pressed", boxes[2]);
         button.AddThemeStyleboxOverride("disabled", boxes[3]);
         button.AddThemeStyleboxOverride("focus", boxes[4]);
     }

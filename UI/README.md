@@ -15,3 +15,9 @@ Campaign shows **Open RTS** and **Preset Battles**, each with its own **Level 00
 ## Gameplay HUD
 
 [UI/GameplayHUD](GameplayHUD/README.md) owns the new **army balance bar** used by BENCHMARK. Unlike the development diagnostics panels, the bar is reusable presentation UI: Blue on the left, Red on the right, optional Green in the middle, smoothly tracking surviving unit shares from cached faction totals. It stays hidden during deployment editing and generation.
+
+## CAMPAIGN1-A — Preset Battles Headquarters
+
+F5 → choose a profile → Campaign → Preset Battles opens Headquarters. The **Campaign Levels** page displays registered levels and opens their existing briefings. **Recruitment** shows remaining Credits, permanent ownership, and estimated army strength. Choose a quantity and recruit from the available units. Purchases save immediately. You can also open Recruitment from a Preset Battles briefing.
+
+The two pages live in `Menus/PresetBattles/` and share button styling through `Shared/UIButtonFactory.cs`. The economy and save format are documented [with the recruitment configuration](../LEVELS/PresetBattles/PROGRESSION/README.md).

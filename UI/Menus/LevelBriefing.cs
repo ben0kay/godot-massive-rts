@@ -59,10 +59,16 @@ public partial class LevelBriefing : Control
         }
         if (!string.IsNullOrWhiteSpace(Level.Description)) AddLabel(details, Level.Description, 16);
 
-        var upgrades = UIButtonFactory.Create("Upgrades / Recruit", () => { }, UIButtonStyle.Secondary);
-        upgrades.Disabled = true;
-        upgrades.TooltipText = "Coming soon";
-        details.AddChild(upgrades);
+        if (Campaign.Id == PresetCampaignStore.CampaignId)
+            details.AddChild(UIButtonFactory.Create("Headquarters Recruitment",
+                () => Navigate(() => MenuNavigation.OpenHeadquarters(this, Campaign, recruitment: true))));
+        else
+        {
+            var upgrades = UIButtonFactory.Create("Upgrades / Recruit", () => { }, UIButtonStyle.Secondary);
+            upgrades.Disabled = true;
+            upgrades.TooltipText = "Coming soon";
+            details.AddChild(upgrades);
+        }
         status = AddLabel(body, "", 16);
         status.Hide();
 
@@ -161,11 +167,13 @@ public partial class LevelBriefing : Control
         Back();
     }
 
-    private void Back() => MenuNavigation.ReturnToCampaign(this, Campaign.Id);
+    private void Back() => Navigate(() => MenuNavigation.ReturnToCampaign(this, Campaign.Id));
 
-    private void Deploy()
+    private void Deploy() => Navigate(() => LevelLauncher.Launch(this, Campaign.Id, Level.Id));
+
+    private void Navigate(Action action)
     {
-        try { LevelLauncher.Launch(this, Campaign.Id, Level.Id); }
+        try { action(); }
         catch (InvalidOperationException error)
         {
             status.Text = error.Message;

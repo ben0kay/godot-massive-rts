@@ -476,3 +476,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 
 - 2026-11-22 — UNIT-BALANCE — Doubled Prism Lance visual/collision scale (1.0→2.0), advanced physical Size Tier (2→3), and doubled its pooled beam flash (0.18→0.36 s) without changing one-tick damage. Renamed Chevron Heavy Artillery to Light Artillery, preserving stable ID and all other stats, and halved its Artillery Shell blast radius (7→3.5) while retaining the 31.25% edge-damage fraction. Updated relevant current documentation; owner Godot validation pending.
 - 2026-11-22 · Broadside Artillery Tower — Renamed the Rocket Tower, set its targeting range to 18–72 units, increased its projectile arc by 50%, and pitched both barrels up 15° with matching muzzle and recoil transforms. Source implemented, awaiting Godot playtest.
+
+- 2026-11-22 · CAMPAIGN1-A — Added Preset Battles Headquarters, profile-specific 500-Credit saves, permanent roster recruitment and legacy completion migration. Source implemented, awaiting owner validation.
