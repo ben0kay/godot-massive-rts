@@ -473,3 +473,6 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — NAV — Handle near-tangent obstacle contact in route recovery and report whether an exit was found. Normal corridor clearance is unchanged.
 
 - 2026-11-21 — EDITOR-LEVEL-PICKER — Replaced campaign and level dropdowns with two mode tabs and a non-scrollable responsive grid of direct-open level buttons. Preserved new-level, current-map return and unsaved-session confirmation. Source reviewed; awaiting owner validation.
+
+- 2026-11-22 — UNIT-BALANCE — Doubled Prism Lance visual/collision scale (1.0→2.0), advanced physical Size Tier (2→3), and doubled its pooled beam flash (0.18→0.36 s) without changing one-tick damage. Renamed Chevron Heavy Artillery to Light Artillery, preserving stable ID and all other stats, and halved its Artillery Shell blast radius (7→3.5) while retaining the 31.25% edge-damage fraction. Updated relevant current documentation; owner Godot validation pending.
+- 2026-11-22 · Broadside Artillery Tower — Renamed the Rocket Tower, set its targeting range to 18–72 units, increased its projectile arc by 50%, and pitched both barrels up 15° with matching muzzle and recoil transforms. Source implemented, awaiting Godot playtest.

@@ -27,6 +27,7 @@ public partial class BuildingDefinition : Resource
     // Null uses a sustained beam; rocket towers use the existing pooled projectile.
     [Export] public ProjectileDefinition Projectile { get; set; }
     [Export(PropertyHint.Range, "0.5,4,0.05")] public float ProjectileVisualScale { get; set; } = 1f;
+    [Export(PropertyHint.Range, "0.5,3,0.05")] public float ProjectileArcScale { get; set; } = 1f;
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;
     [Export] public bool AttacksSoldiers { get; set; } = true;
     [Export] public bool RequiresLineOfSight { get; set; } = true;

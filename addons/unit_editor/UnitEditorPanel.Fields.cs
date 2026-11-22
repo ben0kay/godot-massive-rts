@@ -297,6 +297,8 @@ public partial class UnitEditorPanel
         Number(nameof(defense.TurretDegreesPerSecond), "Turret turn rate", () => defense.TurretDegreesPerSecond,
             value => defense.TurretDegreesPerSecond = value, 1, 3600, 1, "°/s");
         if (beam) Number(nameof(defense.BeamSeconds), "Beam duration", () => defense.BeamSeconds, value => defense.BeamSeconds = value, 0.01, 10, 0.01, " s");
+        if (!beam) Number(nameof(defense.ProjectileArcScale), "Projectile arc multiplier", () => defense.ProjectileArcScale,
+            value => defense.ProjectileArcScale = value, 0.5, 3, 0.05, "×");
         Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
             value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
 

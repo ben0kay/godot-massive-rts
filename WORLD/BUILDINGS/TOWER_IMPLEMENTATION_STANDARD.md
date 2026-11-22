@@ -36,7 +36,7 @@
 | Tower | Definition path | Stable ID | Mechanic | Renderer |
 | --- | --- | --- | --- | --- |
 | Railgun | `DEFINITIONS/LaserTower001.tres` | `laser_tower_001` | Piercing sustained beam; `Projectile == null` with attack enabled | Railgun base, rotating head and recoil barrel |
-| Rocket | `DEFINITIONS/RocketTower001.tres` | `rocket_tower_001` | Twin-rocket projectile path; alternates launcher sides | Rocket-specific base/head/two barrels |
+| Broadside Artillery Tower | `DEFINITIONS/RocketTower001.tres` | `rocket_tower_001` | Twin-rocket projectile path; alternates launcher sides | Rocket-specific base/head/two barrels |
 | Shield Generator | `DEFINITIONS/ShieldGeneratorTower.tres` | `shield_generator` | `AttacksSoldiers = false`, `ShieldEmitterEnabled = true` | Separate static shield tower mesh |
 
 The Shield Generator is already in the live building catalog and Fortress Defense build menu. It is a **support tower**, not a no-damage railgun. Do not copy attack/target logic into it.

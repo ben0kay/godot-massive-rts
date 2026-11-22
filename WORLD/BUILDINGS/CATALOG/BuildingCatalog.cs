@@ -41,7 +41,8 @@ public sealed class RuntimeBuildingCatalog
                     ? Clamp(shot.ExplosionRadius * Clamp(definition.ExplosionRadiusMultiplier, 0.5f, 8f, 1f),
                         0.1f, 64f, 5f) : -1f;
                 projectileType = projectiles.Register(shot,
-                    Clamp(definition.ProjectileVisualScale, 0.5f, 4f, 1f), splash: splash);
+                    Clamp(definition.ProjectileVisualScale, 0.5f, 4f, 1f), splash: splash,
+                    arcScale: Clamp(definition.ProjectileArcScale, 0.5f, 3f, 1f));
             }
             types.Add(new BuildingStats(definition.Id, definition.DisplayName,
                 Mathf.Clamp(definition.Width, 1, 16), Mathf.Clamp(definition.Depth, 1, 16),
