@@ -11,7 +11,11 @@ public partial class LevelEditor : Node
     private VBoxContainer start, toolsPanel, context, toolbar, mapToolsContext, unitContext, defenseContext;
     private Control interfaceRoot;
     private Label status, startStatus, strength;
-    private OptionButton modes, levels, toolPicker, defensePicker;
+    private OptionButton toolPicker, defensePicker;
+    private HBoxContainer campaignButtons;
+    private GridContainer levelGrid;
+    private Button returnToLevel;
+    private string selectedCampaignId;
     private BuildingDefinition[] defenseDefinitions;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
@@ -23,7 +27,6 @@ public partial class LevelEditor : Node
     private CampaignCatalog catalog;
     private LevelEditorMode mode;
     private CampaignDefinition campaign;
-    private LevelDefinition[] listed;
     private CommandSandbox map;
     private Node runningTest;
     private Button testButton;
@@ -61,30 +64,31 @@ public partial class LevelEditor : Node
         layer.AddChild(interfaceRoot);
         interfaceRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        var home = Panel(interfaceRoot, Control.LayoutPreset.Center, -295, -180, 295, 180);
-        start = new VBoxContainer { CustomMinimumSize = new Vector2(540, 0) };
+        var home = Panel(interfaceRoot, Control.LayoutPreset.Center, -405, -270, 405, 270);
+        start = new VBoxContainer { CustomMinimumSize = new Vector2(750, 0) };
         home.AddChild(start);
         Heading(start, "Campaign Level Editor", 34);
         Heading(start, "Choose a campaign", 18);
-        modes = new OptionButton();
-        start.AddChild(modes);
-        modes.ItemSelected += _ => RefreshLevelList();
-        Button(start, "New Level", () => Open(null));
-        levels = new OptionButton();
-        start.AddChild(levels);
-        Button(start, "Load Existing Level", () =>
-        {
-            if (levels.Selected >= 0) Open(listed[levels.Selected]);
-        });
+        campaignButtons = new HBoxContainer();
+        start.AddChild(campaignButtons);
+        Heading(start, "Available levels", 18);
+        levelGrid = new GridContainer { Columns = 3, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        start.AddChild(levelGrid);
+        var newLevel = Button(start, "+ New Level", () => Open(null));
+        newLevel.CustomMinimumSize = new Vector2(0, 38);
         startStatus = Heading(start, "", 15);
         startStatus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Button(start, "Game Editor", () =>
+        var actions = new HBoxContainer();
+        start.AddChild(actions);
+        var backToHub = Button(actions, "Game Editor", () =>
         {
             void BackToHub() => MenuNavigation.Open(this, GameEditor.ScenePath);
             if (dirty) Confirm("Discard unsaved changes?", "Return to the Game Editor?", BackToHub);
             else BackToHub();
         });
-        Button(start, "Return to current level", () => ShowEditor());
+        backToHub.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        returnToLevel = Button(actions, "Return to current level", ShowEditor);
+        returnToLevel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 
         var bar = Panel(interfaceRoot, Control.LayoutPreset.TopWide, 12, 12, -12, 124);
         toolbar = new VBoxContainer();
@@ -164,36 +168,67 @@ public partial class LevelEditor : Node
         try
         {
             catalog = CampaignCatalog.Load(fresh: true);
-            modes.Clear();
-            foreach (var entry in catalog.Campaigns)
+            var supported = catalog.Campaigns.Where(entry =>
+                LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id)).ToArray();
+            if (!supported.Any(entry => entry.Id == selectedCampaignId))
+                selectedCampaignId = supported.FirstOrDefault()?.Id;
+            foreach (Node child in campaignButtons.GetChildren())
             {
-                if (!LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id)) continue;
-                modes.AddItem(entry.DisplayName);
-                modes.SetItemMetadata(modes.ItemCount - 1, entry.Id);
+                campaignButtons.RemoveChild(child);
+                child.QueueFree();
             }
-            if (modes.ItemCount > 0) modes.Select(0);
+            var tabs = new ButtonGroup();
+            foreach (var entry in supported)
+            {
+                string id = entry.Id;
+                var tab = Button(campaignButtons, entry.DisplayName, () =>
+                {
+                    selectedCampaignId = id;
+                    RefreshLevelList();
+                });
+                tab.ToggleMode = true;
+                tab.ButtonGroup = tabs;
+                tab.ButtonPressed = id == selectedCampaignId;
+                tab.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                tab.CustomMinimumSize = new Vector2(0, 36);
+            }
             RefreshLevelList();
         }
         catch (Exception error) { startStatus.Text = error.Message; }
-        (start.GetChild(start.GetChildCount() - 1) as Control).Visible = map != null;
+        returnToLevel.Visible = map != null;
     }
 
     private void RefreshLevelList()
     {
-        levels.Clear();
-        listed = Array.Empty<LevelDefinition>();
-        if (modes.Selected < 0) return;
-        string modeId = modes.GetItemMetadata(modes.Selected).AsString();
-        listed = CampaignCatalog.OrderedLevels(catalog.Campaigns.Single(entry => entry.Id == modeId));
-        foreach (var level in listed) levels.AddItem(level.MenuName == level.Id ? level.Id : $"{level.Id}  ·  {level.MenuName}");
-        if (listed.Length > 0) levels.Select(0);
-        startStatus.Text = listed.Length == 0 ? "This campaign has no levels yet." : "";
+        foreach (Node child in levelGrid.GetChildren())
+        {
+            levelGrid.RemoveChild(child);
+            child.QueueFree();
+        }
+        var selected = catalog?.Campaigns.FirstOrDefault(entry => entry.Id == selectedCampaignId);
+        if (selected == null)
+        {
+            startStatus.Text = "No supported campaigns are available.";
+            return;
+        }
+        LevelDefinition[] available = CampaignCatalog.OrderedLevels(selected);
+        // Expand columns for larger campaigns so every saved level stays visible without scrolling.
+        levelGrid.Columns = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(available.Length)), 3, 10);
+        foreach (var level in available)
+        {
+            var button = Button(levelGrid, level.Id, () => Open(level));
+            button.TooltipText = level.MenuName == level.Id ? level.Id : $"{level.Id} · {level.MenuName}";
+            button.CustomMinimumSize = new Vector2(0, 29);
+            button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            if (available.Length > 36) button.AddThemeFontSizeOverride("font_size", 13);
+        }
+        startStatus.Text = available.Length == 0 ? "This campaign has no levels yet." : "";
     }
 
     private void Open(LevelDefinition existing)
     {
-        if (modes.Selected < 0) return;
-        var adapter = LevelEditorMode.Supported.Single(entry => entry.CampaignId == modes.GetItemMetadata(modes.Selected).AsString());
+        if (selectedCampaignId == null) return;
+        var adapter = LevelEditorMode.Supported.Single(entry => entry.CampaignId == selectedCampaignId);
         if (dirty)
         {
             Confirm("Discard unsaved changes?", "Opening another map replaces this editing session.", () => OpenMap(adapter, existing));
@@ -225,6 +260,7 @@ public partial class LevelEditor : Node
         cursor = null;
         dirty = previewing = false;
         mode = adapter;
+        selectedCampaignId = mode.CampaignId;
         testButton.Text = mode.Preset ? "Test Auto Battler" : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
