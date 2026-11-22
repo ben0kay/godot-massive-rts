@@ -11,7 +11,7 @@
 | Cavalry (`diamond_cavalry`) | Long narrow diamond / rhombus | Melee | **105** | **14** | 0.80 s | 9.0 | 1.9 | 0% | 0.300 | ~2.0× long, ~1.1× wide |
 | Elite Infantry (`pentagon_elite`) | Regular pentagon prism | Melee | 285 | 22 | 1.65 s | 2.7 | 2.3 | 20% | 0.825 | **1.8× square (0.9 size multiplier)** |
 | Siege Infantry (`hexagon_siege`) | Hexagon prism | Melee | 600 | 36 | 1.65 s | 2.2 | 2.3 | 20% | 0.825 | ~2.2× current Pentagon scale |
-| Heavy Artillery (`chevron_artillery`) | Chevron with barrel | Ranged explosive | 350 | 80 | 4.50 s | 1.5 | 70 | 15% | 0.99 | ~2.4× square width |
+| Light Artillery (`chevron_artillery`) | Chevron with barrel | Ranged explosive | 500 | 80 | 4.50 s | 1.2 | 70 | 0% | 0.99 | ~2.4× square width |
 | H Breacher (`h_breacher`) | Twin-ram H frame | Melee vs units/structures | 110 | 20 (10 vs units) | 1.50 s | 2.8 | 0.82 | 0% | 0.44 | 0.91-unit width |
 
 - These are **current authored tuning values**; the definition resources are authoritative. Base dimensions shown above are before Size Multiplier. The 2026-11-14 balance pass adjusts six units' HP/damage and the Pentagon's multiplier, without changing authored attack intervals or other unit settings.

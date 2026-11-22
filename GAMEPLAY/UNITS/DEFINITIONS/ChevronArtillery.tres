@@ -7,7 +7,7 @@
 script = ExtResource("1")
 Id = "chevron_artillery"
 BattleRating = 450
-DisplayName = "Heavy Artillery"
+DisplayName = "Light Artillery"
 Role = "Long-range indirect explosive fire"
 Shape = 6
 Width = 1.92

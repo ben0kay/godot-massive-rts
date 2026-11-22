@@ -22,3 +22,4 @@ Speed = 34.0
 ArcHeight = 24.0
 ArcHeightPerDistance = 0.55
 ExplodesOnImpact = true
+ExplosionRadius = 3.5

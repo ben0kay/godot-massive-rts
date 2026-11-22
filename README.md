@@ -72,13 +72,13 @@ Keep playable maps under `LEVELS/<Mode>/` and reusable map components under `WOR
 
 ## Soldier roster
 
-**UNIT0 is source implemented and awaiting owner validation.** Both factions can field Circle (basic melee), Square (stronger melee), Equilateral Triangle (ranged), Diamond (fast cavalry), Pentagon (large slow elite infantry), Hexagon (siege infantry with a radial stomp), and Chevron (heavy artillery). Their faceted meshes use faction tints and share instanced batches.
+**UNIT0 is source implemented and awaiting owner validation.** Both factions can field Circle (basic melee), Square (stronger melee), Equilateral Triangle (ranged), Diamond (fast cavalry), Pentagon (large slow elite infantry), Hexagon (siege infantry with a radial stomp), and Chevron (light artillery). Their faceted meshes use faction tints and share instanced batches.
 
 Edit the seven resources under `GAMEPLAY/UNITS/DEFINITIONS/` in Godot. UNIT1 compiles the Inspector’s **Size Multiplier** into each type’s mesh dimensions, footprint and melee reach. Diamond Cavalry defaults to 1.25×. See the [catalogue guide](GAMEPLAY/UNITS/README.md) and [starting roster](GAMEPLAY/UNITS/DEFINITIONS/STARTING_ROSTER.md).
 
-## ART1 — Heavy Artillery
+## ART1 — Light Artillery
 
-Heavy Artillery is available in the benchmark's deployment painter and the Unit Editor. Its chevron body is 20% wider and taller than Elite Infantry, with a projecting barrel. It fires over cover at 12–70 units. Its 7-unit blast shares the shockwave damage query and expanding ring. See [PROJECTILES](GAMEPLAY/PROJECTILES/README.md) for flight and impact tuning. Source implemented, awaiting owner validation.
+Light Artillery is available in the benchmark's deployment painter and the Unit Editor. Its chevron body is 20% wider and taller than Elite Infantry, with a projecting barrel. It fires over cover at 12–70 units. Its 3.5-unit blast shares the shockwave damage query and expanding ring. See [PROJECTILES](GAMEPLAY/PROJECTILES/README.md) for flight and impact tuning. Source implemented, awaiting owner validation.
 
 ## SEP1 — Soldier Separation
 
