@@ -471,3 +471,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — NAV — Allow outward movement from initial obstacle-clearance overlap and probe short, full-footprint escape moves after failed individual routes. Existing route budget retained.
 
 - 2026-11-21 — NAV — Handle near-tangent obstacle contact in route recovery and report whether an exit was found. Normal corridor clearance is unchanged.
+
+- 2026-11-21 — EDITOR-LEVEL-PICKER — Replaced campaign and level dropdowns with two mode tabs and a non-scrollable responsive grid of direct-open level buttons. Preserved new-level, current-map return and unsaved-session confirmation. Source reviewed; awaiting owner validation.
