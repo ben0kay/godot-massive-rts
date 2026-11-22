@@ -38,8 +38,7 @@ internal sealed class DefenseSystem
     {
         int slot = System.Array.IndexOf(structures, null);
         structures[slot] = structure;
-        towers[slot] = new Tower { Stats = stats, Faction = structure.Faction, Footprint = structure.Area,
-            Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1 };
+        towers[slot] = CreateTower(structure, stats, height, ground);
         renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled);
         ActiveCount++;
     }
@@ -74,10 +73,14 @@ internal sealed class DefenseSystem
             var area = placement.Footprint(catalog);
             var stats = catalog[placement.Type];
             structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour);
-            towers[i] = new Tower { Stats = stats, Faction = placement.Faction,
-                Pivot = DefenseRenderer.Pivot(area, height) + Vector3.Up * (terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f), Footprint = area, Target = -1 };
+            float ground = terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f;
+            towers[i] = CreateTower(structures[i], stats, height, ground);
         }
     }
+
+    private static Tower CreateTower(StructureHealth structure, BuildingStats stats, float height, float ground) =>
+        new() { Stats = stats, Faction = structure.Faction, Footprint = structure.Area,
+            Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1 };
 
     public bool RemoveDestroyed(out ObstacleField field)
     {
@@ -113,8 +116,9 @@ internal sealed class DefenseSystem
         for (int i = 0; i < towers.Length; i++)
         {
             ref Tower tower = ref towers[i];
-            if (structures[i]?.Destroyed != false || !tower.Stats.AttacksSoldiers) continue;
-            bool rocket = tower.Stats.ProjectileType >= 0;
+            TowerWeapon weapon = tower.Stats.Weapon;
+            if (weapon == TowerWeapon.None || structures[i]?.Destroyed != false) continue;
+            bool rocket = weapon == TowerWeapon.Projectile;
             float oldYaw = tower.Yaw, oldSlope = tower.BeamSlope, left = tower.LeftRecoil, right = tower.RightRecoil;
             float returnSpeed = rocket ? 1.25f : 1.8f;
             tower.LeftRecoil = Mathf.MoveToward(left, 0f, returnSpeed * dt);

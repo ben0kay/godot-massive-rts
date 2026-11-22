@@ -60,8 +60,14 @@ public sealed class RuntimeBuildingCatalog
         float.IsFinite(value) ? Mathf.Clamp(value, min, max) : fallback;
 }
 
+internal enum TowerWeapon { None, DirectBeam, Projectile }
+
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
-    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType, ShieldEmitterStats ShieldEmitter);
+    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType, ShieldEmitterStats ShieldEmitter)
+{
+    internal TowerWeapon Weapon => !AttacksSoldiers ? TowerWeapon.None
+        : ProjectileType >= 0 ? TowerWeapon.Projectile : TowerWeapon.DirectBeam;
+}
 
 public readonly record struct BuildingPlacement(int X, int Z, byte Faction, int Type, float GridSize = DeploymentLayout.CellSize)
 {

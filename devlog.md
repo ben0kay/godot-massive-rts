@@ -465,3 +465,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-21 — NAV — Hold for a verified detour instead of advancing into a blocked corridor. Added playtest counters for route waits and cached stalls, plus individual route failure details. Source reviewed.
 
 - 2026-11-21 — NAV — Sample eight alternate attack bearings on failed combat route builds and report the number of valid attack points on individual failures. Revalidate cached attack endpoints against the current attack distance.
+
+- 2026-11-21 — TOWER-STD2 — Shared tower initialization and explicit weapon dispatch. Authored walls now pass their world-space vertical bounds to existing airborne collision. Updated the tower standard with audit findings and runtime checks.

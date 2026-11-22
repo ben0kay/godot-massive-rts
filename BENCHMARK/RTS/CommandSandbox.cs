@@ -372,15 +372,17 @@ public partial class CommandSandbox : Node3D
                 WorldBounds = new Rect2(ObstacleField.Xz(bounds.Position), ObstacleField.Xz(bounds.Size))
             };
             if (!wall.IsValid) continue;
+            float bottom = bounds.Position.Y;
             if (groundForPlay)
             {
                 Vector3 groundPosition = mesh.GlobalPosition;
                 float relief = 0f;
-                groundPosition.Y += (terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f) - bounds.Position.Y;
+                bottom = terrain?.FootprintHeight(wall.Min, wall.Max, out relief) ?? 0f;
+                groundPosition.Y += bottom - bounds.Position.Y;
                 if (relief > 0.5f) GD.PushWarning($"Command wall '{mesh.Name}' crosses uneven terrain.");
                 mesh.GlobalPosition = groundPosition;
             }
-            walls.Add(wall);
+            walls.Add(wall with { AirborneHeightRange = new Vector2(bottom, bottom + bounds.Size.Y) });
         }
         return walls.ToArray();
     }
