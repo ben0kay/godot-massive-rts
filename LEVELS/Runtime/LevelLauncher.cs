@@ -1,6 +1,7 @@
 // Validates campaign launch requests and attaches session controls to that scene instance.
 using System;
 using System.Linq;
+using System.IO;
 using Godot;
 
 namespace MassiveRts;
@@ -18,10 +19,40 @@ internal static class LevelLauncher
     {
         if (!source.IsInsideTree()) return;
         var (catalog, _, level, profile) = Resolve(campaignId, levelId);
+        if (campaignId == PresetCampaignStore.CampaignId)
+        {
+            LaunchPresetBattle(source, level, profile.Id);
+            return;
+        }
+
         var scene = MenuNavigation.LoadScene(level.ScenePath).Instantiate();
         var session = new LevelSession(profile.Id, campaignId, levelId);
         scene.AddChild(new LevelExitInput(session, catalog.AllowDevelopmentCompletion && OS.IsDebugBuild()));
         MenuNavigation.Change(source, scene);
+    }
+
+    private static void LaunchPresetBattle(Node source, LevelDefinition level, string profileId)
+    {
+        PresetCampaignState state;
+        try { state = PresetCampaignStore.Open(profileId, out _); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException(error.Message, error);
+        }
+
+        var arenaScene = MenuNavigation.LoadScene("res://BENCHMARK/BenchmarkArena.tscn");
+        var instance = MenuNavigation.LoadScene(level.ScenePath).Instantiate();
+        if (instance is not CommandSandbox { PresetRules: not null } map)
+        {
+            instance.Free();
+            throw new InvalidOperationException("This level needs an authored Preset Battles map.");
+        }
+
+        var arena = arenaScene.Instantiate<BenchmarkArena>();
+        arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
+        map.LevelSettings = level;
+        arena.ConfigureCampaignBattle(map, state);
+        MenuNavigation.Change(source, arena);
     }
 
     // =========================================================

@@ -7,7 +7,7 @@ namespace MassiveRts;
 internal static class LevelLayoutPreview
 {
     // =========================================================
-    public static Node3D Build(CommandSandbox level)
+    public static Node3D Build(CommandSandbox level, bool redOnly = false)
     {
         var preview = new Node3D { Name = "LayoutPreview" };
         level.AddChild(preview, false, Node.InternalMode.Back);
@@ -17,7 +17,8 @@ internal static class LevelLayoutPreview
         if (level.GetNodeOrNull<Node3D>("StartingUnits") is Node3D units)
             foreach (var child in units.GetChildren())
             {
-                if (child is not CommandUnitPlacement placement || placement.Unit == null) continue;
+                if (child is not CommandUnitPlacement placement || placement.Unit == null ||
+                    (redOnly && placement.Faction != CommandUnitPlacement.Team.Red)) continue;
                 var key = (placement.Unit, (byte)placement.Faction);
                 if (!groups.TryGetValue(key, out var transforms))
                     groups.Add(key, transforms = new());
@@ -47,7 +48,8 @@ internal static class LevelLayoutPreview
             renderer.Initialize(System.Array.Empty<BuildingPlacement>(), null, CommandLaserPlacement.BaseHeight, battle: false);
             int index = 0;
             foreach (var child in defenses.GetChildren())
-                if (child is CommandLaserPlacement tower && index < CommandSandbox.MaxStartingTowers)
+                if (child is CommandLaserPlacement tower && (!redOnly || tower.Red) &&
+                    index < (redOnly ? DeploymentLayout.MaxBuildings : CommandSandbox.MaxStartingTowers))
                 {
                     var area = tower.Footprint(tower.GlobalPosition);
                     float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;

@@ -153,6 +153,11 @@ public partial class BenchmarkArena : Node3D
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
         panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, PresetTest = presetTestMap != null }; AddChild(panel);
+        if (campaignRoster != null)
+        {
+            panel.Hide();
+            panel.SetProcessUnhandledKeyInput(false);
+        }
         weather = new BattlefieldWeather(camera);
         panel.WeatherChanged += weather.Configure;
         panel.CameraRotationChanged += camera.SetYawDegrees;
@@ -184,7 +189,11 @@ public partial class BenchmarkArena : Node3D
         painter.SetPlacementGridVisible(panel.ShowPlacementGrid);
         panel.PlacementGridChanged += painter.SetPlacementGridVisible;
         painter.Changed += UpdateDeploymentStatus;
-        painter.EditRejected += message => panel.Status.Text = message + "\n" + DeploymentCount();
+        painter.EditRejected += message =>
+        {
+            if (campaignHud != null) campaignHud.Report(message);
+            else panel.Status.Text = message + "\n" + DeploymentCount();
+        };
         panel.PaintToolSelected += painter.SetPaintTool;
         panel.DefenseChoice.ItemSelected += index => painter.DefenseType = panel.DefenseChoice.GetItemId((int)index);
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -197,7 +206,7 @@ public partial class BenchmarkArena : Node3D
             battleObstacleShadows.Visible = enabled;
             armyRenderer?.SetShadowsVisible(enabled);
         };
-        RefreshSavedBattles();
+        if (campaignRoster == null) RefreshSavedBattles();
         panel.SpawnRequested += SpawnSelectedBattle;
         panel.SavePresetRequested += SaveBattlePreset;
         panel.ClearRequested += () =>
@@ -244,6 +253,7 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         armyBalanceHud?.Reset();
+        campaignBattleRunning = false;
         if (dreadnaughts != null)
         {
             RemoveChild(dreadnaughts);
@@ -340,8 +350,8 @@ public partial class BenchmarkArena : Node3D
         painter.CancelDrag();
         painter.Visible = editing;
         panel.EditingDeployment = editing;
-        deploymentStrengthBar.Visible = editing;
-        if (editing) deploymentStrengthBar.Refresh(painter.Layout);
+        deploymentStrengthBar.Visible = editing && campaignRoster == null;
+        if (deploymentStrengthBar.Visible) deploymentStrengthBar.Refresh(painter.Layout);
     }
 
     private string DeploymentCount() => presetTestMap != null
@@ -358,7 +368,8 @@ public partial class BenchmarkArena : Node3D
     }
     private void UpdateDeploymentStatus()
     {
-        panel.Status.Text = DeploymentCount();
+        if (campaignHud != null) UpdateCampaignDeployment();
+        else panel.Status.Text = DeploymentCount();
         if (deploymentStrengthBar.Visible) deploymentStrengthBar.Refresh(painter.Layout);
     }
 
@@ -547,7 +558,7 @@ public partial class BenchmarkArena : Node3D
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = presetForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
-        grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
+        grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: campaignRoster == null);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
         deployment = new DeploymentFactory(snapshot, (ulong)settings.Seed);
         spawning = true;
@@ -577,8 +588,14 @@ public partial class BenchmarkArena : Node3D
             {
                 int first = units.Count;
                 deployment.Append(units, Config.SpawnPerFrame);
-                if (obstacles != null && !ValidateSpawn(first))
+                if ((obstacles != null || campaignRoster != null) && !ValidateSpawn(first))
                 {
+                    if (campaignHud != null)
+                    {
+                        EnterDeployment();
+                        campaignHud.Report("A starting soldier overlaps an obstruction or the map edge. Check the authored positions or move the Blue deployment.");
+                        return;
+                    }
                     Clear();
                     panel.Status.Text = "Spawn or march endpoint overlaps a wall or the battlefield edge.";
                     return;
@@ -616,6 +633,11 @@ public partial class BenchmarkArena : Node3D
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units);
+                if (campaignHud != null)
+                {
+                    campaignBattleRunning = true;
+                    campaignHud.ShowBattle();
+                }
                 panel.Summary.ResetSamples();
             }
         }
@@ -670,6 +692,7 @@ public partial class BenchmarkArena : Node3D
                 changedWrites += armyRenderer.ChangedWrites;
             }
             smoothingWasEnabled = smooth;
+            if (campaignHud != null) UpdateCampaignOutcome(steps);
         }
         if (!paused)
         {
@@ -683,7 +706,13 @@ public partial class BenchmarkArena : Node3D
         shockwaves.Sync();
         deathRenderer.Sync(deathFeedback);
         measuredFrames++; hudClock += delta;
-        if (hudClock >= 0.3) { armyBalanceHud?.RefreshCounts(); UpdateOverlay(); hudClock = 0; ResetTimings(); }
+        if (hudClock >= 0.3)
+        {
+            armyBalanceHud?.RefreshCounts();
+            if (campaignRoster == null) UpdateOverlay();
+            hudClock = 0;
+            ResetTimings();
+        }
     }
     // =========================================================
     private bool ValidateSpawn(int first)
@@ -700,9 +729,9 @@ public partial class BenchmarkArena : Node3D
 
     private bool ValidGroundPoint(Vector3 position, float radius)
     {
-        float edge = obstacles.Boundary;
+        float edge = obstacles?.Boundary ?? presetTestMap.MapSize * 0.5f;
         return Mathf.Abs(position.X) + radius <= edge && Mathf.Abs(position.Z) + radius <= edge &&
-            !obstacles.IntersectsCircle(ObstacleField.Xz(position), radius);
+            obstacles?.IntersectsCircle(ObstacleField.Xz(position), radius) != true;
     }
 
     private void AcquireGuards(int acquisitionStep)

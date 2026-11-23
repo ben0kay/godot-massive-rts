@@ -40,30 +40,53 @@ public partial class BenchmarkArena
         presetForest = paint?.Forest;
 
         var red = new List<SoldierPlacement>();
-        foreach (var child in map.GetNode("StartingUnits").GetChildren())
+        foreach (var child in map.GetNodeOrNull<Node3D>("StartingUnits")?.GetChildren() ?? new Godot.Collections.Array<Node>())
         {
-            if (child is not CommandUnitPlacement group || group.Faction != CommandUnitPlacement.Team.Red ||
-                !catalog.TryResolve(group.Unit?.Id, out byte type)) continue;
+            if (child is not CommandUnitPlacement group || group.Faction != CommandUnitPlacement.Team.Red) continue;
+            if (!catalog.TryResolve(group.Unit?.Id, out byte type))
+            {
+                if (campaignRoster != null) campaignMapError = "The map contains an unrecognized Red soldier type.";
+                continue;
+            }
             var facing = Vector2.Up.Rotated(-group.GlobalRotation.Y);
             foreach (var position in group.Positions(catalog[type].Footprint))
+            {
+                if (campaignRoster != null && red.Count == Config.MaxSoldiers)
+                {
+                    campaignMapError = "The authored Red army exceeds the simulation's soldier capacity.";
+                    break;
+                }
                 red.Add(new SoldierPlacement(0, 0, Factions.Red, type) { AuthoredPosition = position, AuthoredFacing = facing });
+            }
         }
         presetRed = red.ToArray();
 
         if (map.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
             foreach (var child in defenses.GetChildren())
-                if (child is CommandLaserPlacement tower && tower.Red && buildings.TryResolve(tower.EffectiveDefinition.Id, out int type))
+                if (child is CommandLaserPlacement tower && tower.Red)
                 {
+                    if (!buildings.TryResolve(tower.EffectiveDefinition?.Id, out int type))
+                    {
+                        if (campaignRoster != null) campaignMapError = "The map contains an unrecognized Red defense.";
+                        continue;
+                    }
+                    if (campaignRoster != null && presetDefenses.Count == DeploymentLayout.MaxBuildings)
+                    {
+                        campaignMapError = "The authored Red defenses exceed the simulation's defense capacity.";
+                        break;
+                    }
                     var area = tower.Footprint(tower.GlobalPosition);
-                    presetDefenses.Add(new BuildingPlacement(area.X, area.Z, Factions.Red, type));
+                    presetDefenses.Add(new BuildingPlacement(area.X, area.Z, Factions.Red, type,
+                        campaignRoster != null ? area.GridSize : DeploymentLayout.CellSize));
                 }
 
         presetPaintCollision = BuildPresetField(presetCover.Concat(presetWater)
             .Concat(presetDefenses.Select(defense => defense.Footprint(buildings))));
         painter.BrushFaction = Factions.Blue;
-        painter.PaintRestriction = CanDeployBlue;
+        if (campaignRoster == null) painter.PaintRestriction = CanDeployBlue;
         painter.SetPreviewTerrain(terrain);
-        presetTestPreview = LevelLayoutPreview.Build(map);
+        presetTestPreview = LevelLayoutPreview.Build(map, redOnly: campaignRoster != null);
+        if (campaignRoster != null) PrepareCampaignDeployment();
     }
 
     private bool CanDeployBlue(SoldierPlacement placement)

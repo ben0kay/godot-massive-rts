@@ -29,12 +29,16 @@ public sealed class DeploymentLayout
     private readonly long[] factionStrength = new long[Factions.Count];
     private readonly int[] factionCounts = new int[Factions.Count];
 
+    private readonly int[] typeCounts;
+
+    internal int CountForType(byte type) => typeCounts[type];
     internal long StrengthOf(int faction) => factionStrength[faction];
     internal int CountForFaction(int faction) => factionCounts[faction];
 
     private void Tally(SoldierPlacement placement, int change)
     {
         factionCounts[placement.Faction] += change;
+        typeCounts[placement.Type] += change;
         factionStrength[placement.Faction] += change * (long)catalog.BattleRating(placement.Type);
     }
     private readonly Dictionary<Vector2I, int> slots = new();
@@ -72,6 +76,7 @@ public sealed class DeploymentLayout
         GridSize = gridSize;
         Obstacles = new ObstacleLayout(gridSize);
         this.catalog = catalog;
+        typeCounts = new int[catalog.Count];
         this.buildings = buildings;
     }
 
@@ -262,6 +267,7 @@ public sealed class DeploymentLayout
         placements.Clear();
         System.Array.Clear(factionStrength);
         System.Array.Clear(factionCounts);
+        System.Array.Clear(typeCounts);
         slots.Clear();
         soldierBuckets.Clear();
     }

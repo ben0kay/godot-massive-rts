@@ -97,7 +97,7 @@ public partial class LevelBriefing : Control
         map.UpdateGroundBounds();
         try { map.GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile(); }
         catch (InvalidOperationException error) { GD.PushWarning(error.Message); }
-        LevelLayoutPreview.Build(map);
+        LevelLayoutPreview.Build(map, redOnly: Campaign.Id == PresetCampaignStore.CampaignId);
 
         var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal,
             Size = map.MapSize * 1.08f, Far = 18000f };
@@ -109,7 +109,7 @@ public partial class LevelBriefing : Control
         viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
     }
 
-    private static void AddForces(Control details, CommandSandbox map)
+    private void AddForces(Control details, CommandSandbox map)
     {
         var groups = map.GetNodeOrNull<Node3D>("StartingUnits")?.GetChildren().OfType<CommandUnitPlacement>()
             .Where(group => group.Unit != null).ToArray() ?? Array.Empty<CommandUnitPlacement>();
@@ -128,11 +128,46 @@ public partial class LevelBriefing : Control
             AddLabel(details, $"Incoming waves: {map.WaveDefinitions.Count:N0} · {reinforcements:N0} units", 16);
         }
 
-        AddLabel(details, "Player starting forces", 22);
-        if (map.PresetRules is PresetBattleRules rules)
+        if (Campaign.Id == PresetCampaignStore.CampaignId && map.PresetRules is PresetBattleRules rules)
         {
-            AddLabel(details, $"Deployment allowance: {rules.BlueUnitLimit:N0} units", 16);
-            var allowed = rules.AllowedBlueUnitIds;
+            foreach (var enemy in groups.Where(group => group.Faction == CommandUnitPlacement.Team.Red)
+                         .GroupBy(group => group.Unit.DisplayName))
+                AddLabel(details, $"{enemy.Key} × {enemy.Sum(group => (long)group.SoldierCount):N0}", 16);
+            AddLabel(details, "Objective", 22);
+            AddLabel(details, "Eliminate Red soldiers and defenses.", 16);
+            if (redDefenses > 0) AddLabel(details, "Deploy units that can attack structures to destroy Red defenses.", 16);
+            AddLabel(details, "Owned army", 22);
+            var allowed = rules.AllowedBlueUnitIds ?? Array.Empty<string>();
+            var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres");
+            if (allowed.Length > 0)
+            {
+                var names = allowed.Select(id => catalog.Definitions.FirstOrDefault(unit => unit?.Id == id)?.DisplayName ?? id);
+                AddLabel(details, "Map allows: " + string.Join(", ", names), 16);
+            }
+            try
+            {
+                var owned = PresetCampaignStore.Open(ProfileStore.Selected.Id, out _);
+                bool any = false;
+                foreach (var unit in catalog.Definitions)
+                {
+                    if (unit == null || owned.Owned(unit.Id) == 0 || (allowed.Length > 0 && !allowed.Contains(unit.Id))) continue;
+                    AddLabel(details, $"{unit.DisplayName} × {owned.Owned(unit.Id):N0}", 16);
+                    any = true;
+                }
+                if (!any) AddLabel(details, "No eligible soldiers owned. Visit Headquarters to recruit.", 16);
+            }
+            catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                AddLabel(details, error.Message, 16);
+            }
+            return;
+        }
+
+        AddLabel(details, "Player starting forces", 22);
+        if (map.PresetRules is PresetBattleRules legacyRules)
+        {
+            AddLabel(details, $"Deployment allowance: {legacyRules.BlueUnitLimit:N0} units", 16);
+            var allowed = legacyRules.AllowedBlueUnitIds;
             if (allowed.Length > 0)
             {
                 var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres");

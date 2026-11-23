@@ -7,6 +7,8 @@ namespace MassiveRts;
 public partial class DeploymentPainter : Node3D
 {
     internal System.Func<SoldierPlacement, bool> PaintRestriction { get; set; }
+    internal System.Func<SoldierPlacement, string> PlacementError { get; set; }
+    private string paintError;
     private TerrainHeightField previewTerrain;
 
     internal void SetPreviewTerrain(TerrainHeightField surface)
@@ -149,6 +151,7 @@ public partial class DeploymentPainter : Node3D
         else return;
 
         if (!TryGround(screen, out Vector3 ground)) return;
+        paintError = null;
         bool changed = false;
         int side = Mathf.Clamp(SoldierBrushSize, 1, 10);
         int subdivisions = DeploymentLayout.SoldierSubdivisions;
@@ -186,6 +189,7 @@ public partial class DeploymentPainter : Node3D
             }
         }
         if (changed) Changed?.Invoke();
+        if (paintError != null) EditRejected?.Invoke(paintError);
     }
 
     private void HandleDefenseInput(InputEvent input)
@@ -286,6 +290,7 @@ public partial class DeploymentPainter : Node3D
 
     private void EditSoldierRectangle(ObstacleRectangle area, bool erase)
     {
+        paintError = null;
         bool changed = false;
         if (erase)
         {
@@ -310,13 +315,25 @@ public partial class DeploymentPainter : Node3D
             catch (System.InvalidOperationException error) { EditRejected?.Invoke(error.Message); }
         }
         if (changed) Changed?.Invoke();
+        if (paintError != null) EditRejected?.Invoke(paintError);
     }
 
     private bool PaintSoldier(Vector2I point)
     {
         bool existed = Layout.TryGet(point, out SoldierPlacement previous);
         var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType, Layout.GridSize);
-        if (PaintRestriction?.Invoke(placement) == false || !Layout.TryPaint(placement, out _)) return false;
+        if (existed && previous == placement) return false;
+        string error = PlacementError?.Invoke(placement);
+        if (error != null)
+        {
+            paintError ??= error;
+            return false;
+        }
+        if (PaintRestriction?.Invoke(placement) == false || !Layout.TryPaint(placement, out _))
+        {
+            if (PlacementError != null) paintError ??= "This soldier overlaps another placement or the battlefield edge.";
+            return false;
+        }
         if (existed) previews[previous.Type].Remove(point);
         previews[placement.Type].Add(placement);
         return true;

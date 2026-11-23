@@ -1,6 +1,6 @@
 # Preset Battles — Persistent Campaign Progression Implementation Plan
 
-> **Status:** CAMPAIGN1-A source implemented and awaiting owner validation. Later stages are planned.
+> **Status:** CAMPAIGN1-A and CAMPAIGN1-B source implemented and awaiting owner validation. Later stages are planned.
 > **Date:** 2026-11-22
 > **Repository:** ben0kay/godot-massive-rts
 > **Branch:** main
@@ -255,11 +255,11 @@ Tasks:
 | Stage | Status | Commit | Owner validation |
 | --- | --- | --- | --- |
 | CAMPAIGN1-A — Economy & HQ | **Source Implemented / Awaiting Owner Validation** | See implementation commit | Pending |
-| CAMPAIGN1-B — Deployment & battle | **Planned** | — | Pending |
+| CAMPAIGN1-B — Deployment & battle | **Source Implemented / Awaiting Owner Validation** | See implementation commit | Pending |
 | CAMPAIGN2 — Rewards & unlocks | **Planned** | — | Pending |
 | CAMPAIGN3-A — Research | **Planned** | — | Pending |
 | CAMPAIGN3-B — Expansion & polish | **Planned** | — | Pending |
 
 Statuses should advance through **Planned → Source Implemented / Awaiting Owner Validation → Accepted** after each independently approved pass.
 
-**First action for Codex:** Implement **CAMPAIGN1-A only**, then stop. The owner will explicitly authorize subsequent stages.
+**Next gate:** Owner validation of CAMPAIGN1-A and CAMPAIGN1-B. Begin CAMPAIGN2 only on explicit authorization.
