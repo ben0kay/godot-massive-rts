@@ -24,15 +24,15 @@ public partial class LevelEditor
 
     private void DeploymentLineTools()
     {
-        var rules = map.PresetRules;
+        var rules = map.AutoBattlerRules;
         Heading(context, "Blue and Red occupy opposite sides.", 15);
         Choice(context, "Split along coordinate", new[] { "Off", "X (left / right)", "Z (north / south)" },
             (int)rules.LineAxis, value =>
             {
-                SetValue(rules.LineAxis, (PresetBattleRules.DeploymentAxis)value, axis => rules.LineAxis = axis);
+                SetValue(rules.LineAxis, (AutoBattlerRules.DeploymentAxis)value, axis => rules.LineAxis = axis);
                 UpdateTool();
             });
-        if (rules.LineAxis == PresetBattleRules.DeploymentAxis.Disabled) return;
+        if (rules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled) return;
         float half = map.MapSize * 0.5f;
         Number(context, "Line coordinate", rules.LineOffset, -half + Grid, half - Grid, 1).ValueChanged += value =>
             SetValue(rules.LineOffset, (float)value, position => rules.LineOffset = position);
@@ -44,11 +44,11 @@ public partial class LevelEditor
         Heading(context, "Click the map to position the line.", 15);
     }
 
-    private void SetLine(PresetBattleRules.DeploymentAxis axis, Vector3 point)
+    private void SetLine(AutoBattlerRules.DeploymentAxis axis, Vector3 point)
     {
-        var rules = map.PresetRules;
+        var rules = map.AutoBattlerRules;
         float half = map.MapSize * 0.5f;
-        float offset = Mathf.Clamp(axis == PresetBattleRules.DeploymentAxis.X ? point.X : point.Z, -half + Grid, half - Grid);
+        float offset = Mathf.Clamp(axis == AutoBattlerRules.DeploymentAxis.X ? point.X : point.Z, -half + Grid, half - Grid);
         SetValue((rules.LineAxis, rules.LineOffset), (axis, offset), value =>
         {
             rules.LineAxis = value.Item1;
@@ -86,7 +86,7 @@ public partial class LevelEditor
 
     private bool FitsPresetSide(Node3D node, Vector3 center)
     {
-        var rules = map.PresetRules;
+        var rules = map.AutoBattlerRules;
         if (rules == null) return true;
         if (node is CommandLaserPlacement tower) return tower.FitsSide(rules, center);
         if (node is not CommandUnitPlacement group) return true;
@@ -150,9 +150,9 @@ public partial class LevelEditor
         if (!placementCatalog.TryResolve(unit.Id, out byte type)) return;
         float radius = placementCatalog[type].Footprint;
         float half = map.MapSize * 0.5f;
-        byte faction = mode.Preset || red ? Factions.Red : Factions.Blue;
+        byte faction = mode.IsAutoBattler || red ? Factions.Red : Factions.Blue;
         int subdivisions = DeploymentLayout.SoldierSubdivisions;
-        int limit = mode.Preset ? 100000 : CommandSandbox.NonWaveUnitCapacity - (map.SpawnDefaultBlueSquad ? CommandMovement.SquadSize : 0);
+        int limit = mode.IsAutoBattler ? 100000 : CommandSandbox.NonWaveUnitCapacity - (map.SpawnDefaultBlueSquad ? CommandMovement.SquadSize : 0);
         int existing = 0;
         foreach (var group in groups)
         {
@@ -177,7 +177,7 @@ public partial class LevelEditor
             var slot = new SoldierPlacement(cell.X, cell.Y, faction, type);
             var point = slot.Position();
             if (Mathf.Abs(point.X) + radius > half || Mathf.Abs(point.Z) + radius > half ||
-                map.PresetRules?.AllowsSide(point, radius, blue: false) == false ||
+                map.AutoBattlerRules?.AllowsSide(point, radius, blue: false) == false ||
                 collision?.IntersectsCircle(ObstacleField.Xz(point), radius) == true ||
                 candidates.TryGet(cell, out _) || !candidates.TryPaint(slot, out _)) continue;
             if (existing + offsets.Count >= limit) throw new InvalidOperationException($"This fill would exceed the level limit of {limit:N0} authored soldiers.");
@@ -233,7 +233,7 @@ public partial class LevelEditor
             var army = groups.Where(group => group.Faction == team && group.Unit != null);
             return $"{team}  {army.Sum(group => (long)group.SoldierCount):N0} units  ·  {army.Sum(group => (long)group.SoldierCount * Mathf.Clamp(group.Unit.BattleRating, 0, UnitDefinition.MaxBattleRating)):N0} strength";
         }
-        string blue = mode.Preset ? $"Blue allowance  {map.PresetRules.BlueUnitLimit:N0} units · strength set by deployment" : Team(CommandUnitPlacement.Team.Blue);
+        string blue = mode.IsAutoBattler ? $"Blue allowance  {map.AutoBattlerRules.BlueUnitLimit:N0} units · strength set by deployment" : Team(CommandUnitPlacement.Team.Blue);
         strength.Text = $"{map.MapSize:0} × {map.MapSize:0}     |     {blue}     |     {Team(CommandUnitPlacement.Team.Red)}";
     }
 }

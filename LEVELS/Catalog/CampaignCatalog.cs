@@ -32,12 +32,15 @@ public partial class CampaignCatalog : Resource
                 throw new InvalidOperationException("The campaign catalog has an invalid or duplicate campaign.");
 
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            var orders = new HashSet<int>();
+            var orders = new Dictionary<int, string>();
             foreach (var level in campaign.Levels)
             {
                 if (level == null || !ValidId(level.Id) || !ids.Add(level.Id) ||
-                    level.Order < 1 || !orders.Add(level.Order) || string.IsNullOrWhiteSpace(level.DisplayName))
-                    throw new InvalidOperationException($"Campaign {campaign.DisplayName} has an invalid or duplicate level entry.");
+                    level.Order < 1 || string.IsNullOrWhiteSpace(level.DisplayName))
+                    throw new InvalidOperationException($"Campaign {campaign.DisplayName} has an invalid or duplicate level entry ({level?.Id ?? "missing level"}).");
+                if (!orders.TryAdd(level.Order, level.Id))
+                    throw new InvalidOperationException(
+                        $"Campaign {campaign.DisplayName} has duplicate Order {level.Order} on {orders[level.Order]} and {level.Id}.");
             }
         }
 

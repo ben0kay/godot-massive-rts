@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="LevelDefinition" format=3]
+
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_h1caa"]
+
+[resource]
+script = ExtResource("1_h1caa")
+Id = "Level008"
+DisplayName = "Level008"
+Order = 4
+ScenePath = "res://LEVELS/AutoBattler/Level008/Level008.tscn"
+MapSize = 256.0

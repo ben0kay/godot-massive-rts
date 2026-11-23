@@ -104,7 +104,7 @@ internal static class LevelEditorSave
         try
         {
             if (verified is not CommandSandbox restored ||
-                (restored.PresetRules != null) != mode.Preset || !SameSceneNodes(map, restored))
+                (restored.AutoBattlerRules != null) != mode.IsAutoBattler || !SameSceneNodes(map, restored))
                 throw new InvalidOperationException("The staged scene could not restore the editable map.");
         }
         finally { verified?.Free(); }
@@ -194,19 +194,19 @@ internal static class LevelEditorSave
             ?? Array.Empty<CommandLaserPlacement>();
         if (towers.Length > CommandSandbox.MaxStartingTowers)
             throw new InvalidOperationException($"A level supports up to {CommandSandbox.MaxStartingTowers} starting defense towers.");
-        if (mode.Preset)
+        if (mode.IsAutoBattler)
         {
-            var rules = map.PresetRules;
-            if (rules.LineAxis != PresetBattleRules.DeploymentAxis.Disabled &&
+            var rules = map.AutoBattlerRules;
+            if (rules.LineAxis != AutoBattlerRules.DeploymentAxis.Disabled &&
                 Mathf.Abs(rules.LineOffset) >= map.MapSize * 0.5f)
                 throw new InvalidOperationException("Move the deployment line inside the map boundary.");
             if (groups.Any(group => !group.FitsSide(rules, group.GlobalPosition)) ||
                 towers.Any(tower => !tower.Red || !tower.FitsSide(rules, tower.GlobalPosition)))
                 throw new InvalidOperationException("Move preplaced formations and defense towers onto the Red side of the line.");
             if (groups.Sum(group => (long)group.SoldierCount) > 100000)
-                throw new InvalidOperationException("Preset Battles supports up to 100,000 authored soldiers.");
+                throw new InvalidOperationException("AutoBattler supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||
-                map.PresetRules.BlueUnitLimit < 0 || map.PresetRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))
+                map.AutoBattlerRules.BlueUnitLimit < 0 || map.AutoBattlerRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))
                 throw new InvalidOperationException("Check the Red formation factions and Blue deployment settings.");
             return;
         }

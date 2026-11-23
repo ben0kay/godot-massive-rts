@@ -193,7 +193,7 @@ public partial class FrontMenu : Control
     // Reload progress for the active profile when showing a mode, including after a level.
     private void ShowCampaignLevels(CampaignDefinition campaign, Button back)
     {
-        if (campaign.Id == PresetCampaignStore.CampaignId)
+        if (campaign.Id == AutoBattlerCampaignStore.CampaignId)
         {
             MenuNavigation.OpenHeadquarters(this, campaign);
             return;

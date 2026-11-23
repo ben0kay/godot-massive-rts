@@ -22,10 +22,10 @@ internal static class MenuNavigation
     public static void ReturnToCampaign(Node source, string campaignId)
     {
         if (!source.IsInsideTree()) return;
-        if (campaignId == PresetCampaignStore.CampaignId)
+        if (campaignId == AutoBattlerCampaignStore.CampaignId)
         {
             var campaign = CampaignCatalog.Load().Campaigns.FirstOrDefault(entry => entry.Id == campaignId)
-                ?? throw new InvalidOperationException("Preset Battles is unavailable.");
+                ?? throw new InvalidOperationException("AutoBattler is unavailable.");
             OpenHeadquarters(source, campaign);
             return;
         }
@@ -36,7 +36,7 @@ internal static class MenuNavigation
     }
 
     public static void OpenHeadquarters(Node source, CampaignDefinition campaign, bool recruitment = false) =>
-        Change(source, new PresetCampaignHeadquarters { Campaign = campaign, OpenRecruitment = recruitment });
+        Change(source, new AutoBattlerCampaignHeadquarters { Campaign = campaign, OpenRecruitment = recruitment });
 
     // =========================================================
     // Surface missing or invalid references before touching the active scene.

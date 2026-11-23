@@ -36,7 +36,7 @@ public partial class LevelEditor
         var x = Number(form, "Camera focus X", cameraMarker.Position.X, -2500, 2500, 0.25);
         var z = Number(form, "Camera focus Z", cameraMarker.Position.Z, -2500, 2500, 0.25);
         var yawDegrees = Number(form, "Camera yaw", cameraMarker.RotationDegrees.Y, -180, 360, 0.25);
-        Func<(Action Undo, Action Redo)> readRules = mode.Preset ? PresetForm(form) : FortressForm(form);
+        Func<(Action Undo, Action Redo)> readRules = mode.IsAutoBattler ? AutoBattlerForm(form) : FortressForm(form);
         var errorLabel = Heading(dialogContent, "", 15);
         errorLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         Button(dialogContent, "Apply settings", () =>
@@ -71,9 +71,9 @@ public partial class LevelEditor
         settingsDialog.PopupCentered();
     }
 
-    private Func<(Action Undo, Action Redo)> PresetForm(Control parent)
+    private Func<(Action Undo, Action Redo)> AutoBattlerForm(Control parent)
     {
-        var rules = map.PresetRules;
+        var rules = map.AutoBattlerRules;
         Heading(parent, "Objective · Eliminate the enemy", 17);
         var allowance = Number(parent, "Blue unit limit", rules.BlueUnitLimit, 0, 50000);
         Heading(parent, "Allowed Blue unit types", 15);

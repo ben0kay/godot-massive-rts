@@ -28,7 +28,7 @@ public partial class CommandUnitPlacement : Marker3D
             yield return CommandMovement.Slot(center, basis.X, columns, slot, SoldierCount, footprint * 2f + 0.3f);
     }
 
-    internal bool FitsSide(PresetBattleRules rules, Vector3 center)
+    internal bool FitsSide(AutoBattlerRules rules, Vector3 center)
     {
         if (Unit == null) return false;
         float footprint = UnitOutline.FromDefinition(Unit, UnitOutline.EffectiveSize(Unit)).Footprint;

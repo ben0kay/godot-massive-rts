@@ -33,8 +33,8 @@ public partial class LevelEditor
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
             if (entry is Tool.Soldiers or Tool.Defense) continue;
-            if (mode.Preset && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
-            if (!mode.Preset && entry is Tool.Deployment or Tool.DeploymentLine) continue;
+            if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
+            if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine) continue;
             toolPicker.AddItem(entry switch
             {
                 Tool.Bridge => "Draw bridge",
@@ -185,13 +185,13 @@ public partial class LevelEditor
                 break;
             case Tool.Defense:
                 Heading(context, "Click the map to place this defense.", 15);
-                if (!mode.Preset) Choice(context, "Faction", new[] { "Blue", "Red" }, redTower ? 1 : 0, index => redTower = index == 1);
+                if (!mode.IsAutoBattler) Choice(context, "Faction", new[] { "Blue", "Red" }, redTower ? 1 : 0, index => redTower = index == 1);
                 break;
             case Tool.Soldiers:
                 Choice(context, "Placement", new[] { "Formation", "Rectangle fill" }, fillRectangle ? 1 : 0,
                     index => { fillRectangle = index == 1; UpdateTool(); });
                 UnitPicker(context, unitIndex, index => unitIndex = index);
-                if (!mode.Preset)
+                if (!mode.IsAutoBattler)
                     Choice(context, "Faction", new[] { "Blue", "Red" }, red ? 1 : 0, index => red = index == 1);
                 if (fillRectangle)
                     Number(context, "Density scale (lower is denser)", densityScale, 0, 3, 0.05).ValueChanged += value => densityScale = (float)value;
@@ -391,11 +391,11 @@ public partial class LevelEditor
     private void BeginPaint()
     {
         EndPaint();
-        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.PresetRules?.BlueDeploymentCells);
+        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.AutoBattlerRules?.BlueDeploymentCells);
         rocks = new(paint.Data.RockCells);
         water = new(paint.Data.WaterCells);
         forest = new(paint.Data.ForestCells);
-        deployment = map.PresetRules == null ? new() : new(map.PresetRules.BlueDeploymentCells);
+        deployment = map.AutoBattlerRules == null ? new() : new(map.AutoBattlerRules.BlueDeploymentCells);
         paintChanged = false;
     }
 
@@ -421,7 +421,7 @@ public partial class LevelEditor
                 if (tool == Tool.Rock) { paintChanged |= forest.Remove(next); paintChanged |= water.Remove(next); paintChanged |= rocks.Add(next); }
                 if (tool == Tool.Water) { paintChanged |= forest.Remove(next); paintChanged |= rocks.Remove(next); paintChanged |= water.Add(next); }
                 if (tool == Tool.Forest) { paintChanged |= rocks.Remove(next); paintChanged |= water.Remove(next); paintChanged |= forest.Add(next); }
-                if (tool == Tool.Deployment && map.PresetRules.AllowsSide(
+                if (tool == Tool.Deployment && map.AutoBattlerRules.AllowsSide(
                     new Vector3((next.X + 0.5f) * Grid, 0, (next.Y + 0.5f) * Grid), Grid * 0.5f, blue: true))
                     paintChanged |= deployment.Add(next);
             }
@@ -449,7 +449,7 @@ public partial class LevelEditor
         beforePaint = null;
         previousCell = null;
         if (!paintChanged) return;
-        (Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.PresetRules?.BlueDeploymentCells);
+        (Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.AutoBattlerRules?.BlueDeploymentCells);
         Remember(() => SetPaint(previous), () => SetPaint(next));
     }
 
@@ -458,7 +458,7 @@ public partial class LevelEditor
         paint.Data.RockCells = cells.Rocks;
         paint.Data.WaterCells = cells.Water;
         paint.Data.ForestCells = cells.Forest;
-        if (map.PresetRules != null) map.PresetRules.BlueDeploymentCells = cells.Blue;
+        if (map.AutoBattlerRules != null) map.AutoBattlerRules.BlueDeploymentCells = cells.Blue;
         RefreshMap();
     }
 
@@ -515,8 +515,8 @@ public partial class LevelEditor
                 Move(map.GetNode<Node3D>("Citadel"), point);
                 return;
             case Tool.DeploymentLine:
-                SetLine(map.PresetRules.LineAxis == PresetBattleRules.DeploymentAxis.Disabled
-                    ? PresetBattleRules.DeploymentAxis.Z : map.PresetRules.LineAxis, point);
+                SetLine(map.AutoBattlerRules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled
+                    ? AutoBattlerRules.DeploymentAxis.Z : map.AutoBattlerRules.LineAxis, point);
                 return;
             case Tool.Camera:
                 var marker = map.GetNode<Marker3D>("CameraStart");
@@ -537,13 +537,13 @@ public partial class LevelEditor
             case Tool.Soldiers:
                 var formation = LoadNode<CommandUnitPlacement>("res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn");
                 formation.Unit = units[unitIndex];
-                formation.Faction = mode.Preset || red ? CommandUnitPlacement.Team.Red : CommandUnitPlacement.Team.Blue;
+                formation.Faction = mode.IsAutoBattler || red ? CommandUnitPlacement.Team.Red : CommandUnitPlacement.Team.Blue;
                 formation.Count = groupSize;
                 formation.RotationDegrees = new Vector3(0, yaw, 0);
                 node = formation; parent = "StartingUnits";
                 break;
             case Tool.Defense:
-                node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.Preset || redTower };
+                node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler || redTower };
                 parent = "StartingDefenses";
                 break;
             case Tool.Fabricator:

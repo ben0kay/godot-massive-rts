@@ -30,10 +30,10 @@ public partial class CommandLaserPlacement : Marker3D
         return new Vector3(center.X, point.Y, center.Y);
     }
 
-    internal bool FitsSide(PresetBattleRules rules, Vector3 point)
+    internal bool FitsSide(AutoBattlerRules rules, Vector3 point)
     {
         var area = Footprint(point);
         var size = (area.Max - area.Min) * 0.5f;
-        return rules.AllowsSide(SnapCenter(point), rules.LineAxis == PresetBattleRules.DeploymentAxis.X ? size.X : size.Y, !Red);
+        return rules.AllowsSide(SnapCenter(point), rules.LineAxis == AutoBattlerRules.DeploymentAxis.X ? size.X : size.Y, !Red);
     }
 }

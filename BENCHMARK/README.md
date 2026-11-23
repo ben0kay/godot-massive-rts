@@ -174,7 +174,7 @@ Under **CPU and separation**, the pursuit breakdown shows live refresh, schedule
 
 ### Named painted battles
 
-In **Edit painted deployment → Paint tools**, enter a **Preset name** and click **Save as preset**. The preset stores the painted soldier positions, types and teams, walls, defenses, team orders, guard radius, and seed in `user://benchmark_presets`. Names are unique. Choose it under **Preset battle → Saved battle** and click **Spawn / Reset selected** to replay the deployment, including after restarting Godot. Choose **Generated battle** to use the standard benchmark controls. Saved battles use the current unit definitions and live tuning settings. The existing single deployment slot still loads into the painter.
+In **Edit painted deployment → Paint tools**, enter a **Preset name** and click **Save as preset**. The preset stores the painted soldier positions, types and teams, walls, defenses, team orders, guard radius, and seed in `user://benchmark_presets`. Names are unique. Choose it under **AutoBattler → Saved battle** and click **Spawn / Reset selected** to replay the deployment, including after restarting Godot. Choose **Generated battle** to use the standard benchmark controls. Saved battles use the current unit definitions and live tuning settings. The existing single deployment slot still loads into the painter.
 
 
 ## Fortress Defense Command Sandbox
@@ -235,12 +235,12 @@ Blocked units try short sidesteps, and melee pressure can nudge up to four allie
 
 ### Terrain speed
 
-On maps with elevation, units adjust movement speed to the grade in their travel direction. Changes ramp from a 2% grade to full strength at a 35% grade. Downhill movement gains up to 10%. Uphill penalties follow Size Tier, capped at 3% for Tier 1, 8% for Tier 2, 15% for Tier 3 and 22% from Tier 5 onward. Intermediate tiers interpolate. Benchmark, Preset Battle playtests and Fortress Defense share the rule. Route selection keeps its existing costs.
+On maps with elevation, units adjust movement speed to the grade in their travel direction. Changes ramp from a 2% grade to full strength at a 35% grade. Downhill movement gains up to 10%. Uphill penalties follow Size Tier, capped at 3% for Tier 1, 8% for Tier 2, 15% for Tier 3 and 22% from Tier 5 onward. Intermediate tiers interpolate. Benchmark, AutoBattler playtests and Fortress Defense share the rule. Route selection keeps its existing costs.
 
 
 ### Weather
 
-Open **Weather** in the left panel of Benchmark or the Level Editor's Auto Battler playtest. Enable it to adjust **Mist density**, **Drift speed**, and **Haze** while the battle runs. Broken cloud patches drift across the map, with softer haze toward the far side. Painted rivers have a denser drifting mist that feathers onto their banks. **Mist density** controls both ground and river mist. Weather is off by default and applies only to the current test session. It uses one camera pass and affects presentation only.
+Open **Weather** in the left panel of Benchmark or the Level Editor's AutoBattler playtest. Enable it to adjust **Mist density**, **Drift speed**, and **Haze** while the battle runs. Broken cloud patches drift across the map, with softer haze toward the far side. Painted rivers have a denser drifting mist that feathers onto their banks. **Mist density** controls both ground and river mist. Weather is off by default and applies only to the current test session. It uses one camera pass and affects presentation only.
 
 ### Shield diagnostics
 

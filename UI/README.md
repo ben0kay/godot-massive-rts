@@ -10,14 +10,14 @@ See [LEVELS](../LEVELS/README.md) for campaign authoring and [SYSTEMS](../SYSTEM
 
 ## FRONT1 — Campaign game modes
 
-Campaign shows **Open RTS** and **Preset Battles**, each with its own **Level 001**. Mode buttons follow the order in `LEVELS/Catalog/DefaultCampaignCatalog.tres`. A launched level returns to the level list for its own mode. See the [FRONT1 plan](CAMPAIGN_MODE_STRUCTURE_PLAN.md) for the compatibility mapping and owner checks.
+Campaign shows **Open RTS** and **AutoBattler**, each with its own **Level 001**. Mode buttons follow the order in `LEVELS/Catalog/DefaultCampaignCatalog.tres`. A launched level returns to the level list for its own mode. See the [FRONT1 plan](CAMPAIGN_MODE_STRUCTURE_PLAN.md) for the compatibility mapping and owner checks.
 
 ## Gameplay HUD
 
 [UI/GameplayHUD](GameplayHUD/README.md) owns the new **army balance bar** used by BENCHMARK. Unlike the development diagnostics panels, the bar is reusable presentation UI: Blue on the left, Red on the right, optional Green in the middle, smoothly tracking surviving unit shares from cached faction totals. It stays hidden during deployment editing and generation.
 
-## CAMPAIGN1-A — Preset Battles Headquarters
+## CAMPAIGN1-A — AutoBattler Headquarters
 
-F5 → choose a profile → Campaign → Preset Battles opens Headquarters. The **Campaign Levels** page displays registered levels and opens their existing briefings. **Recruitment** shows remaining Credits, permanent ownership, and estimated army strength. Choose a quantity and recruit from the available units. Purchases save immediately. You can also open Recruitment from a Preset Battles briefing.
+F5 → choose a profile → Campaign → AutoBattler opens Headquarters. The **Campaign Levels** page displays registered levels and opens their existing briefings. **Recruitment** shows remaining Credits, permanent ownership, and estimated army strength. Choose a quantity and recruit from the available units. Purchases save immediately. You can also open Recruitment from a AutoBattler briefing.
 
-The two pages live in `Menus/PresetBattles/` and share button styling through `Shared/UIButtonFactory.cs`. The economy and save format are documented [with the recruitment configuration](../LEVELS/PresetBattles/PROGRESSION/README.md).
+The two pages live in `Menus/AutoBattler/` and share button styling through `Shared/UIButtonFactory.cs`. The economy and save format are documented [with the recruitment configuration](../LEVELS/AutoBattler/PROGRESSION/README.md).

@@ -58,15 +58,15 @@ internal static class LevelLayoutPreview
                 }
         }
 
-        if (level.PresetRules is { LineAxis: not PresetBattleRules.DeploymentAxis.Disabled } rules)
+        if (level.AutoBattlerRules is { LineAxis: not AutoBattlerRules.DeploymentAxis.Disabled } rules)
         {
-            bool alongZ = rules.LineAxis == PresetBattleRules.DeploymentAxis.X;
+            bool alongZ = rules.LineAxis == AutoBattlerRules.DeploymentAxis.X;
             float half = level.MapSize * 0.5f;
             float offset = Mathf.Clamp(rules.LineOffset, -half, half);
             float blue = rules.FlipBlueSide ? 1 : -1;
             AddDeploymentLine(preview, terrain, alongZ, offset, half, blue);
         }
-        if (level.PresetRules?.BlueDeploymentCells is not { Count: > 0 } cells) return preview;
+        if (level.AutoBattlerRules?.BlueDeploymentCells is not { Count: > 0 } cells) return preview;
         using var region = new SurfaceTool();
         bool hasRegion = false;
         region.Begin(Mesh.PrimitiveType.Triangles);
@@ -80,7 +80,7 @@ internal static class LevelLayoutPreview
             float x = cell.X * cellSize, z = cell.Y * cellSize;
             if (Mathf.Abs(x + cellSize * 0.5f) > level.MapSize * 0.5f ||
                 Mathf.Abs(z + cellSize * 0.5f) > level.MapSize * 0.5f ||
-                !level.PresetRules.AllowsSide(new Vector3(x + cellSize * 0.5f, 0, z + cellSize * 0.5f),
+                !level.AutoBattlerRules.AllowsSide(new Vector3(x + cellSize * 0.5f, 0, z + cellSize * 0.5f),
                     cellSize * 0.5f, blue: true)) continue;
             hasRegion = true;
             Vector3 At(float vx, float vz) => new(vx, Height(vx, vz) + 0.08f, vz);

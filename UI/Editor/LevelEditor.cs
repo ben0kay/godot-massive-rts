@@ -261,7 +261,7 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        testButton.Text = mode.Preset ? "Test Auto Battler" : "Test Fortress";
+        testButton.Text = mode.IsAutoBattler ? "Test AutoBattler" : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
         map = next;
@@ -403,14 +403,14 @@ public partial class LevelEditor : Node
             SetStatus("Could not create a temporary test scene.");
             return;
         }
-        if (mode.Preset)
+        if (mode.IsAutoBattler)
         {
             try
             {
                 var arena = MenuNavigation.LoadScene("res://BENCHMARK/BenchmarkArena.tscn").Instantiate<BenchmarkArena>();
                 arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
                 test.LevelSettings = metadata;
-                arena.ConfigurePresetTest(test);
+                arena.ConfigureAutoBattlerPlaytest(test);
                 var container = new SubViewportContainer { Stretch = true };
                 var viewport = new SubViewport { OwnWorld3D = true };
                 container.AddChild(viewport);
@@ -435,7 +435,7 @@ public partial class LevelEditor : Node
         }
         else AddChild(runningTest);
         ShowEditor();
-        SetStatus(mode.Preset ? "Paint Blue troops, then Start painted battle · Return from Test resumes editing" :
+        SetStatus(mode.IsAutoBattler ? "Paint Blue troops, then Start painted battle · Return from Test resumes editing" :
             "Temporary Fortress test · use Return from Test to resume editing");
     }
 

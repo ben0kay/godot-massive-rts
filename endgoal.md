@@ -61,7 +61,7 @@ This is the more focused, simulation-forward mode. It can be enjoyable without p
 - Barracks, workers, resource gathering, a build menu or a recurring economy.
 - RTS-specific command processing running silently in the background.
 
-**Preset Battles campaign direction (2026-11-19):** An authored sequence of increasingly difficult maps is now intended. Red troops begin predeployed and visible; the player deploys a limited Blue army, presses Fight and watches the autonomous outcome. Victories should award campaign credits for recruitment and upgrades, with a possible bonus for preserving more troops. Persistent roster rules, exact reward economics and future hidden enemy/fog mechanics remain design decisions. See the dedicated [Preset Battles campaign design](LEVELS/PresetBattles/PRESET_CAMPAIGN_DESIGN.md) for the current proposed loop, milestones and open questions.
+**AutoBattler campaign direction (2026-11-19):** An authored sequence of increasingly difficult maps is now intended. Red troops begin predeployed and visible; the player deploys a limited Blue army, presses Fight and watches the autonomous outcome. Victories should award campaign credits for recruitment and upgrades, with a possible bonus for preserving more troops. Persistent roster rules, exact reward economics and future hidden enemy/fog mechanics remain design decisions. See the dedicated [AutoBattler campaign design](LEVELS/AutoBattler/AUTOBATTLER_CAMPAIGN_DESIGN.md) for the current proposed loop, milestones and open questions.
 
 **Existing foundation:** the BENCH0 painted deployment editor already supports placing basic soldier types and starting a battle. It should be reused/adapted rather than mistaken for a fully finished game mode.
 
@@ -109,9 +109,9 @@ At huge unit counts, production should eventually have sensible pacing/limits an
 **The owner's preference is to design the map by hand.** Open RTS **Level 001** must be a **separate Godot scene** that can be opened and edited directly in the editor. It should be safe to place/arrange terrain, obstacles, Carbon deposit nodes, Citadels, starting positions and future structures by editing scene data. These objects are planned content, not items to spawn or lock into a hard-coded layout today.
 
 - **Do not fill Level 001 with a random map**, a mandatory procedural seed, generic trees, or a copied benchmark arena. The scene can start intentionally empty.
-- Preset Battles keeps `LEVELS/PresetBattles/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/FortressDefense/Level001/Level001.tscn`.
+- AutoBattler keeps `LEVELS/AutoBattler/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/FortressDefense/Level001/Level001.tscn`.
 - Gameplay controllers can be composed when those systems are authorized; future map props should preferably be normal editable Godot scenes/resources with exposed settings, not procedural coordinates buried in code.
-- Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with Preset Battles rather than duplicate a second engine.
+- Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with AutoBattler rather than duplicate a second engine.
 - **Important:** Recording this direction does not mean workers, Carbon extraction, buildings or actual RTS battle gameplay are implemented.
 
 ### Campaign menu hierarchy (two game modes to start)
@@ -120,11 +120,11 @@ At huge unit counts, production should eventually have sensible pacing/limits an
 Profile -> Main Menu -> Campaign
                           ├── Open RTS
                           │     └── Level 001   (owner-authored Open RTS map)
-                          └── Preset Battles
+                          └── AutoBattler
                                 └── Level 001   (authored tactical / Army Painter challenge)
 ```
 
-**Campaign** is an umbrella that can hold additional modes later. **Preset Battles** is the player-facing name for the existing Army Painter / tactical-battle concept, not a third game mode. Each mode has its **own level list, scene paths and per-profile progression**, sharing the established campaign catalog, menu widgets, launch/session plumbing and common soldier simulation. The two `Level001` IDs may be equal *within different campaign IDs* because progress keys are `CampaignId -> LevelId`; their **scene paths must be distinct**. Add future modes through the catalog, not by hard-coding new menus.
+**Campaign** is an umbrella that can hold additional modes later. **AutoBattler** is the player-facing name for the existing Army Painter / tactical-battle concept, not a third game mode. Each mode has its **own level list, scene paths and per-profile progression**, sharing the established campaign catalog, menu widgets, launch/session plumbing and common soldier simulation. The two `Level001` IDs may be equal *within different campaign IDs* because progress keys are `CampaignId -> LevelId`; their **scene paths must be distinct**. Add future modes through the catalog, not by hard-coding new menus.
 
 Implementation scope and compatibility mapping are specified in [UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md](UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md). FRONT1 implements the menu hierarchy and blank scenes for future level authoring.
 
@@ -182,7 +182,7 @@ These are architectural constraints and experiments, **not a request to implemen
 
 ### Terrain source choices for the two modes
 
-Both modes share the same authoritative compiled heightfield, per [TERR1](WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. Preset Battles (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
+Both modes share the same authoritative compiled heightfield, per [TERR1](WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. AutoBattler (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
 
 ## 7. One simulation, separate optional mode systems
 

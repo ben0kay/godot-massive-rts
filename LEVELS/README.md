@@ -5,11 +5,11 @@ Campaign scenes are grouped by mode:
 | Campaign mode | Stable campaign ID | Level 001 scene |
 | --- | --- | --- |
 | Fortress Defense | `OpenRTS` | `FortressDefense/Level001/Level001.tscn` |
-| Preset Battles | `Campaign001` | `PresetBattles/Level001/Level001.tscn` |
+| AutoBattler | `Campaign001` | `AutoBattler/Level001/Level001.tscn` |
 
-Fortress Defense Level 001 contains a hand-authored map. Use the [standalone Level Editor](../UI/Editor/LevelEditor.md) to create, reopen and register campaign maps through F6. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to Preset Battles.
+Fortress Defense Level 001 contains a hand-authored map. Use the [standalone Level Editor](../UI/Editor/LevelEditor.md) to create, reopen and register campaign maps through F6. The launcher adds return controls at runtime on campaign launch. Both modes can use the same `Level001` ID because progress is keyed by profile and campaign. Existing `Campaign001/Level001` progress still belongs to AutoBattler.
 
-**Preset Battles campaign plan:** [PRESET_CAMPAIGN_DESIGN.md](PresetBattles/PRESET_CAMPAIGN_DESIGN.md) describes the intended authored enemy/Blue deployment battles, recruiting, credits, casualty bonuses, upgrades and future intelligence/fog options. These are **planned**, not yet implemented in the blank Preset Battles Level 001.
+**AutoBattler campaign plan:** [AUTOBATTLER_CAMPAIGN_DESIGN.md](AutoBattler/AUTOBATTLER_CAMPAIGN_DESIGN.md) describes the intended authored enemy/Blue deployment battles, recruiting, credits, casualty bonuses, upgrades and future intelligence/fog options. These are **planned**, not yet implemented in the blank AutoBattler Level 001.
 
 To add a level, author its scene and a `LevelDefinition` resource with a stable ID, display name, unique positive order, and scene path. Add the resource to the campaign's `Levels` array. Add modes as `CampaignDefinition` resources in `Catalog/DefaultCampaignCatalog.tres` in the order they should appear. The campaign menu orders levels by their authored order. The first level is unlocked, and each later level requires completion of its immediate predecessor.
 

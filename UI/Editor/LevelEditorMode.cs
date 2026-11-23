@@ -4,12 +4,12 @@ using Godot;
 
 namespace MassiveRts;
 
-internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Preset)
+internal sealed record LevelEditorMode(string CampaignId, string Folder, bool IsAutoBattler)
 {
     private const string Template = "res://BENCHMARK/RTS/CommandSandbox.tscn";
     public static readonly LevelEditorMode[] Supported =
     {
-        new("Campaign001", "res://LEVELS/PresetBattles", true),
+        new("Campaign001", "res://LEVELS/AutoBattler", true),
         new("OpenRTS", "res://LEVELS/FortressDefense", false)
     };
 
@@ -24,7 +24,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Pr
         var root = source?.Instantiate();
         if (root != null && root is not CommandSandbox)
         {
-            bool blank = Preset && root.GetType() == typeof(Node3D) && root.GetChildCount() == 0 &&
+            bool blank = IsAutoBattler && root.GetType() == typeof(Node3D) && root.GetChildCount() == 0 &&
                 source.GetState().GetNodePropertyCount(0) == 0;
             root.Free();
             if (!blank) throw new InvalidOperationException("This scene uses a root the level editor does not support.");
@@ -39,15 +39,15 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Pr
         if (fresh)
         {
             level.SpawnDefaultBlueSquad = false;
-            if (Preset)
+            if (IsAutoBattler)
             {
                 level.WaveDefinitions = new();
-                level.PresetRules = new PresetBattleRules { LineAxis = PresetBattleRules.DeploymentAxis.Z };
+                level.AutoBattlerRules = new AutoBattlerRules { LineAxis = AutoBattlerRules.DeploymentAxis.Z };
                 foreach (string name in new[] { "Citadel", "BlueSpawn", "Resources" })
                     level.GetNode(name).Free();
             }
         }
-        if ((level.PresetRules != null) != Preset)
+        if ((level.AutoBattlerRules != null) != IsAutoBattler)
         {
             level.Free();
             throw new InvalidOperationException("The scene's authoring rules do not match this campaign.");

@@ -13,21 +13,21 @@ Select / create profile
     ├── Campaign
     │   ├── Open RTS
     │   │   └── Level 001
-    │   └── Preset Battles
+    │   └── AutoBattler
     │       └── Level 001
     ├── Change Profile
     ├── Options
     └── Exit Game
 ```
 
-**Campaign is a category**, not itself a battle type. **Open RTS** and **Preset Battles** are the two current planned game modes. "Preset Battles" is the new player-facing label for the previously discussed **Army Painter / tactical battle** concept. Additional modes can join Campaign later.
+**Campaign is a category**, not itself a battle type. **Open RTS** and **AutoBattler** are the two current planned game modes. "AutoBattler" is the new player-facing label for the previously discussed **Army Painter / tactical battle** concept. Additional modes can join Campaign later.
 
 ## FRONT0 baseline before implementation
 
 - `project.godot` launches `UI/Menus/BootScreen.tscn` via F5; the benchmark remains directly runnable via F6.
 - `UI/Menus/FrontMenu.cs` currently uses `MenuScreen.Campaign` to show one `OptionButton` of campaigns followed immediately by level buttons. It already derives both from `CampaignCatalog.Load()`, not a list of hard-coded UI entries.
-- `LEVELS/Catalog/CampaignDefinition.cs` has `Id`, `DisplayName`, `Description`, `Levels`. `CampaignCatalog.cs` loads and validates the catalog and orders levels. Current `LEVELS/Catalog/DefaultCampaignCatalog.tres` registers only `LEVELS/PresetBattles/Campaign001.tres`, displayed as "Main Campaign".
-- The existing `LEVELS/PresetBattles/Level001/Level001.tscn` is an intentionally blank `Node3D`. `LevelLauncher` uses campaign + level IDs and attaches temporary return/development completion controls.
+- `LEVELS/Catalog/CampaignDefinition.cs` has `Id`, `DisplayName`, `Description`, `Levels`. `CampaignCatalog.cs` loads and validates the catalog and orders levels. Current `LEVELS/Catalog/DefaultCampaignCatalog.tres` registers only `LEVELS/AutoBattler/Campaign001.tres`, displayed as "Main Campaign".
+- The existing `LEVELS/AutoBattler/Level001/Level001.tscn` is an intentionally blank `Node3D`. `LevelLauncher` uses campaign + level IDs and attaches temporary return/development completion controls.
 - `CampaignProgressStore` keys completed levels by **campaign ID and level ID**, so a `Level001` ID can exist in each mode without collisions if the campaign IDs differ. Existing profile progress must be preserved.
 
 ## Required implementation — menu and catalog only
@@ -36,7 +36,7 @@ Select / create profile
 
 Change **Campaign** to show **one visible mode choice per registered `CampaignDefinition`**, instead of immediately presenting levels under the campaign selector. On choosing a mode, show **that mode's levels**. A simple two-stage view within `FrontMenu` is fine; do not build an elaborate frontend framework.
 
-- Buttons/cards should be generated from `DefaultCampaignCatalog.tres` in authored order. Do not hard-code "Open RTS" and "Preset Battles" in a switch or duplicate lists in UI scripts.
+- Buttons/cards should be generated from `DefaultCampaignCatalog.tres` in authored order. Do not hard-code "Open RTS" and "AutoBattler" in a switch or duplicate lists in UI scripts.
 - Level buttons remain generated from the selected campaign's `Levels` resource list.
 - Preserve shared `UIButtonFactory`, `MenuLayout`, `UIMasterConfig`, selected profile checks, enabled/unavailable/locked labels, level descriptions and error reporting.
 - Preserve keyboard/gamepad focus and Back/Escape behavior:
@@ -52,13 +52,13 @@ Change **Campaign** to show **one visible mode choice per registered `CampaignDe
 
 | Role | Catalog identity | Resources |
 |---|---|---|
-| Preset Battles | **Keep existing** `Campaign001` ID to preserve saved progress; rename **DisplayName** to `Preset Battles` | Keep `LEVELS/PresetBattles/Campaign001.tres`, `LEVELS/PresetBattles/Level001/Level001.tres`, and existing blank `LEVELS/PresetBattles/Level001/Level001.tscn`. This is the future owner-authored tactical battle/Army Painter map. |
+| AutoBattler | **Keep existing** `Campaign001` ID to preserve saved progress; rename **DisplayName** to `AutoBattler` | Keep `LEVELS/AutoBattler/Campaign001.tres`, `LEVELS/AutoBattler/Level001/Level001.tres`, and existing blank `LEVELS/AutoBattler/Level001/Level001.tscn`. This is the future owner-authored tactical battle/Army Painter map. |
 | Open RTS | New stable campaign ID, e.g. `OpenRTS` | New `LEVELS/FortressDefense/OpenRTS.tres`, `LEVELS/FortressDefense/Level001/Level001.tres`, `LEVELS/FortressDefense/Level001/Level001.tscn`. The `Level001` scene starts as a **blank, editable Godot scene** (e.g. root `Node3D`) and is where the owner will author the Open RTS battlefield later. |
 
 - Register both campaign resources in `LEVELS/Catalog/DefaultCampaignCatalog.tres`. Preserve existing IDs, references and completion data.
-- `Open RTS Level 001` is intentionally a **different scene** from `Preset Battles Level 001`; don't route both menu choices to one placeholder.
+- `Open RTS Level 001` is intentionally a **different scene** from `AutoBattler Level 001`; don't route both menu choices to one placeholder.
 - Keep all levels data-driven, with no `Level001`/mode-specific launch branches except where genuinely necessary for mode-specific gameplay later.
-- Both Level 001 buttons can launch their blank scenes and show the existing return/dev completion overlay as an interim navigation check. Do **not** claim the RTS game loop or preset battle experience exists just because the level scene loads.
+- Both Level 001 buttons can launch their blank scenes and show the existing return/dev completion overlay as an interim navigation check. Do **not** claim the RTS game loop or AutoBattler experience exists just because the level scene loads.
 - Ensure no level is marked complete merely for launching/returning; preserve dev-completion gating and per-profile progress isolation.
 
 ### C. Open RTS Level 001 is specifically hand-authored
@@ -90,12 +90,12 @@ Maintain uppercase top-level folders and existing shared UI architecture. Do not
 
 ## Acceptance checks for Codex / owner
 
-1. F5 -> profile picker -> Main -> Campaign shows **Open RTS** and **Preset Battles** as two distinct selectable modes.
+1. F5 -> profile picker -> Main -> Campaign shows **Open RTS** and **AutoBattler** as two distinct selectable modes.
 2. Open RTS -> **Level 001** opens its own **blank** editable Open RTS scene; return takes the user to the Open RTS level list.
-3. Preset Battles -> **Level 001** opens the current blank `LEVELS/PresetBattles/Level001/Level001.tscn`; return goes to the Preset Battles list.
+3. AutoBattler -> **Level 001** opens the current blank `LEVELS/AutoBattler/Level001/Level001.tscn`; return goes to the AutoBattler list.
 4. Back/Escape navigation works through the hierarchy without losing the selected profile, changing progress on return, or creating stuck focus.
 5. Both modes and levels come from catalog resources; adding a third `CampaignDefinition` should add a third mode without editing menu labels or switches.
-6. Old saved completion data for `Campaign001/Level001` remains associated with Preset Battles; no profile/progress migration or destructive reset.
+6. Old saved completion data for `Campaign001/Level001` remains associated with AutoBattler; no profile/progress migration or destructive reset.
 7. Direct F6 run of `BENCHMARK/BenchmarkArena.tscn` still works; no extra per-soldier work or game-scene initialization from menus.
 8. Minimal source review / one feasible `dotnet build`, per `CodePreferences.md`. Owner validates in Godot.
 

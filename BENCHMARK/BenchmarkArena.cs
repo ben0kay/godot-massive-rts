@@ -152,7 +152,7 @@ public partial class BenchmarkArena : Node3D
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
-        panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, PresetTest = presetTestMap != null }; AddChild(panel);
+        panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, AutoBattlerPlaytest = autoBattlerPlaytestMap != null }; AddChild(panel);
         if (campaignRoster != null)
         {
             panel.Hide();
@@ -212,7 +212,7 @@ public partial class BenchmarkArena : Node3D
         panel.ClearRequested += () =>
         {
             if (painter.Visible) painter.Clear();
-            else if (presetTestMap != null) EnterDeployment();
+            else if (autoBattlerPlaytestMap != null) EnterDeployment();
             else Clear();
         };
         panel.PaintRequested += EnterDeployment;
@@ -242,7 +242,7 @@ public partial class BenchmarkArena : Node3D
         panel.PaintSpread.ValueChanged += value => painter.SoldierBrushSpread = (float)value;
         if (openInDeployment)
         {
-            if (presetTestMap != null) PreparePresetTest();
+            if (autoBattlerPlaytestMap != null) PrepareAutoBattlerPlaytest();
             if (editorSettings != null) panel.RestoreBattleSettings(editorSettings);
             if (editorLayout != null) painter.ReplaceLayout(editorLayout);
             EnterDeployment();
@@ -281,7 +281,7 @@ public partial class BenchmarkArena : Node3D
             terrainMeshes = null;
         }
         terrain = null;
-        flatGround.Visible = presetTestMap == null;
+        flatGround.Visible = autoBattlerPlaytestMap == null;
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
         obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
@@ -354,8 +354,8 @@ public partial class BenchmarkArena : Node3D
         if (deploymentStrengthBar.Visible) deploymentStrengthBar.Refresh(painter.Layout);
     }
 
-    private string DeploymentCount() => presetTestMap != null
-        ? $"Blue: {painter.Layout.Placements.Count:N0} deployed · No roster cap\nRed: {presetRed.Length:N0} units · {presetDefenses.Count} defenses"
+    private string DeploymentCount() => autoBattlerPlaytestMap != null
+        ? $"Blue: {painter.Layout.Placements.Count:N0} deployed · No roster cap\nRed: {autoBattlerRed.Length:N0} units · {autoBattlerDefenses.Count} defenses"
         : $"Painted {painter.Layout.Placements.Count:N0} • " +
         $"{painter.Layout.Obstacles.Field?.RectangleCount ?? 0} wall rectangles • {painter.Layout.Defenses.Count} defenses";
 
@@ -378,11 +378,11 @@ public partial class BenchmarkArena : Node3D
         if (painter.Visible) return;
         Clear();
         SetDeploymentEditing(true);
-        if (presetTestMap != null)
+        if (autoBattlerPlaytestMap != null)
         {
-            presetForest?.ResetVisibility();
-            presetTestPreview.Show();
-            presetTestMap.FrameOpening(camera);
+            autoBattlerForest?.ResetVisibility();
+            autoBattlerPlaytestPreview.Show();
+            autoBattlerPlaytestMap.FrameOpening(camera);
         }
         else camera.Frame(100);
         UpdateDeploymentStatus();
@@ -489,16 +489,16 @@ public partial class BenchmarkArena : Node3D
     {
         IReadOnlyList<SoldierPlacement> placements = layout.Placements;
         IReadOnlyList<BuildingPlacement> defenses = layout.Defenses;
-        if (presetTestMap != null)
+        if (autoBattlerPlaytestMap != null)
         {
-            if (placements.Count == 0 || (presetRed.Length == 0 && presetDefenses.Count == 0))
+            if (placements.Count == 0 || (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0))
             {
                 panel.Status.Text = placements.Count == 0 ? "Paint Blue troops in the deployment area." :
                     "Add Red troops or defenses in the Level Editor before testing.";
                 return;
             }
-            placements = placements.Concat(presetRed).ToArray();
-            defenses = presetDefenses;
+            placements = placements.Concat(autoBattlerRed).ToArray();
+            defenses = autoBattlerDefenses;
         }
         int factionMask = 0;
         bool ranged = false;
@@ -540,11 +540,11 @@ public partial class BenchmarkArena : Node3D
             }
         }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
-        if (presetTestMap == null) SetBattleObstacles(layout.CollisionField, wallMesh);
+        if (autoBattlerPlaytestMap == null) SetBattleObstacles(layout.CollisionField, wallMesh);
         else
         {
-            presetTestPreview.Hide();
-            terrain = presetTestMap.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
+            autoBattlerPlaytestPreview.Hide();
+            terrain = autoBattlerPlaytestMap.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         }
         if (defenses.Count > 0)
         {
@@ -553,10 +553,10 @@ public partial class BenchmarkArena : Node3D
             defenseRenderer.Initialize(defenses, buildings, Config.ObstacleHeight, battle: true, terrain: terrain);
             defenseSystem = new DefenseSystem(defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field, terrain);
         }
-        if (presetTestMap != null) RefreshPresetBattleFields();
+        if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
         defenseSystem?.RegisterShieldEmitters(units);
-        units.Forest = presetForest;
+        units.Forest = autoBattlerForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
         grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: campaignRoster == null);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
@@ -624,7 +624,7 @@ public partial class BenchmarkArena : Node3D
                 armyRenderer.SetShieldShellsVisible(panel.ShowShieldShells);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
-                    presetTestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
+                    autoBattlerPlaytestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
                 dreadnaughts = DreadnaughtCombat.Create(units);
                 if (dreadnaughts != null)
                 {
@@ -729,7 +729,7 @@ public partial class BenchmarkArena : Node3D
 
     private bool ValidGroundPoint(Vector3 position, float radius)
     {
-        float edge = obstacles?.Boundary ?? presetTestMap.MapSize * 0.5f;
+        float edge = obstacles?.Boundary ?? autoBattlerPlaytestMap.MapSize * 0.5f;
         return Mathf.Abs(position.X) + radius <= edge && Mathf.Abs(position.Z) + radius <= edge &&
             obstacles?.IntersectsCircle(ObstacleField.Xz(position), radius) != true;
     }
@@ -835,7 +835,7 @@ public partial class BenchmarkArena : Node3D
         SeparationMode separationMode = panel.Separation;
         bool hard = separationMode == SeparationMode.Hard;
         bool separate = separationMode != SeparationMode.Off && units.Alive > 1;
-        float boundary = obstacles?.Boundary ?? (presetTestMap?.MapSize * 0.5f ?? DeploymentLayout.WorldHalfWidth);
+        float boundary = obstacles?.Boundary ?? (autoBattlerPlaytestMap?.MapSize * 0.5f ?? DeploymentLayout.WorldHalfWidth);
         if (hard && separate)
         {
             start = Stamp();
@@ -876,7 +876,7 @@ public partial class BenchmarkArena : Node3D
             meleeSteering = new MeleeSteering(units.Count, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
             Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, activeTrample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, units.HasStructureAttackers ? defenseCombat : null,
-            BattleSight, presetTestMap != null);
+            BattleSight, autoBattlerPlaytestMap != null);
         if (guards != null)
             foreach (GuardGroup group in guards)
                 group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
@@ -937,7 +937,7 @@ public partial class BenchmarkArena : Node3D
         }
         if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
         {
-            if (presetTestMap != null) RefreshPresetBattleFields();
+            if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
             else SetBattleObstacles(remainingObstacles, battleWalls.Mesh);
             navigation = obstacles == null ? null : new ObstacleNavigation(obstacles, catalog, units.Count, Config.RouteSectorSize,
                 Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));

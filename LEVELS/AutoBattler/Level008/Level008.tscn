@@ -1,0 +1,161 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1_02oll"]
+[ext_resource type="Script" path="res://LEVELS/AutoBattler/AutoBattlerRules.cs" id="2_yxbii"]
+[ext_resource type="PlaneMesh" path="res://WORLD/TERRAIN/RENDERING/DefaultLevelGround.tres" id="3_mmf1o"]
+[ext_resource type="Script" path="res://WORLD/TERRAIN/AUTHORING/CommandTerrain.cs" id="4_s5a11"]
+[ext_resource type="PackedScene" path="res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn" id="5_lpegt"]
+[ext_resource type="Script" path="res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.cs" id="6_mhp8e"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/PentagonElite.tres" id="7_evyqn"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/CircleInfantry.tres" id="8_xww5v"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/TriangleArcher.tres" id="9_sad8d"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/TwinRocketLauncher.tres" id="10_nrurv"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/ChevronArtillery.tres" id="11_jpk3s"]
+[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaint.cs" id="12_6x76f"]
+[ext_resource type="Script" path="res://WORLD/WORLD_PAINT/WorldPaintData.cs" id="13_5kxfi"]
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFENSE/CommandLaserPlacement.cs" id="14_gm3iy"]
+[ext_resource type="Resource" path="res://WORLD/BUILDINGS/DEFINITIONS/RocketTower001.tres" id="15_unaxo"]
+[ext_resource type="Resource" path="res://WORLD/BUILDINGS/DEFINITIONS/LaserTower001.tres" id="16_x8orn"]
+
+[sub_resource type="Resource" id="Resource_u6ema"]
+script = ExtResource("2_yxbii")
+LineAxis = 2
+
+[sub_resource type="Resource" id="Resource_sy3eg"]
+resource_local_to_scene = true
+script = ExtResource("13_5kxfi")
+RockCells = Array[Vector2i]([Vector2i(14, -3), Vector2i(15, -3), Vector2i(16, -3), Vector2i(13, -2), Vector2i(14, -2), Vector2i(15, -2), Vector2i(16, -2), Vector2i(1, -1), Vector2i(2, -1), Vector2i(3, -1), Vector2i(4, -1), Vector2i(5, -1), Vector2i(6, -1), Vector2i(7, -1), Vector2i(11, -1), Vector2i(12, -1), Vector2i(13, -1), Vector2i(14, -1), Vector2i(15, -1), Vector2i(16, -1), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0), Vector2i(5, 0), Vector2i(6, 0), Vector2i(7, 0), Vector2i(8, 0), Vector2i(9, 0), Vector2i(10, 0), Vector2i(11, 0), Vector2i(12, 0), Vector2i(13, 0), Vector2i(14, 0), Vector2i(15, 0), Vector2i(16, 0), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1), Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1), Vector2i(8, 1), Vector2i(9, 1), Vector2i(10, 1), Vector2i(11, 1), Vector2i(12, 1), Vector2i(13, 1), Vector2i(14, 1), Vector2i(15, 1), Vector2i(6, 2), Vector2i(7, 2), Vector2i(8, 2), Vector2i(9, 2), Vector2i(10, 2), Vector2i(11, 2), Vector2i(12, 2), Vector2i(13, 2), Vector2i(7, 3), Vector2i(8, 3), Vector2i(9, 3), Vector2i(10, 3), Vector2i(11, 3), Vector2i(12, 3), Vector2i(-2, 6), Vector2i(-1, 6), Vector2i(0, 6), Vector2i(-2, 7), Vector2i(-1, 7), Vector2i(0, 7), Vector2i(-2, 8), Vector2i(-1, 8), Vector2i(0, 8)])
+WaterCells = Array[Vector2i]([Vector2i(-7, -13), Vector2i(-6, -13), Vector2i(-5, -13), Vector2i(-4, -13), Vector2i(-3, -13), Vector2i(-7, -12), Vector2i(-6, -12), Vector2i(-5, -12), Vector2i(-4, -12), Vector2i(-3, -12), Vector2i(-2, -12), Vector2i(-1, -12), Vector2i(0, -12), Vector2i(1, -12), Vector2i(2, -12), Vector2i(3, -12), Vector2i(-7, -11), Vector2i(-6, -11), Vector2i(-5, -11), Vector2i(-4, -11), Vector2i(-3, -11), Vector2i(-2, -11), Vector2i(-1, -11), Vector2i(0, -11), Vector2i(1, -11), Vector2i(2, -11), Vector2i(3, -11), Vector2i(-4, -10), Vector2i(-3, -10), Vector2i(-2, -10), Vector2i(-1, -10), Vector2i(0, -10), Vector2i(1, -10), Vector2i(2, -10), Vector2i(3, -10), Vector2i(1, -9), Vector2i(2, -9), Vector2i(3, -9), Vector2i(-33, 3), Vector2i(-32, 3), Vector2i(-31, 3), Vector2i(-30, 3), Vector2i(-33, 4), Vector2i(-32, 4), Vector2i(-31, 4), Vector2i(-30, 4), Vector2i(-33, 5), Vector2i(-32, 5), Vector2i(-31, 5), Vector2i(-30, 5), Vector2i(-29, 5), Vector2i(29, 5), Vector2i(30, 5), Vector2i(31, 5), Vector2i(32, 5), Vector2i(-32, 6), Vector2i(-31, 6), Vector2i(-30, 6), Vector2i(-29, 6), Vector2i(-28, 6), Vector2i(24, 6), Vector2i(25, 6), Vector2i(26, 6), Vector2i(27, 6), Vector2i(28, 6), Vector2i(29, 6), Vector2i(30, 6), Vector2i(31, 6), Vector2i(32, 6), Vector2i(-31, 7), Vector2i(-30, 7), Vector2i(-29, 7), Vector2i(-28, 7), Vector2i(21, 7), Vector2i(22, 7), Vector2i(23, 7), Vector2i(24, 7), Vector2i(25, 7), Vector2i(26, 7), Vector2i(27, 7), Vector2i(28, 7), Vector2i(29, 7), Vector2i(30, 7), Vector2i(31, 7), Vector2i(32, 7), Vector2i(-30, 8), Vector2i(-29, 8), Vector2i(-28, 8), Vector2i(-27, 8), Vector2i(21, 8), Vector2i(22, 8), Vector2i(23, 8), Vector2i(24, 8), Vector2i(25, 8), Vector2i(26, 8), Vector2i(27, 8), Vector2i(28, 8), Vector2i(29, 8), Vector2i(30, 8), Vector2i(-30, 9), Vector2i(-29, 9), Vector2i(-28, 9), Vector2i(-27, 9), Vector2i(21, 9), Vector2i(22, 9), Vector2i(23, 9), Vector2i(24, 9), Vector2i(25, 9), Vector2i(-29, 10), Vector2i(-28, 10), Vector2i(-27, 10), Vector2i(-29, 11), Vector2i(-28, 11), Vector2i(-27, 11)])
+ForestCells = Array[Vector2i]([Vector2i(-18, -6), Vector2i(-17, -6), Vector2i(-16, -6), Vector2i(-26, -5), Vector2i(-25, -5), Vector2i(-24, -5), Vector2i(-23, -5), Vector2i(-19, -5), Vector2i(-18, -5), Vector2i(-17, -5), Vector2i(-16, -5), Vector2i(-26, -4), Vector2i(-25, -4), Vector2i(-24, -4), Vector2i(-23, -4), Vector2i(-22, -4), Vector2i(-21, -4), Vector2i(-20, -4), Vector2i(-19, -4), Vector2i(-18, -4), Vector2i(-17, -4), Vector2i(-16, -4), Vector2i(-26, -3), Vector2i(-25, -3), Vector2i(-24, -3), Vector2i(-23, -3), Vector2i(-22, -3), Vector2i(-21, -3), Vector2i(-20, -3), Vector2i(-19, -3), Vector2i(-18, -3), Vector2i(-17, -3), Vector2i(-16, -3), Vector2i(-15, -3), Vector2i(-14, -3), Vector2i(-13, -3), Vector2i(-12, -3), Vector2i(-24, -2), Vector2i(-23, -2), Vector2i(-22, -2), Vector2i(-21, -2), Vector2i(-20, -2), Vector2i(-19, -2), Vector2i(-18, -2), Vector2i(-17, -2), Vector2i(-16, -2), Vector2i(-15, -2), Vector2i(-14, -2), Vector2i(-13, -2), Vector2i(-12, -2), Vector2i(-11, -2), Vector2i(-22, -1), Vector2i(-21, -1), Vector2i(-20, -1), Vector2i(-19, -1), Vector2i(-18, -1), Vector2i(-17, -1), Vector2i(-16, -1), Vector2i(-15, -1), Vector2i(-14, -1), Vector2i(-13, -1), Vector2i(-12, -1), Vector2i(-11, -1), Vector2i(-10, -1), Vector2i(-9, -1), Vector2i(-21, 0), Vector2i(-20, 0), Vector2i(-19, 0), Vector2i(-18, 0), Vector2i(-17, 0), Vector2i(-16, 0), Vector2i(-15, 0), Vector2i(-14, 0), Vector2i(-13, 0), Vector2i(-12, 0), Vector2i(-11, 0), Vector2i(-10, 0), Vector2i(-9, 0), Vector2i(-20, 1), Vector2i(-19, 1), Vector2i(-18, 1), Vector2i(-17, 1), Vector2i(-16, 1), Vector2i(-15, 1), Vector2i(-14, 1), Vector2i(-13, 1), Vector2i(-12, 1), Vector2i(-11, 1), Vector2i(-10, 1), Vector2i(-9, 1), Vector2i(-18, 2), Vector2i(-17, 2), Vector2i(-16, 2), Vector2i(-15, 2), Vector2i(-14, 2), Vector2i(-13, 2), Vector2i(-12, 2), Vector2i(-11, 2), Vector2i(-18, 3), Vector2i(-17, 3), Vector2i(-16, 3), Vector2i(-15, 3), Vector2i(-14, 3), Vector2i(-13, 3), Vector2i(-12, 3), Vector2i(-17, 4), Vector2i(-16, 4), Vector2i(-15, 4), Vector2i(-14, 4), Vector2i(-13, 4), Vector2i(-12, 4), Vector2i(-16, 5), Vector2i(-15, 5), Vector2i(-14, 5), Vector2i(-13, 5)])
+
+[node name="Level008" type="Node3D" unique_id=1162740712]
+script = ExtResource("1_02oll")
+AutoBattlerRules = SubResource("Resource_u6ema")
+SpawnDefaultBlueSquad = false
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=959569258]
+cast_shadow = 0
+mesh = ExtResource("3_mmf1o")
+
+[node name="Terrain" type="Node3D" parent="." unique_id=707822236]
+script = ExtResource("4_s5a11")
+
+[node name="StartingUnits" type="Node3D" parent="." unique_id=353634270]
+
+[node name="SoldierRectangle" type="Marker3D" parent="StartingUnits" unique_id=1451693819 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 22)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("7_evyqn")
+Faction = 1
+PaintedOffsets = PackedVector2Array(-44, -1, -42, -1, -40, -1, -38, -1, -36, -1, -34, -1, -32, -1, -30, -1, -28, -1, -26, -1, -24, -1, -22, -1, -20, -1, -14, -1, -12, -1, -10, -1, -8, -1, -6, -1, -4, -1, -2, -1, 0, -1, 2, -1, 4, -1, 6, -1, 8, -1, 10, -1, 12, -1, 14, -1, 16, -1, 18, -1, 20, -1, 22, -1, 24, -1, 26, -1, 28, -1, 30, -1, 32, -1, 34, -1, 36, -1, 38, -1, 40, -1, 42, -1, 44, -1, -44, 1, -42, 1, -40, 1, -38, 1, -36, 1, -34, 1, -32, 1, -30, 1, -28, 1, -26, 1, -24, 1, -22, 1, -20, 1, -14, 1, -12, 1, -10, 1, -8, 1, -6, 1, -4, 1, -2, 1, 0, 1, 2, 1, 4, 1, 6, 1, 8, 1, 10, 1, 12, 1, 14, 1, 16, 1, 18, 1, 20, 1, 22, 1, 24, 1, 26, 1, 28, 1, 30, 1, 32, 1, 34, 1, 36, 1, 38, 1, 40, 1, 42, 1, 44, 1)
+
+[node name="SoldierRectangle2" type="Marker3D" parent="StartingUnits" unique_id=830958990 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 18)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("8_xww5v")
+Faction = 1
+PaintedOffsets = PackedVector2Array(-46, -1, -44, -1, -42, -1, -40, -1, -38, -1, -36, -1, -34, -1, -32, -1, -30, -1, -28, -1, -26, -1, -24, -1, -22, -1, -20, -1, -18, -1, -16, -1, -14, -1, -12, -1, -10, -1, -8, -1, -6, -1, -4, -1, -2, -1, 0, -1, 8, -1, 10, -1, 12, -1, 14, -1, 16, -1, 18, -1, 20, -1, 22, -1, 24, -1, 26, -1, 28, -1, 30, -1, 32, -1, 34, -1, 36, -1, 38, -1, 40, -1, 42, -1, 44, -1, 46, -1, -46, 1, -44, 1, -42, 1, -40, 1, -38, 1, -36, 1, -34, 1, -32, 1, -30, 1, -28, 1, -26, 1, -24, 1, -22, 1, -20, 1, -18, 1, -16, 1, -14, 1, -12, 1, -10, 1, -8, 1, -6, 1, -4, 1, -2, 1, 0, 1, 2, 1, 4, 1, 6, 1, 8, 1, 10, 1, 12, 1, 14, 1, 16, 1, 18, 1, 20, 1, 22, 1, 24, 1, 26, 1, 28, 1, 30, 1, 32, 1, 34, 1, 36, 1, 38, 1, 40, 1, 42, 1, 44, 1, 46, 1)
+
+[node name="SoldierRectangle3" type="Marker3D" parent="StartingUnits" unique_id=887858441 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 27)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("9_sad8d")
+Faction = 1
+PaintedOffsets = PackedVector2Array(-47, 0, -45, 0, -43, 0, -41, 0, -39, 0, -37, 0, -35, 0, -33, 0, -31, 0, -29, 0, -27, 0, -25, 0, -23, 0, -21, 0, -19, 0, -17, 0, -15, 0, -13, 0, -11, 0, -9, 0, -7, 0, -5, 0, -3, 0, -1, 0, 1, 0, 3, 0, 5, 0, 7, 0, 9, 0, 11, 0, 13, 0, 15, 0, 17, 0, 19, 0, 25, 0, 27, 0, 29, 0, 31, 0, 33, 0, 35, 0, 37, 0, 39, 0, 41, 0, 43, 0)
+
+[node name="SoldierRectangle4" type="Marker3D" parent="StartingUnits" unique_id=1806743607 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -41, 0, 33)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("10_nrurv")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle5" type="Marker3D" parent="StartingUnits" unique_id=2068785907 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33, 0, 31)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("10_nrurv")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle6" type="Marker3D" parent="StartingUnits" unique_id=379094901 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 31)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("10_nrurv")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle7" type="Marker3D" parent="StartingUnits" unique_id=1094164500 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31, 0, 31)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("10_nrurv")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle8" type="Marker3D" parent="StartingUnits" unique_id=941646862 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0, 31)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("10_nrurv")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle9" type="Marker3D" parent="StartingUnits" unique_id=605142122 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, 0, 35)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("11_jpk3s")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle10" type="Marker3D" parent="StartingUnits" unique_id=2058342966 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 0, 35)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("11_jpk3s")
+Faction = 1
+PaintedOffsets = PackedVector2Array(0, 0)
+
+[node name="SoldierRectangle11" type="Marker3D" parent="StartingUnits" unique_id=104344085 instance=ExtResource("5_lpegt")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 40)
+script = ExtResource("6_mhp8e")
+Unit = ExtResource("8_xww5v")
+Faction = 1
+PaintedOffsets = PackedVector2Array(-46, -1, -44, -1, -42, -1, -40, -1, -38, -1, -36, -1, -34, -1, -32, -1, -30, -1, -28, -1, -26, -1, -24, -1, -22, -1, -20, -1, -18, -1, -16, -1, -14, -1, -12, -1, -10, -1, -8, -1, -6, -1, -4, -1, -2, -1, 0, -1, 2, -1, 4, -1, 6, -1, 8, -1, 10, -1, 12, -1, 14, -1, 16, -1, 18, -1, 20, -1, 22, -1, 24, -1, 26, -1, 28, -1, 30, -1, 32, -1, 34, -1, 36, -1, 38, -1, 40, -1, 42, -1, 44, -1, 46, -1, -46, 1, -44, 1, -42, 1, -40, 1, -38, 1, -36, 1, -34, 1, -32, 1, -30, 1, -28, 1, -26, 1, -24, 1, -22, 1, -20, 1, -18, 1, -16, 1, -14, 1, -12, 1, -10, 1, -8, 1, -6, 1, -4, 1, -2, 1, 0, 1, 2, 1, 4, 1, 6, 1, 8, 1, 10, 1, 12, 1, 14, 1, 16, 1, 18, 1, 20, 1, 22, 1, 24, 1, 26, 1, 28, 1, 30, 1, 32, 1, 34, 1, 36, 1, 38, 1, 40, 1, 42, 1, 44, 1, 46, 1)
+
+[node name="CameraStart" type="Marker3D" parent="." unique_id=1296018547]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0, 0, 0)
+
+[node name="Obstacles" type="Node3D" parent="." unique_id=583024127]
+
+[node name="WorldPaint" type="Node3D" parent="." unique_id=1804193997]
+script = ExtResource("12_6x76f")
+Data = SubResource("Resource_sy3eg")
+
+[node name="StartingDefenses" type="Node3D" parent="." unique_id=585734539]
+
+[node name="Defense" type="Marker3D" parent="StartingDefenses" unique_id=1632435578]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -49, 0, 31)
+script = ExtResource("14_gm3iy")
+Definition = ExtResource("15_unaxo")
+Red = true
+
+[node name="Defense2" type="Marker3D" parent="StartingDefenses" unique_id=1428122640]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 35)
+script = ExtResource("14_gm3iy")
+Definition = ExtResource("15_unaxo")
+Red = true
+
+[node name="Defense3" type="Marker3D" parent="StartingDefenses" unique_id=2055477339]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43, 0, 25)
+script = ExtResource("14_gm3iy")
+Definition = ExtResource("15_unaxo")
+Red = true
+
+[node name="Defense4" type="Marker3D" parent="StartingDefenses" unique_id=1736688227]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 22)
+script = ExtResource("14_gm3iy")
+Definition = ExtResource("16_x8orn")
+Red = true
+
+[node name="Defense5" type="Marker3D" parent="StartingDefenses" unique_id=1868048380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 26)
+script = ExtResource("14_gm3iy")
+Definition = ExtResource("16_x8orn")
+Red = true

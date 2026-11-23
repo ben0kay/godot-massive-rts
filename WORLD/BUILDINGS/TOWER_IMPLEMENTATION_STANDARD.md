@@ -82,7 +82,7 @@ The Shield Generator is already in the live building catalog and Fortress Defens
 ### E. Add to every relevant workflow
 
 - **Benchmark:** Catalog selection, paint, erase, preview, battle runtime, debug, reset.
-- **Level Editor / Preset Battles:** Defense list, placement marker, saved level, runtime and preview.
+- **Level Editor / AutoBattler:** Defense list, placement marker, saved level, runtime and preview.
 - **Fortress Defense:** `CommandBuildType`, cost, build button, snap/placement and damage/selection/lifecycle.
 - **Entity Editor:** Relevant definition fields grouped and editable; only show controls applicable to this attack/support style.
 - **Documentation:** Update `WORLD/BUILDINGS/README.md`, and append one concise `devlog.md` entry when source code is implemented.
@@ -139,7 +139,7 @@ Before calling a new tower complete, confirm:
 
 Railgun and Rocket share the same staggered acquisition, hostile grid query, range validation, turn and cooldown loop. `BuildingStats.Weapon` maps existing definitions to beam, projectile or no weapon. The Shield Generator exits the attack loop before targeting and uses the existing health, placement and shield lifecycle. Preset and command registration use the same tower initialization. The renderer still selects the existing batched model and muzzle layout. New visual variants and Fortress build menu entries require explicit registration.
 
-- **Water and bridges.** Preset Battles and Fortress Defense add water to movement obstacles only. Bridge openings and clearance affect ground routing. The standalone Benchmark uses its authored obstacle layout.
+- **Water and bridges.** AutoBattler and Fortress Defense add water to movement obstacles only. Bridge openings and clearance affect ground routing. The standalone Benchmark uses its authored obstacle layout.
 - **Railgun.** Acquisition checks XZ cover and excludes the firing tower’s footprint. The active beam stops at the first cover footprint and clips against sampled terrain. Acquisition itself still uses XZ cover, so an intervening hill can cut off a fired beam. Soldier footprints take piercing damage through the common damage pipeline.
 - **Rocket.** The tower definition permits acquisition behind cover. The rocket resource enables physical collision. Each existing flight step sweeps a 3D segment against obstacle vertical bounds, terrain and hostile soldiers, then uses the existing pooled explosion path. Painted rocks use terrain-adjusted conservative height ranges and authored box walls now supply their world-space bottom and top, including Fortress grounding. Structures and obstacles without explicit airborne heights still use the configured fallback slab. Cover collision uses volumes rather than individual mesh triangles.
 - **Lifecycle.** Destroyed towers stop acquiring and firing, and their beam and model are removed through the existing lifecycle. Already launched rockets finish in the shared pool. Destroyed shield emitters stop refreshing shields and existing shield points decay under the normal rules.

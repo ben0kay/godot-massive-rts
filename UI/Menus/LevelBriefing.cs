@@ -59,7 +59,7 @@ public partial class LevelBriefing : Control
         }
         if (!string.IsNullOrWhiteSpace(Level.Description)) AddLabel(details, Level.Description, 16);
 
-        if (Campaign.Id == PresetCampaignStore.CampaignId)
+        if (Campaign.Id == AutoBattlerCampaignStore.CampaignId)
             details.AddChild(UIButtonFactory.Create("Headquarters Recruitment",
                 () => Navigate(() => MenuNavigation.OpenHeadquarters(this, Campaign, recruitment: true))));
         else
@@ -97,7 +97,7 @@ public partial class LevelBriefing : Control
         map.UpdateGroundBounds();
         try { map.GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile(); }
         catch (InvalidOperationException error) { GD.PushWarning(error.Message); }
-        LevelLayoutPreview.Build(map, redOnly: Campaign.Id == PresetCampaignStore.CampaignId);
+        LevelLayoutPreview.Build(map, redOnly: Campaign.Id == AutoBattlerCampaignStore.CampaignId);
 
         var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal,
             Size = map.MapSize * 1.08f, Far = 18000f };
@@ -121,14 +121,14 @@ public partial class LevelBriefing : Control
             .ToArray() ?? Array.Empty<CommandLaserPlacement>();
         int redDefenses = defenses.Count(defense => defense.Red);
         if (redDefenses > 0) AddLabel(details, $"Starting defenses: {redDefenses:N0}", 16);
-        if (map.PresetRules == null)
+        if (map.AutoBattlerRules == null)
         {
             long reinforcements = map.WaveDefinitions.Where(wave => wave != null)
                 .Sum(wave => wave.Enemies.Values.Sum(count => (long)count));
             AddLabel(details, $"Incoming waves: {map.WaveDefinitions.Count:N0} · {reinforcements:N0} units", 16);
         }
 
-        if (Campaign.Id == PresetCampaignStore.CampaignId && map.PresetRules is PresetBattleRules rules)
+        if (Campaign.Id == AutoBattlerCampaignStore.CampaignId && map.AutoBattlerRules is AutoBattlerRules rules)
         {
             foreach (var enemy in groups.Where(group => group.Faction == CommandUnitPlacement.Team.Red)
                          .GroupBy(group => group.Unit.DisplayName))
@@ -146,7 +146,7 @@ public partial class LevelBriefing : Control
             }
             try
             {
-                var owned = PresetCampaignStore.Open(ProfileStore.Selected.Id, out _);
+                var owned = AutoBattlerCampaignStore.Open(ProfileStore.Selected.Id, out _);
                 bool any = false;
                 foreach (var unit in catalog.Definitions)
                 {
@@ -164,7 +164,7 @@ public partial class LevelBriefing : Control
         }
 
         AddLabel(details, "Player starting forces", 22);
-        if (map.PresetRules is PresetBattleRules legacyRules)
+        if (map.AutoBattlerRules is AutoBattlerRules legacyRules)
         {
             AddLabel(details, $"Deployment allowance: {legacyRules.BlueUnitLimit:N0} units", 16);
             var allowed = legacyRules.AllowedBlueUnitIds;

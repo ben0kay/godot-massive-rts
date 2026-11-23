@@ -19,9 +19,9 @@ internal static class LevelLauncher
     {
         if (!source.IsInsideTree()) return;
         var (catalog, _, level, profile) = Resolve(campaignId, levelId);
-        if (campaignId == PresetCampaignStore.CampaignId)
+        if (campaignId == AutoBattlerCampaignStore.CampaignId)
         {
-            LaunchPresetBattle(source, level, profile.Id);
+            LaunchAutoBattler(source, level, profile.Id);
             return;
         }
 
@@ -31,10 +31,10 @@ internal static class LevelLauncher
         MenuNavigation.Change(source, scene);
     }
 
-    private static void LaunchPresetBattle(Node source, LevelDefinition level, string profileId)
+    private static void LaunchAutoBattler(Node source, LevelDefinition level, string profileId)
     {
-        PresetCampaignState state;
-        try { state = PresetCampaignStore.Open(profileId, out _); }
+        AutoBattlerCampaignState state;
+        try { state = AutoBattlerCampaignStore.Open(profileId, out _); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException(error.Message, error);
@@ -42,10 +42,10 @@ internal static class LevelLauncher
 
         var arenaScene = MenuNavigation.LoadScene("res://BENCHMARK/BenchmarkArena.tscn");
         var instance = MenuNavigation.LoadScene(level.ScenePath).Instantiate();
-        if (instance is not CommandSandbox { PresetRules: not null } map)
+        if (instance is not CommandSandbox { AutoBattlerRules: not null } map)
         {
             instance.Free();
-            throw new InvalidOperationException("This level needs an authored Preset Battles map.");
+            throw new InvalidOperationException("This level needs an authored AutoBattler map.");
         }
 
         var arena = arenaScene.Instantiate<BenchmarkArena>();

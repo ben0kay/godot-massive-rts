@@ -23,7 +23,7 @@ public partial class CommandSandbox : Node3D
     internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
-    [Export] public PresetBattleRules PresetRules { get; set; }
+    [Export] public AutoBattlerRules AutoBattlerRules { get; set; }
     [Export] public int StartingCarbon { get; set; } = 10000;
     internal bool AuthoringPreview { get; set; }
     private CommandBuildings buildings;
@@ -158,7 +158,7 @@ public partial class CommandSandbox : Node3D
         camera.MakeCurrent();
         FrameOpening(camera);
         var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
-        if (PresetRules != null)
+        if (AutoBattlerRules != null)
         {
             GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile();
             LevelLayoutPreview.Build(this);

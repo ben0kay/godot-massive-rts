@@ -114,7 +114,7 @@ These are subjective estimates. Codex should replace them with source-grounded a
 2. **MultiMesh and bounded pools by default.** No `Node3D`, `RigidBody3D`, light, timer or particle-system instance per soldier, hit, tree or projectile.
 3. **Event-driven, sampled, and capped.** Minimize CPU writes and GPU overdraw, especially in 10k–25k unit battles. Drop cosmetic events cleanly when budget is full; never queue a backlog.
 4. **Independent feature controls.** Design optional toggles/config carefully, ideally using existing `UnitVisualConfig` or established settings conventions, without bloating one resource with unrelated options.
-5. **Mode consistency.** Shared combat effects should work in Benchmark, Preset Battles and Fortress Defense as appropriate; forest effects only where forests exist.
+5. **Mode consistency.** Shared combat effects should work in Benchmark, AutoBattler and Fortress Defense as appropriate; forest effects only where forests exist.
 6. **Coexist with shipped effects.** Preserve FX2 cracks/crumbling, white hit flash/pulse, ranged recoil, shockwaves, splats, muzzle smoke, optional projectile visuals and ground shadows.
 7. **Terrain-aware, zero-gameplay-impact transforms.** Any dust/scars/impacts should use cheap available terrain data; transient visual wobble must not affect authoritative units.
 8. **Avoid unnecessary scans/allocations.** Use existing contact/hit/projectile events, active lists, preallocated buffers and deterministic seeds. No new all-unit pass per frame.

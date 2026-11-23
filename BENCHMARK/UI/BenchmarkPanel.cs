@@ -61,7 +61,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public bool AlliedYield => alliedYield.ButtonPressed;
 	public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
 	public RuntimeBuildingCatalog Buildings { get; set; }
-	internal bool PresetTest { get; set; }
+	internal bool AutoBattlerPlaytest { get; set; }
 	public readonly OptionButton DefenseChoice = new();
 	private readonly OptionButton[] teamOrders = new OptionButton[Factions.Count];
 	public GuardOrder OrderFor(int faction) => (GuardOrder)teamOrders[faction].GetSelectedId();
@@ -147,7 +147,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		AddChild(left);
 		var shell = new VBoxContainer();
 		left.AddChild(shell);
-		var heading = new Label { Text = PresetTest ? "AUTO BATTLER PLAYTEST" : "AUTO-BATTLE BENCHMARK" };
+		var heading = new Label { Text = AutoBattlerPlaytest ? "AUTOBATTLER PLAYTEST" : "AUTO-BATTLE BENCHMARK" };
 		heading.AddThemeFontSizeOverride("font_size", 17);
 		heading.AddThemeColorOverride("font_color", new Color("#CCE8F6"));
 		shell.AddChild(heading);
@@ -162,7 +162,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		column.AddThemeConstantOverride("separation", 8);
 		scroll.AddChild(column);
 
-		var preset = Section(column, "Preset battle", true, out var presetHeader);
+		var preset = Section(column, "Scenario preset", true, out var presetHeader);
 		foreach (int count in Counts) CountChoice.AddItem(count.ToString("N0"));
 		foreach (string mode in new[] { "A — Rendering only", "B — Movement", "C — Melee", "D — Ranged" }) ModeChoice.AddItem(mode);
 		foreach (string layout in new[]
@@ -183,7 +183,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		SavedBattleChoice.AddItem("Generated battle");
 		Field(preset, "Saved battle", SavedBattleChoice);
 		AddButton(preset, "Spawn / Reset selected", () => SpawnRequested?.Invoke());
-		if (PresetTest)
+		if (AutoBattlerPlaytest)
 		{
 			presetHeader.Hide();
 			((Control)preset.GetParent().GetParent()).Hide();
@@ -282,7 +282,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		drift.ValueChanged += _ => UpdateWeather();
 		haze.ValueChanged += _ => UpdateWeather();
 
-		AddButton(column, PresetTest ? "Edit Blue deployment" : "Edit painted deployment", () => PaintRequested?.Invoke());
+		AddButton(column, AutoBattlerPlaytest ? "Edit Blue deployment" : "Edit painted deployment", () => PaintRequested?.Invoke());
 		paintSection = new VBoxContainer { Visible = false };
 		column.AddChild(paintSection);
 		paintControls = Section(paintSection, "Paint tools", true, out paintHeader);
@@ -370,7 +370,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		}
 		Field(orders, "Melee guard radius", GuardRadius);
 		AddButton(paintControls, "Start painted battle", () => BattleRequested?.Invoke());
-		if (PresetTest)
+		if (AutoBattlerPlaytest)
 		{
 			toolRow.Hide();
 			factionRow.Hide();
@@ -398,7 +398,7 @@ public partial class BenchmarkPanel : CanvasLayer
 
 		var actions = new HBoxContainer();
 		shell.AddChild(actions);
-		var clear = new Button { Text = PresetTest ? "Clear test" : "Clear all", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		var clear = new Button { Text = AutoBattlerPlaytest ? "Clear test" : "Clear all", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		clear.Pressed += () => ClearRequested?.Invoke();
 		actions.AddChild(clear);
 		PauseButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -431,7 +431,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog, compact: PresetTest);
+		unitBar.Build(Catalog, compact: AutoBattlerPlaytest);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
 
 	}

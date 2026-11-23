@@ -37,4 +37,4 @@ Open [UnitVisualConfig.tres](../../GAMEPLAY/UNITS/UnitVisualConfig.tres) in the 
 
 First Crack Health and Heavy Crack Health default to 75% and 25%. The intermediate threshold is halfway between them. The shared crack mask adds progressive dark fractures to upper facets in mesh-local space, with a stable orientation derived from each unit ID. Crack Darkness sets the maximum shading and defaults to 0.84. The existing opaque MultiMesh alpha channel carries stage and orientation, retaining the 16-float instance stride. The white hit flash temporarily hides the cracks.
 
-[UNIT_DEATHS](UNIT_DEATHS/README.md) owns fragments and splats. Benchmark, Fortress Defense and the Level Editor's combat tests use these shared visuals. The Preset Battles campaign layout view is static.
+[UNIT_DEATHS](UNIT_DEATHS/README.md) owns fragments and splats. Benchmark, Fortress Defense and the Level Editor's combat tests use these shared visuals. The AutoBattler campaign layout view is static.
