@@ -71,7 +71,7 @@ internal sealed partial class PresetBattleHud : CanvasLayer
             }
             var fillButton = new Button { Text = "Rectangle Fill", ToggleMode = true };
             UIButtonFactory.Apply(fillButton, UIButtonStyle.Compact);
-            fillButton.Toggled += fill;
+            fillButton.Toggled += enabled => fill(enabled);
             fillButton.TooltipText = "Drag to paint or erase a rectangle.";
             deployment.AddChild(fillButton);
             deployment.AddChild(UIButtonFactory.Create("Clear Blue Deployment", clear, UIButtonStyle.Compact));

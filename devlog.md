@@ -480,3 +480,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-22 · CAMPAIGN1-A — Added Preset Battles Headquarters, profile-specific 500-Credit saves, permanent roster recruitment and legacy completion migration. Source implemented, awaiting owner validation.
 
 - 2026-11-22 · CAMPAIGN1-B — Connected owned-roster Blue deployment to authored Red forces and the shared battle simulation, with results and retry. Source implemented, awaiting owner validation.
+
+- 2026-11-22 · CAMPAIGN1 — Fixed the deployment toggle signal binding and qualified the save-lock file access type to resolve C# build errors.

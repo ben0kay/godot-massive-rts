@@ -54,7 +54,7 @@ internal static class PresetCampaignStore
     private static FileStream BeginTransaction(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        return new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        return new FileStream(path + ".lock", FileMode.OpenOrCreate, System.IO.FileAccess.ReadWrite, FileShare.None);
     }
 
     private static string PathFor(string profileId)
