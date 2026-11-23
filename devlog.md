@@ -486,3 +486,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-22 · AutoBattler — Renamed the campaign, updated scene and editor references, and corrected the duplicate level order that blocked the Campaign menu.
 
 - 2026-11-22 · AutoBattler — Replaced recruitment rows with compact responsive cards and fixed quantity toolbar wrapping.
+
+- 2026-11-23 · AutoBattler — Improved recruitment readability with available and locked sections, aligned price and ownership, and compact recruit actions.

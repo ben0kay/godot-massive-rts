@@ -1,13 +1,14 @@
 // Displays permanent ownership and quotes batch recruitment from the campaign catalog.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace MassiveRts;
 
 internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
 {
-    private const int CardWidth = 196;
+    private const int CardWidth = 224;
     private const int MaxColumns = 7;
     private readonly AutoBattlerRecruitment recruitment;
     private readonly List<(AutoBattlerRecruitment.Offer Offer, Label Owned, Button Buy)> cards = new();
@@ -40,42 +41,71 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
         }
         quantity.ValueChanged += _ => RefreshOffers();
 
-        var grid = new GridContainer();
+        var offers = recruitment.Offers.ToArray();
+        AddSection("Available to recruit", offers.Where(offer => offer.Available).ToArray(), buy, spacing);
+        AddSection("Locked units", offers.Where(offer => !offer.Available).ToArray(), buy, spacing);
+    }
+
+    private void AddSection(string title, AutoBattlerRecruitment.Offer[] offers, Action<string, int> buy, int spacing)
+    {
+        if (offers.Length == 0) return;
+        var section = new VBoxContainer();
+        section.AddThemeConstantOverride("separation", 6);
+        AddChild(section);
+        var heading = CardLabel(title, 19);
+        heading.AddThemeColorOverride("font_color", UIMasterConfig.Current.Accent);
+        section.AddChild(heading);
+
+        var grid = new GridContainer { SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         grid.AddThemeConstantOverride("h_separation", spacing);
         grid.AddThemeConstantOverride("v_separation", spacing);
-        AddChild(grid);
+        section.AddChild(grid);
         Resized += () =>
         {
-            int columns = Mathf.Clamp(Mathf.FloorToInt((Size.X + spacing) / (CardWidth + spacing)), 1, MaxColumns);
+            int columns = Mathf.Clamp(Mathf.FloorToInt((Size.X + spacing) / (CardWidth + spacing)),
+                1, Math.Min(MaxColumns, offers.Length));
             if (grid.Columns != columns) grid.Columns = columns;
         };
 
         var config = UIMasterConfig.Current;
-        var cardStyle = UIButtonFactory.Box(config.Panel, config.Accent.Darkened(0.72f), 10);
-        foreach (var offer in recruitment.Offers)
+        var availableStyle = UIButtonFactory.Box(config.Panel.Lightened(0.035f), config.Accent.Darkened(0.48f), 10);
+        var lockedStyle = UIButtonFactory.Box(config.Panel.Darkened(0.12f), config.Button, 10);
+        foreach (var offer in offers)
         {
             var unit = offer.Unit;
             var panel = new PanelContainer
             {
                 CustomMinimumSize = new Vector2(CardWidth, 0),
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                TooltipText = $"{unit.DisplayName}\n{unit.Role}"
+                TooltipText = $"{unit.DisplayName}\n{unit.Role}\nTier {unit.SizeTier:0.#} · Battle Rating {recruitment.Rating(unit.Id):N0}"
             };
-            panel.AddThemeStyleboxOverride("panel", cardStyle);
+            panel.AddThemeStyleboxOverride("panel", offer.Available ? availableStyle : lockedStyle);
             grid.AddChild(panel);
             var details = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-            details.AddThemeConstantOverride("separation", 3);
+            details.AddThemeConstantOverride("separation", 6);
             panel.AddChild(details);
             var name = CardLabel(unit.DisplayName, 18);
             name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             details.AddChild(name);
-            details.AddChild(CardLabel($"Tier {unit.SizeTier:0.#}  ·  BR {recruitment.Rating(unit.Id):N0}", 14, muted: true));
-            var owned = CardLabel("", 15);
-            details.AddChild(owned);
-            var button = UIButtonFactory.Create("", () => buy(unit.Id, (int)quantity.Value), UIButtonStyle.Primary);
-            CompactButton(button);
-            button.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            details.AddChild(button);
+
+            var stats = new HBoxContainer();
+            stats.AddThemeConstantOverride("separation", 8);
+            details.AddChild(stats);
+            var owned = CardLabel("", 16);
+            owned.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            owned.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            stats.AddChild(owned);
+            var price = CardLabel($"{offer.Price:N0} cr / unit", 15, muted: !offer.Available);
+            if (offer.Available) price.AddThemeColorOverride("font_color", new Color("#ffda93"));
+            stats.AddChild(price);
+
+            Button button = null;
+            if (offer.Available)
+            {
+                button = UIButtonFactory.Create("", () => buy(unit.Id, (int)quantity.Value), UIButtonStyle.Primary);
+                CompactButton(button);
+                button.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+                details.AddChild(button);
+            }
             cards.Add((offer, owned, button));
         }
     }
@@ -98,7 +128,7 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
     {
         state = saved;
         foreach (var card in cards)
-            card.Owned.Text = $"Owned {state.Owned(card.Offer.Unit.Id):N0}  ·  {card.Offer.Price:N0} cr each";
+            card.Owned.Text = $"Owned {state.Owned(card.Offer.Unit.Id):N0}";
         RefreshOffers();
     }
 
@@ -107,9 +137,10 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
         if (state == null) return;
         foreach (var card in cards)
         {
+            if (card.Buy == null) continue;
             bool affordable = recruitment.TryQuote(state, card.Offer.Unit.Id, (int)quantity.Value,
                 out long cost, out string reason);
-            card.Buy.Text = card.Offer.Available ? $"Recruit · {cost:N0} cr" : "Locked";
+            card.Buy.Text = $"Recruit · {cost:N0} cr";
             card.Buy.Disabled = !affordable;
             card.Buy.TooltipText = affordable ? $"Recruit {quantity.Value:N0} for {cost:N0} Credits" : reason;
         }
