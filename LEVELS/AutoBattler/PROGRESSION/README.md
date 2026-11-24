@@ -22,3 +22,11 @@ Level 001 currently has no authored Red forces. The existing development profile
 - Campaign deployment, results and retry are in `LEVELS/AutoBattler/BenchmarkArena.Campaign.cs`.
 - Headquarters and recruitment UI live in `UI/Menus/AutoBattler/`. The deployment and results HUD lives in `UI/GameplayHUD/AutoBattlerHud.cs`.
 - The shared battlefield setup lives in `BENCHMARK/BenchmarkArena.AutoBattlerPlaytest.cs`.
+
+## Optional reinforcements
+
+In campaign deployment, use **Reserve** to select a unit type and assign a quantity. The same timer applies to all reserved types. Reserving soldiers reduces the available paint count, and setting the quantity back to zero makes them available again. No reserve is assigned by default. Retrying keeps the deployment and reserve choices and resets both wave clocks.
+
+In the AutoBattler Level Editor, open **Map Size… → Red reinforcements** to author one optional single-type Red wave. Set its count to zero to disable it. The entry offset moves its formation along the Red map edge. **Test AutoBattler** runs the authored wave.
+
+The first pass releases soldiers at clear positions just inside their side's edge. Arrival times count simulation time from battle start and release work is capped per tick. A blocked entry with insufficient clear positions is reported before battle begins. A side with pending reserves can still fight after its opening army is wiped out.

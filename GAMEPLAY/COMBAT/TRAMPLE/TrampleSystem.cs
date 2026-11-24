@@ -34,11 +34,11 @@ public sealed class TrampleSystem
         ids = new int[count];
         states = new Charge[count];
         hits = new int[count * HitSlots];
-        slots = new int[units.Count];
+        slots = new int[units.Position.Length];
         Array.Fill(slots, -1);
-        shoves = new Vector2[units.Count];
-        shovedIds = new int[units.Count];
-        queued = new bool[units.Count];
+        shoves = new Vector2[units.Position.Length];
+        shovedIds = new int[units.Position.Length];
+        queued = new bool[units.Position.Length];
         int slot = 0;
         for (int index = 0; index < end; index++)
         {

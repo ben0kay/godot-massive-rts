@@ -53,7 +53,7 @@ public partial class BenchmarkArena
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
             fill => painter.SetSoldierPaintType(fill ? 1 : 0),
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
-            () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle);
+            () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds);
         AddChild(campaignHud);
     }
 
@@ -64,11 +64,11 @@ public partial class BenchmarkArena
     private string CampaignPlacementError(SoldierPlacement placement)
     {
         ref readonly var unit = ref catalog[placement.Type];
-        if (painter.Layout.CountForType(placement.Type) >= campaignRoster.Owned(unit.Id) ||
+        if (painter.Layout.CountForType(placement.Type) >= campaignRoster.Owned(unit.Id) - Reserved(placement.Type) ||
             (allowedCampaignUnits.Count != 0 && !allowedCampaignUnits.Contains(unit.Id)))
             return "No eligible soldiers of this type are available. Erase placements or recruit more in Headquarters.";
         if (!painter.Layout.TryGet(new Vector2I(placement.X, placement.Z), out _) &&
-            painter.Layout.Placements.Count >= Config.MaxSoldiers - autoBattlerRed.Length)
+            painter.Layout.Placements.Count >= Config.MaxSoldiers - autoBattlerRed.Length - AuthoredRedReserve - blueReserveCount)
             return "This placement exceeds the simulation's total soldier capacity.";
 
         Vector3 position = placement.Position();
@@ -122,11 +122,11 @@ public partial class BenchmarkArena
     private string CampaignStartError()
     {
         if (campaignMapError != null) return campaignMapError;
-        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0) return "This level has no authored Red forces.";
+        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0) return "This level has no authored Red forces.";
         if (campaignZoneCells.Count == 0 && autoBattlerPlaytestMap.AutoBattlerRules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled)
             return "This map has no authored Blue deployment area.";
-        if (painter.Layout.Placements.Count == 0) return "Deploy at least one owned soldier to fight.";
-        if ((long)painter.Layout.Placements.Count + autoBattlerRed.Length > Config.MaxSoldiers)
+        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0) return "Deploy or reserve at least one owned soldier to fight.";
+        if ((long)painter.Layout.Placements.Count + autoBattlerRed.Length + AuthoredRedReserve + blueReserveCount > Config.MaxSoldiers)
             return "Both armies together exceed the simulation's total soldier capacity.";
         return null;
     }
@@ -137,8 +137,9 @@ public partial class BenchmarkArena
         campaignHud.ShowDeployment(type =>
         {
             int owned = campaignRoster.Owned(catalog[type].Id), deployed = layout.CountForType(type);
-            return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Available {owned - deployed:N0}";
-        }, $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses",
+            return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
+        }, $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
+            (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : ""),
             CampaignStartError());
     }
 
@@ -157,8 +158,9 @@ public partial class BenchmarkArena
     {
         if (!campaignBattleRunning || steps == 0) return;
         campaignBattleSeconds += steps * Config.TickSeconds;
-        if (units.FactionAlive[Factions.Blue] == 0) FinishCampaignBattle("Defeat");
-        else if (units.FactionAlive[Factions.Red] == 0 && projectiles.Count == 0 &&
+        if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
+        if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
+        else if (units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
         else if (campaignBattleSeconds >= CampaignBattleTimeLimit) FinishCampaignBattle("Stalemate");
@@ -174,8 +176,12 @@ public partial class BenchmarkArena
         for (int id = 0; id < campaignInitialBlue; id++)
             if (units.Faction[id] == Factions.Blue && units.Health[id] > 0f) survivors++;
         int defenses = defenseSystem?.Structures.Count(tower => !tower.Destroyed) ?? 0;
+        int arrived = blueWave?.Released ?? 0;
+        string reserveResult = blueWave == null ? "" :
+            $"\nBlue reserve survivors {units.FactionAlive[Factions.Blue] - survivors:N0} / {arrived:N0} arrived";
+        string survivorLabel = blueWave == null ? "Blue survivors" : "Blue opening survivors";
         campaignHud.ShowResult(result,
-            $"Blue survivors {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses");
+            $"{survivorLabel} {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses{reserveResult}");
     }
 
     private void ReturnFromCampaignBattle()

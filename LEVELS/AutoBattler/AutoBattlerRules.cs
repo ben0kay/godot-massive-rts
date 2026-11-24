@@ -27,6 +27,11 @@ public partial class AutoBattlerRules : Resource
         return BlueDeploymentCells.Contains(new Vector2I(Mathf.FloorToInt(position.X / grid), Mathf.FloorToInt(position.Z / grid)));
     }
 
+    [Export] public string RedReserveUnitId { get; set; } = "";
+    [Export] public int RedReserveCount { get; set; }
+    [Export] public float RedReserveSeconds { get; set; } = 30f;
+    [Export(PropertyHint.Range, "-100,100,1")] public float RedReserveEdgeOffset { get; set; }
+
     [Export] public ObjectiveType Objective { get; set; }
     [Export] public int BlueUnitLimit { get; set; } = 200;
     [Export] public string[] AllowedBlueUnitIds { get; set; } = System.Array.Empty<string>();

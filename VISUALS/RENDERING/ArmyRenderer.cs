@@ -209,9 +209,9 @@ public partial class ArmyRenderer : Node3D
 
     public void CapturePose()
     {
-        previousPositions ??= new Vector3[units.Count];
-        previousFacing ??= new Vector2[units.Count];
-        unsettled ??= new bool[units.Count];
+        previousPositions ??= new Vector3[units.Position.Length];
+        previousFacing ??= new Vector2[units.Position.Length];
+        unsettled ??= new bool[units.Position.Length];
         System.Array.Copy(units.Position, previousPositions, units.Count);
         System.Array.Copy(units.Facing, previousFacing, units.Count);
         hasPreviousPose = true;

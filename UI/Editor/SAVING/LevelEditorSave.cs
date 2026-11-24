@@ -203,7 +203,12 @@ internal static class LevelEditorSave
             if (groups.Any(group => !group.FitsSide(rules, group.GlobalPosition)) ||
                 towers.Any(tower => !tower.Red || !tower.FitsSide(rules, tower.GlobalPosition)))
                 throw new InvalidOperationException("Move preplaced formations and defense towers onto the Red side of the line.");
-            if (groups.Sum(group => (long)group.SoldierCount) > 100000)
+            if (rules.RedReserveCount < 0 || (rules.RedReserveCount > 0 &&
+                (!roster.Contains(rules.RedReserveUnitId) || !float.IsFinite(rules.RedReserveSeconds) ||
+                 rules.RedReserveSeconds < 0f || rules.RedReserveSeconds >= 300f ||
+                 !float.IsFinite(rules.RedReserveEdgeOffset) || Mathf.Abs(rules.RedReserveEdgeOffset) > 100f)))
+                throw new InvalidOperationException("Check the Red reinforcement type, count, arrival time, and entry offset.");
+            if (groups.Sum(group => (long)group.SoldierCount) + rules.RedReserveCount > 100000)
                 throw new InvalidOperationException("AutoBattler supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||
                 map.AutoBattlerRules.BlueUnitLimit < 0 || map.AutoBattlerRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))
