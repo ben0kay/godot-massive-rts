@@ -90,7 +90,26 @@ public partial class LevelEditor
             types.AddChild(item);
             checks.Add((unit.Id, item));
         }
-        Heading(parent, "Red reinforcements", 17);
+        return () =>
+        {
+            string[] chosen = restrict.ButtonPressed ? checks.Where(item => item.Box.ButtonPressed).Select(item => item.Id).ToArray() : Array.Empty<string>();
+            if (restrict.ButtonPressed && chosen.Length == 0) throw new InvalidOperationException("Select at least one permitted unit type.");
+            int oldAllowance = rules.BlueUnitLimit, nextAllowance = (int)allowance.Value;
+            string[] oldAllowed = rules.AllowedBlueUnitIds;
+            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; },
+                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen; });
+        };
+    }
+
+    private void ShowReinforcementSettings()
+    {
+        EndPaint();
+        settingsDialog?.QueueFree();
+        settingsDialog = new AcceptDialog { Title = "Red reinforcements" };
+        interfaceRoot.AddChild(settingsDialog);
+        var parent = new VBoxContainer { CustomMinimumSize = new Vector2(390, 0) };
+        settingsDialog.AddChild(parent);
+        var rules = map.AutoBattlerRules;
         Heading(parent, "A painted Red staging formation takes precedence over the fallback wave.", 15)
             .AutowrapMode = TextServer.AutowrapMode.WordSmart;
         var reserveType = new OptionButton();
@@ -100,19 +119,15 @@ public partial class LevelEditor
         var reserveCount = Number(parent, "Fallback count (0 disables fallback)", rules.RedReserveCount, 0, 100000);
         var reserveSeconds = Number(parent, "Arrival seconds after Fight", rules.RedReserveSeconds, 0, 299, 1);
         var reserveOffset = Number(parent, "Entry offset along Red edge (%)", rules.RedReserveEdgeOffset, -100, 100, 1);
-        return () =>
+        settingsDialog.GetOkButton().Text = "Apply settings";
+        settingsDialog.Confirmed += () =>
         {
             var before = (rules.RedReserveUnitId, rules.RedReserveCount, rules.RedReserveSeconds, rules.RedReserveEdgeOffset);
             var after = (units[reserveType.Selected].Id, (int)reserveCount.Value, (float)reserveSeconds.Value, (float)reserveOffset.Value);
-            void ApplyReserve((string Id, int Count, float Seconds, float Offset) value) =>
-                (rules.RedReserveUnitId, rules.RedReserveCount, rules.RedReserveSeconds, rules.RedReserveEdgeOffset) = value;
-            string[] chosen = restrict.ButtonPressed ? checks.Where(item => item.Box.ButtonPressed).Select(item => item.Id).ToArray() : Array.Empty<string>();
-            if (restrict.ButtonPressed && chosen.Length == 0) throw new InvalidOperationException("Select at least one permitted unit type.");
-            int oldAllowance = rules.BlueUnitLimit, nextAllowance = (int)allowance.Value;
-            string[] oldAllowed = rules.AllowedBlueUnitIds;
-            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; ApplyReserve(before); },
-                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen; ApplyReserve(after); });
+            SetValue(before, after, value =>
+                (rules.RedReserveUnitId, rules.RedReserveCount, rules.RedReserveSeconds, rules.RedReserveEdgeOffset) = value);
         };
+        settingsDialog.PopupCentered();
     }
 
     private Func<(Action Undo, Action Redo)> FortressForm(Control parent)

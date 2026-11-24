@@ -7,7 +7,7 @@ namespace MassiveRts;
 public partial class LevelEditor
 {
     private bool editingReserve, previewReserveEntry;
-    private Button reserveGridButton, reserveEntryButton;
+    private Button reserveGridButton;
     private Vector3 ReserveOrigin => new(0, 0,
         Mathf.Ceil(map.MapSize * 0.5f / Grid) * Grid + RedReserveFormation.HalfWidth + 32f);
     private Vector3 PaintOrigin => editingReserve ? ReserveOrigin : Vector3.Zero;
@@ -29,9 +29,8 @@ public partial class LevelEditor
         EndPaint();
         editingReserve = !editingReserve;
         selected = null;
-        reserveGridButton.Text = editingReserve ? "Back to battlefield" : "Red staging";
-        reserveEntryButton.Disabled = editingReserve;
-        ShowPalettePage(0);
+        reserveGridButton.Visible = editingReserve;
+        ShowPalettePage(editingReserve ? 0 : palettePages.Length - 1);
         SwitchTool(editingReserve ? Tool.Soldiers : Tool.Select);
         RefreshLayout();
         FrameEditor();

@@ -19,7 +19,7 @@ public partial class LevelEditor
         var body = placementPalette.BuildShell(154);
         var header = new HBoxContainer();
         body.AddChild(header);
-        string[] tabs = { "Units", "Defenses", "Terrain", "Setup" };
+        string[] tabs = { "Units", "Defenses", "Terrain", "Setup", "Simulation" };
         paletteTabs = new Button[tabs.Length];
         var tabGroup = new ButtonGroup();
         for (int i = 0; i < tabs.Length; i++)
@@ -41,8 +41,13 @@ public partial class LevelEditor
         paletteMove = AddPaletteAction(header, "Move", Tool.Move);
         paletteErase = AddPaletteAction(header, "Erase", Tool.Erase);
 
-        reserveGridButton = Button(header, "Red staging", ToggleReserveGrid);
-        reserveEntryButton = Button(header, "Red entry preview", () =>
+        reserveGridButton = Button(header, "Back to battlefield", ToggleReserveGrid);
+        reserveGridButton.Hide();
+        var simulation = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Begin };
+        body.AddChild(simulation);
+        Button(simulation, "Reinforcement settings", ShowReinforcementSettings);
+        Button(simulation, "Red staging", ToggleReserveGrid);
+        Button(simulation, "Red entry preview", () =>
         {
             previewReserveEntry = !previewReserveEntry || tool != Tool.ReserveEntry;
             PickPaletteTool(previewReserveEntry ? Tool.ReserveEntry : Tool.Select);
@@ -82,7 +87,8 @@ public partial class LevelEditor
             ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge" },
                 new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge }),
             ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
-                new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera })
+                new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
+            simulation
         };
         ShowPalettePage(0);
 
