@@ -19,7 +19,9 @@ public partial class LevelEditor
     private Vector2I? previousCell;
     private (Cells Rocks, Cells Water, Cells Forest, Cells Blue)? beforePaint;
     private HashSet<Vector2I> rocks, water, forest, deployment;
-    private bool paintChanged;
+    private const double PaintPreviewInterval = 0.125;
+    private bool paintChanged, paintPreviewPending;
+    private double paintPreviewCooldown;
     private float elevationRadius = 16f, elevationStrength = 2f, elevationTarget;
     private bool setElevationHeight;
     private float wallWidth = 10, wallDepth = 4, wallHeight = 2, yaw;
@@ -225,8 +227,7 @@ public partial class LevelEditor
 
     private void SwitchTool(Tool next)
     {
-        if (mode.IsAutoBattler) EndPaint();
-        else EndElevation();
+        EndPaint();
         CancelBridge();
         if (cursor?.Mesh is BoxMesh box && squareCursor != box)
         {
@@ -367,6 +368,8 @@ public partial class LevelEditor
     public override void _Process(double delta)
     {
         UpdateElevation(delta);
+        if (paintPreviewCooldown > 0) paintPreviewCooldown -= delta;
+        if (paintPreviewPending && paintPreviewCooldown <= 0) PublishPaintPreview();
         if (rectangleStart != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
             rectangleStart = null;
         if (beforePaint != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
@@ -428,7 +431,8 @@ public partial class LevelEditor
         water = new(paint.Data.WaterCells);
         forest = new(paint.Data.ForestCells);
         deployment = map.AutoBattlerRules == null ? new() : new(map.AutoBattlerRules.BlueDeploymentCells);
-        paintChanged = false;
+        paintChanged = paintPreviewPending = false;
+        paintPreviewCooldown = 0;
     }
 
     private void PaintTo(Vector2I cell, bool erase)
@@ -436,6 +440,7 @@ public partial class LevelEditor
         if (previousCell == cell) return;
         var from = previousCell ?? cell;
         int steps = Math.Max(Math.Abs(cell.X - from.X), Math.Abs(cell.Y - from.Y));
+        bool changed = false;
         for (int i = 0; i <= steps; i++)
         {
             float t = steps == 0 ? 0 : i / (float)steps;
@@ -445,31 +450,42 @@ public partial class LevelEditor
             {
                 var next = center + new Vector2I(x, z);
                 if (x * x + z * z >= brushRadius * brushRadius || !paint.Contains(next)) continue;
-                if (tool == Tool.Erase || (erase && tool == Tool.Rock)) paintChanged |= rocks.Remove(next);
-                if (tool == Tool.Erase || (erase && tool == Tool.Water)) paintChanged |= water.Remove(next);
-                if (tool == Tool.Erase || (erase && tool == Tool.Forest)) paintChanged |= forest.Remove(next);
-                if (tool == Tool.Erase || (erase && tool == Tool.Deployment)) paintChanged |= deployment.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Rock)) changed |= rocks.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Water)) changed |= water.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Forest)) changed |= forest.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Deployment)) changed |= deployment.Remove(next);
                 if (erase || tool == Tool.Erase) continue;
-                if (tool == Tool.Rock) { paintChanged |= forest.Remove(next); paintChanged |= water.Remove(next); paintChanged |= rocks.Add(next); }
-                if (tool == Tool.Water) { paintChanged |= forest.Remove(next); paintChanged |= rocks.Remove(next); paintChanged |= water.Add(next); }
-                if (tool == Tool.Forest) { paintChanged |= rocks.Remove(next); paintChanged |= water.Remove(next); paintChanged |= forest.Add(next); }
+                if (tool == Tool.Rock) { changed |= forest.Remove(next); changed |= water.Remove(next); changed |= rocks.Add(next); }
+                if (tool == Tool.Water) { changed |= forest.Remove(next); changed |= rocks.Remove(next); changed |= water.Add(next); }
+                if (tool == Tool.Forest) { changed |= rocks.Remove(next); changed |= water.Remove(next); changed |= forest.Add(next); }
                 if (tool == Tool.Deployment && map.AutoBattlerRules.AllowsSide(
                     new Vector3((next.X + 0.5f) * Grid, 0, (next.Y + 0.5f) * Grid), Grid * 0.5f, blue: true))
-                    paintChanged |= deployment.Add(next);
+                    changed |= deployment.Add(next);
             }
         }
         previousCell = cell;
-        if (!paintChanged) return;
+        if (!changed) return;
+        paintPreviewPending = true;
+        if (paintPreviewCooldown <= 0) PublishPaintPreview();
+    }
+
+    // Mouse motion can arrive much faster than the renderer can replace forest batches.
+    private void PublishPaintPreview()
+    {
+        if (!paintPreviewPending || beforePaint is not { } previous) return;
+        paintPreviewPending = false;
+        paintPreviewCooldown = PaintPreviewInterval;
         if (!paint.TryMerge(new(rocks), new(water), out _, out _) || forest.Count > WorldPaint.MaxPaintedCells || deployment.Count > WorldPaint.MaxPaintedCells)
         {
-            var previous = beforePaint.Value;
             beforePaint = null;
             previousCell = null;
             SetPaint(previous);
             SetStatus("Stroke exceeded the map paint budget and was reverted.");
             return;
         }
-        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(deployment)));
+        paintChanged = true;
+        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(deployment)),
+            refreshLayout: tool is Tool.Deployment or Tool.Erase);
     }
 
     private static Cells Sorted(HashSet<Vector2I> cells) => new(cells.OrderBy(cell => cell.Y).ThenBy(cell => cell.X));
@@ -477,21 +493,24 @@ public partial class LevelEditor
     private void EndPaint()
     {
         EndElevation();
+        PublishPaintPreview();
         if (beforePaint is not { } previous) return;
         beforePaint = null;
         previousCell = null;
         if (!paintChanged) return;
         (Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.AutoBattlerRules?.BlueDeploymentCells);
-        Remember(() => SetPaint(previous), () => SetPaint(next));
+        bool refreshLayout = tool is Tool.Deployment or Tool.Erase;
+        Remember(() => SetPaint(previous, refreshLayout), () => SetPaint(next, refreshLayout));
     }
 
-    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Blue) cells)
+    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Blue) cells, bool refreshLayout = true)
     {
         paint.Data.RockCells = cells.Rocks;
         paint.Data.WaterCells = cells.Water;
         paint.Data.ForestCells = cells.Forest;
         if (map.AutoBattlerRules != null) map.AutoBattlerRules.BlueDeploymentCells = cells.Blue;
-        RefreshMap();
+        if (refreshLayout || previewReserveEntry) RefreshMap();
+        else paint.Compile();
     }
 
     // =========================================================
