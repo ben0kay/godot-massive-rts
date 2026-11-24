@@ -2,7 +2,7 @@
 using Godot;
 namespace MassiveRts;
 
-public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught, DeepFork, Prism }
+public enum UnitShape { Circle, Square, Triangle, Diamond, Pentagon, Hexagon, Chevron, HFrame, LongTriangle, DrillRig, Pike, Dreadnaught, DeepFork, Prism, Obliterator }
 [System.Flags]
 public enum TargetCategory { None = 0, Units = 1, Structures = 2, Both = Units | Structures }
 public enum TargetPreference { Units, Structures }
@@ -88,6 +88,9 @@ public partial class UnitDefinition : Resource
     [ExportSubgroup("Melee target bonus")]
     [Export] public string MeleeBonusTargetId { get; set; } = "";
     [Export(PropertyHint.Range, "1,10,0.05")] public float MeleeBonusMultiplier { get; set; } = 1f;
+
+    [ExportSubgroup("First hit")]
+    [Export(PropertyHint.Range, "1,10,0.05")] public float FirstHitMultiplier { get; set; } = 1f;
 
     [ExportSubgroup("Cleave")]
     [Export] public bool CleaveEnabled { get; set; }

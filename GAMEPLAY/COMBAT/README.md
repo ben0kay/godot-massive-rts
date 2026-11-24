@@ -24,3 +24,7 @@ Structure targeting is a separate setting. In the command sandbox, eligible atta
 ## PRISM1 piercing discharge
 
 Prism Lance shares segment-versus-footprint and terrain math with the Railgun Tower. Prism only scans the full segment once per shot. Its spatial query uses the existing enemy grid and movement padding. It keeps the nearest hits in a bounded stack buffer, using soldier ID to resolve equal entry distances. A 32-discharge limit per simulation tick spreads simultaneous salvos over several ticks. Fully charged units revalidate their target before using a later slot. The firing flash and charge lens use separate bounded MultiMesh batches. `UnitVisualConfig.MaxPrismBeamEffects` controls the flash cap independently of damage.
+
+## First hit per enemy
+
+Set **First hit per enemy** above 1× in the Entity Editor to boost a unit's first single-target melee strike against each enemy soldier. An attacker keeps its own record, so returning to a previous enemy uses regular damage. The ordinary attack interval still applies. The bonus is applied before armour and shields. Only attackers with the bonus allocate a hit record, which is discarded when the attacker dies or the battle resets.

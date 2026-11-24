@@ -239,6 +239,8 @@ public static class CombatSystem
             {
                 float damage = type.AgainstUnits(type.Damage);
                 if (units.Type[target] == type.MeleeBonusTarget) damage *= type.MeleeBonusMultiplier;
+                if (damage > 0f && type.FirstHitMultiplier > 1f && units.RecordFirstHit(i, target))
+                    damage *= type.FirstHitMultiplier;
                 units.Damage(target, damage, type.UnitDamageType);
             }
             if (type.MeleeLungeDistance > 0f) visualsChanged = units.Dirty[i] = true;

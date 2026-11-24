@@ -118,6 +118,13 @@ public static class FacetedSoldierMeshes
             AppendBeveledRectangle(surface, new Vector3(0f, height * 0.35f, -outline.RadiusZ * 0.82f),
                 new Vector3(outline.RadiusX * 0.40f, height * 0.30f, outline.RadiusZ * 0.20f), new Color(0.70f, 0.96f, 1f));
         }
+        if (unit.Shape == UnitShape.Obliterator)
+        {
+            // A bright raised keel follows the tapered nose of the hull.
+            AppendPrism(surface, 4, outline.RadiusX * 0.34f, outline.RadiusZ * 0.72f,
+                height * 0.28f, 0f, new Vector3(0f, height * 0.57f, -outline.RadiusZ * 0.10f),
+                new Color(0.65f, 0.91f, 1f));
+        }
         if (outline.IsDreadnaught)
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)

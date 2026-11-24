@@ -123,6 +123,10 @@ public partial class UnitEditorPanel
         var meleePatternRow = Row("Hit pattern", hitPattern);
         refreshFields.Add(() => meleePatternRow.Visible = IsMelee);
 
+        Number(nameof(Unit.FirstHitMultiplier), "First hit per enemy", () => Unit.FirstHitMultiplier,
+            v => Unit.FirstHitMultiplier = v, 1, 10, 0.05, "×", () => IsMelee && !HasCleave,
+            "Applies once per enemy for each attacker. Set to 1 to disable.");
+
         var rangedPattern = new Label();
         var rangedPatternRow = Row("Hit pattern", rangedPattern);
         refreshFields.Add(() =>

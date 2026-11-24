@@ -1,4 +1,5 @@
 // Compact authoritative soldier arrays; stable IDs survive deaths until the next reset.
+using System.Collections.Generic;
 using Godot;
 namespace MassiveRts;
 
@@ -13,6 +14,7 @@ public sealed class UnitState
     public readonly bool[] Dirty;
     public readonly int[] FactionAlive = new int[Factions.Count];
     private byte[] completedAttacks;
+    private Dictionary<int, HashSet<int>> firstHitTargets;
     private int[] nextRocketMount;
 
     internal int RocketMountIndex(int id) => nextRocketMount?[id] ?? 0;
@@ -186,6 +188,18 @@ public sealed class UnitState
         Shields.AddTower(tower, stats);
     }
 
+    // Stable soldier IDs let an attacker remember each defender for its lifetime.
+    internal bool RecordFirstHit(int attacker, int defender)
+    {
+        firstHitTargets ??= new Dictionary<int, HashSet<int>>();
+        if (!firstHitTargets.TryGetValue(attacker, out var targets))
+        {
+            targets = new HashSet<int>();
+            firstHitTargets.Add(attacker, targets);
+        }
+        return targets.Add(defender);
+    }
+
     public void Damage(int id, float damage, int damageType = 0)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
@@ -214,6 +228,7 @@ public sealed class UnitState
         FactionAlive[Faction[id]]--;
         Alive--;
         Shields?.RemoveRecipient(id);
+        firstHitTargets?.Remove(id);
         if (Catalog[Type[id]].PrismBeam.Enabled)
         {
             prismAlive--;

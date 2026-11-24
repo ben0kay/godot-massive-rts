@@ -107,3 +107,7 @@ In `Dreadnaught.tres`, the **Weapon Mounts** group contains four independent twi
 Prism Lance is a Tier 3 ranged unit with a narrow six-sided hull, twin rails and a cyan charging lens. Its Size Multiplier is now **2.0×** (was 1.0×), including its mesh dimensions and collision footprint. It charges for 3 seconds, deals 65 damage to up to 24 hostile soldiers in a straight line, then recovers for 6 seconds. Its starting range is 8–58 units. It uses the existing nearest-target search and fires through its target until it meets cover, terrain or the range limit. Damage and recovery use the unit's ordinary Damage and Interval fields. The **visible beam flash** lasts **0.36 seconds** (was 0.18 seconds); piercing damage still resolves on the firing tick. The **Prism Beam** section in Entity Editor exposes the remaining weapon settings.
 
 Paint it in the Benchmark or Level Editor. In Fortress Defense the Fabricator produces two for 240 Carbon in 18 seconds. A plain move order interrupts a charge. Attack-move can hold to fire and resumes the order when no target remains.
+
+## Obliterator
+
+The Obliterator is a Tier 2 melee assault unit with a tapered hull and a raised center ridge. It uses Elite Infantry's 285 HP and 22 base damage with a higher base speed of 3.5. Its single-target opener deals 33 raw damage per new enemy, then 22 on repeat hits. It is available in the unit catalogue, AutoBattler recruitment for 40 credits, and the Fabricator in batches of four for 220 Carbon.

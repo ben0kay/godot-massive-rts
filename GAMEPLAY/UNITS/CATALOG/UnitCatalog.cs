@@ -111,6 +111,7 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
+            UnitShape.Obliterator => new(5, halfWidth, width * 0.78f, -Mathf.Pi * 0.5f),
             UnitShape.Prism => new(6, halfWidth, width * 0.88f, -Mathf.Pi * 0.5f),
             UnitShape.DeepFork => new(DeepForkVertices.Length, halfWidth, width * 0.38f, 0f, IsDeepFork: true),
             UnitShape.Pike => new(PikeVertices.Length, halfWidth, width * 0.74f, 0f, IsPike: true),
@@ -128,7 +129,7 @@ public readonly record struct UnitStats(string Id, string Name, UnitShape Shape,
     bool CleaveEnabled, float CleaveExtraReach, float CleaveCosineSquared, float CleaveSecondaryFraction, int CleaveMaxAdditionalTargets, float MeleeFacingCosineSquared, TrampleStats Trample, float AccelerationRateOverride, ShockwaveStats Shockwave, RangedRecoilStats RangedRecoil,
     int DamageType, int ArmourClass, TargetCategory AllowedTargets, TargetPreference PreferredTarget,
     float StructureDetectionRange, float TurnDegreesPerSecond, float MeleeLungeDistance, float UnitDamagePercent, float StructureDamagePercent,
-    int MeleeBonusTarget, float MeleeBonusMultiplier, float SizeTier, PrismBeamStats PrismBeam, ShieldEmitterStats ShieldEmitter)
+    int MeleeBonusTarget, float MeleeBonusMultiplier, float SizeTier, PrismBeamStats PrismBeam, ShieldEmitterStats ShieldEmitter, float FirstHitMultiplier)
 {
     internal bool DirectFire(ProjectileCatalog projectiles) =>
         !Ranged || PrismBeam.Enabled || projectiles.Flight(ProjectileType).ObstacleFire == ObstacleFireMode.RequiresDirectLineOfSight;
@@ -158,10 +159,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher", PrismLanceId = "prism_lance", MobileGeneratorId = "mobile_generator";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher", PrismLanceId = "prism_lance", MobileGeneratorId = "mobile_generator", ObliteratorId = "obliterator";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12, PrismLance = 13, MobileGenerator = 14;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId, PrismLanceId, MobileGeneratorId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12, PrismLance = 13, MobileGenerator = 14, Obliterator = 15;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId, PrismLanceId, MobileGeneratorId, ObliteratorId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
@@ -251,6 +252,11 @@ public sealed class RuntimeUnitCatalog
             var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/MobileGenerator.tres");
             if (definition != null) byId.Add(MobileGeneratorId, definition);
         }
+        if (!byId.ContainsKey(ObliteratorId))
+        {
+            var definition = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Obliterator.tres");
+            if (definition != null) byId.Add(ObliteratorId, definition);
+        }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;
         for (byte i = 0; i < Count; i++)
@@ -337,7 +343,8 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
                 Array.IndexOf(OrderedIds, d.MeleeBonusTargetId), ClampStat(d.MeleeBonusMultiplier, 1f, 10f, 1f), CompileSizeTier(d.SizeTier), prism,
                 ShieldEmitterStats.Compile(d.ShieldEmitterEnabled, d.ShieldRadius, d.ShieldCapacity,
-                    d.ShieldRegenerationPerSecond, d.ShieldDecayPerSecond));
+                    d.ShieldRegenerationPerSecond, d.ShieldDecayPerSecond),
+                combat && !ranged && !d.CleaveEnabled ? ClampStat(d.FirstHitMultiplier, 1f, 10f, 1f) : 1f);
             battleRatings[i] = Mathf.Clamp(d.BattleRating, 0, UnitDefinition.MaxBattleRating);
             indices.Add(id, i);
             MaxSpeed = Mathf.Max(MaxSpeed, stats[i].Speed);

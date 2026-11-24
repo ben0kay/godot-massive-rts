@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "obliterator"
+DisplayName = "Obliterator"
+Role = "Fast single-target assault unit"
+BattleRating = 270
+Shape = 14
+Width = 1.55
+Height = 0.825
+SizeTier = 2.0
+Speed = 3.5
+TurnDegreesPerSecond = 180.0
+Health = 285.0
+ChargeResistance = 1.2
+Damage = 22.0
+Interval = 1.65
+Reach = 2.3
+MeleeLungeDistance = 0.25
+FirstHitMultiplier = 1.5

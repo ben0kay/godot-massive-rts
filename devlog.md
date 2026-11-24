@@ -490,3 +490,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-23 · AutoBattler — Improved recruitment readability with available and locked sections, aligned price and ownership, and compact recruit actions.
 
 - 2026-11-24 · AutoBattler — Reset authored maps to blank editable scenes with centered deployment dividers. Original maps are backed up on `backup/autobattler-maps-2026-11-24`.
+
+- 2026-11-24 — Obliterator. Added a Tier 2 single-target melee unit and a reusable first-hit multiplier per attacker and defender. Source implemented, awaiting owner validation.
