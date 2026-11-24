@@ -516,3 +516,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Moved AutoBattler reinforcement settings and authoring actions into the bottom Simulation tab.
 
 - 2026-11-24 — Sized ranged recoil for all battle slots including reserves, and clipped Red ingress meshes at the battlefield edge. Runtime validation pending.
+
+- 2026-11-24 — Slowed painted reinforcements to formation pace and gave all ranks a common combat handoff line to reduce bunching. Runtime validation pending.

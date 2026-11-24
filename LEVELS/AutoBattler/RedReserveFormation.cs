@@ -8,7 +8,7 @@ internal static class RedReserveFormation
 {
     internal const string ContainerName = "RedReserveUnits";
     internal const float HalfWidth = 128f;
-    internal const float MarchSpeed = 14f;
+    internal const float EntrySpeedFraction = 0.75f;
     internal enum EntryEdge { Automatic, North, East, South, West }
     internal readonly record struct Lane(Vector3 Start, Vector3 Goal, Vector2 Facing, float Distance, bool Clear);
 
@@ -28,7 +28,7 @@ internal static class RedReserveFormation
             : rules.FlipBlueSide ? EntryEdge.North : EntryEdge.South;
     }
 
-    internal static Lane Project(Vector3 local, float radius, CommandSandbox map, ObstacleField field, float leadIn)
+    internal static Lane Project(Vector3 local, float radius, CommandSandbox map, ObstacleField field, float leadIn, float handoffRadius)
     {
         float half = map.MapSize * 0.5f;
         Vector2 outward = ResolveEdge(map.AutoBattlerRules) switch
@@ -45,8 +45,8 @@ internal static class RedReserveFormation
         if (!float.IsFinite(offset)) offset = 0f;
         Vector2 edge = outward * half + across * (local.X + half * Mathf.Clamp(offset, -100f, 100f) * 0.01f);
         Vector2 start = edge + outward * (HalfWidth - local.Z + leadIn);
-        // One radius clears the footprint, then three more radii provide the buffer.
-        Vector2 goal = edge + inward * (4f * radius + 0.05f);
+        // Use the largest footprint for the common handoff line so ranks do not stack.
+        Vector2 goal = edge + inward * (4f * handoffRadius + 0.05f);
         var destination = new Vector3(goal.X, 0, goal.Y);
         bool clear = Mathf.Abs(goal.X) + radius < half && Mathf.Abs(goal.Y) + radius < half &&
             map.AutoBattlerRules.AllowsSide(destination, radius, blue: false) &&

@@ -13,18 +13,20 @@ public partial class BenchmarkArena
         public readonly SoldierPlacement[] Soldiers;
         public readonly float Seconds;
         public readonly RedReserveFormation.Lane[] Lanes;
+        public readonly float MarchSpeed;
         public float TimeToFinish { get; }
         public UnitState Marching;
         public ArmyRenderer MarchRenderer;
         public int Released;
         public bool Pending => Released < Soldiers.Length;
 
-        public ReserveWave(SoldierPlacement[] soldiers, float seconds, RedReserveFormation.Lane[] lanes = null)
+        public ReserveWave(SoldierPlacement[] soldiers, float seconds, RedReserveFormation.Lane[] lanes = null, float marchSpeed = 0f)
         {
             Soldiers = soldiers;
             Seconds = seconds;
             Lanes = lanes;
-            TimeToFinish = seconds + (lanes?.Max(lane => lane.Distance) ?? 0f) / RedReserveFormation.MarchSpeed;
+            MarchSpeed = marchSpeed;
+            TimeToFinish = lanes == null ? seconds : seconds + lanes.Max(lane => lane.Distance) / MarchSpeed;
         }
     }
 
@@ -101,11 +103,12 @@ public partial class BenchmarkArena
         var soldiers = new SoldierPlacement[ordered.Length];
         var lanes = new RedReserveFormation.Lane[ordered.Length];
         float leadIn = ordered.Max(item => catalog[item.Type].Footprint);
+        float marchSpeed = ordered.Min(item => catalog[item.Type].Speed) * RedReserveFormation.EntrySpeedFraction;
         for (int i = 0; i < ordered.Length; i++)
         {
             var item = ordered[i];
             float radius = catalog[item.Type].Footprint;
-            var lane = RedReserveFormation.Project(item.Local, radius, autoBattlerPlaytestMap, entryField, leadIn);
+            var lane = RedReserveFormation.Project(item.Local, radius, autoBattlerPlaytestMap, entryField, leadIn, handoffRadius: leadIn);
             if (!lane.Clear || Mathf.Abs(item.Local.X) + radius > RedReserveFormation.HalfWidth ||
                 Mathf.Abs(item.Local.Z) + radius > RedReserveFormation.HalfWidth)
             {
@@ -118,7 +121,7 @@ public partial class BenchmarkArena
         }
 
         float seconds = autoBattlerPlaytestMap.AutoBattlerRules.RedReserveSeconds;
-        return new ReserveWave(soldiers, float.IsFinite(seconds) ? Mathf.Clamp(seconds, 0, 299) : 30f, lanes);
+        return new ReserveWave(soldiers, float.IsFinite(seconds) ? Mathf.Clamp(seconds, 0, 299) : 30f, lanes, marchSpeed);
     }
 
     private void BeginReserveMarch(ReserveWave wave)
@@ -164,7 +167,7 @@ public partial class BenchmarkArena
     private void SyncReserveMarch()
     {
         if (redWave?.Marching == null) return;
-        float distance = (reserveClock - redWave.Seconds) * RedReserveFormation.MarchSpeed;
+        float distance = (reserveClock - redWave.Seconds) * redWave.MarchSpeed;
         for (int i = redWave.Released; i < redWave.Soldiers.Length; i++)
         {
             redWave.Marching.Position[i] = ReserveMarchPosition(redWave.Lanes[i], distance);
@@ -256,7 +259,7 @@ public partial class BenchmarkArena
         void Release(ReserveWave wave)
         {
             if (wave?.Pending != true || reserveClock < wave.Seconds) return;
-            float distance = (reserveClock - wave.Seconds) * RedReserveFormation.MarchSpeed;
+            float distance = (reserveClock - wave.Seconds) * wave.MarchSpeed;
             if (wave.Lanes != null && wave.Marching == null) BeginReserveMarch(wave);
             while (wave.Pending && budget > 0)
             {
@@ -265,6 +268,7 @@ public partial class BenchmarkArena
                 var soldier = wave.Soldiers[wave.Released++];
                 int id = units.TrySpawn(soldier.Type, soldier.Faction, soldier.Position());
                 units.Facing[id] = soldier.AuthoredFacing;
+                if (wave.Lanes != null) units.MoveSpeed[id] = wave.MarchSpeed;
                 budget--;
             }
             if (!wave.Pending) ClearReserveMarch(wave);

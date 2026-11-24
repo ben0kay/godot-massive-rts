@@ -122,7 +122,7 @@ public partial class LevelEditor
             lines.AddVertex(b);
         }
 
-        var marker = RedReserveFormation.Project(new Vector3(0, 0, RedReserveFormation.HalfWidth), 4f, map, field, 0f);
+        var marker = RedReserveFormation.Project(new Vector3(0, 0, RedReserveFormation.HalfWidth), 4f, map, field, 0f, 4f);
         var facing = new Vector3(marker.Facing.X, 0, marker.Facing.Y);
         var across = facing.Cross(Vector3.Up);
         Color arrow = new("#ffad6d");
@@ -138,8 +138,8 @@ public partial class LevelEditor
             foreach (var point in group.Positions(radius))
             {
                 var local = group.GetParent<Node3D>().ToLocal(point);
-                var lane = RedReserveFormation.Project(local, radius, map, field, 0f);
-                var edge = lane.Goal - facing * (4f * radius + 0.05f);
+                var lane = RedReserveFormation.Project(local, radius, map, field, 0f, widest);
+                var edge = lane.Goal - facing * (4f * widest + 0.05f);
                 Color color = lane.Clear ? new Color("#64e5cb") : new Color("#ff4d53");
                 float side = across.Dot(edge - marker.Start);
                 minAcross = Mathf.Min(minAcross, side - radius);
