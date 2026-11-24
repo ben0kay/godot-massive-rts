@@ -6,7 +6,26 @@ namespace MassiveRts;
 
 public partial class RectangleDimensions : Node2D
 {
-    private Camera3D camera;
+    private Camera3D camera, brushCamera;
+    private readonly System.Collections.Generic.List<Vector3> brushPoints = new();
+    private float brushRadius;
+    private Color brushInk;
+
+    internal void SetBrushGhost(Camera3D view, float radius, Color color)
+    {
+        brushCamera = view;
+        brushRadius = radius;
+        brushInk = color;
+        brushPoints.Clear();
+        Visible = camera != null;
+        QueueRedraw();
+    }
+
+    internal void AddBrushGhost(Vector3 point)
+    {
+        brushPoints.Add(point);
+        Show();
+    }
     private Vector2 min, max;
     private string widthText, lengthText;
     private static readonly Color Ink = new(0.92f, 0.97f, 1f);
@@ -29,14 +48,18 @@ public partial class RectangleDimensions : Node2D
 
     public void Clear()
     {
+        camera = null;
+        brushPoints.Clear();
         Hide();
         SetProcess(false);
+        QueueRedraw();
     }
 
     public override void _Process(double delta) => QueueRedraw();
 
     public override void _Draw()
     {
+        foreach (var point in brushPoints) DrawFootprint(brushCamera, point, brushRadius, brushInk);
         if (camera == null) return;
         Vector3 origin = new(min.X, 0f, min.Y);
         Vector3 width = new(max.X, 0f, min.Y);
@@ -48,6 +71,21 @@ public partial class RectangleDimensions : Node2D
         Vector2 lengthEnd = camera.UnprojectPosition(length);
         DrawDimension(corner, widthEnd, lengthEnd - corner, widthText);
         DrawDimension(corner, lengthEnd, widthEnd - corner, lengthText);
+    }
+
+    protected void DrawFootprint(Camera3D view, Vector3 center, float radius, Color color)
+    {
+        if (view.IsPositionBehind(center)) return;
+        const int segments = 20;
+        Vector2 previous = view.UnprojectPosition(center + Vector3.Right * radius);
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = Mathf.Tau * i / segments;
+            Vector3 point = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+            Vector2 next = view.UnprojectPosition(point);
+            DrawLine(previous, next, color, 1f, true);
+            previous = next;
+        }
     }
 
     protected void DrawDimension(Vector2 start, Vector2 end, Vector2 interior, string label)

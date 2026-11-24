@@ -9,6 +9,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
 {
     private readonly VBoxContainer body = new();
     private readonly VBoxContainer deployment = new();
+    private Control deploymentBar;
     private readonly Label status = MenuLayout.Label("", muted: true);
     private readonly Label strength = MenuLayout.Label("");
     private readonly Label arrival = MenuLayout.Label("", muted: true);
@@ -20,7 +21,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
         Action<byte> select, Action<int> brush, Action<bool> fill, Action clear, Action start,
         Action reset, Action retreat, Action leave, Func<byte, int> maxReserve,
-        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds)
+        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged)
     {
         Layer = 3;
         var panel = new PanelContainer { Position = new Vector2(16, 16), CustomMinimumSize = new Vector2(360, 0) };
@@ -39,14 +40,26 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             deployment.AddChild(MenuLayout.Label("No eligible soldiers owned. Visit Headquarters to recruit.", muted: true));
         else
         {
+            var palette = new UnitPlacementBar();
+            deploymentBar = palette;
+            AddChild(palette);
+            var columns = new HBoxContainer();
+            columns.AddThemeConstantOverride("separation", 12);
+            palette.BuildShell(154).AddChild(columns);
+            var brushControls = new VBoxContainer { CustomMinimumSize = new Vector2(240, 0) };
+            columns.AddChild(brushControls);
+            var cardColumn = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            columns.AddChild(cardColumn);
+            cardColumn.AddChild(MenuLayout.Label("UNIT PLACEMENT"));
+
             var list = new ScrollContainer
             {
-                CustomMinimumSize = new Vector2(0, Mathf.Min(175, choices.Length * 67)),
+                SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
                 FollowFocus = true
             };
-            deployment.AddChild(list);
-            var rows = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            cardColumn.AddChild(list);
+            var rows = new GridContainer { Columns = Math.Min(4, choices.Length), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             list.AddChild(rows);
             var group = new ButtonGroup();
             foreach (var choice in choices)
@@ -55,9 +68,12 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
                 button.ToggleMode = true;
                 button.ButtonGroup = group;
                 if (roster.Count == 0) button.SetPressedNoSignal(true);
-                rows.AddChild(button);
+                var card = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+                rows.AddChild(card);
+                card.AddChild(button);
                 var label = MenuLayout.Label("", muted: true);
-                rows.AddChild(label);
+                label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                card.AddChild(label);
                 roster.Add(choice.Type, label);
             }
             var reserveRow = new HBoxContainer();
@@ -91,7 +107,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             refreshReserve = RefreshReserve;
 
             var brushRow = new HBoxContainer();
-            deployment.AddChild(brushRow);
+            brushControls.AddChild(brushRow);
             brushRow.AddChild(MenuLayout.Label("Brush"));
             var brushes = new ButtonGroup();
             foreach (int size in new[] { 1, 3, 6, 10 })
@@ -106,7 +122,20 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             UIButtonFactory.Apply(fillButton, UIButtonStyle.Compact);
             fillButton.Toggled += enabled => fill(enabled);
             fillButton.TooltipText = "Drag to paint or erase a rectangle.";
-            deployment.AddChild(fillButton);
+            brushControls.AddChild(fillButton);
+            var densityRow = new HBoxContainer();
+            brushControls.AddChild(densityRow);
+            densityRow.AddChild(MenuLayout.Label("Density"));
+            var spread = new HSlider { MinValue = 0, MaxValue = 3, Step = 0.1, Value = 1,
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            densityRow.AddChild(spread);
+            var valueLabel = MenuLayout.Label("1.0×");
+            densityRow.AddChild(valueLabel);
+            spread.ValueChanged += value =>
+            {
+                valueLabel.Text = value == 0 ? "Touching" : $"{value:F1}×";
+                densityChanged((float)value);
+            };
             deployment.AddChild(UIButtonFactory.Create("Clear Blue Deployment", clear, UIButtonStyle.Compact));
         }
         fight = UIButtonFactory.Create("Fight", start, UIButtonStyle.Primary);
@@ -125,6 +154,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     internal void ShowDeployment(Func<byte, string> counts, string rating, string blocked)
     {
         deployment.Show();
+        deploymentBar?.Show();
         arrival.Hide();
         refreshReserve?.Invoke();
         result.Hide();
@@ -139,6 +169,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     internal void ShowPreparing()
     {
         deployment.Hide();
+        deploymentBar?.Hide();
         Report("Preparing both armies…");
     }
 

@@ -26,12 +26,12 @@ public partial class CommandOverlay : RectangleDimensions
     {
         if (View == null) return;
         foreach (int id in Selection)
-            if (Units.Health[id] > 0) DrawFootprint(Units.Position[id], Radius(id), SelectionInk);
+            if (Units.Health[id] > 0) DrawFootprint(View, Units.Position[id], Radius(id), SelectionInk);
         if (Building?.Rally is Vector3 rally && !Building.Destroyed)
         {
             Vector3 gate = Building.FrontEdge;
             DrawLine(View.UnprojectPosition(gate), View.UnprojectPosition(rally), GhostInk, 1.25f, true);
-            DrawFootprint(rally, 0.65f, SelectionInk);
+            DrawFootprint(View, rally, 0.65f, SelectionInk);
         }
         if (Selecting)
         {
@@ -51,7 +51,7 @@ public partial class CommandOverlay : RectangleDimensions
         if (FreeformPreview)
         {
             for (int i = 0; i < Freeform.Slots.Count && i < Selection.Count; i++)
-                DrawFootprint(Units.OnTerrain(Freeform.Slots[i]), Radius(Selection[i]), GhostInk);
+                DrawFootprint(View, Units.OnTerrain(Freeform.Slots[i]), Radius(Selection[i]), GhostInk);
             for (int i = 1; i < Freeform.Points.Count; i++)
                 DrawLine(View.UnprojectPosition(Freeform.Points[i - 1]),
                     View.UnprojectPosition(Freeform.Points[i]), GhostInk, 1.5f, true);
@@ -59,7 +59,7 @@ public partial class CommandOverlay : RectangleDimensions
         else
         {
             for (int i = 0; i < Selection.Count; i++)
-                DrawFootprint(Units.OnTerrain(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing)),
+                DrawFootprint(View, Units.OnTerrain(CommandMovement.Slot(Front, Right, Columns, i, Selection.Count, Spacing)),
                     Radius(Selection[i]), GhostInk);
         }
 
@@ -74,18 +74,4 @@ public partial class CommandOverlay : RectangleDimensions
         DrawDimension(start, end, interior, width.ToString("0.##", CultureInfo.InvariantCulture) + " u");
     }
 
-    private void DrawFootprint(Vector3 center, float radius, Color color)
-    {
-        if (View.IsPositionBehind(center)) return;
-        const int segments = 20;
-        Vector2 previous = View.UnprojectPosition(center + Vector3.Right * radius);
-        for (int i = 1; i <= segments; i++)
-        {
-            float angle = Mathf.Tau * i / segments;
-            Vector3 point = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
-            Vector2 next = View.UnprojectPosition(point);
-            DrawLine(previous, next, color, 1f, true);
-            previous = next;
-        }
-    }
 }

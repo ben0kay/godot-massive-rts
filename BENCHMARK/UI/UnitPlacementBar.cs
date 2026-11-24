@@ -21,9 +21,15 @@ internal partial class UnitPlacementBar : PanelContainer
         defenseCards.Visible = enabled;
     }
 
-    internal void Build(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, bool compact)
+    internal void Build(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, bool compact, Control brushControls)
     {
-        var body = BuildShell(compact ? 148 : 154, compact);
+        var shell = BuildShell(compact ? 148 : 154, compact);
+        var columns = new HBoxContainer();
+        columns.AddThemeConstantOverride("separation", 12);
+        shell.AddChild(columns);
+        columns.AddChild(brushControls);
+        var body = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        columns.AddChild(body);
         heading = new Label { Text = "UNIT PLACEMENT" };
         heading.AddThemeFontSizeOverride("font_size", 14);
         heading.AddThemeColorOverride("font_color", new Color("#bde9ff"));

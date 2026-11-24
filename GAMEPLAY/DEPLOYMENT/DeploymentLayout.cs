@@ -156,9 +156,8 @@ public sealed class DeploymentLayout
 
     public IReadOnlyList<SoldierPlacement> Placements => placements;
 
-    public bool TryPaint(SoldierPlacement placement, out int slot)
+    internal bool CanPaint(SoldierPlacement placement)
     {
-        slot = -1;
         if (placement.X < -SoldierBoundary - SoldierSubdivisions / 2 || placement.X >= SoldierBoundary - SoldierSubdivisions / 2 ||
             placement.Z < -SoldierBoundary - SoldierSubdivisions / 2 || placement.Z >= SoldierBoundary - SoldierSubdivisions / 2 ||
             placement.Faction >= Factions.Count || placement.Type >= catalog.Count) return false;
@@ -186,9 +185,17 @@ public sealed class DeploymentLayout
             }
         }
 
+        return !TryGet(cell, out var existing) || existing != placement;
+    }
+
+    public bool TryPaint(SoldierPlacement placement, out int slot)
+    {
+        slot = -1;
+        if (!CanPaint(placement)) return false;
+        var cell = new Vector2I(placement.X, placement.Z);
+        Vector2I center = Bucket(cell);
         if (slots.TryGetValue(cell, out slot))
         {
-            if (placements[slot] == placement) return false;
             Tally(placements[slot], -1);
             Tally(placement, 1);
             placements[slot] = placement;

@@ -42,6 +42,7 @@ public partial class DeploymentPainter : Node3D
     private MeshInstance3D walls, rectanglePreview, placementGrid;
     private RectangleDimensions dimensions;
     private bool dragging;
+    private double ghostRefresh;
     private long paintTool;
     private MouseButton dragButton;
     private Vector2I dragStart;
@@ -154,16 +155,7 @@ public partial class DeploymentPainter : Node3D
         paintError = null;
         bool changed = false;
         int side = Mathf.Clamp(SoldierBrushSize, 1, 10);
-        int subdivisions = DeploymentLayout.SoldierSubdivisions;
-        float spread = Mathf.Clamp(SoldierBrushSpread, 0f, 3f);
-        int stride = Mathf.Max(Mathf.RoundToInt(spread * subdivisions),
-            Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / Layout.SoldierStep));
-        // Keep the original cell alignment at default spacing.
-        float xCell = ground.X / Layout.GridSize, zCell = ground.Z / Layout.GridSize;
-        Vector2I center = spread == 1f
-            ? new Vector2I(Mathf.FloorToInt(xCell), Mathf.FloorToInt(zCell)) * subdivisions
-            : new Vector2I(Mathf.RoundToInt((xCell - 0.5f) * subdivisions / stride),
-                Mathf.RoundToInt((zCell - 0.5f) * subdivisions / stride)) * stride;
+        GetBrushGrid(ground, out Vector2I center, out int stride);
         int first = -(side - 1) / 2;
         if (erase)
         {
@@ -182,14 +174,86 @@ public partial class DeploymentPainter : Node3D
         }
         else
         {
-            for (int z = first; z < first + side; z++)
-            for (int x = first; x < first + side; x++)
-            {
-                changed |= PaintSoldier(center + new Vector2I(x * stride, z * stride));
-            }
+            foreach (var slot in BrushSlots(center, stride, side))
+                changed |= PaintSoldier(slot);
         }
         if (changed) Changed?.Invoke();
         if (paintError != null) EditRejected?.Invoke(paintError);
+    }
+
+    private void GetBrushGrid(Vector3 ground, out Vector2I center, out int stride)
+    {
+        int subdivisions = DeploymentLayout.SoldierSubdivisions;
+        float spread = Mathf.Clamp(SoldierBrushSpread, 0f, 3f);
+        stride = Mathf.Max(Mathf.RoundToInt(spread * subdivisions),
+            Mathf.CeilToInt(catalog[BrushType].Footprint * 2f / Layout.SoldierStep));
+        // Keep the original cell alignment at default spacing.
+        float xCell = ground.X / Layout.GridSize, zCell = ground.Z / Layout.GridSize;
+        center = spread == 1f
+            ? new Vector2I(Mathf.FloorToInt(xCell), Mathf.FloorToInt(zCell)) * subdivisions
+            : new Vector2I(Mathf.RoundToInt((xCell - 0.5f) * subdivisions / stride),
+                Mathf.RoundToInt((zCell - 0.5f) * subdivisions / stride)) * stride;
+    }
+
+    private System.Collections.Generic.IEnumerable<Vector2I> BrushSlots(Vector2I center, int stride, int side)
+    {
+        int first = -(side - 1) / 2;
+        for (int z = first; z < first + side; z++)
+        for (int x = first; x < first + side; x++)
+            yield return center + new Vector2I(x * stride, z * stride);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (dimensions == null || !Visible) return;
+        ghostRefresh -= delta;
+        if (ghostRefresh > 0) return;
+        ghostRefresh = 1.0 / 24.0;
+        UpdateBrushGhost();
+    }
+
+    private void UpdateBrushGhost()
+    {
+        const int previewLimit = 256;
+        Color color = ArmyRenderer.FactionColor(BrushFaction).Lerp(Colors.White, 0.5f);
+        color.A = 0.7f;
+        float radius = catalog[BrushType].Footprint;
+        dimensions.SetBrushGhost(Camera, radius, color);
+        if (paintTool != 0 || GetViewport().GuiGetHoveredControl() != null ||
+            Input.IsMouseButtonPressed(MouseButton.Right) ||
+            !TryGround(GetViewport().GetMousePosition(), out var ground)) return;
+
+        System.Collections.Generic.IEnumerable<Vector2I> slots;
+        if (fillSoldierRectangle)
+        {
+            if (!TryCell(GetViewport().GetMousePosition(), out var end)) return;
+            var cell = new ObstacleRectangle(end.X, end.Y, 1, 1) { GridSize = Layout.GridSize };
+            if (!cell.IsValid) return;
+            slots = DeploymentLayout.RectangleSoldierSlots(dragging ? DragArea(end) : cell, SoldierBrushSpread, radius);
+        }
+        else
+        {
+            GetBrushGrid(ground, out var center, out int stride);
+            slots = BrushSlots(center, stride, Mathf.Clamp(SoldierBrushSize, 1, 10));
+        }
+        int remaining = previewLimit;
+        try
+        {
+            foreach (var slot in slots)
+            {
+                if (remaining-- == 0) break;
+                var placement = new SoldierPlacement(slot.X, slot.Y, BrushFaction, BrushType, Layout.GridSize);
+                if (!Layout.CanPaint(placement) || PaintRestriction?.Invoke(placement) == false ||
+                    PlacementError?.Invoke(placement) != null) continue;
+                Vector3 point = placement.Position();
+                point.Y = (previewTerrain?.At(point.X, point.Z) ?? 0f) + 0.05f;
+                dimensions.AddBrushGhost(point);
+            }
+        }
+        catch (System.InvalidOperationException)
+        {
+            // Oversized rectangles are rejected by the same slot generator on commit.
+        }
     }
 
     private void HandleDefenseInput(InputEvent input)

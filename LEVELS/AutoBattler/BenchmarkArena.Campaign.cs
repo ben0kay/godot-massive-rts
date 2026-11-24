@@ -88,7 +88,8 @@ public partial class BenchmarkArena
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
             fill => painter.SetSoldierPaintType(fill ? 1 : 0),
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
-            () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds);
+            () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
+            spread => painter.SoldierBrushSpread = spread);
         AddChild(campaignHud);
     }
 

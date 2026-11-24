@@ -318,16 +318,15 @@ public partial class BenchmarkPanel : CanvasLayer
 		}
 		placementGridToggle.Toggled += enabled => PlacementGridChanged?.Invoke(enabled);
 		paintControls.AddChild(placementGridToggle);
-		var soldierControls = new VBoxContainer();
-		paintControls.AddChild(soldierControls);
+		var soldierControls = new VBoxContainer { CustomMinimumSize = new Vector2(244, 0) };
 		SoldierPaintType.AddItem("Brush");
 		SoldierPaintType.AddItem("Filled rectangle");
 		SoldierPaintType.Select(0);
-		Field(soldierControls, "Paint type", SoldierPaintType);
+		Field(soldierControls, "Brush type", SoldierPaintType);
 		foreach (int size in new[] { 1, 3, 5, 10 })
 			SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
 		SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.
-		var brushSizeRow = Field(soldierControls, "Paint size", SoldierBrushSizeChoice);
+		var brushSizeRow = Field(soldierControls, "Brush size", SoldierBrushSizeChoice);
 		SoldierPaintType.ItemSelected += index => brushSizeRow.Visible = index == 0;
 		var density = new HBoxContainer();
 		var spreadLabel = new Label { Text = "1.0×" };
@@ -335,7 +334,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		density.AddChild(spreadLabel);
 		PaintSpread.ValueChanged += value => spreadLabel.Text = value == 0 ? "Touching" : $"{value:F1}×";
 		PaintSpread.TooltipText = "Spacing relative to the default. The unit footprint sets the minimum.";
-		Field(soldierControls, "Paint density", density);
+		Field(soldierControls, "Density", density);
 		var wallHelp = new Label { Text = "Drag left to draw rectangle\nDrag right to erase area", Visible = false };
 		paintControls.AddChild(wallHelp);
 		var defenseControls = new VBoxContainer { Visible = false };
@@ -429,7 +428,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest);
+		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest, brushControls: soldierControls);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
 		unitBar.FactionSelected += faction => FactionSelected?.Invoke(faction);
 		unitBar.DefenseSelected += type => DefenseSelected?.Invoke(type);
