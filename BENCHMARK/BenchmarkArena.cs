@@ -224,7 +224,7 @@ public partial class BenchmarkArena : Node3D
         panel.SoldierBrushSizeChoice.ItemSelected += index =>
             painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId((int)index);
         painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId(panel.SoldierBrushSizeChoice.Selected);
-        panel.FactionChoice.ItemSelected += index => painter.BrushFaction = (byte)panel.FactionChoice.GetItemId((int)index);
+        panel.FactionSelected += faction => painter.BrushFaction = faction;
         panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         shockwaves = new ShockwaveRenderer();
         AddChild(shockwaves);

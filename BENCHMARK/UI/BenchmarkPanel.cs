@@ -82,7 +82,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	private int paintTool;
 	public readonly OptionButton SoldierPaintType = new();
 	public readonly OptionButton SoldierBrushSizeChoice = new();
-	public readonly OptionButton FactionChoice = new();
+	public event Action<byte> FactionSelected;
 	private VBoxContainer paintControls, paintSection;
 	private Button paintHeader;
 	public bool EditingDeployment
@@ -292,9 +292,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		paintSection = new VBoxContainer { Visible = false };
 		column.AddChild(paintSection);
 		paintControls = Section(paintSection, "Paint tools", true, out paintHeader);
-		foreach (byte faction in Factions.DisplayOrder)
-			FactionChoice.AddItem(Factions.Name(faction), faction);
-		FactionChoice.Select(FactionChoice.GetItemIndex(Factions.Blue));
 		// Single-click radio selection keeps all three tools visible without opening a dropdown.
 		var toolRow = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		toolRow.AddThemeConstantOverride("separation", 8);
@@ -432,8 +429,9 @@ public partial class BenchmarkPanel : CanvasLayer
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog, Buildings, FactionChoice, compact: AutoBattlerPlaytest);
+		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
+		unitBar.FactionSelected += faction => FactionSelected?.Invoke(faction);
 		unitBar.DefenseSelected += type => DefenseSelected?.Invoke(type);
 
 	}
