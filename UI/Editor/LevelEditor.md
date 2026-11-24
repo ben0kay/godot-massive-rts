@@ -40,3 +40,5 @@ Select **Paint elevation** and choose a brush radius.
 Each stroke or Set Height click can be undone or redone as one edit and saves with the map. The brush works on the combined terrain surface, including authored hills.
 
 The ground grid and map edge follow the sculpted terrain. Both playtest modes use the saved height surface for grounding.
+
+AutoBattler authoring uses the bottom placement bar. **Units** and **Defenses** show the authored Red roster and tower choices with base HP and damage. **Defenses** also includes Solid Wall. **Terrain** contains Rocks, Forest, Water, Elevation, and Bridge. **Setup** contains Blue Deployment Zone, Deployment Line, and Opening Camera. Select, Move, and Erase stay available on every tab. Settings for the active tool appear on the left.

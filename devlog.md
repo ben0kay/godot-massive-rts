@@ -500,3 +500,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added budgeted static-tower approach checks and temporary per-soldier tower skips. Moved Benchmark faction selection and defense brushes into the placement bar and added a Game Editor return button. Source implemented, awaiting owner validation.
 
 - 2026-11-24 — Added Benchmark faction color buttons, tinted silhouettes, and compact placement cards with base HP and damage. Source implemented, awaiting owner validation.
+
+- 2026-11-24 — Added the AutoBattler Level Editor placement palette with Units, Defenses, Terrain, and Setup tabs. Shares Benchmark placement card styling and preserves authored Red placement. Source implemented, awaiting owner validation.

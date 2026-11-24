@@ -29,6 +29,7 @@ public partial class LevelEditor
     // =========================================================
     private void SetTools()
     {
+        SetPlacementPaletteMode();
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
@@ -190,7 +191,8 @@ public partial class LevelEditor
             case Tool.Soldiers:
                 Choice(context, "Placement", new[] { "Formation", "Rectangle fill" }, fillRectangle ? 1 : 0,
                     index => { fillRectangle = index == 1; UpdateTool(); });
-                UnitPicker(context, unitIndex, index => unitIndex = index);
+                if (!mode.IsAutoBattler)
+                    UnitPicker(context, unitIndex, index => unitIndex = index);
                 if (!mode.IsAutoBattler)
                     Choice(context, "Faction", new[] { "Blue", "Red" }, red ? 1 : 0, index => red = index == 1);
                 if (fillRectangle)
@@ -215,7 +217,8 @@ public partial class LevelEditor
 
     private void SwitchTool(Tool next)
     {
-        EndElevation();
+        if (mode.IsAutoBattler) EndPaint();
+        else EndElevation();
         CancelBridge();
         if (cursor?.Mesh is BoxMesh box && squareCursor != box)
         {
@@ -233,7 +236,8 @@ public partial class LevelEditor
         }
         tool = next;
         toolPicker.Select(toolPicker.GetItemIndex((int)next));
-        if (next != Tool.Defense) defensePicker.Select(0);
+        if (next != Tool.Defense && !mode.IsAutoBattler) defensePicker.Select(0);
+        if (mode.IsAutoBattler) SyncPaletteTool(next);
         UpdateTool();
     }
 

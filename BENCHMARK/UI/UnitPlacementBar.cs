@@ -1,4 +1,4 @@
-// Displays the benchmark's soldier and defense brushes as selectable silhouette cards.
+// Displays shared placement cards for the Benchmark and AutoBattler Level Editor.
 using System;
 using System.Collections.Generic;
 using Godot;
@@ -23,15 +23,7 @@ internal partial class UnitPlacementBar : PanelContainer
 
     internal void Build(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, bool compact)
     {
-        BarHeight = compact ? 148 : 154;
-        AnchorTop = AnchorBottom = AnchorRight = 1;
-        OffsetLeft = 12;
-        OffsetRight = -12;
-        OffsetTop = -BarHeight - 12;
-        OffsetBottom = -12;
-        AddThemeStyleboxOverride("panel", UIButtonFactory.Box(new Color("#091a2d"), new Color("#327fa3"), compact ? 6 : 10));
-        var body = new VBoxContainer();
-        AddChild(body);
+        var body = BuildShell(compact ? 148 : 154, compact);
         heading = new Label { Text = "UNIT PLACEMENT" };
         heading.AddThemeFontSizeOverride("font_size", 14);
         heading.AddThemeColorOverride("font_color", new Color("#bde9ff"));
@@ -76,10 +68,25 @@ internal partial class UnitPlacementBar : PanelContainer
         ShowDefenses(false);
     }
 
-    private static string Stats(float hp, float damage) => $"HP {hp:0.#}   DMG {damage:0.#}";
+    internal VBoxContainer BuildShell(int height, bool compact = false)
+    {
+        BarHeight = height;
+        AnchorTop = AnchorBottom = AnchorRight = 1;
+        OffsetLeft = 12;
+        OffsetRight = -12;
+        OffsetTop = -BarHeight - 12;
+        OffsetBottom = -12;
+        AddThemeStyleboxOverride("panel", UIButtonFactory.Box(new Color("#091a2d"), new Color("#327fa3"), compact ? 6 : 10));
+        var body = new VBoxContainer();
+        AddChild(body);
+        return body;
+    }
 
-    private Control BuildCards(VBoxContainer body, int count, int columns, Func<int, string> nameFor,
-        Func<int, string> statsFor, Action<UnitSilhouette, int> setIcon, Action<int> select)
+    internal static string Stats(float hp, float damage) => $"HP {hp:0.#}   DMG {damage:0.#}";
+
+    internal Control BuildCards(VBoxContainer body, int count, int columns, Func<int, string> nameFor,
+        Func<int, string> statsFor, Action<UnitSilhouette, int> setIcon, Action<int> select,
+        ButtonGroup group = null, bool selectFirst = true)
     {
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill,
             VerticalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true };
@@ -89,7 +96,7 @@ internal partial class UnitPlacementBar : PanelContainer
         cards.AddThemeConstantOverride("v_separation", 4);
         scroll.AddChild(cards);
 
-        var group = new ButtonGroup();
+        group ??= new ButtonGroup();
         var normal = UIButtonFactory.Box(new Color("#122d4a"), new Color("#326582"), 3);
         var hover = UIButtonFactory.Box(new Color("#174161"), new Color("#75cbe9"), 3);
         var pressed = UIButtonFactory.Box(new Color("#14506a"), new Color("#56e5ff"), 3);
@@ -100,9 +107,9 @@ internal partial class UnitPlacementBar : PanelContainer
             int type = i;
             string title = nameFor(type);
             string stats = statsFor(type);
-            var card = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = i == 0,
+            var card = new Button { ToggleMode = true, ButtonGroup = group, ButtonPressed = selectFirst && i == 0,
                 CustomMinimumSize = new Vector2(144, 46), SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                TooltipText = $"{title}\n{stats} (base stats)",
+                TooltipText = stats == null ? title : $"{title}\n{stats} (base stats)",
                 AccessibilityName = title };
             card.AddThemeStyleboxOverride("normal", normal);
             card.AddThemeStyleboxOverride("hover", hover);
@@ -119,10 +126,17 @@ internal partial class UnitPlacementBar : PanelContainer
             face.OffsetLeft = 5;
             face.OffsetRight = -5;
             face.OffsetBottom = -2;
-            var icon = new UnitSilhouette { MouseFilter = MouseFilterEnum.Ignore };
-            setIcon(icon, type);
-            silhouettes.Add(icon);
-            face.AddChild(icon);
+            if (setIcon != null)
+            {
+                var icon = new UnitSilhouette { MouseFilter = MouseFilterEnum.Ignore };
+                setIcon(icon, type);
+                if (icon.CustomMinimumSize.X > 0)
+                {
+                    silhouettes.Add(icon);
+                    face.AddChild(icon);
+                }
+                else icon.Free();
+            }
             var details = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 Alignment = BoxContainer.AlignmentMode.Center };
             details.AddThemeConstantOverride("separation", 0);
@@ -135,20 +149,23 @@ internal partial class UnitPlacementBar : PanelContainer
             name.AddThemeFontSizeOverride("font_size", 12);
             name.AddThemeColorOverride("font_color", new Color("#d5efff"));
             details.AddChild(name);
-            var values = new Label { Text = stats, MouseFilter = MouseFilterEnum.Ignore };
-            values.AddThemeFontSizeOverride("font_size", 10);
-            values.AddThemeColorOverride("font_color", new Color("#b3cde0"));
-            details.AddChild(values);
+            if (stats != null)
+            {
+                var values = new Label { Text = stats, MouseFilter = MouseFilterEnum.Ignore };
+                values.AddThemeFontSizeOverride("font_size", 10);
+                values.AddThemeColorOverride("font_color", new Color("#b3cde0"));
+                details.AddChild(values);
+            }
             card.Pressed += () => select(type);
         }
         return scroll;
     }
 
-    private partial class UnitSilhouette : Control
+    internal partial class UnitSilhouette : Control
     {
         private Vector2[] points = Array.Empty<Vector2>();
 
-        private BuildingStats? defense;
+        private (bool Projectile, bool Shield)? defense;
         private Color tint = Factions.Color(Factions.Blue);
 
         internal void SetColor(Color color)
@@ -157,9 +174,11 @@ internal partial class UnitPlacementBar : PanelContainer
             QueueRedraw();
         }
 
-        internal void SetDefense(BuildingStats stats)
+        internal void SetDefense(BuildingStats stats) => SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled);
+
+        internal void SetDefense(bool projectile, bool shield)
         {
-            defense = stats;
+            defense = (projectile, shield);
             CustomMinimumSize = new Vector2(28, 0);
         }
 
@@ -180,15 +199,15 @@ internal partial class UnitPlacementBar : PanelContainer
         public override void _Draw()
         {
             Color edge = tint.Lerp(Colors.White, 0.58f);
-            if (defense is BuildingStats stats)
+            if (defense is { } stats)
             {
                 Vector2 center = Size * 0.5f;
                 var baseRect = new Rect2(center - new Vector2(12, 5), new Vector2(24, 17));
                 DrawRect(baseRect, tint);
                 DrawRect(baseRect, edge, false, 1.6f);
-                if (stats.ShieldEmitter.Enabled)
+                if (stats.Shield)
                     DrawArc(center, 12, Mathf.Pi, Mathf.Tau, 16, edge, 2f, true);
-                else if (stats.Weapon == TowerWeapon.Projectile)
+                else if (stats.Projectile)
                 {
                     DrawLine(center + new Vector2(-4, 3), center + new Vector2(-4, -17), edge, 4);
                     DrawLine(center + new Vector2(4, 3), center + new Vector2(4, -17), edge, 4);

@@ -9,7 +9,9 @@ namespace MassiveRts;
 public partial class LevelEditor : Node
 {
     private VBoxContainer start, toolsPanel, context, toolbar, mapToolsContext, unitContext, defenseContext;
-    private Control interfaceRoot;
+    private Control interfaceRoot, toolSidebar;
+    private Label toolsHeading;
+    private Control legacyUnitPicker, legacyDefenseHeading, legacyUnitDivider, legacyDefenseDivider;
     private Label status, startStatus, strength;
     private OptionButton toolPicker, defensePicker;
     private HBoxContainer campaignButtons;
@@ -109,11 +111,12 @@ public partial class LevelEditor : Node
         status = Heading(toolbar, "", 15);
 
         var sidebar = Panel(interfaceRoot, Control.LayoutPreset.LeftWide, 12, 134, 310, -12);
+        toolSidebar = sidebar;
         var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         sidebar.AddChild(scroll);
         toolsPanel = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         scroll.AddChild(toolsPanel);
-        Heading(toolsPanel, "Map tools", 22);
+        toolsHeading = Heading(toolsPanel, "Map tools", 22);
         toolPicker = new OptionButton();
         toolsPanel.AddChild(toolPicker);
         toolPicker.ItemSelected += index => { selected = null; SwitchTool((Tool)toolPicker.GetItemId((int)index)); };
@@ -127,13 +130,18 @@ public partial class LevelEditor : Node
         toolsPanel.AddChild(showGrid);
         mapToolsContext = new VBoxContainer();
         toolsPanel.AddChild(mapToolsContext);
-        toolsPanel.AddChild(new HSeparator());
-        Heading(toolsPanel, "Unit placement", 18);
-        Button(toolsPanel, "Place units", () => { selected = null; SwitchTool(Tool.Soldiers); });
+        legacyUnitDivider = new HSeparator();
+        toolsPanel.AddChild(legacyUnitDivider);
+        var legacyUnits = new VBoxContainer();
+        toolsPanel.AddChild(legacyUnits);
+        legacyUnitPicker = legacyUnits;
+        Heading(legacyUnits, "Unit placement", 18);
+        Button(legacyUnits, "Place units", () => { selected = null; SwitchTool(Tool.Soldiers); });
         unitContext = new VBoxContainer();
         toolsPanel.AddChild(unitContext);
-        toolsPanel.AddChild(new HSeparator());
-        Heading(toolsPanel, "Defenses", 18);
+        legacyDefenseDivider = new HSeparator();
+        toolsPanel.AddChild(legacyDefenseDivider);
+        legacyDefenseHeading = Heading(toolsPanel, "Defenses", 18);
         defensePicker = new OptionButton();
         defensePicker.AddItem("Choose a defense…");
         foreach (var definition in defenseDefinitions) defensePicker.AddItem(definition.DisplayName);
@@ -149,6 +157,8 @@ public partial class LevelEditor : Node
         var help = Heading(toolsPanel, "WASD / arrows to pan\nWheel to zoom · Home to frame\nCtrl+Z / Ctrl+Shift+Z", 15);
         help.Modulate = new Color("#b6c9d5");
 
+        BuildPlacementPalette();
+
         confirmation = new ConfirmationDialog();
         interfaceRoot.AddChild(confirmation);
         confirmation.Confirmed += () => { var action = accepted; accepted = null; action?.Invoke(); };
@@ -163,7 +173,8 @@ public partial class LevelEditor : Node
         cursor?.Hide();
         start.GetParent<Control>().Show();
         toolbar.GetParent<Control>().Hide();
-        toolsPanel.GetParent().GetParent<Control>().Hide();
+        toolSidebar.Hide();
+        placementPalette.Hide();
         if (map != null) map.Hide();
         try
         {
@@ -288,7 +299,9 @@ public partial class LevelEditor : Node
         if (map == null) return;
         start.GetParent<Control>().Hide();
         toolbar.GetParent<Control>().Show();
-        toolsPanel.GetParent().GetParent<Control>().Visible = !previewing && runningTest == null;
+        toolSidebar.Visible = !previewing && runningTest == null;
+        placementPalette.Visible = toolSidebar.Visible && mode.IsAutoBattler;
+        toolSidebar.OffsetBottom = placementPalette.Visible ? -placementPalette.BarHeight - 24 : -12;
         map.Visible = runningTest == null;
     }
 

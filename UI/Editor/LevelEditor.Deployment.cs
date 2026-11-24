@@ -57,7 +57,7 @@ public partial class LevelEditor
         UpdateTool();
     }
 
-    private BuildingDefinition SelectedDefense => defenseDefinitions[defensePicker.Selected - 1];
+    private BuildingDefinition SelectedDefense => defenseDefinitions[mode.IsAutoBattler ? paletteDefenseIndex : defensePicker.Selected - 1];
 
     private Vector3 TowerCursor()
     {
