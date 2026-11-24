@@ -174,6 +174,7 @@ public partial class BenchmarkArena : Node3D
         // Keep the gameplay bar separate from BENCHMARK's developer panels.
         var gameplayHudLayer = new CanvasLayer { Layer = 2 };
         AddChild(gameplayHudLayer);
+        if (autoBattlerPlaytestMap != null) AddAutoBattlerClock(gameplayHudLayer);
         armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
         gameplayHudLayer.AddChild(armyBalanceHud);
         deploymentStrengthBar = new DeploymentStrengthBar { Visible = false };
@@ -253,6 +254,7 @@ public partial class BenchmarkArena : Node3D
     private void Clear()
     {
         armyBalanceHud?.Reset();
+        ShowAutoBattlerClock(false);
         campaignBattleRunning = false;
         ClearReserveMarch(redWave);
         blueWave = redWave = null;
@@ -664,6 +666,7 @@ public partial class BenchmarkArena : Node3D
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units);
+                ShowAutoBattlerClock(true);
                 if (campaignHud != null)
                 {
                     campaignBattleRunning = true;
@@ -726,6 +729,7 @@ public partial class BenchmarkArena : Node3D
                 changedWrites += armyRenderer.ChangedWrites;
             }
             smoothingWasEnabled = smooth;
+            AdvanceAutoBattlerClock(steps);
             if (campaignHud != null) UpdateCampaignOutcome(steps);
             else if (ReserveCapacity > 0)
             {

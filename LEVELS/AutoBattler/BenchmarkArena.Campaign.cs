@@ -16,7 +16,42 @@ public partial class BenchmarkArena
     private readonly Dictionary<Vector2I, List<SoldierPlacement>> campaignRedBuckets = new();
     private int campaignInitialBlue;
     private long campaignRedStrength;
-    private float campaignBattleSeconds;
+    private long autoBattlerElapsedTicks;
+    private Label autoBattlerClock;
+    private double AutoBattlerElapsedSeconds => autoBattlerElapsedTicks * (double)Config.TickSeconds;
+
+    private void AddAutoBattlerClock(CanvasLayer layer)
+    {
+        autoBattlerClock = new Label
+        {
+            Visible = false, AnchorLeft = 1, AnchorRight = 1,
+            OffsetLeft = -110, OffsetRight = -12, OffsetTop = 12,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        autoBattlerClock.AddThemeFontSizeOverride("font_size", 24);
+        autoBattlerClock.AddThemeColorOverride("font_outline_color", Colors.Black);
+        autoBattlerClock.AddThemeConstantOverride("outline_size", 5);
+        layer.AddChild(autoBattlerClock);
+    }
+
+    private void ShowAutoBattlerClock(bool visible)
+    {
+        if (autoBattlerClock == null) return;
+        autoBattlerElapsedTicks = 0;
+        autoBattlerClock.Text = "00:00";
+        autoBattlerClock.Visible = visible;
+        panel.MakeRoomForBattleClock(visible);
+    }
+
+    private void AdvanceAutoBattlerClock(int steps)
+    {
+        if (autoBattlerClock == null || steps == 0) return;
+        int previousSecond = (int)AutoBattlerElapsedSeconds;
+        autoBattlerElapsedTicks += steps;
+        int seconds = (int)AutoBattlerElapsedSeconds;
+        if (seconds != previousSecond) autoBattlerClock.Text = $"{seconds / 60:00}:{seconds % 60:00}";
+    }
     private bool campaignBattleRunning;
     private string campaignMapError;
 
@@ -148,7 +183,6 @@ public partial class BenchmarkArena
         string error = CampaignStartError();
         if (error != null) { campaignHud.Report(error); return; }
         campaignInitialBlue = painter.Layout.Placements.Count;
-        campaignBattleSeconds = 0;
         var settings = new DeploymentPainter.BattleSettings(12345, new GuardOrder[Factions.Count], 0);
         StartPaintedBattle(painter.Layout, settings, painter.ObstacleMesh);
         if (spawning) campaignHud.ShowPreparing();
@@ -157,13 +191,12 @@ public partial class BenchmarkArena
     private void UpdateCampaignOutcome(int steps)
     {
         if (!campaignBattleRunning || steps == 0) return;
-        campaignBattleSeconds += steps * Config.TickSeconds;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
         if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
         else if (units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
-        else if (campaignBattleSeconds >= (redWave?.Lanes != null ?
+        else if (AutoBattlerElapsedSeconds >= (redWave?.Lanes != null ?
             Mathf.Max(CampaignBattleTimeLimit, redWave.TimeToFinish + 15f) : CampaignBattleTimeLimit)) FinishCampaignBattle("Stalemate");
     }
 

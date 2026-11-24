@@ -435,6 +435,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		unitBar.DefenseSelected += type => DefenseSelected?.Invoke(type);
 
 	}
+	internal void MakeRoomForBattleClock(bool visible) => right.OffsetTop = visible ? 46 : 12;
+
 	private void UpdatePlacementBar()
 	{
 		if (unitBar == null) return;
