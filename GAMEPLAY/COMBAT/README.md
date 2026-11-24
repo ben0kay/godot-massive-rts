@@ -28,3 +28,5 @@ Prism Lance shares segment-versus-footprint and terrain math with the Railgun To
 ## First hit per enemy
 
 Set **First hit per enemy** above 1× in the Entity Editor to boost a unit's first single-target melee strike against each enemy soldier. An attacker keeps its own record, so returning to a previous enemy uses regular damage. The ordinary attack interval still applies. The bonus is applied before armour and shields. Only attackers with the bonus allocate a hit record, which is discarded when the attacker dies or the battle resets.
+
+Twin Rocket Launcher and Light Artillery can target both soldiers and structures through the shared structure combat system. Their structure detection matches their weapon range (35 and 70 world units respectively). They prefer structures where the mode honors target preference and retain the painted benchmark's nearest-target rule. Shots use the existing projectile flight, minimum range, and structure damage rules.
