@@ -364,7 +364,7 @@ internal sealed class CommandBuildings
             defenses = new DefenseSystem(defenseRenderer, LaserTowerLimit);
         }
         var tower = new CommandStructure(area, stats.Health, faction, definition,
-            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ShieldEmitter.Enabled ? "ShieldGenerator" : stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height);
+            units.Catalog.DamageRules, readyView: new Node3D { Name = stats.ShieldEmitter.Enabled ? "ShieldGenerator" : stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height) { IsTower = true };
         defenses.AddTower(tower, stats, TowerBaseHeight, height);
         if (stats.ShieldEmitter.Enabled) units.AddShieldTower(tower, stats.ShieldEmitter);
         Add(tower);

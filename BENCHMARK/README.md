@@ -86,7 +86,7 @@ The original three layouts retain their historical composition and spacing so be
 
 ## Painted deployments
 
-The **Paint tools** selector uses visible, mutually exclusive radio buttons for **Soldiers**, **Obstacles** and **Defenses** instead of a dropdown. **Paint faction** appears above **Soldier type** and stays available for soldiers and defenses, while the redundant soldier drag/erase hint has been removed. Tool selection still changes the existing painter mode; brush size, placement grid, paint behavior and saved deployment formats are unchanged.
+The **Paint tools** radio buttons switch between **Soldiers**, **Obstacles** and **Defenses**. The bottom placement bar shows selectable unit or defense cards and shares one faction selector between both tools. The **Game Editor** button beside the Benchmark title returns to the editor hub.
 
 Click **Edit painted deployment** to clear the live battle and open the placement tools. Pick a faction in Paint tools and select a unit card in the bottom placement bar. Scroll the cards horizontally on narrower windows. The left panel still controls brush type, size and density. Larger bodies need extra clearance. Left drag paints a 3×3 area and right drag erases. Blue, Red and Green can be placed anywhere across the battlefield within footprint clearance and the map boundary. Painted armies have no troop-count cap. The count selector applies to seeded presets. **Clear all** clears soldiers and walls from the draft while editing.
 

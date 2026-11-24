@@ -43,6 +43,9 @@ internal sealed class CommandMovement
         navigation = null;
     }
 
+    internal ObstacleNavigation StructureNavigation() =>
+        field == null ? null : (navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4));
+
     internal void PrepareBridgeRoutes()
     {
         if (field?.Bridges.Length > 0)
@@ -125,9 +128,9 @@ internal sealed class CommandMovement
 
     public bool Step(float delta)
     {
-        if (activeCount == 0) return false;
         if (navigation?.QueueDepth > 0) navigation.BuildQueuedRoutes();
         else navigation?.AdvanceFrame();
+        if (activeCount == 0) return false;
         bool changed = false;
         var turnSteps = units.TurnSteps(delta);
         for (int i = activeCount - 1; i >= 0; i--)

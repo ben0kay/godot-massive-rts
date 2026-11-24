@@ -62,7 +62,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
 	public RuntimeBuildingCatalog Buildings { get; set; }
 	internal bool AutoBattlerPlaytest { get; set; }
-	public readonly OptionButton DefenseChoice = new();
+	public event Action<int> DefenseSelected;
 	private readonly OptionButton[] teamOrders = new OptionButton[Factions.Count];
 	public GuardOrder OrderFor(int faction) => (GuardOrder)teamOrders[faction].GetSelectedId();
 
@@ -78,7 +78,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly OptionButton TerrainChoice = new();
 	public readonly CheckButton TestWall = new() { Text = "Test wall in preset" };
 	private UnitPlacementBar unitBar;
-	private bool editingDeployment, placingSoldiers = true;
+	private bool editingDeployment;
+	private int paintTool;
 	public readonly OptionButton SoldierPaintType = new();
 	public readonly OptionButton SoldierBrushSizeChoice = new();
 	public readonly OptionButton FactionChoice = new();
@@ -150,7 +151,12 @@ public partial class BenchmarkPanel : CanvasLayer
 		var heading = new Label { Text = AutoBattlerPlaytest ? "AUTOBATTLER PLAYTEST" : "AUTO-BATTLE BENCHMARK" };
 		heading.AddThemeFontSizeOverride("font_size", 17);
 		heading.AddThemeColorOverride("font_color", new Color("#CCE8F6"));
-		shell.AddChild(heading);
+		var titleRow = new HBoxContainer();
+		heading.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		titleRow.AddChild(heading);
+		if (!AutoBattlerPlaytest)
+			titleRow.AddChild(UIButtonFactory.Create("Game Editor", () => MenuNavigation.Open(this, GameEditor.ScenePath)));
+		shell.AddChild(titleRow);
 		var scroll = new ScrollContainer
 		{
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
@@ -315,7 +321,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		}
 		placementGridToggle.Toggled += enabled => PlacementGridChanged?.Invoke(enabled);
 		paintControls.AddChild(placementGridToggle);
-		var factionRow = Field(paintControls, "Paint faction", FactionChoice);
 		var soldierControls = new VBoxContainer();
 		paintControls.AddChild(soldierControls);
 		SoldierPaintType.AddItem("Brush");
@@ -338,8 +343,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		paintControls.AddChild(wallHelp);
 		var defenseControls = new VBoxContainer { Visible = false };
 		paintControls.AddChild(defenseControls);
-		for (int type = 0; type < Buildings.Count; type++) DefenseChoice.AddItem(Buildings[type].Name, type);
-		Field(defenseControls, "Defense type", DefenseChoice);
 		defenseControls.AddChild(new Label { Text = "Left click to place • right click to remove" });
 		for (int i = 0; i < toolButtons.Length; i++)
 		{
@@ -347,12 +350,11 @@ public partial class BenchmarkPanel : CanvasLayer
 			toolButtons[i].Toggled += selected =>
 			{
 				if (!selected) return;
-				placingSoldiers = tool == 0;
-				soldierControls.Visible = placingSoldiers;
+				paintTool = tool;
+				soldierControls.Visible = tool == 0;
 				UpdatePlacementBar();
 				wallHelp.Visible = tool == 1;
 				defenseControls.Visible = tool == 2;
-				factionRow.Visible = tool != 1;
 				PaintToolSelected?.Invoke(tool);
 			};
 		}
@@ -373,7 +375,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		if (AutoBattlerPlaytest)
 		{
 			toolRow.Hide();
-			factionRow.Hide();
 			orderHeader.Hide();
 			((Control)orders.GetParent().GetParent()).Hide();
 		}
@@ -431,14 +432,16 @@ public partial class BenchmarkPanel : CanvasLayer
 		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog, compact: AutoBattlerPlaytest);
+		unitBar.Build(Catalog, Buildings, FactionChoice, compact: AutoBattlerPlaytest);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
+		unitBar.DefenseSelected += type => DefenseSelected?.Invoke(type);
 
 	}
 	private void UpdatePlacementBar()
 	{
 		if (unitBar == null) return;
-		unitBar.Visible = leftPanelVisible && editingDeployment && placingSoldiers;
+		unitBar.ShowDefenses(paintTool == 2);
+		unitBar.Visible = leftPanelVisible && editingDeployment && paintTool != 1;
 		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -unitBar.BarHeight - 24 : -12;
 	}
 

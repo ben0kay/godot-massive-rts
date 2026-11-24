@@ -88,7 +88,7 @@ public sealed class ObstacleNavigation
             var graph = graphs[request.Key.Type];
             Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner,
                 out bool endsAtAttackPoint, out int validAttackPoints);
-            if (points == null && request.Key.Soldier >= 0)
+            if (points == null && request.Key.Soldier >= 0 && request.Key.Detail == 2)
             {
                 bool overlaps = field.IntersectsCircle(request.Start, graph.Radius);
                 bool contact = overlaps || field.HasClearanceContact(request.Start, graph.Radius);
@@ -219,6 +219,22 @@ public sealed class ObstacleNavigation
         CacheMisses++;
         RouteWaits++;
         return start;
+    }
+
+    // A tower needs an exact attack position. A missing result means the shared queue
+    // has not answered yet, including when the queue was full.
+    internal bool? ProbeStructureRoute(int id, byte type, Vector2 start, Vector2 goal)
+    {
+        static Vector2I Exact(Vector2 point) =>
+            new(BitConverter.SingleToInt32Bits(point.X), BitConverter.SingleToInt32Bits(point.Y));
+
+        var key = new RouteKey(Exact(start), Exact(goal), type, 3, id);
+        if (!routes.TryGetValue(key, out Route route))
+        {
+            QueueRoute(key, start, goal, 0f);
+            return null;
+        }
+        return route.Points != null;
     }
 
     private bool CanFinish(Route route, Vector2 goal, float radius, float stop)

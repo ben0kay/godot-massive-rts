@@ -496,3 +496,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Enabled structure targeting for Twin Rocket Launcher and Light Artillery at their existing weapon ranges. Reuses shared structure acquisition and projectile damage. Source implemented, awaiting owner validation.
 
 - **2026-11-24 | Artillery tuning | Source implemented.** Reduced only Broadside Artillery Tower's projectile arc multiplier from 1.5 to 1.1 (18 → 13.2 maximum arc rise). Light Artillery's existing Chevron barrel now elevates 30° via an editable unit property, with matching shared mesh, projected preview and actual raised launch origin. Preserved full-length separation clearance, projectile definitions, targeting, attack stats and other units. Godot visual/runtime validation pending.
+
+- 2026-11-24 — Added budgeted static-tower approach checks and temporary per-soldier tower skips. Moved Benchmark faction selection and defense brushes into the placement bar and added a Game Editor return button. Source implemented, awaiting owner validation.

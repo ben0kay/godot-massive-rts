@@ -195,7 +195,7 @@ public partial class BenchmarkArena : Node3D
             else panel.Status.Text = message + "\n" + DeploymentCount();
         };
         panel.PaintToolSelected += painter.SetPaintTool;
-        panel.DefenseChoice.ItemSelected += index => painter.DefenseType = panel.DefenseChoice.GetItemId((int)index);
+        panel.DefenseSelected += type => painter.DefenseType = type;
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleWalls);
         battleObstacleShadows = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -782,7 +782,7 @@ public partial class BenchmarkArena : Node3D
             Vector3 position = units.Position[id];
             float soldierDistance = soldier >= 0 ? position.DistanceTo(units.Position[soldier]) : float.PositiveInfinity;
             var sight = StructureCombat.Sight(type, units, BattleSight);
-            var building = defenseCombat.Acquire(id, type, soldierDistance, true, true, obstacles, sight);
+            var building = defenseCombat.Acquire(id, type, soldierDistance, true, true, obstacles, sight, tick, navigation);
             Vector2 ground = ObstacleField.Xz(position);
             if (building != null && soldier >= 0 &&
                 ground.DistanceSquaredTo(StructureCombat.Edge(building.Area, ground)) >= soldierDistance * soldierDistance)

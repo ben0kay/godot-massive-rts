@@ -370,7 +370,7 @@ internal sealed class FortressWaves
                 bool canApproach = !movement.HasCommand(id) || attackMove;
                 float structureRange = canApproach ? type.StructureDetectionRange :
                     Mathf.Min(type.StructureDetectionRange, type.Ranged ? units.RangedReach(id, type) : StructureCombat.Reach(type));
-                StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, buildings.MovementField, sight);
+                StructureHealth structure = structures.Acquire(id, type, structureRange, refresh, canApproach, buildings.MovementField, sight, tick, commands: movement);
                 if (ChooseStructure(id, type, target, structure, sight))
                 {
                     units.Target[id] = -1;
@@ -425,7 +425,7 @@ internal sealed class FortressWaves
         if (type.TargetsStructures)
         {
             var sight = Sight(type, field);
-            StructureHealth structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, buildings.MovementField, sight);
+            StructureHealth structure = structures.Acquire(id, type, type.StructureDetectionRange, refresh, true, buildings.MovementField, sight, tick, commands: movement);
             if (ChooseStructure(id, type, target, structure, sight))
             {
                 units.Target[id] = -1;

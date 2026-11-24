@@ -72,7 +72,7 @@ internal sealed class DefenseSystem
             var placement = placements[i];
             var area = placement.Footprint(catalog);
             var stats = catalog[placement.Type];
-            structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour);
+            structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour) { IsTower = true };
             float ground = terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f;
             towers[i] = CreateTower(structures[i], stats, height, ground);
         }
