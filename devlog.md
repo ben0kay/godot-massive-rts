@@ -508,3 +508,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added Red reinforcement staging-grid painting, validated battlefield entry previews, and ordered off-map marches with footprint-based combat handoff. Source implemented, awaiting owner validation.
 
 - 2026-11-24 — Batched Level Editor paint previews to reduce Godot render-resource churn during drag strokes, skipped no-op brush updates, and flushed pending paint before recording undo. Crash mitigation, awaiting owner validation.
+
+- 2026-11-24 — Kept forest preview nodes, meshes and materials alive across brush updates to address repeated Godot .NET disposal crashes. Windows verification pending.

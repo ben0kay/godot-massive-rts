@@ -10,13 +10,18 @@ internal sealed class ForestCover
     private const float CrownRadius = 0.56f;
     private readonly record struct Tree(int Index, Vector2 Center, float RadiusSquared);
     private readonly Dictionary<Vector2I, Tree> trees = new();
-    private readonly Rect2I visibilityBounds;
+    private Rect2I visibilityBounds;
     private HashSet<int> faded = new(), nearby = new();
     private readonly MultiMesh trunks, crowns;
+    private readonly ImmediateMesh outline = new();
+    private readonly StandardMaterial3D outlineMaterial = new()
+    {
+        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color("#668d4d")
+    };
     private float timeUntilRefresh;
     private static Color Tint(float opacity) => new(1f, 1f, 1f, opacity);
 
-    internal ForestCover(Node3D parent, HashSet<Vector2I> cells, TerrainHeightField surface)
+    internal ForestCover(Node3D parent)
     {
         var shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestTree.gdshader");
         ShaderMaterial Material(Color tint)
@@ -27,14 +32,34 @@ internal sealed class ForestCover
         }
 
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
-            RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) }, cells.Count);
+            RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
         crowns = Batch(parent, new SphereMesh { Radius = CrownRadius, Height = 1.18f,
-            RadialSegments = 8, Rings = 4, Material = Material(new Color("#427c3b")) }, cells.Count);
+            RadialSegments = 8, Rings = 4, Material = Material(new Color("#427c3b")) });
 
-        using var outline = new SurfaceTool();
-        outline.Begin(Mesh.PrimitiveType.Lines);
-        outline.SetMaterial(new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            AlbedoColor = new Color("#668d4d") });
+        parent.AddChild(new MeshInstance3D { Mesh = outline,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+    }
+
+    // Keep the native render objects attached for the map's lifetime.
+    internal void Rebuild(HashSet<Vector2I> cells, TerrainHeightField surface)
+    {
+        trees.Clear();
+        faded.Clear();
+        nearby.Clear();
+        timeUntilRefresh = 0f;
+        outline.ClearSurfaces();
+        if (cells.Count > trunks.InstanceCount)
+        {
+            int capacity = System.Math.Max(cells.Count, trunks.InstanceCount * 2);
+            trunks.InstanceCount = crowns.InstanceCount = capacity;
+        }
+        trunks.VisibleInstanceCount = crowns.VisibleInstanceCount = cells.Count;
+        if (cells.Count == 0)
+        {
+            visibilityBounds = default;
+            return;
+        }
+        outline.SurfaceBegin(Mesh.PrimitiveType.Lines, outlineMaterial);
         float cellSize = WorldPaint.CellSize;
         float Ground(Vector2 point) => surface?.At(point.X, point.Y) ?? 0f;
         Vector3 OnGround(Vector2 point) => new(point.X, Ground(point) + 0.06f, point.Y);
@@ -80,22 +105,21 @@ internal sealed class ForestCover
                     2 => low + Vector2.Down * cellSize,
                     _ => low + Vector2.Down * cellSize
                 };
-                outline.AddVertex(OnGround(a));
+                outline.SurfaceAddVertex(OnGround(a));
                 Vector3 midpoint = OnGround((a + b) * 0.5f);
-                outline.AddVertex(midpoint);
-                outline.AddVertex(midpoint);
-                outline.AddVertex(OnGround(b));
+                outline.SurfaceAddVertex(midpoint);
+                outline.SurfaceAddVertex(midpoint);
+                outline.SurfaceAddVertex(OnGround(b));
             }
         }
         visibilityBounds = new Rect2I(min, max - min + Vector2I.One);
-        parent.AddChild(new MeshInstance3D { Mesh = outline.Commit(),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        outline.SurfaceEnd();
     }
 
-    private static MultiMesh Batch(Node3D parent, Mesh mesh, int count)
+    private static MultiMesh Batch(Node3D parent, Mesh mesh)
     {
         var batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true, Mesh = mesh, InstanceCount = count };
+            UseColors = true, Mesh = mesh };
         parent.AddChild(new MultiMeshInstance3D { Multimesh = batch,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         return batch;

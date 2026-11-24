@@ -191,22 +191,20 @@ public partial class WorldPaint : Node3D
 
     private void RebuildForest()
     {
-        if (forestView != null)
-        {
-            RemoveChild(forestView);
-            forestView.QueueFree();
-            forestView = null;
-        }
-        Forest = null;
         var cells = new HashSet<Vector2I>(data?.ForestCells ?? new Cells());
         cells.RemoveWhere(cell => !Contains(cell));
         cells.ExceptWith(data?.RockCells ?? new Cells());
         cells.ExceptWith(data?.WaterCells ?? new Cells());
-        if (cells.Count == 0 || cells.Count > MaxPaintedCells) return;
-        forestView = new Node3D { Name = "ForestPreview", TopLevel = true };
-        AddChild(forestView, false, InternalMode.Back);
-        forestView.GlobalTransform = Transform3D.Identity;
-        Forest = new ForestCover(forestView, cells, Surface);
+        if (cells.Count > MaxPaintedCells) cells.Clear();
+        if (forestView == null)
+        {
+            if (cells.Count == 0) return;
+            forestView = new Node3D { Name = "ForestPreview", TopLevel = true };
+            AddChild(forestView, false, InternalMode.Back);
+            forestView.GlobalTransform = Transform3D.Identity;
+            Forest = new ForestCover(forestView);
+        }
+        Forest.Rebuild(cells, Surface);
     }
 
     private void RebuildViews(HashSet<Vector2I> rocks, HashSet<Vector2I> water)
