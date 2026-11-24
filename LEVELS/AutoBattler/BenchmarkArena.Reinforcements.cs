@@ -134,7 +134,13 @@ public partial class BenchmarkArena
         }
         wave.MarchRenderer = new ArmyRenderer();
         AddChild(wave.MarchRenderer);
-        wave.MarchRenderer.Initialize(wave.Marching, soldierMeshes, soldierShadow, panel.GroundShadows, unitVisuals);
+        var entryMaterial = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://LEVELS/AutoBattler/ReserveEntryClip.gdshader")
+        };
+        entryMaterial.SetShaderParameter("map_half_width", autoBattlerPlaytestMap.MapSize * 0.5f);
+        // Entry shadows would extend past the map edge. Combat rendering restores them on handoff.
+        wave.MarchRenderer.Initialize(wave.Marching, soldierMeshes, soldierShadow, false, unitVisuals, entryMaterial);
     }
 
     private Vector3 ReserveMarchPosition(RedReserveFormation.Lane lane, float distance)

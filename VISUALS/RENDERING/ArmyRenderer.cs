@@ -15,6 +15,7 @@ public partial class ArmyRenderer : Node3D
     private float[][] shadowBuffers;
     private Mesh shadowMesh;
     private Mesh[] batchShapes;
+    private Material batchMaterialOverride;
     private bool shadowsEnabled;
     private const int ShadowStride = 12;
     // Relative to the previous oval footprint; large elites get extra reduction.
@@ -53,7 +54,7 @@ public partial class ArmyRenderer : Node3D
     public double UploadMilliseconds { get; private set; }
     public int InstanceCount { get; private set; }
     // =========================================================
-    public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows, UnitVisualConfig visuals)
+    public void Initialize(UnitState state, Mesh[] shapes, Mesh sharedShadow, bool showShadows, UnitVisualConfig visuals, Material materialOverride = null)
     {
         maxShieldShells = Mathf.Clamp(visuals.MaxShieldShells, 0, 2048);
         if (!visuals.ShowShieldShells) maxShieldShells = 0;
@@ -80,6 +81,7 @@ public partial class ArmyRenderer : Node3D
         var capacities = new int[batchCount];
         for (int i = 0; i < state.Count; i++) capacities[Batch(i)]++;
         batchShapes = shapes;
+        batchMaterialOverride = materialOverride;
         for (int b = 0; b < batchCount; b++)
             if (capacities[b] > 0) AllocateBatch(b, capacities[b]);
         shadowMesh = sharedShadow;
@@ -99,7 +101,8 @@ public partial class ArmyRenderer : Node3D
             };
             batches[batch] = mesh;
             changedSlots[batch] = new int[SparseUpdateLimit];
-            AddChild(new MultiMeshInstance3D { Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            AddChild(new MultiMeshInstance3D { Multimesh = mesh, MaterialOverride = batchMaterialOverride,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
         int previousCapacity = members[batch]?.Length ?? 0;
         System.Array.Resize(ref members[batch], capacity);

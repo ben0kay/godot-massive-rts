@@ -514,3 +514,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added a top-right elapsed simulation clock to AutoBattler campaign battles and Level Editor playtests. Source implemented, awaiting owner validation.
 
 - 2026-11-24 — Moved AutoBattler reinforcement settings and authoring actions into the bottom Simulation tab.
+
+- 2026-11-24 — Sized ranged recoil for all battle slots including reserves, and clipped Red ingress meshes at the battlefield edge. Runtime validation pending.

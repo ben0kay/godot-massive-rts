@@ -343,7 +343,7 @@ public partial class BenchmarkArena : Node3D
             ? new HitFeedbackSystem(capacity, Config.HitFeedback ?? new HitFeedbackSettings())
             : null;
         var recoil = (mode is BenchmarkMode.Ranged or BenchmarkMode.Melee) && catalog.HasRangedRecoil
-            ? new RangedRecoilSystem(targetCount) : null;
+            ? new RangedRecoilSystem(capacity) : null;
         return new UnitState(capacity, catalog, feedback, terrain, recoil)
         {
             DeathFeedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? deathFeedback : null
