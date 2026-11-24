@@ -101,7 +101,7 @@ public partial class LevelEditor
             WorldPoint(motion.Position, out var point);
             var area = RectangleArea(start, ClampedCell(point));
             Vector2 center = (area.Min + area.Max) * 0.5f;
-            cursor.GlobalPosition = new Vector3(center.X, Surface(point) + 0.15f, center.Y);
+            cursor.GlobalPosition = new Vector3(center.X, Surface(point) + 0.15f, center.Y) + PaintOrigin;
             cursor.Scale = new Vector3(area.Max.X - area.Min.X, 1, area.Max.Y - area.Min.Y);
             cursor.Show();
             return true;
@@ -132,8 +132,8 @@ public partial class LevelEditor
 
     private Vector2I ClampedCell(Vector3 point)
     {
-        int edge = Mathf.FloorToInt(map.MapSize * 0.5f / Grid);
-        var cell = Cell(point);
+        int edge = Mathf.FloorToInt(PaintHalfWidth / Grid);
+        var cell = Cell(point - PaintOrigin);
         return new Vector2I(Mathf.Clamp(cell.X, -edge, edge - 1), Mathf.Clamp(cell.Y, -edge, edge - 1));
     }
 
@@ -142,14 +142,14 @@ public partial class LevelEditor
 
     private void EditSoldierRectangle(ObstacleRectangle area, bool erase)
     {
-        var groups = map.GetNode("StartingUnits").GetChildren().OfType<CommandUnitPlacement>().ToArray();
+        var groups = map.GetNode(UnitContainerName).GetChildren().OfType<CommandUnitPlacement>().ToArray();
         if (erase) { EraseRectangle(area, groups); return; }
         placementCatalog ??= GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Compile(1f);
         var candidates = new DeploymentLayout(placementCatalog, null);
         var unit = units[unitIndex];
         if (!placementCatalog.TryResolve(unit.Id, out byte type)) return;
         float radius = placementCatalog[type].Footprint;
-        float half = map.MapSize * 0.5f;
+        float half = PaintHalfWidth;
         byte faction = mode.IsAutoBattler || red ? Factions.Red : Factions.Blue;
         int subdivisions = DeploymentLayout.SoldierSubdivisions;
         int limit = mode.IsAutoBattler ? 100000 : CommandSandbox.NonWaveUnitCapacity - (map.SpawnDefaultBlueSquad ? CommandMovement.SquadSize : 0);
@@ -160,8 +160,9 @@ public partial class LevelEditor
             if (!placementCatalog.TryResolve(group.Unit?.Id, out byte previousType)) continue;
             foreach (var point in group.Positions(placementCatalog[previousType].Footprint))
             {
-                int x = Mathf.RoundToInt((point.X / Grid - 0.5f) * subdivisions);
-                int z = Mathf.RoundToInt((point.Z / Grid - 0.5f) * subdivisions);
+                Vector3 local = point - PaintOrigin;
+                int x = Mathf.RoundToInt((local.X / Grid - 0.5f) * subdivisions);
+                int z = Mathf.RoundToInt((local.Z / Grid - 0.5f) * subdivisions);
                 candidates.TryPaint(new SoldierPlacement(x, z, (byte)group.Faction, previousType), out _);
             }
         }
@@ -169,7 +170,7 @@ public partial class LevelEditor
         var walls = map.ReadAuthoredWalls();
         var blocked = rocks.Concat(water).Concat(walls)
             .Concat(Objects().OfType<CommandLaserPlacement>().Select(tower => tower.Footprint(tower.GlobalPosition))).ToArray();
-        var collision = blocked.Length == 0 ? null : new ObstacleField(blocked, half);
+        var collision = editingReserve || blocked.Length == 0 ? null : new ObstacleField(blocked, half);
         Vector2 center = (area.Min + area.Max) * 0.5f;
         var offsets = new List<Vector2>();
         foreach (var cell in DeploymentLayout.RectangleSoldierSlots(area, densityScale, radius))
@@ -177,7 +178,7 @@ public partial class LevelEditor
             var slot = new SoldierPlacement(cell.X, cell.Y, faction, type);
             var point = slot.Position();
             if (Mathf.Abs(point.X) + radius > half || Mathf.Abs(point.Z) + radius > half ||
-                map.AutoBattlerRules?.AllowsSide(point, radius, blue: false) == false ||
+                (!editingReserve && map.AutoBattlerRules?.AllowsSide(point, radius, blue: false) == false) ||
                 collision?.IntersectsCircle(ObstacleField.Xz(point), radius) == true ||
                 candidates.TryGet(cell, out _) || !candidates.TryPaint(slot, out _)) continue;
             if (existing + offsets.Count >= limit) throw new InvalidOperationException($"This fill would exceed the level limit of {limit:N0} authored soldiers.");
@@ -189,7 +190,7 @@ public partial class LevelEditor
         patch.Unit = unit;
         patch.Faction = (CommandUnitPlacement.Team)faction;
         patch.PaintedOffsets = offsets.ToArray();
-        if (!TryAddPlacement(patch, "StartingUnits", new Vector3(center.X, 0, center.Y))) patch.Free();
+        if (!TryAddPlacement(patch, UnitContainerName, new Vector3(center.X, 0, center.Y) + PaintOrigin)) patch.Free();
     }
 
     private void EraseRectangle(ObstacleRectangle area, CommandUnitPlacement[] groups)
@@ -200,13 +201,17 @@ public partial class LevelEditor
             if (group.Unit == null) continue;
             float footprint = UnitOutline.FromDefinition(group.Unit, UnitOutline.EffectiveSize(group.Unit)).Footprint;
             var remaining = group.Positions(footprint)
-                .Where(point => point.X < area.Min.X || point.X >= area.Max.X || point.Z < area.Min.Y || point.Z >= area.Max.Y)
+                .Where(world =>
+                {
+                    Vector3 point = world - PaintOrigin;
+                    return point.X < area.Min.X || point.X >= area.Max.X || point.Z < area.Min.Y || point.Z >= area.Max.Y;
+                })
                 .Select(point => ObstacleField.Xz(group.ToLocal(point))).ToArray();
             if (remaining.Length == group.SoldierCount) continue;
             changes.Add((group, group.PaintedOffsets, remaining));
         }
         if (changes.Count == 0) return;
-        var parent = map.GetNode("StartingUnits");
+        var parent = map.GetNode(UnitContainerName);
         void Apply(bool erase)
         {
             foreach (var change in changes)

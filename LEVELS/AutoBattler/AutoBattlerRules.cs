@@ -28,6 +28,7 @@ public partial class AutoBattlerRules : Resource
     }
 
     [Export] public string RedReserveUnitId { get; set; } = "";
+    [Export] public int RedFormationEdge { get; set; }
     [Export] public int RedReserveCount { get; set; }
     [Export] public float RedReserveSeconds { get; set; } = 30f;
     [Export(PropertyHint.Range, "-100,100,1")] public float RedReserveEdgeOffset { get; set; }

@@ -208,7 +208,24 @@ internal static class LevelEditorSave
                  rules.RedReserveSeconds < 0f || rules.RedReserveSeconds >= 300f ||
                  !float.IsFinite(rules.RedReserveEdgeOffset) || Mathf.Abs(rules.RedReserveEdgeOffset) > 100f)))
                 throw new InvalidOperationException("Check the Red reinforcement type, count, arrival time, and entry offset.");
-            if (groups.Sum(group => (long)group.SoldierCount) + rules.RedReserveCount > 100000)
+            var staged = RedReserveFormation.Groups(map).ToArray();
+            foreach (var group in staged)
+            {
+                if (group.Unit == null || !roster.Contains(group.Unit.Id) ||
+                    group.Faction != CommandUnitPlacement.Team.Red || group.Count is < 1 or > 256)
+                    throw new InvalidOperationException("Every staged formation needs a registered Red unit type.");
+                float radius = UnitOutline.FromDefinition(group.Unit, UnitOutline.EffectiveSize(group.Unit)).Footprint;
+                var parent = group.GetParent<Node3D>();
+                foreach (var point in group.Positions(radius))
+                {
+                    var local = parent.ToLocal(point);
+                    if (Mathf.Abs(local.X) + radius > RedReserveFormation.HalfWidth ||
+                        Mathf.Abs(local.Z) + radius > RedReserveFormation.HalfWidth)
+                        throw new InvalidOperationException("Keep every reserve footprint inside the staging grid.");
+                }
+            }
+            long reserveCount = staged.Length > 0 ? staged.Sum(group => (long)group.SoldierCount) : rules.RedReserveCount;
+            if (groups.Sum(group => (long)group.SoldierCount) + reserveCount > 100000)
                 throw new InvalidOperationException("AutoBattler supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||
                 map.AutoBattlerRules.BlueUnitLimit < 0 || map.AutoBattlerRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))

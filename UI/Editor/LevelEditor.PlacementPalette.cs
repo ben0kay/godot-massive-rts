@@ -27,6 +27,7 @@ public partial class LevelEditor
             int page = i;
             var tab = Button(header, tabs[i], () =>
             {
+                if (editingReserve && page != 0) ToggleReserveGrid();
                 ShowPalettePage(page);
                 PickPaletteTool(Tool.Select);
             });
@@ -39,6 +40,15 @@ public partial class LevelEditor
         paletteSelect = AddPaletteAction(header, "Select", Tool.Select);
         paletteMove = AddPaletteAction(header, "Move", Tool.Move);
         paletteErase = AddPaletteAction(header, "Erase", Tool.Erase);
+
+        reserveGridButton = Button(header, "Red staging", ToggleReserveGrid);
+        reserveEntryButton = Button(header, "Red entry preview", () =>
+        {
+            previewReserveEntry = !previewReserveEntry || tool != Tool.ReserveEntry;
+            PickPaletteTool(previewReserveEntry ? Tool.ReserveEntry : Tool.Select);
+            if (previewReserveEntry) FrameEditor();
+            RefreshLayout();
+        });
 
         Color enemy = Factions.Color(Factions.Red);
         int towers = defenseDefinitions.Length;

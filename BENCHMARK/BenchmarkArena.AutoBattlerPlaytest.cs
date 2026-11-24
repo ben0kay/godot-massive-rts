@@ -60,6 +60,8 @@ public partial class BenchmarkArena
             }
         }
         autoBattlerRed = red.ToArray();
+        paintedRedReserveCount = (int)Math.Min(int.MaxValue,
+            RedReserveFormation.Groups(map).Sum(group => (long)group.SoldierCount));
 
         if (map.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
             foreach (var child in defenses.GetChildren())

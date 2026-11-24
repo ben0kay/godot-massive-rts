@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -33,7 +33,7 @@ public partial class LevelEditor
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
-            if (entry is Tool.Soldiers or Tool.Defense) continue;
+            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
             if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine) continue;
             toolPicker.AddItem(entry switch
@@ -71,7 +71,8 @@ public partial class LevelEditor
         camera.SuspendPanWhileEditingText = true;
         camera.ArrowsAlwaysPan = true;
         camera.MaximumZoomSize = map.MapSize * 1.6f;
-        camera.SetOpeningView(Vector3.Zero, map.MapSize * 0.95f, camera.TopDown ? 0 : 45);
+        camera.SetOpeningView(editingReserve ? ReserveOrigin : Vector3.Zero,
+            editingReserve ? RedReserveFormation.HalfWidth * 2.1f : map.MapSize * 0.95f, camera.TopDown ? 0 : 45);
     }
 
     private void UpdateEditorGround() => map?.UpdateGroundBounds(showGrid.ButtonPressed && !previewing);
@@ -91,8 +92,12 @@ public partial class LevelEditor
             map.RemoveChild(layout);
             layout.QueueFree();
         }
-        layout = LevelLayoutPreview.Build(map);
+        if (editingReserve) ReserveContainer().Position = ReserveOrigin;
+        layout = LevelLayoutPreview.Build(map, formationContainer: UnitContainerName);
+        if (editingReserve) DrawReserveGrid(layout);
+        else if (previewReserveEntry) DrawReserveEntry(layout);
         RefreshStrength();
+        if (editingReserve) return;
         if (map.GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (var child in fabricators.GetChildren())
                 if (child is Node3D marker)
@@ -175,6 +180,9 @@ public partial class LevelEditor
                     Number(context, "Strength", elevationStrength, 0.1, 20, 0.1).ValueChanged += value => elevationStrength = (float)value;
                     Heading(context, "Left-click or drag to raise. Right-click or drag to lower.", 15);
                 }
+                break;
+            case Tool.ReserveEntry:
+                Heading(context, "Click near a battlefield edge to set the Red entry.", 15);
                 break;
             case Tool.Wall:
                 Number(context, "Width", wallWidth, 1, 500).ValueChanged += value => wallWidth = (float)value;
@@ -294,6 +302,25 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
+        if (editingReserve && input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } reserveClick &&
+            (tool is Tool.Select or Tool.Move or Tool.Erase) && WorldPoint(reserveClick.Position, out var reservePoint))
+        {
+            var group = ReserveContainer().GetChildren().OfType<CommandUnitPlacement>().FirstOrDefault(item =>
+                item.Unit != null && item.Positions(UnitOutline.FromDefinition(item.Unit, UnitOutline.EffectiveSize(item.Unit)).Footprint)
+                    .Any(point => point.DistanceSquaredTo(reservePoint) <= 2f));
+            if (tool == Tool.Erase && group != null) RemoveObject(group);
+            else if (tool == Tool.Move && selected is CommandUnitPlacement formation)
+            {
+                var destination = Snap(reservePoint);
+                if (FitsStagingFormation(formation, destination))
+                    SetValue(formation.Position, destination - ReserveOrigin, at => formation.Position = at);
+                else SetStatus("Keep the full formation within the staging grid.");
+            }
+            else { selected = group; UpdateTool(); }
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (editingReserve && tool is not Tool.Soldiers) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
@@ -358,11 +385,12 @@ public partial class LevelEditor
             height = Surface(point);
         }
         point.Y = height;
-        return Mathf.Abs(point.X) < map.MapSize * 0.5f && Mathf.Abs(point.Z) < map.MapSize * 0.5f;
+        Vector3 local = point - PaintOrigin;
+        return Mathf.Abs(local.X) < PaintHalfWidth && Mathf.Abs(local.Z) < PaintHalfWidth;
     }
 
     private float Surface(Vector3 point) =>
-        map.GetNodeOrNull<CommandTerrain>("Terrain")?.SampleHeight(point.X, point.Z) ?? 0f;
+        editingReserve ? 0f : map.GetNodeOrNull<CommandTerrain>("Terrain")?.SampleHeight(point.X, point.Z) ?? 0f;
 
     private static Vector2I Cell(Vector3 point) => new(Mathf.FloorToInt(point.X / Grid), Mathf.FloorToInt(point.Z / Grid));
 
@@ -538,13 +566,16 @@ public partial class LevelEditor
                 node.Set("wall_size", new Vector3(wallWidth, wallHeight, wallDepth));
                 parent = "Obstacles";
                 break;
+            case Tool.ReserveEntry:
+                SetReserveEntry(point);
+                return;
             case Tool.Soldiers:
                 var formation = LoadNode<CommandUnitPlacement>("res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn");
                 formation.Unit = units[unitIndex];
                 formation.Faction = mode.IsAutoBattler || red ? CommandUnitPlacement.Team.Red : CommandUnitPlacement.Team.Blue;
                 formation.Count = groupSize;
                 formation.RotationDegrees = new Vector3(0, yaw, 0);
-                node = formation; parent = "StartingUnits";
+                node = formation; parent = UnitContainerName;
                 break;
             case Tool.Defense:
                 node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler || redTower };
@@ -582,9 +613,15 @@ public partial class LevelEditor
                 return false;
             }
         }
-        if (!FitsPresetSide(node, point))
+        if (parent != RedReserveFormation.ContainerName && !FitsPresetSide(node, point))
         {
             SetStatus("Place the entire enemy formation or defense on the Red side of the deployment line.");
+            return false;
+        }
+        if (parent == RedReserveFormation.ContainerName && node is CommandUnitPlacement reserve &&
+            reserve.Unit != null && !FitsStagingFormation(reserve, point))
+        {
+            SetStatus("Keep the full formation within the staging grid.");
             return false;
         }
         if (map.GetNodeOrNull<Node3D>(parent) is not Node3D container)
@@ -593,11 +630,13 @@ public partial class LevelEditor
             map.AddChild(container);
             container.Owner = map;
         }
+        Vector3 stagingPosition = parent == RedReserveFormation.ContainerName ? point - ReserveOrigin : Vector3.Zero;
         void Add()
         {
             container.AddChild(node, true);
             node.Owner = map;
-            PlaceAt(node, point);
+            if (parent == RedReserveFormation.ContainerName) node.Position = stagingPosition;
+            else PlaceAt(node, point);
             RefreshMap(node is TerrainHill);
         }
         void Remove()

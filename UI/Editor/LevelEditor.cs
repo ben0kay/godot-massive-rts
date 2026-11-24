@@ -268,6 +268,9 @@ public partial class LevelEditor : Node
         redo.Clear();
         selected = null;
         layout = null;
+        editingReserve = previewReserveEntry = false;
+        reserveGridButton.Text = "Red staging";
+        reserveEntryButton.Disabled = false;
         cursor = null;
         dirty = previewing = false;
         mode = adapter;

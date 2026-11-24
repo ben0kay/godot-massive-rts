@@ -91,11 +91,13 @@ public partial class LevelEditor
             checks.Add((unit.Id, item));
         }
         Heading(parent, "Red reinforcements", 17);
+        Heading(parent, "A painted Red staging formation takes precedence over the fallback wave.", 15)
+            .AutowrapMode = TextServer.AutowrapMode.WordSmart;
         var reserveType = new OptionButton();
         foreach (var unit in units) reserveType.AddItem(unit.DisplayName);
         reserveType.Select(Math.Max(0, Array.FindIndex(units, unit => unit.Id == rules.RedReserveUnitId)));
         parent.AddChild(reserveType);
-        var reserveCount = Number(parent, "Count (0 disables wave)", rules.RedReserveCount, 0, 100000);
+        var reserveCount = Number(parent, "Fallback count (0 disables fallback)", rules.RedReserveCount, 0, 100000);
         var reserveSeconds = Number(parent, "Arrival seconds after Fight", rules.RedReserveSeconds, 0, 299, 1);
         var reserveOffset = Number(parent, "Entry offset along Red edge (%)", rules.RedReserveEdgeOffset, -100, 100, 1);
         return () =>

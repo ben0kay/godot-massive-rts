@@ -163,7 +163,8 @@ public partial class BenchmarkArena
         else if (units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
-        else if (campaignBattleSeconds >= CampaignBattleTimeLimit) FinishCampaignBattle("Stalemate");
+        else if (campaignBattleSeconds >= (redWave?.Lanes != null ?
+            Mathf.Max(CampaignBattleTimeLimit, redWave.TimeToFinish + 15f) : CampaignBattleTimeLimit)) FinishCampaignBattle("Stalemate");
     }
 
     private void FinishCampaignBattle(string result)

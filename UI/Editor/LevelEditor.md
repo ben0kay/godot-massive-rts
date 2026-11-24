@@ -42,3 +42,5 @@ Each stroke or Set Height click can be undone or redone as one edit and saves wi
 The ground grid and map edge follow the sculpted terrain. Both playtest modes use the saved height surface for grounding.
 
 AutoBattler authoring uses the bottom placement bar. **Units** and **Defenses** show the authored Red roster and tower choices with base HP and damage. **Defenses** also includes Solid Wall. **Terrain** contains Rocks, Forest, Water, Elevation, and Bridge. **Setup** contains Blue Deployment Zone, Deployment Line, and Opening Camera. Select, Move, and Erase stay available on every tab. Settings for the active tool appear on the left.
+
+Use **Red staging** in the AutoBattler palette to paint a reserve formation on a separate 256-unit grid. Paint or erase with the standard unit tools. The highlighted south edge is the front of the wave. **Back to battlefield** returns to the map. Use **Red entry preview** and click near an edge to position the entry. Cyan lanes are clear, red lanes overlap a blocker or leave the legal entry area, and the pale line shows the largest unit's handoff depth. The timer is under **Map Size… → Red reinforcements**.

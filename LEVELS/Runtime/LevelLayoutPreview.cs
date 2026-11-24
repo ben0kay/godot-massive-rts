@@ -7,14 +7,15 @@ namespace MassiveRts;
 internal static class LevelLayoutPreview
 {
     // =========================================================
-    public static Node3D Build(CommandSandbox level, bool redOnly = false)
+    public static Node3D Build(CommandSandbox level, bool redOnly = false, string formationContainer = "StartingUnits")
     {
         var preview = new Node3D { Name = "LayoutPreview" };
         level.AddChild(preview, false, Node.InternalMode.Back);
-        var terrain = level.GetNodeOrNull<CommandTerrain>("Terrain");
+        bool staging = formationContainer == RedReserveFormation.ContainerName;
+        var terrain = staging ? null : level.GetNodeOrNull<CommandTerrain>("Terrain");
         float Height(float x, float z) => terrain?.SampleHeight(x, z) ?? 0f;
         var groups = new Dictionary<(UnitDefinition Unit, byte Team), List<Transform3D>>();
-        if (level.GetNodeOrNull<Node3D>("StartingUnits") is Node3D units)
+        if (level.GetNodeOrNull<Node3D>(formationContainer) is Node3D units)
             foreach (var child in units.GetChildren())
             {
                 if (child is not CommandUnitPlacement placement || placement.Unit == null ||
@@ -40,6 +41,8 @@ internal static class LevelLayoutPreview
             for (int i = 0; i < entry.Value.Count; i++) batch.SetInstanceTransform(i, entry.Value[i]);
             preview.AddChild(new MultiMeshInstance3D { Multimesh = batch });
         }
+
+        if (staging) return preview;
 
         if (level.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
         {

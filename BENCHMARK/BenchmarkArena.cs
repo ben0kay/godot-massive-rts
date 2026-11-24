@@ -254,6 +254,7 @@ public partial class BenchmarkArena : Node3D
     {
         armyBalanceHud?.Reset();
         campaignBattleRunning = false;
+        ClearReserveMarch(redWave);
         blueWave = redWave = null;
         if (dreadnaughts != null)
         {
@@ -713,6 +714,7 @@ public partial class BenchmarkArena : Node3D
                 long start = Stamp();
                 float blend = smooth ? (float)Math.Clamp(accumulator / Config.TickSeconds, 0.0, 1.0) : 1f;
                 armyRenderer.Sync(blend);
+                SyncReserveMarch();
                 dreadnaughts?.SyncVisuals();
                 if (steps > 0) projectileRenderer.Sync(projectiles);
                 timeSinceArmySync = 0;
