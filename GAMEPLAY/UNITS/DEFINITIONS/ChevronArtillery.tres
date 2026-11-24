@@ -15,6 +15,7 @@ Height = 0.99
 SizeMultiplier = 1.25
 SizeTier = 3.0
 ArtilleryBarrelLengthMultiplier = 2.0
+ArtilleryBarrelElevationDegrees = 30.0
 Speed = 1.2
 TurnDegreesPerSecond = 75.0
 Health = 500.0

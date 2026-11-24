@@ -8,7 +8,7 @@ public readonly record struct ShockwaveStats(int EveryAttacks, float Radius, flo
 public readonly record struct RangedRecoilStats(float Distance, float ReturnSeconds);
 
 // Ground outline shared by the renderer and the circular simulation footprint.
-public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false, bool IsDeepFork = false, float ChevronBarrelScale = 1f)
+public readonly record struct UnitOutline(int Sides, float RadiusX, float RadiusZ, float Rotation, bool IsChevron = false, bool IsHFrame = false, bool IsDrillRig = false, bool IsPike = false, bool IsDreadnaught = false, bool IsDeepFork = false, float ChevronBarrelScale = 1f, float ChevronBarrelElevation = 0f)
 {
     private static readonly Vector2[] ChevronVertices =
     {
@@ -49,15 +49,21 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
 
     public float DrillLengthFromOrigin => -DrillRigVertices[2].Y * RadiusZ;
 
-    public float Footprint => IsChevron ? Mathf.Max(RadiusX, BarrelFront) : IsDeepFork ? Mathf.Max(
+    public float Footprint => IsChevron ? Mathf.Max(RadiusX, BarrelBack + BarrelLength) : IsDeepFork ? Mathf.Max(
         new Vector2(RadiusX * 0.82f, RadiusZ).Length(), new Vector2(RadiusX, RadiusZ * 0.72f).Length()) : IsDreadnaught ? 1f : IsDrillRig
         ? Mathf.Max(DrillLengthFromOrigin, new Vector2(RadiusX, RadiusZ * 0.72f).Length())
         : IsPike ? Mathf.Max(RadiusZ, new Vector2(RadiusX, RadiusZ * 0.82f).Length())
         : IsHFrame ? new Vector2(RadiusX, RadiusZ).Length() : Mathf.Max(RadiusX, RadiusZ);
     public float BarrelWidth => RadiusX * 0.25f;
     public float BarrelBack => RadiusZ * 0.38f;
+    public float BarrelLength => (RadiusZ - BarrelBack) * ChevronBarrelScale;
+    // Preserve the original full-length collision clearance while projecting the
+    // elevated barrel into XZ for the editor and the real muzzle position.
     public float BarrelFront => IsChevron
-        ? BarrelBack + (RadiusZ - BarrelBack) * ChevronBarrelScale : RadiusZ;
+        ? BarrelBack + BarrelLength * Mathf.Cos(ChevronBarrelElevation) : RadiusZ;
+    public float BarrelRise => BarrelLength * Mathf.Sin(ChevronBarrelElevation);
+    public Vector3 ArtilleryBarrelMount(float height) => new(0f, height * 0.32f, -BarrelBack);
+    public Vector3 ArtilleryBarrelTip(float height) => new(0f, height * 0.32f + BarrelRise, -BarrelFront);
 
     public Vector2 Vertex(int index)
     {
@@ -90,7 +96,9 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
         {
             float scale = float.IsFinite(definition.ArtilleryBarrelLengthMultiplier)
                 ? Mathf.Clamp(definition.ArtilleryBarrelLengthMultiplier, 0.5f, 4f) : 1f;
-            return outline with { ChevronBarrelScale = scale };
+            float elevation = float.IsFinite(definition.ArtilleryBarrelElevationDegrees)
+                ? Mathf.Clamp(definition.ArtilleryBarrelElevationDegrees, 0f, 75f) : 0f;
+            return outline with { ChevronBarrelScale = scale, ChevronBarrelElevation = Mathf.DegToRad(elevation) };
         }
         return outline;
     }

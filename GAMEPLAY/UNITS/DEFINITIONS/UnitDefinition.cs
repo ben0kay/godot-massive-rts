@@ -40,6 +40,7 @@ public partial class UnitDefinition : Resource
     // Multiplies barrel length from its fixed rear anchor; affects mesh, muzzle and clearance.
     // Unchanged legacy art keeps the default value of one.
     [Export(PropertyHint.Range, "0.5,4,0.1")] public float ArtilleryBarrelLengthMultiplier { get; set; } = 1f;
+    [Export(PropertyHint.Range, "0,75,1,degrees")] public float ArtilleryBarrelElevationDegrees { get; set; }
 
     [ExportGroup("Dreadnaught")]
     [Export] public float HullLength { get; set; } = 14f;

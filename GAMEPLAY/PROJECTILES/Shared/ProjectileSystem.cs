@@ -83,8 +83,9 @@ public sealed class ProjectileSystem
         else if (type.Outline.IsChevron)
         {
             Vector2 heading = units.Facing[shooter];
+            Vector3 tip = type.Outline.ArtilleryBarrelTip(type.Height);
             muzzle = units.Position[shooter] +
-                new Vector3(heading.X * type.Outline.BarrelFront, type.Height * 0.82f, heading.Y * type.Outline.BarrelFront);
+                new Vector3(-heading.X * tip.Z, type.Height * 0.5f + tip.Y, -heading.Y * tip.Z);
         }
         bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
             againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage),

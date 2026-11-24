@@ -129,10 +129,10 @@ public static class FacetedSoldierMeshes
             AppendDreadnaughtDetails(surface, outline, height);
         if (outline.IsChevron)
         {
-            float length = outline.BarrelFront - outline.BarrelBack;
-            float midpoint = (outline.BarrelFront + outline.BarrelBack) * 0.5f;
-            AppendBeveledRectangle(surface, new Vector3(0f, height * 0.32f, -midpoint),
-                new Vector3(outline.BarrelWidth, height * 0.24f, length), new Color(0.86f, 0.86f, 0.86f), SoldierSideShade);
+            Vector3 center = (outline.ArtilleryBarrelMount(height) + outline.ArtilleryBarrelTip(height)) * 0.5f;
+            AppendBeveledRectangle(surface, center,
+                new Vector3(outline.BarrelWidth, height * 0.24f, outline.BarrelLength),
+                new Color(0.86f, 0.86f, 0.86f), SoldierSideShade, pitch: outline.ChevronBarrelElevation);
         }
         return surface.Commit();
     }
@@ -285,11 +285,12 @@ public static class FacetedSoldierMeshes
         }
     }
 
-    public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint, float sideShade = 1f)
+    public static void AppendBeveledRectangle(SurfaceTool surface, Vector3 center, Vector3 size, Color tint,
+        float sideShade = 1f, float pitch = 0f)
     {
         const float inverseSqrtTwo = 0.70710678f;
         AppendPrism(surface, 4, size.X * inverseSqrtTwo, size.Z * inverseSqrtTwo,
-            size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f, sideShade: sideShade);
+            size.Y, Mathf.Pi * 0.25f, center, tint, 0.16f, sideShade: sideShade, pitch: pitch);
     }
 
     internal static void AppendRocketBarrel(SurfaceTool surface, Transform3D pose)
@@ -304,8 +305,16 @@ public static class FacetedSoldierMeshes
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
         UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,
-        float yaw = 0f, float topCapBrightness = 1f)
+        float yaw = 0f, float topCapBrightness = 1f, float pitch = 0f)
     {
+        // The artillery barrel is tilted once during mesh construction, never per soldier.
+        Basis tilt = pitch == 0f ? Basis.Identity : new Basis(Vector3.Right, pitch);
+        Vector3 Point(Vector3 p) => pitch == 0f ? p : center + tilt * (p - center);
+        Vector3 Normal(Vector3 n) => pitch == 0f ? n : tilt * n;
+        void Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 normal, Color color) =>
+            AddTriangle(surface, Point(a), Point(b), Point(c), Normal(normal), color);
+        void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Color color) =>
+            AddQuad(surface, Point(a), Point(b), Point(c), Point(d), Normal(normal), color);
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
         float insetDistance = Mathf.Min(radiusX, radiusZ) * TopInsetFraction;
@@ -359,17 +368,17 @@ public static class FacetedSoldierMeshes
                 Vector3 recess = Vector3.Down * (height * 0.035f);
                 Vector3 inner = capCenter.Lerp(top[i], 0.84f) + recess;
                 Vector3 innerNext = capCenter.Lerp(top[next], 0.84f) + recess;
-                AddQuad(surface, inner, innerNext, top[next], top[i], Vector3.Up, Colors.White * tint);
-                AddTriangle(surface, capCenter + recess, innerNext, inner, Vector3.Up, tint * 0.68f);
+                Quad(inner, innerNext, top[next], top[i], Vector3.Up, Colors.White * tint);
+                Triangle(capCenter + recess, innerNext, inner, Vector3.Up, tint * 0.68f);
             }
             else if (!concaveFork)
-                AddTriangle(surface, center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint * topCapBrightness);
-            if (!concaveFork) AddTriangle(surface, center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
+                Triangle(center + cap + Vector3.Up * half, top[next], top[i], Vector3.Up, TopTint * tint * topCapBrightness);
+            if (!concaveFork) Triangle(center + cap + Vector3.Down * half, bottom[i], bottom[next], Vector3.Down, BottomTint * tint);
 
-            AddQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
+            Quad(bottom[i], shoulder[i], shoulder[next], bottom[next],
                 outward, SideTint(outward) * tint * sideShade);
             Vector3 bevelNormal = (outward * bevelRise + Vector3.Up * insetDistance).Normalized();
-            AddQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
+            Quad(shoulder[i], top[i], top[next], shoulder[next],
                 bevelNormal, BevelTint(outward) * tint * Mathf.Lerp(1f, sideShade, 0.5f));
         }
     }

@@ -69,7 +69,10 @@ public partial class UnitEditorPanel
             "Legacy Diamond silhouette input. The collision radius is derived from the visible outline.", true);
         Number(nameof(Unit.ArtilleryBarrelLengthMultiplier), "Artillery barrel length", () => Unit.ArtilleryBarrelLengthMultiplier,
             v => Unit.ArtilleryBarrelLengthMultiplier = v, 0.5, 4, 0.1, "×", () => Unit.Shape == UnitShape.Chevron,
-            "Scales the barrel's forward length from the rear mount. The projectile muzzle and circular clearance follow the tip.");
+            "Scales the barrel's length from the rear mount. The projectile muzzle follows the tip and full-length clearance is retained.");
+        Number(nameof(Unit.ArtilleryBarrelElevationDegrees), "Artillery barrel elevation", () => Unit.ArtilleryBarrelElevationDegrees,
+            v => Unit.ArtilleryBarrelElevationDegrees = v, 0, 75, 1, "°", () => Unit.Shape == UnitShape.Chevron,
+            "Fixed upward angle. The mesh and launch origin share the same raised tip.");
 
         Section("Movement");
         Number(nameof(Unit.Speed), "Base speed", () => Unit.Speed, v => Unit.Speed = v, 0.001, 100, 0.001, " u/s", unbounded: true);
