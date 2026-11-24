@@ -13,6 +13,7 @@ public partial class LevelEditor
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
+    private LevelLayoutPreview.PlacementBatches placementBatches;
     private MeshInstance3D cursor;
     private WorldPaint paint;
     private int brushRadius = 2;
@@ -87,6 +88,28 @@ public partial class LevelEditor
         RefreshLayout();
     }
 
+    private void RefreshPlacement(Node3D node)
+    {
+        if ((node is CommandUnitPlacement or CommandLaserPlacement) && !previewReserveEntry)
+        {
+            RefreshPlacementBatches();
+            RefreshStrength();
+        }
+        else RefreshMap(node is TerrainHill);
+    }
+
+    private void RefreshPlacementBatches()
+    {
+        if (editingReserve) ReserveContainer().Position = ReserveOrigin;
+        if (placementBatches == null)
+        {
+            var root = new Node3D { Name = "PlacementBatches" };
+            map.AddChild(root, false, InternalMode.Back);
+            placementBatches = new LevelLayoutPreview.PlacementBatches(root);
+        }
+        placementBatches.Refresh(map, redOnly: false, formationContainer: UnitContainerName);
+    }
+
     private void RefreshLayout()
     {
         if (layout != null)
@@ -94,8 +117,8 @@ public partial class LevelEditor
             map.RemoveChild(layout);
             layout.QueueFree();
         }
-        if (editingReserve) ReserveContainer().Position = ReserveOrigin;
-        layout = LevelLayoutPreview.Build(map, formationContainer: UnitContainerName);
+        RefreshPlacementBatches();
+        layout = LevelLayoutPreview.Build(map, formationContainer: UnitContainerName, decorationsOnly: true);
         if (editingReserve) DrawReserveGrid(layout);
         else if (previewReserveEntry) DrawReserveEntry(layout);
         RefreshStrength();
@@ -656,13 +679,13 @@ public partial class LevelEditor
             node.Owner = map;
             if (parent == RedReserveFormation.ContainerName) node.Position = stagingPosition;
             else PlaceAt(node, point);
-            RefreshMap(node is TerrainHill);
+            RefreshPlacement(node);
         }
         void Remove()
         {
             container.RemoveChild(node);
             if (selected == node) selected = null;
-            RefreshMap(node is TerrainHill);
+            RefreshPlacement(node);
         }
         detached.Add(node);
         Add();
@@ -686,10 +709,10 @@ public partial class LevelEditor
         void Apply(Vector3 at)
         {
             PlaceAt(node, at);
-            RefreshMap(node is TerrainHill);
+            RefreshPlacement(node);
         }
         Apply(point);
-        Remember(() => { node.GlobalPosition = old; RefreshMap(node is TerrainHill); }, () => Apply(point));
+        Remember(() => { node.GlobalPosition = old; RefreshPlacement(node); }, () => Apply(point));
     }
 
     private void PlaceAt(Node3D node, Vector3 point)
@@ -709,13 +732,13 @@ public partial class LevelEditor
         }
         var parent = node.GetParent();
         int index = node.GetIndex();
-        void Remove() { parent.RemoveChild(node); selected = null; RefreshMap(node is TerrainHill); }
+        void Remove() { parent.RemoveChild(node); selected = null; RefreshPlacement(node); }
         void Restore()
         {
             parent.AddChild(node, true);
             parent.MoveChild(node, index);
             node.Owner = map;
-            RefreshMap(node is TerrainHill);
+            RefreshPlacement(node);
         }
         detached.Add(node);
         Remove();

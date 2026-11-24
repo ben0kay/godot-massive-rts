@@ -7,59 +7,19 @@ namespace MassiveRts;
 internal static class LevelLayoutPreview
 {
     // =========================================================
-    public static Node3D Build(CommandSandbox level, bool redOnly = false, string formationContainer = "StartingUnits")
+    public static Node3D Build(CommandSandbox level, bool redOnly = false, string formationContainer = "StartingUnits", bool decorationsOnly = false)
     {
         var preview = new Node3D { Name = "LayoutPreview" };
         level.AddChild(preview, false, Node.InternalMode.Back);
         bool staging = formationContainer == RedReserveFormation.ContainerName;
         var terrain = staging ? null : level.GetNodeOrNull<CommandTerrain>("Terrain");
         float Height(float x, float z) => terrain?.SampleHeight(x, z) ?? 0f;
-        var groups = new Dictionary<(UnitDefinition Unit, byte Team), List<Transform3D>>();
-        if (level.GetNodeOrNull<Node3D>(formationContainer) is Node3D units)
-            foreach (var child in units.GetChildren())
-            {
-                if (child is not CommandUnitPlacement placement || placement.Unit == null ||
-                    (redOnly && placement.Faction != CommandUnitPlacement.Team.Red)) continue;
-                var key = (placement.Unit, (byte)placement.Faction);
-                if (!groups.TryGetValue(key, out var transforms))
-                    groups.Add(key, transforms = new());
-                float footprint = UnitOutline.FromDefinition(placement.Unit, UnitOutline.EffectiveSize(placement.Unit)).Footprint;
-                var basis = new Basis(Vector3.Up, placement.GlobalRotation.Y);
-                foreach (var position in placement.Positions(footprint))
-                {
-                    var point = position;
-                    point.Y = Height(point.X, point.Z) + placement.Unit.Height * UnitOutline.EffectiveSize(placement.Unit) * 0.5f;
-                    transforms.Add(new Transform3D(basis, point));
-                }
-            }
-
-        foreach (var entry in groups)
+        if (!decorationsOnly)
         {
-            var mesh = FacetedSoldierMeshes.CreatePlacementPreview(entry.Key.Unit, ArmyRenderer.FactionColor(entry.Key.Team));
-            var batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh,
-                InstanceCount = entry.Value.Count };
-            for (int i = 0; i < entry.Value.Count; i++) batch.SetInstanceTransform(i, entry.Value[i]);
-            preview.AddChild(new MultiMeshInstance3D { Multimesh = batch });
+            var batches = new PlacementBatches(preview);
+            batches.Refresh(level, redOnly, formationContainer);
         }
-
         if (staging) return preview;
-
-        if (level.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
-        {
-            var renderer = new DefenseRenderer();
-            preview.AddChild(renderer);
-            renderer.Initialize(System.Array.Empty<BuildingPlacement>(), null, CommandLaserPlacement.BaseHeight, battle: false);
-            int index = 0;
-            foreach (var child in defenses.GetChildren())
-                if (child is CommandLaserPlacement tower && (!redOnly || tower.Red) &&
-                    index < (redOnly ? DeploymentLayout.MaxBuildings : CommandSandbox.MaxStartingTowers))
-                {
-                    var area = tower.Footprint(tower.GlobalPosition);
-                    float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;
-                    renderer.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground,
-                        tower.EffectiveDefinition.Projectile != null, tower.EffectiveDefinition.ShieldEmitterEnabled);
-                }
-        }
 
         if (level.AutoBattlerRules is { LineAxis: not AutoBattlerRules.DeploymentAxis.Disabled } rules)
         {
@@ -97,6 +57,78 @@ internal static class LevelLayoutPreview
         if (hasRegion) preview.AddChild(new MeshInstance3D { Mesh = region.Commit() });
         return preview;
     }
+    // The editor retains these batches for the lifetime of the loaded map.
+    internal sealed class PlacementBatches
+    {
+        private readonly Node3D root;
+        private readonly Dictionary<(UnitDefinition Unit, byte Team), MultiMesh> meshes = new();
+        private DefenseRenderer defenses;
+
+        internal PlacementBatches(Node3D root) => this.root = root;
+
+        internal void Refresh(CommandSandbox level, bool redOnly, string formationContainer)
+        {
+            bool staging = formationContainer == RedReserveFormation.ContainerName;
+            var terrain = staging ? null : level.GetNodeOrNull<CommandTerrain>("Terrain");
+            float Height(float x, float z) => terrain?.SampleHeight(x, z) ?? 0f;
+            var groups = new Dictionary<(UnitDefinition Unit, byte Team), List<Transform3D>>();
+            if (level.GetNodeOrNull<Node3D>(formationContainer) is Node3D units)
+                foreach (var child in units.GetChildren())
+                {
+                    if (child is not CommandUnitPlacement placement || placement.Unit == null ||
+                        (redOnly && placement.Faction != CommandUnitPlacement.Team.Red)) continue;
+                    var key = (placement.Unit, (byte)placement.Faction);
+                    if (!groups.TryGetValue(key, out var transforms))
+                        groups.Add(key, transforms = new());
+                    float footprint = UnitOutline.FromDefinition(placement.Unit, UnitOutline.EffectiveSize(placement.Unit)).Footprint;
+                    var basis = new Basis(Vector3.Up, placement.GlobalRotation.Y);
+                    foreach (var position in placement.Positions(footprint))
+                    {
+                        var point = position;
+                        point.Y = Height(point.X, point.Z) + placement.Unit.Height * UnitOutline.EffectiveSize(placement.Unit) * 0.5f;
+                        transforms.Add(new Transform3D(basis, point));
+                    }
+                }
+
+            foreach (var entry in meshes)
+                if (!groups.ContainsKey(entry.Key)) entry.Value.VisibleInstanceCount = 0;
+            foreach (var entry in groups)
+            {
+                if (!meshes.TryGetValue(entry.Key, out var batch))
+                {
+                    batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                        Mesh = FacetedSoldierMeshes.CreatePlacementPreview(entry.Key.Unit, ArmyRenderer.FactionColor(entry.Key.Team)) };
+                    meshes.Add(entry.Key, batch);
+                    root.AddChild(new MultiMeshInstance3D { Multimesh = batch });
+                }
+                if (batch.InstanceCount < entry.Value.Count)
+                    batch.InstanceCount = System.Math.Max(entry.Value.Count, batch.InstanceCount * 2);
+                for (int i = 0; i < entry.Value.Count; i++) batch.SetInstanceTransform(i, entry.Value[i]);
+                batch.VisibleInstanceCount = entry.Value.Count;
+            }
+
+            if (defenses != null) defenses.Visible = !staging;
+            if (staging) return;
+            if (level.GetNodeOrNull<Node3D>("StartingDefenses") is not Node3D towers) return;
+            if (defenses == null)
+            {
+                defenses = new DefenseRenderer();
+                root.AddChild(defenses);
+            }
+            defenses.Initialize(System.Array.Empty<BuildingPlacement>(), null, CommandLaserPlacement.BaseHeight, battle: false);
+            int index = 0;
+            foreach (var child in towers.GetChildren())
+                if (child is CommandLaserPlacement tower && tower.EffectiveDefinition is { } definition &&
+                    (!redOnly || tower.Red) && index < (redOnly ? DeploymentLayout.MaxBuildings : CommandSandbox.MaxStartingTowers))
+                {
+                    var area = tower.Footprint(tower.GlobalPosition);
+                    float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;
+                    defenses.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground,
+                        definition.Projectile != null, definition.ShieldEmitterEnabled);
+                }
+        }
+    }
+
     private static void AddDeploymentLine(Node3D parent, CommandTerrain terrain, bool alongZ, float offset, float half, float blue)
     {
         using var surface = new SurfaceTool();

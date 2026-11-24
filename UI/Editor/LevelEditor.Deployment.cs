@@ -223,7 +223,7 @@ public partial class LevelEditor
                 }
                 else change.Group.PaintedOffsets = erase ? change.After : change.Before;
             }
-            RefreshMap();
+            RefreshPlacement(changes[0].Group);
         }
         detached.AddRange(changes.Where(change => change.After.Length == 0).Select(change => change.Group));
         Apply(true);

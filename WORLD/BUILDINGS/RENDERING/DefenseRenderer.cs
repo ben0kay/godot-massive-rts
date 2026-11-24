@@ -249,6 +249,11 @@ public partial class DefenseRenderer : Node3D
     public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle, TerrainHeightField terrain = null)
     {
         InitializeBatches();
+        if (shieldTowers != null)
+        {
+            for (int i = 0; i < shieldTowers.VisibleInstanceCount; i++) shieldTowers.SetInstanceTransform(i, Hidden);
+            shieldTowers.VisibleInstanceCount = 0;
+        }
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
             rocketBases.VisibleInstanceCount = rocketHeads.VisibleInstanceCount = rocketBarrels.VisibleInstanceCount = rightRocketBarrels.VisibleInstanceCount = placements.Count;
         for (int i = 0; i < placements.Count; i++)

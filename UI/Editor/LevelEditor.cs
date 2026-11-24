@@ -268,6 +268,7 @@ public partial class LevelEditor : Node
         redo.Clear();
         selected = null;
         layout = null;
+        placementBatches = null;
         editingReserve = previewReserveEntry = false;
         reserveGridButton.Hide();
         cursor = null;
