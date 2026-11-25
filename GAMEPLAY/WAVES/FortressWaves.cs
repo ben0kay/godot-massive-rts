@@ -170,7 +170,7 @@ internal sealed class FortressWaves
             {
                 if (engagePrism && idleMoved) RebuildGrid();
                 attackVisualsChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
-                    obstacles: idleField, commands: movement);
+                    obstacles: idleField, shockwaves: impactRings, commands: movement);
                 if (engageStructures) AttackStructures(delta, idleField, Factions.Blue);
             }
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
@@ -215,7 +215,7 @@ internal sealed class FortressWaves
                 units.Target[id] = -1;
         }
         bool weaponChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
-            obstacles: field, commands: movement);
+            obstacles: field, shockwaves: impactRings, commands: movement);
 
         if (units.HasStructureAttackers) AttackStructures(delta, field, Factions.Blue);
         for (int i = 0; i < enemyCount && !Defeat; i++)
@@ -549,7 +549,10 @@ internal sealed class FortressWaves
         if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f)) return;
         Vector3 aim = Ground(edge) + Vector3.Up * 1.5f;
         if (Projectiles.FireAtStructure(id, units, aim, buildings.Citadel))
+        {
+            units.HitFeedback?.OnAttack(units, id);
             units.Cooldown[id] = type.Interval;
+        }
     }
 
     private Vector3 Ground(Vector2 point) => units.OnTerrain(new Vector3(point.X, 0f, point.Y));

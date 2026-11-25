@@ -924,7 +924,7 @@ public partial class BenchmarkArena : Node3D
         if (guards != null)
             foreach (GuardGroup group in guards)
                 group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
-        float tramplePadding = activeTrample?.MoveCharges(units, grid, dt, obstacles) ?? 0f;
+        float tramplePadding = activeTrample?.MoveCharges(units, grid, dt, obstacles, shockwaves) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;
         if (profileMovement)

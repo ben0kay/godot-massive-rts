@@ -8,6 +8,10 @@ public sealed class HitFeedbackSystem
     private readonly float[] remaining, riseStart;
     private readonly int[] activeIds;
     private readonly bool[] meleeFlash;
+    private const float AttackDuration = 0.16f;
+    private readonly float[] attackRemaining;
+    private readonly int[] attackingIds;
+    private int attackingCount;
     private readonly float duration, flashDuration, pulseDuration, riseDuration, fallDuration, peakExpansion;
     private int activeCount;
     private bool hitRegistered;
@@ -24,6 +28,8 @@ public sealed class HitFeedbackSystem
         riseStart = new float[capacity];
         activeIds = new int[capacity];
         meleeFlash = new bool[capacity];
+        attackRemaining = new float[capacity];
+        attackingIds = new int[capacity];
     }
 
     public void OnHit(int id, bool melee)
@@ -36,6 +42,13 @@ public sealed class HitFeedbackSystem
         remaining[id] = duration;
         meleeFlash[id] = melee;
         hitRegistered = true;
+    }
+
+    public bool OnAttack(UnitState units, int id)
+    {
+        if (attackRemaining[id] <= 0f) attackingIds[attackingCount++] = id;
+        attackRemaining[id] = AttackDuration;
+        return units.Dirty[id] = true;
     }
 
     public bool Advance(UnitState units, float dt)
@@ -60,15 +73,26 @@ public sealed class HitFeedbackSystem
                 changed = true;
             }
         }
+        for (int slot = attackingCount - 1; slot >= 0; slot--)
+        {
+            int id = attackingIds[slot];
+            bool alive = units.Health[id] > 0f;
+            attackRemaining[id] = alive ? Mathf.Max(0f, attackRemaining[id] - dt) : 0f;
+            if (attackRemaining[id] == 0f) attackingIds[slot] = attackingIds[--attackingCount];
+            if (alive) changed = units.Dirty[id] = true;
+        }
         return changed;
     }
 
     public (float Flash, float Scale) Evaluate(int id)
     {
-        if (remaining[id] <= 0f) return (0f, 1f);
+        float attackAge = 1f - attackRemaining[id] / AttackDuration;
+        float attackScale = attackRemaining[id] > 0f ? 0.095f * (attackAge < 0.28f
+            ? Smooth(attackAge / 0.28f) : Smooth((1f - attackAge) / 0.72f)) : 0f;
+        if (remaining[id] <= 0f) return (0f, 1f + attackScale);
         float age = duration - remaining[id];
-        float flash = age < flashDuration ? (meleeFlash[id] ? 0.60f : 1f) : 0f;
-        return (flash, 1f + Expansion(id, age));
+        float flash = age < flashDuration ? (meleeFlash[id] ? 0.35f : 1f) : 0f;
+        return (flash, 1f + Mathf.Max(attackScale, Expansion(id, age)));
     }
 
     private float Expansion(int id, float age)

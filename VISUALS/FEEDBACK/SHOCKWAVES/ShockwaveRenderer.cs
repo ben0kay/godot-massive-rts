@@ -12,6 +12,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction, bool StructureChips);
     private readonly Ring[] rings = new Ring[Capacity];
     private MultiMesh bursts, chips;
+    private MeleeEffects meleeEffects;
     private int count;
     private bool dirty;
 
@@ -92,8 +93,23 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         dirty = true;
     }
 
+    internal void EmitMelee(Vector3 contact, Vector2 direction, float footprint, bool cleave)
+    {
+        meleeEffects ??= new MeleeEffects(this);
+        meleeEffects.Emit(contact, direction, Mathf.Clamp(footprint * 1.6f, 0.58f, 1.2f), 0);
+        if (cleave)
+            meleeEffects.Emit(contact, direction, Mathf.Clamp(footprint * 3.9f, 1.3f, 3.1f), 1);
+    }
+
+    internal void EmitChargeDust(Vector3 position)
+    {
+        meleeEffects ??= new MeleeEffects(this);
+        meleeEffects.Emit(position, Vector2.Zero, 1.25f, 2);
+    }
+
     public void Advance(float dt)
     {
+        meleeEffects?.Advance(dt);
         if (count == 0) return;
         dirty = true;
         for (int i = count - 1; i >= 0; i--)
@@ -106,6 +122,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
 
     public void Sync()
     {
+        meleeEffects?.Sync();
         if (!dirty) return;
         int ringCount = 0, flashCount = 0, chipCount = 0;
         for (int i = 0; i < count; i++)
@@ -153,6 +170,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
 
     public void Clear()
     {
+        meleeEffects?.Clear();
         count = 0;
         dirty = true;
         Sync();

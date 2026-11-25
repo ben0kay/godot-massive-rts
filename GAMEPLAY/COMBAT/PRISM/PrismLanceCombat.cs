@@ -49,6 +49,7 @@ internal static class PrismLanceCombat
         budget--;
         Strike(units, grid, id, type, muzzle, segment, padding);
         effects.EmitPrismBeam(muzzle, muzzle + segment, units.Faction[id], type.PrismBeam.FlashSeconds);
+        units.HitFeedback?.OnAttack(units, id);
         units.RangedRecoil?.OnFire(units, id, target);
         units.SetPrismCharge(id, 0f);
         units.Cooldown[id] = type.Interval;

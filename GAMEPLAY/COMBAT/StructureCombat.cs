@@ -207,6 +207,7 @@ internal sealed class StructureCombat
             if (!projectiles.FireAtStructure(id, units, units.OnTerrain(Ground(edge)) + Vector3.Up * 1.5f, target)) return false;
         }
         else target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
+        units.HitFeedback?.OnAttack(units, id);
         units.Cooldown[id] = type.Interval;
         return units.Dirty[id] = true;
     }

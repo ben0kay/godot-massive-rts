@@ -220,8 +220,9 @@ internal partial class DreadnaughtCombat : Node3D
         float barrelLength = rocket ? cannon.Pose.Basis.Z.Length() : BarrelLength * gun.VisualScale;
         Vector3 muzzle = mount + Vector3.Forward.Rotated(Vector3.Up, gun.Yaw) * barrelLength;
         if (!indirect && obstacles?.BlocksSight(muzzle, aim) == true) return;
-        projectiles.LaunchFrom(muzzle, aim, units.Faction[id], projectile,
-            rocket ? cannon.Damage : settings.Damage, DamageRules.NeutralType);
+        if (projectiles.LaunchFrom(muzzle, aim, units.Faction[id], projectile,
+            rocket ? cannon.Damage : settings.Damage, DamageRules.NeutralType))
+            units.HitFeedback?.OnAttack(units, id);
         gun.Cooldown = (rocket ? cannon.Interval : settings.Interval) / Mathf.Max(0.01f, fireRate);
     }
 
@@ -253,6 +254,7 @@ internal partial class DreadnaughtCombat : Node3D
             {
                 hull.NextContact[victim] = time + stats.Interval;
                 units.Damage(victim, stats.AgainstUnits(stats.Damage), stats.UnitDamageType, melee: true);
+                units.HitFeedback?.OnAttack(units, id);
             }
 
             if (units.Health[victim] <= 0 || clearance >= radius) continue;

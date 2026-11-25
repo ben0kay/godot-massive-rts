@@ -18,7 +18,7 @@ public sealed class TrampleSystem
     private struct Charge
     {
         public Vector2 Start, Heading, Approach;
-        public float RunUp, Distance, Momentum, Recovery;
+        public float RunUp, Distance, Momentum, Recovery, DustDistance;
         public int Hits;
         public bool Active, BypassThisTick;
     }
@@ -138,6 +138,7 @@ public sealed class TrampleSystem
                 obstacles?.BlocksCorridor(charge.Start, Xz(units.Position[target]), 0f) != true)
             {
                 charge.Active = true;
+                charge.DustDistance = 1.1f;
                 charge.Distance = type.Trample.Distance;
                 charge.Momentum = type.Trample.Efficiency;
                 charge.Hits = 0;
@@ -147,7 +148,7 @@ public sealed class TrampleSystem
         }
     }
 
-    public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null)
+    public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null, ShockwaveRenderer feedback = null)
     {
         float padding = units.MaximumTravelSpeed * dt;
         var turnSteps = units.TurnSteps(dt);
@@ -155,7 +156,7 @@ public sealed class TrampleSystem
         {
             int id = ids[slot];
             if (units.Health[id] <= 0f || !states[slot].Active) continue;
-            MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles);
+            MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles, feedback);
         }
         bool appliedShove = false;
         for (int i = 0; i < shoveCount; i++)
@@ -176,7 +177,7 @@ public sealed class TrampleSystem
         return appliedShove ? MaxCombinedContactShove : 0f;
     }
 
-    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles)
+    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles, ShockwaveRenderer feedback)
     {
         ref Charge charge = ref states[slot];
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
@@ -212,7 +213,15 @@ public sealed class TrampleSystem
             float resistance = units.Catalog[units.Type[defender]].Trample.Resistance;
             bool penetrates = charge.Momentum > resistance;
             float damage = type.Damage * type.Trample.DamageMultiplier * (penetrates ? 1f : 0.5f) / (1f + resistance);
+            float previousHealth = units.Health[defender];
             units.Damage(defender, type.AgainstUnits(damage), type.UnitDamageType, melee: true);
+            if (units.Health[defender] < previousHealth)
+            {
+                units.HitFeedback?.OnAttack(units, id);
+                Vector2 impact = origin + charge.Heading * (contact + type.Footprint);
+                feedback?.EmitMelee(units.OnTerrain(new Vector3(impact.X, 0f, impact.Y)) + Vector3.Up * 0.3f,
+                    charge.Heading, type.Footprint, cleave: false);
+            }
             if (!penetrates)
             {
                 blocked = true;
@@ -230,6 +239,13 @@ public sealed class TrampleSystem
         {
             if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, charge.Heading, turnStep);
             Place(units, id, origin + charge.Heading * travel);
+            charge.DustDistance += travel;
+            if (feedback != null && charge.DustDistance >= 1.1f)
+            {
+                charge.DustDistance = 0f;
+                Vector2 rear = Xz(units.Position[id]) - charge.Heading * type.Footprint;
+                feedback.EmitChargeDust(units.OnTerrain(new Vector3(rear.X, 0f, rear.Y)) + Vector3.Up * 0.18f);
+            }
         }
         charge.Distance -= travel;
         if (blocked || charge.Distance <= 0.0001f ||

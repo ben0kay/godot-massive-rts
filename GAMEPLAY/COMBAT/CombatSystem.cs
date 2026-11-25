@@ -215,6 +215,8 @@ public static class CombatSystem
                     }
                 }
             }
+            float previousHealth = units.Health[target];
+            bool cleaved = false;
             if (type.Ranged)
             {
                 if (!SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
@@ -222,8 +224,11 @@ public static class CombatSystem
                 // Only recoil when the projectile pool accepted the shot.
                 int before = projectiles.Count;
                 projectiles.Fire(i, target, units);
-                if (projectiles.Count > before && type.RangedRecoil.Distance > 0f)
-                    units.RangedRecoil?.OnFire(units, i, target);
+                if (projectiles.Count > before)
+                {
+                    visualsChanged |= units.HitFeedback?.OnAttack(units, i) == true;
+                    if (type.RangedRecoil.Distance > 0f) units.RangedRecoil?.OnFire(units, i, target);
+                }
             }
             else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
             {
@@ -234,7 +239,10 @@ public static class CombatSystem
                 shockwaves?.Emit(impact, stomp.Radius);
             }
             else if (type.CleaveEnabled)
+            {
+                cleaved = true;
                 AreaDamage.Cleave(units, grid, i, target, type, facing, separationGap, MeleeContactTolerance, units.MaximumTravelSpeed * dt + separationPadding, attackSight);
+            }
             else
             {
                 float damage = type.AgainstUnits(type.Damage);
@@ -242,6 +250,15 @@ public static class CombatSystem
                 if (damage > 0f && type.FirstHitMultiplier > 1f && units.RecordFirstHit(i, target))
                     damage *= type.FirstHitMultiplier;
                 units.Damage(target, damage, type.UnitDamageType, melee: true);
+            }
+            if (!type.Ranged)
+            {
+                visualsChanged |= units.HitFeedback?.OnAttack(units, i) == true;
+                if (shockwaves != null && (cleaved || units.Health[target] < previousHealth))
+                {
+                    var contact = units.Position[i] + offset * 0.5f + Vector3.Up * (type.Height * 0.52f);
+                    shockwaves.EmitMelee(contact, ObstacleField.Xz(offset), type.Footprint, cleaved);
+                }
             }
             if (type.MeleeLungeDistance > 0f) visualsChanged = units.Dirty[i] = true;
             units.Cooldown[i] = type.Ranged ? type.Interval / fireRateMultiplier : type.Interval;
