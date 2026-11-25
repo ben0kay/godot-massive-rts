@@ -26,6 +26,7 @@ public partial class CommandSandbox : Node3D
     public enum BaseTerrainStyle { Industrial, SteelSlate }
     [Export] public BaseTerrainStyle BaseTerrain { get; set; }
     private MultiMesh industrialWallBatch;
+    private MeshInstance3D industrialWallShadows;
     private ShaderMaterial industrialWallMaterial;
 
     [Export] public AutoBattlerRules AutoBattlerRules { get; set; }
@@ -410,8 +411,27 @@ public partial class CommandSandbox : Node3D
             }
         }
         walls.AddRange(painted);
-        if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, painted);
+        if (groundForPlay || updateVisuals)
+        {
+            UpdateIndustrialWallViews(authored, painted);
+            UpdateIndustrialWallShadows(walls, GetNodeOrNull<CommandTerrain>("Terrain")?.Field);
+        }
         return walls.ToArray();
+    }
+
+    private void UpdateIndustrialWallShadows(List<ObstacleRectangle> walls, TerrainHeightField terrain)
+    {
+        if (industrialWallShadows == null)
+        {
+            if (walls.Count == 0) return;
+            industrialWallShadows = new MeshInstance3D
+            {
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                MaterialOverride = GroundShadowMeshes.Material(0.56f)
+            };
+            AddChild(industrialWallShadows, false, InternalMode.Back);
+        }
+        industrialWallShadows.Mesh = GroundShadowMeshes.ExposedWallEdges(walls, terrain, GlobalTransform.AffineInverse());
     }
 
     private void UpdateIndustrialWallViews(Node3D authored, List<ObstacleRectangle> painted)

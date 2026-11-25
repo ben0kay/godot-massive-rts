@@ -536,3 +536,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added shaded steel panel bevels and amber wall lights, plus beveled basin rims, cyan retaining-wall lights, and water caustics. Godot .NET visual validation pending.
 
 - 2026-11-24 — Broadside visual pass: added shared chamfered charcoal armor, faction-colored plating and trim, reinforced rotating head and twin barrels using existing MultiMesh batches. Preserved gameplay, footprint, muzzle alignment and independent recoil; Godot visual validation pending.
+
+- 2026-11-24 — Made amber wall lights sparse and deterministic, deepened industrial ground shading, and added baked ground shadows along exposed wall edges. Godot .NET visual validation pending.

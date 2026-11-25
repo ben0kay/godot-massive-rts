@@ -52,6 +52,11 @@ void fragment() {
     float specular = pow(max(dot(normal_world, halfway), 0.0), mix(11.0, 25.0, polished));
     vec3 base = slate_color.rgb * (0.83 + stone * 0.30 + diffuse * 0.55 - seam * (industrial_panels ? 0.24 : seam_strength));
     vec3 ground = base + vec3(0.63, 0.77, 1.0) * specular * sheen * mix(0.10, 0.42, polished);
+    if (industrial_panels) {
+        float ambient = texture(stone_noise, ground_xz * 0.011).r;
+        ground *= mix(vec3(0.46, 0.54, 0.75), vec3(0.78, 0.83, 0.96),
+            smoothstep(0.18, 0.82, ambient));
+    }
     ground *= 1.0 + 0.24 * clamp(ground_height / 16.0, -1.0, 1.0);
     if (editor_grid_size > 0.0) {
         vec2 pixel_width = max(fwidth(ground_xz), vec2(0.0001));
