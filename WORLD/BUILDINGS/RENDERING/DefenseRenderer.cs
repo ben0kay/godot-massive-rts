@@ -7,7 +7,7 @@ namespace MassiveRts;
 
 public partial class DefenseRenderer : Node3D
 {
-    // Reuse the soldier meshes' baked faux lighting style; no real lights or shaders needed.
+    // Keep the railgun beam visible independently of battlefield lighting.
     private static readonly StandardMaterial3D Material = new()
     {
         VertexColorUseAsAlbedo = true, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
@@ -16,6 +16,10 @@ public partial class DefenseRenderer : Node3D
     private const float BarrelLength = 3.8f;
     private const float BarrelCenterForward = BarrelLength * 0.5f;
     private const float FlashSeconds = 0.11f;
+    private static readonly ShaderMaterial LitTowerMaterial = new()
+    {
+        Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/TowerArmor.gdshader")
+    };
     private static readonly Mesh BaseMesh = BuildBaseMesh();
     private static readonly Mesh HeadMesh = BuildHeadMesh();
     private static readonly Mesh BarrelMesh = BuildBarrelMesh();
@@ -189,7 +193,7 @@ public partial class DefenseRenderer : Node3D
         };
         AddChild(new MultiMeshInstance3D
         {
-            Multimesh = batch, MaterialOverride = material ?? Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+            Multimesh = batch, MaterialOverride = material ?? LitTowerMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
         });
         return batch;
     }
@@ -214,7 +218,7 @@ public partial class DefenseRenderer : Node3D
         }
         if (battle)
         {
-            beams ??= Batch(BeamMesh, DeploymentLayout.MaxBuildings);
+            beams ??= Batch(BeamMesh, DeploymentLayout.MaxBuildings, Material);
             Array.Fill(beamSlots, -1);
             flashes ??= Batch(FlashMesh, FlashCapacity, FlashMaterial);
             beams.VisibleInstanceCount = flashes.VisibleInstanceCount = 0;

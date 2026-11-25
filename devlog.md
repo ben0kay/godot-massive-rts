@@ -542,3 +542,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Broadside visual pass 2: strengthened corner armor, turret silhouette and barrel housings; added faction-emissive power rails and status strips using the same shared batches. No weapon, footprint or global glow changes; Godot visual validation pending.
 
 - 2026-11-24 — Applied the shared directional sun and lit unit materials in AutoBattler and Fortress Defense, keeping fake ground shadows. Added Offense as an empty campaign menu entry. Godot .NET runtime validation pending.
+
+- 2026-11-24 — Added directional shading to shared defense tower armor, including Broadside, while retaining emissive trim and fake ground shadows. Godot .NET visual validation pending.
