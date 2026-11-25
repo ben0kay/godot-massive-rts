@@ -13,6 +13,8 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     internal delegate bool GroundPicker(Vector2 screen, out Vector3 point);
     internal GroundPicker EditorGround { get; init; }
     internal bool OffenseEditor { get; init; }
+    internal enum AfterCombat { StayStill, ReturnToSpawn, AutoFight }
+    private OptionButton afterCombat;
     internal enum Behavior { OpeningOrder, Guard, HardGuard, AutoAttack }
     internal System.Action OrdersChanged { get; init; }
     private IReadOnlyList<SoldierPlacement> Soldiers => Painter?.Layout.Placements ?? AuthoredSoldiers;
@@ -28,6 +30,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         internal Vector3 Start, End, Bend;
         internal float Hold;
         internal Behavior Mode;
+        internal AfterCombat After;
         internal bool Bent;
         internal Vector3 Point(float t) => Bent
             ? Start.Lerp(Bend, t).Lerp(Bend.Lerp(End, t), t)
@@ -78,7 +81,9 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         AddChild(layer);
         layer.AddChild(orderPopup);
         var actions = new HBoxContainer();
-        orderPopup.AddChild(actions);
+        var rows = new VBoxContainer();
+        orderPopup.AddChild(rows);
+        rows.AddChild(actions);
         move = UIButtonFactory.Create("Order move", () => placingRoute = !placingRoute, UIButtonStyle.Compact);
         actions.AddChild(move);
         if (OffenseEditor)
@@ -86,6 +91,26 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             AddBehavior("Guard", Behavior.Guard);
             AddBehavior("Hard Guard", Behavior.HardGuard);
             AddBehavior("Auto Attack", Behavior.AutoAttack);
+            var followUp = new HBoxContainer();
+            rows.AddChild(followUp);
+            followUp.AddChild(new Label { Text = "After combat" });
+            afterCombat = new OptionButton();
+            afterCombat.AddItem("Stay Still", (int)AfterCombat.StayStill);
+            afterCombat.AddItem("Return to Spawn", (int)AfterCombat.ReturnToSpawn);
+            afterCombat.AddItem("Auto Fight", (int)AfterCombat.AutoFight);
+            followUp.AddChild(afterCombat);
+            afterCombat.ItemSelected += index =>
+            {
+                var normal = new Order { Mode = Behavior.Guard, After = (AfterCombat)afterCombat.GetItemId((int)index) };
+                var hard = new Order { Mode = Behavior.HardGuard, After = normal.After };
+                foreach (var soldier in selected)
+                {
+                    var existing = For(soldier);
+                    if (existing != null && existing.Mode is not (Behavior.Guard or Behavior.HardGuard)) continue;
+                    orders[soldier] = existing?.Mode == Behavior.HardGuard ? hard : normal;
+                }
+                OrdersChanged?.Invoke();
+            };
         }
 
         void AddBehavior(string label, Behavior behavior)
@@ -93,8 +118,14 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             actions.AddChild(UIButtonFactory.Create(label, () =>
             {
                 placingRoute = false;
-                var order = new Order { Mode = behavior };
-                foreach (var soldier in selected) orders[soldier] = order;
+                var byFollowUp = new Dictionary<AfterCombat, Order>();
+                foreach (var soldier in selected)
+                {
+                    var after = For(soldier)?.After ?? AfterCombat.StayStill;
+                    if (!byFollowUp.TryGetValue(after, out var order))
+                        byFollowUp.Add(after, order = new Order { Mode = behavior, After = after });
+                    orders[soldier] = order;
+                }
                 OrdersChanged?.Invoke();
                 QueueRedraw();
             }, UIButtonStyle.Compact));
@@ -240,6 +271,22 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         if (orderPopup == null) return;
         orderPopup.Visible = Visible && Selecting && selected.Count > 0 && anchor == null && editing == null;
         if (!orderPopup.Visible) return;
+        if (afterCombat != null)
+        {
+            AfterCombat? value = null;
+            bool mixed = false;
+            foreach (var soldier in selected)
+            {
+                var order = For(soldier);
+                if (order != null && order.Mode is not (Behavior.Guard or Behavior.HardGuard)) continue;
+                var current = order?.After ?? AfterCombat.StayStill;
+                mixed |= value.HasValue && value.Value != current;
+                value ??= current;
+            }
+            afterCombat.Disabled = !value.HasValue;
+            int index = mixed ? -1 : (int)(value ?? AfterCombat.StayStill);
+            if (afterCombat.Selected != index) afterCombat.Select(index);
+        }
         move.Text = placingRoute ? "Click destination" : "Order move";
         Vector2 bounds = GetViewportRect().Size;
         float bottom = float.NegativeInfinity, left = float.PositiveInfinity, right = float.NegativeInfinity;

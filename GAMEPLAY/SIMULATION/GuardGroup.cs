@@ -11,12 +11,13 @@ public sealed class GuardGroup
     public int End { get; }
     private readonly Vector3[] posts;
     private readonly float radius, radiusSquared;
-    private readonly bool returnToPost, counterattack, hardGuard;
+    private readonly bool returnToPost, counterattack, hardGuard, offense;
     private int lastContact = -1;
 
-    public GuardGroup(int start, int end, SoldierPlacement[] placements, float radius, GuardOrder order, bool hardGuard = false)
+    public GuardGroup(int start, int end, SoldierPlacement[] placements, float radius, GuardOrder order, bool hardGuard = false, bool offense = false)
     {
         this.hardGuard = hardGuard;
+        this.offense = offense;
         Start = start;
         End = end;
         this.radius = radius;
@@ -42,7 +43,7 @@ public sealed class GuardGroup
             if (type.PrismBeam.Enabled || !IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
             {
                 units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
-                    counterattack && !type.PrismBeam.Enabled ? int.MaxValue : config.QueryCandidateLimit, tick,
+                    counterattack && !offense && !type.PrismBeam.Enabled ? int.MaxValue : config.QueryCandidateLimit, tick,
                     type.PrismBeam.Enabled ? obstacles : null, minimumRange: type.PrismBeam.Enabled ? type.MinimumFireRange : 0f,
                     guardPost: post, guardRadius: type.Ranged && !hardGuard ? engagementRadius * 0.5f : engagementRadius);
             }
@@ -50,8 +51,13 @@ public sealed class GuardGroup
         }
 
         int faction = units.Faction[Start];
-        return counterattack && lastContact >= 0 && tick - lastContact >= interval &&
-            units.FactionAlive[faction] > 0 && units.Alive > units.FactionAlive[faction];
+        if (!counterattack || lastContact < 0 || tick - lastContact < interval ||
+            units.FactionAlive[faction] == 0 || units.Alive <= units.FactionAlive[faction]) return false;
+        if (offense)
+            for (int id = Start; id < End; id++)
+                if (units.Health[id] > 0f && units.Target[id] >= 0 && units.Health[units.Target[id]] > 0f)
+                    return false;
+        return true;
     }
 
     private static bool IsEngaging(UnitState units, int target, Vector2 post, float rangeSquared) =>
@@ -78,7 +84,11 @@ public sealed class GuardGroup
             if (!engaging)
             {
                 units.Target[id] = -1;
-                if (!returnToPost) continue;
+                if (!returnToPost)
+                {
+                    if (offense && !counterattack && !hardGuard) posts[id - Start] = position;
+                    continue;
+                }
             }
             if (hardGuard && type.Ranged && engaging && anchor.DistanceSquaredTo(from) <= 0.04f) continue;
             if (hardGuard && type.Ranged) engaging = false;

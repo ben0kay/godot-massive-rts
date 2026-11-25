@@ -590,26 +590,42 @@ public partial class BenchmarkArena : Node3D
         autoAttackCount = attackerCount;
         if (attackerCount < snapshot.Length)
         {
-            guards = new GuardGroup[Factions.Count + (IsOffense ? 1 : 0)];
+            var guardGroups = new List<GuardGroup>();
             int next = attackerCount;
             for (int faction = 0; faction < Factions.Count; faction++)
             {
                 GuardOrder order = orders[faction];
-                if (order == GuardOrder.AutoAttack) continue;
+                if (order == GuardOrder.AutoAttack || (IsOffense && faction == Factions.Red)) continue;
                 int start = next;
                 foreach (SoldierPlacement placement in placements)
                     if (placement.Faction == faction && !AutoAttack(placement) && !HardGuard(placement)) snapshot[next++] = placement;
                 if (start < next)
-                    guards[faction] = new GuardGroup(start, next, snapshot, IsOffense && faction == Factions.Red ? 12f : settings.GuardRadius, order);
+                    guardGroups.Add(new GuardGroup(start, next, snapshot, settings.GuardRadius, order));
             }
             if (IsOffense)
             {
-                int start = next;
-                foreach (var placement in placements)
-                    if (HardGuard(placement)) snapshot[next++] = placement;
-                if (start < next)
-                    guards[Factions.Count] = new GuardGroup(start, next, snapshot, 6f, GuardOrder.Return, hardGuard: true);
+                var defenders = placements.Where(placement => placement.Faction == Factions.Red && !AutoAttack(placement));
+                foreach (var group in defenders.GroupBy(placement =>
+                {
+                    var authored = RedOrder(placement);
+                    var after = authored?.After ?? DeploymentOrderOverlay.AfterCombat.StayStill;
+                    return (Hard: HardGuard(placement), After: after,
+                        Squad: after == DeploymentOrderOverlay.AfterCombat.AutoFight ? authored : null);
+                }))
+                {
+                    int start = next;
+                    foreach (var placement in group) snapshot[next++] = placement;
+                    var behavior = group.Key.After switch
+                    {
+                        DeploymentOrderOverlay.AfterCombat.ReturnToSpawn => GuardOrder.Return,
+                        DeploymentOrderOverlay.AfterCombat.AutoFight => GuardOrder.Counterattack,
+                        _ => GuardOrder.Hold
+                    };
+                    guardGroups.Add(new GuardGroup(start, next, snapshot, group.Key.Hard ? 6f : 12f,
+                        behavior, hardGuard: group.Key.Hard, offense: true));
+                }
             }
+            guards = guardGroups.ToArray();
         }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
         if (autoBattlerPlaytestMap == null) SetBattleObstacles(layout.CollisionField, wallMesh);
