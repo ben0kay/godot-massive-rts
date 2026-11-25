@@ -15,6 +15,53 @@ internal static class GroundShadowMeshes
         CullMode = BaseMaterial3D.CullModeEnum.Disabled
     };
 
+    internal static StandardMaterial3D SilhouetteMaterial(float opacity)
+    {
+        var material = Material(opacity);
+        material.VertexColorUseAsAlbedo = true;
+        return material;
+    }
+
+    internal static Mesh Pine()
+    {
+        // X follows the cast direction, starting at the trunk.
+        Vector2[] outline =
+        {
+            new(0f, -0.13f), new(0.24f, -0.13f), new(0.24f, -0.84f),
+            new(0.57f, -0.53f), new(0.57f, -0.65f), new(0.87f, -0.36f),
+            new(0.87f, -0.46f), new(1.28f, 0f),
+            new(0.87f, 0.46f), new(0.87f, 0.36f), new(0.57f, 0.65f),
+            new(0.57f, 0.53f), new(0.24f, 0.84f), new(0.24f, 0.13f), new(0f, 0.13f)
+        };
+        using var surface = new SurfaceTool();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetMaterial(SilhouetteMaterial(0.31f));
+        AppendSilhouette(surface, outline, new Vector2(0.46f, 0f), innerScale: 0.79f);
+        return surface.Commit();
+    }
+
+    internal static void AppendSilhouette(SurfaceTool surface, Vector2[] outline, Vector2 center,
+        TerrainHeightField terrain = null, float groundOffset = 0f, float innerScale = 0.87f)
+    {
+        var clear = new Color(1f, 1f, 1f, 0f);
+        foreach (int index in Geometry2D.TriangulatePolygon(outline))
+            Add(center.Lerp(outline[index], innerScale), Colors.White);
+        for (int i = 0; i < outline.Length; i++)
+        {
+            Vector2 a = outline[i], b = outline[(i + 1) % outline.Length];
+            Vector2 innerA = center.Lerp(a, innerScale), innerB = center.Lerp(b, innerScale);
+            Add(innerA, Colors.White); Add(a, clear); Add(b, clear);
+            Add(innerA, Colors.White); Add(b, clear); Add(innerB, Colors.White);
+        }
+
+        void Add(Vector2 point, Color tint)
+        {
+            surface.SetColor(tint);
+            surface.AddVertex(new Vector3(point.X,
+                (terrain?.At(point.X, point.Y) ?? 0f) + groundOffset, point.Y));
+        }
+    }
+
     public static Mesh Soldier(float opacity = 0.52f)
     {
         using var surface = new SurfaceTool();

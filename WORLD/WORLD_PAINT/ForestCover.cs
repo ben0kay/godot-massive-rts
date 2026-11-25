@@ -35,7 +35,7 @@ internal sealed class ForestCover
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
         crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"), foliage: true)));
-        shadows = Batch(parent, GroundShadowMeshes.Soldier(0.27f));
+        shadows = Batch(parent, GroundShadowMeshes.Pine());
 
         parent.AddChild(new MeshInstance3D { Mesh = outline,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
@@ -91,10 +91,12 @@ internal sealed class ForestCover
                 new Vector3(center.X, ground + height * 0.5f, center.Y)));
             crowns.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, 0.6f + height * 0.65f, width)),
                 new Vector3(center.X, ground + height + 0.25f, center.Y)));
-            Vector2 shadeCenter = center + GroundShadowMeshes.SceneryOffset(height * 0.72f);
-            shadows.SetInstanceTransform(index, new Transform3D(
-                Basis.Identity.Scaled(new Vector3(radius * 1.26f, 1f, radius * 0.88f)),
-                OnGround(shadeCenter) - Vector3.Up * 0.025f));
+            Vector2 cast = GroundShadowMeshes.SceneryOffset(height + 0.35f);
+            Vector2 along = cast.Normalized();
+            var shadowBasis = new Basis(new Vector3(along.X, 0f, along.Y) * (cast.Length() + radius * 0.55f),
+                Vector3.Up, new Vector3(-along.Y, 0f, along.X) * radius);
+            shadows.SetInstanceTransform(index, new Transform3D(shadowBasis,
+                OnGround(center) - Vector3.Up * 0.025f));
             shadows.SetInstanceColor(index, Colors.White);
             trunks.SetInstanceColor(index, Colors.White);
             crowns.SetInstanceColor(index, Colors.White);

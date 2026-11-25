@@ -20,7 +20,9 @@ internal static class WorldPaintMeshBuilder
             Shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/RockSurface.gdshader")
         });
 
-        var shadows = new List<(Vector3 Center, Vector2 Radius)>(cells.Count);
+        using var shadows = new SurfaceTool();
+        shadows.Begin(Mesh.PrimitiveType.Triangles);
+        shadows.SetMaterial(GroundShadowMeshes.SilhouetteMaterial(0.30f));
         tint = tint.Lerp(new Color("#384256"), 0.65f);
         foreach (var cell in cells)
         {
@@ -34,19 +36,13 @@ internal static class WorldPaintMeshBuilder
             AddBoulder(surface, shadows, cell, terrain, broad ? height * 0.37f : height, tint, neighbours, broad: false);
             if (broad && cell == anchor) AddBoulder(surface, shadows, cell, terrain, height, tint, neighbours, broad: true);
         }
-        var mesh = surface.Commit();
-        surface.Clear();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(GroundShadowMeshes.Material(0.30f));
-        foreach (var shadow in shadows)
-            GroundShadowMeshes.AppendDisc(surface, shadow.Center, shadow.Radius, terrain);
-        return surface.Commit(mesh);
+        return shadows.Commit(surface.Commit());
     }
 
     // =========================================================
     // Build uneven polygon rings with a broad cap and a chipped upper bevel.
     // Only the relative height responds to neighbours as new brush strokes join a pile.
-    private static void AddBoulder(SurfaceTool surface, List<(Vector3 Center, Vector2 Radius)> shadows,
+    private static void AddBoulder(SurfaceTool surface, SurfaceTool shadows,
         Vector2I cell, TerrainHeightField terrain,
         float height, Color tint, int neighbours, bool broad)
     {
@@ -66,10 +62,6 @@ internal static class WorldPaintMeshBuilder
         Color stone = tint.Lerp(tint.Lightened(0.22f), Next(ref seed)).Darkened(0.04f);
         var crown = new Vector3(x + radius * Mathf.Lerp(-0.18f, 0.18f, Next(ref seed)),
             baseY + columnHeight, z + radius * Mathf.Lerp(-0.18f, 0.18f, Next(ref seed)));
-        Vector2 offset = GroundShadowMeshes.SceneryOffset(columnHeight * 0.48f);
-        shadows.Add((new Vector3(x + offset.X, 0.035f, z + offset.Y),
-            new Vector2(radius + offset.X * 0.42f, radius * stretch - offset.Y * 0.42f)));
-
         System.Span<Vector3> foot = stackalloc Vector3[7];
         System.Span<Vector3> shoulder = stackalloc Vector3[7];
         System.Span<Vector3> cap = stackalloc Vector3[7];
@@ -84,6 +76,27 @@ internal static class WorldPaintMeshBuilder
             shoulder[i] = new Vector3(x + dx * 0.98f, topY - columnHeight * 0.40f, z + dz * 0.98f);
             cap[i] = new Vector3(x + dx * inset, topY, z + dz * inset);
         }
+
+        var projected = new Vector2[sides * 3 + 1];
+        for (int i = 0; i < sides; i++)
+        {
+            projected[i] = Project(foot[i]);
+            projected[sides + i] = Project(shoulder[i]);
+            projected[sides * 2 + i] = Project(cap[i]);
+        }
+        projected[^1] = Project(crown);
+        Vector2[] outline = Geometry2D.ConvexHull(projected);
+        if (outline.Length > 1 && outline[0] == outline[^1])
+            System.Array.Resize(ref outline, outline.Length - 1);
+        if (outline.Length >= 3)
+        {
+            var center = Vector2.Zero;
+            foreach (var point in outline) center += point;
+            GroundShadowMeshes.AppendSilhouette(shadows, outline, center / outline.Length, terrain, groundOffset: 0.035f);
+        }
+
+        Vector2 Project(Vector3 vertex) => new Vector2(vertex.X, vertex.Z) +
+            GroundShadowMeshes.SceneryOffset(Mathf.Max(0f, vertex.Y - baseY));
 
         for (int i = 0; i < sides; i++)
         {
