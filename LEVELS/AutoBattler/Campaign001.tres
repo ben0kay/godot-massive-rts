@@ -1,15 +1,16 @@
 [gd_resource type="Resource" script_class="CampaignDefinition" format=3]
 
-[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_cvldj"]
-[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level001/Level001.tres" id="2_23c17"]
-[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level002/Level002.tres" id="3_c00cb"]
-[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level010/Level010.tres" id="4_dujw0"]
-[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level009/Level009.tres" id="5_3icex"]
-[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level008/Level008.tres" id="7_incoming"]
-[ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="6_pnpag"]
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_bckq0"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level001/Level001.tres" id="2_sjlrd"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level002/Level002.tres" id="3_05r42"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level010/Level010.tres" id="4_6hao6"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level009/Level009.tres" id="5_rdle0"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level008/Level008.tres" id="6_8bmrf"]
+[ext_resource type="Resource" path="res://LEVELS/AutoBattler/Level003/Level003.tres" id="7_urgmb"]
+[ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="8_5p2ta"]
 
 [resource]
-script = ExtResource("6_pnpag")
+script = ExtResource("8_5p2ta")
 Id = "Campaign001"
 DisplayName = "AutoBattler"
-Levels = Array[ExtResource("1_cvldj")]([ExtResource("2_23c17"), ExtResource("3_c00cb"), ExtResource("4_dujw0"), ExtResource("5_3icex"), ExtResource("7_incoming")])
+Levels = Array[ExtResource("1_bckq0")]([ExtResource("2_sjlrd"), ExtResource("3_05r42"), ExtResource("4_6hao6"), ExtResource("5_rdle0"), ExtResource("6_8bmrf"), ExtResource("7_urgmb")])
