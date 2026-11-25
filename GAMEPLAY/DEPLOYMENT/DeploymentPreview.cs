@@ -10,7 +10,10 @@ internal sealed class DeploymentPreview
     private readonly MultiMesh mesh;
     private readonly float halfHeight;
     internal TerrainHeightField Terrain { get; set; }
-    private const float PopTime = 0.19f, SettleTime = 0.13f;
+    private const float PeakTime = 0.11f;
+    private const float DipTime = 0.20f;
+    private const float ReboundTime = 0.27f;
+    private const float SettleTime = 0.36f;
     private float animationTime;
     private readonly Dictionary<Vector2I, float> popping = new();
     private readonly List<Vector2I> settled = new();
@@ -73,7 +76,7 @@ internal sealed class DeploymentPreview
         foreach (var (cell, startedAt) in popping)
         {
             WriteTransform(slots[cell]);
-            if (animationTime - startedAt >= PopTime + SettleTime) settled.Add(cell);
+            if (animationTime - startedAt >= SettleTime) settled.Add(cell);
         }
         foreach (var cell in settled) popping.Remove(cell);
     }
@@ -87,20 +90,25 @@ internal sealed class DeploymentPreview
     private void WriteTransform(int slot)
     {
         SoldierPlacement placement = placements[slot];
-        float scale = 1f;
-        if (popping.TryGetValue(new Vector2I(placement.X, placement.Z), out float startedAt))
-        {
-            float age = animationTime - startedAt;
-            if (age < PopTime)
-            {
-                float remaining = 1f - age / PopTime;
-                scale = Mathf.Lerp(0.10f, 1.10f, 1f - remaining * remaining * remaining);
-            }
-            else
-                scale = Mathf.Lerp(1.10f, 1f, Mathf.SmoothStep(0f, 1f, (age - PopTime) / SettleTime));
-        }
+        float scale = popping.TryGetValue(new Vector2I(placement.X, placement.Z), out float startedAt)
+            ? PopScale(animationTime - startedAt) : 1f;
         Vector3 position = placement.Position();
         position.Y += halfHeight * scale + (Terrain?.At(position.X, position.Z) ?? 0f);
         mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), position));
+    }
+
+    private static float PopScale(float age)
+    {
+        if (age < PeakTime)
+        {
+            float remaining = 1f - age / PeakTime;
+            return Mathf.Lerp(0.10f, 1.22f, 1f - remaining * remaining * remaining);
+        }
+        if (age < DipTime) return Ease(1.22f, 0.93f, PeakTime, DipTime);
+        if (age < ReboundTime) return Ease(0.93f, 1.04f, DipTime, ReboundTime);
+        return Ease(1.04f, 1f, ReboundTime, SettleTime);
+
+        float Ease(float from, float to, float start, float end) =>
+            Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f, (age - start) / (end - start)));
     }
 }
