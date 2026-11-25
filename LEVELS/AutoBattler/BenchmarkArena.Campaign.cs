@@ -91,6 +91,7 @@ public partial class BenchmarkArena
             () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
             spread => painter.SoldierBrushSpread = spread);
         AddChild(campaignHud);
+        painter.Orders.AddControls(campaignHud.DeploymentOrderControls);
     }
 
     private static Vector2I DeploymentCell(Vector3 position) => new(

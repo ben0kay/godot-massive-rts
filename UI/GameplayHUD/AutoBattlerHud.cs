@@ -10,6 +10,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     private readonly VBoxContainer body = new();
     private readonly VBoxContainer deployment = new();
     private Control deploymentBar;
+    internal VBoxContainer DeploymentOrderControls => deployment;
     private readonly Label status = MenuLayout.Label("", muted: true);
     private readonly Label strength = MenuLayout.Label("");
     private readonly Label arrival = MenuLayout.Label("", muted: true);

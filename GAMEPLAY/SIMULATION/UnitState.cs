@@ -49,6 +49,7 @@ public sealed class UnitState
         return retargetAfter ??= new int[Target.Length];
     }
     public int Count;
+    internal OpeningOrders OpeningOrders { get; set; }
     internal ForestCover Forest { get; set; }
     internal bool CircleUsesFacing { get; init; }
 

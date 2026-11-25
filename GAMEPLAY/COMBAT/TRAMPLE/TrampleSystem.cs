@@ -110,6 +110,12 @@ public sealed class TrampleSystem
             charge.BypassThisTick = false;
             if (units.Health[id] <= 0f) continue;
             charge.Recovery = Mathf.Max(0f, charge.Recovery - dt);
+            if (units.OpeningOrders?.Active(id) == true && units.OpeningOrders.Holding(id))
+            {
+                if (charge.Active) End(units, id, ref charge);
+                charge.RunUp = 0f;
+                continue;
+            }
             if (charge.Active)
             {
                 if (units.Alive == units.FactionAlive[units.Faction[id]]) End(units, id, ref charge);

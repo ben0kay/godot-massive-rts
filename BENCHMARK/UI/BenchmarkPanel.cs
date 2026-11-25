@@ -91,6 +91,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly OptionButton SoldierBrushSizeChoice = new();
 	public event Action<byte> FactionSelected;
 	private VBoxContainer paintControls, paintSection;
+	internal VBoxContainer DeploymentOrderControls => paintControls;
 	private Button paintHeader;
 	public bool EditingDeployment
 	{

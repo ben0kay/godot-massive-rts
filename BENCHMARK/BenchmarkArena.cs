@@ -187,6 +187,7 @@ public partial class BenchmarkArena : Node3D
         };
         AddChild(painter);
         painter.Initialize(catalog, soldierMeshes, buildings);
+        if (autoBattlerPlaytestMap != null && campaignRoster == null) painter.Orders.AddControls(panel.DeploymentOrderControls);
         painter.SetPlacementGridVisible(panel.ShowPlacementGrid);
         panel.PlacementGridChanged += painter.SetPlacementGridVisible;
         painter.Changed += UpdateDeploymentStatus;
@@ -538,10 +539,11 @@ public partial class BenchmarkArena : Node3D
             return;
         }
         var orders = settings.Orders;
+        var openingOverlay = autoBattlerPlaytestMap != null && ReferenceEquals(layout, painter.Layout) ? painter.Orders : null;
         var snapshot = new SoldierPlacement[placements.Count];
         int attackerCount = 0;
         foreach (SoldierPlacement placement in placements)
-            if (orders[placement.Faction] == GuardOrder.AutoAttack)
+            if (orders[placement.Faction] == GuardOrder.AutoAttack || openingOverlay?.For(placement) != null)
                 snapshot[attackerCount++] = placement;
 
         Clear();
@@ -561,7 +563,7 @@ public partial class BenchmarkArena : Node3D
                 if (order == GuardOrder.AutoAttack) continue;
                 int start = next;
                 foreach (SoldierPlacement placement in placements)
-                    if (placement.Faction == faction) snapshot[next++] = placement;
+                    if (placement.Faction == faction && openingOverlay?.For(placement) == null) snapshot[next++] = placement;
                 if (start < next)
                     guards[faction] = new GuardGroup(start, next, snapshot, settings.GuardRadius, order);
             }
@@ -583,6 +585,8 @@ public partial class BenchmarkArena : Node3D
         }
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
+        if (openingOverlay != null)
+            units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, openingOverlay, autoBattlerPlaytestMap.MapSize * 0.5f);
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = autoBattlerForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
@@ -819,7 +823,7 @@ public partial class BenchmarkArena : Node3D
             int id = autoAttackIds == null ? slot : autoAttackIds[slot];
             if (units.Health[id] <= 0f) continue;
             ref readonly var type = ref catalog[units.Type[id]];
-            if (!type.TargetsStructures) continue;
+            if (!type.TargetsStructures || units.OpeningOrders?.Active(id) == true) continue;
 
             // Reuse the shared soldier acquisition result and its normal search budget.
             int soldier = units.Target[id];
@@ -848,6 +852,7 @@ public partial class BenchmarkArena : Node3D
 
     private void Step(float dt)
     {
+        if (units.OpeningOrders?.Advance(units, dt) == false) units.OpeningOrders = null;
         deathFeedback.BeginTick();
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)

@@ -29,13 +29,21 @@ public static class MovementSystem
                 melee?.Reset(i);
                 continue;
             }
+            var opening = units.OpeningOrders;
+            bool hasOrder = opening?.Active(i) == true;
             int target = units.Target[i];
             var structure = structureCombat?.Target(i);
             bool hasStructure = structure?.Destroyed == false;
             bool hasTarget = !hasStructure && target >= 0 && units.Health[target] > 0;
+            if (hasOrder && opening.Holding(i))
+            {
+                units.MoveSpeed[i] = 0f;
+                continue;
+            }
+            bool followRoute = hasOrder && !hasTarget;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
                 units.Alive > units.FactionAlive[units.Faction[i]];
-            if (!hasTarget && !movementMode && !followingLastPosition && !hasStructure)
+            if (!hasTarget && !movementMode && !followingLastPosition && !hasStructure && !followRoute)
             {
                 units.MoveSpeed[i] = 0f;
                 continue;
@@ -45,16 +53,16 @@ public static class MovementSystem
             bool steerMelee = melee != null && !movementMode && !type.Ranged && hasTarget && !type.Outline.IsDreadnaught;
             if (!hasTarget) melee?.Reset(i);
             // Hold the firing line until there is a living target worth moving toward.
-            if (rangedCombat && !hasTarget && !hasStructure && units.MoveSpeed[i] == 0f) continue;
+            if (rangedCombat && !hasTarget && !hasStructure && !followRoute && units.MoveSpeed[i] == 0f) continue;
             Vector3 destination = movementMode ? units.Goal[i] : hasStructure
-                ? structureCombat.ApproachGoal(i) : units.Position[target];
+                ? structureCombat.ApproachGoal(i) : followRoute ? opening.Goal(i, type.Footprint) : units.Position[target];
             if (hasStructure && structureCombat.CanHit(i, type, structure, StructureCombat.Sight(type, units, sight)))
             {
                 units.MoveSpeed[i] = 0f;
                 continue;
             }
             Vector3 offset = destination - units.Position[i];
-            float stop = hasStructure ? 0f : 0.2f;
+            float stop = hasStructure ? 0f : followRoute ? Mathf.Max(0.2f, type.Footprint * 0.7f) : 0.2f;
             bool hasClearShot = false;
             if (hasTarget)
             {
@@ -120,6 +128,7 @@ public static class MovementSystem
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
             if (distance <= stop)
             {
+                if (followRoute && !detouring) opening.Arrive(i);
                 if (steerMelee) melee.ResetSidestep(i);
                 // Movement-only mode continuously marches back and forth along separate lanes.
                 if (movementMode && !detouring) units.Goal[i].X = -units.Goal[i].X;

@@ -11,6 +11,12 @@ public partial class DeploymentPainter : Node3D
     private string paintError;
     private TerrainHeightField previewTerrain;
 
+    internal Vector3 OnPreviewTerrain(Vector3 point)
+    {
+        point.Y = previewTerrain?.At(point.X, point.Z) ?? 0f;
+        return point;
+    }
+
     internal void SetPreviewTerrain(TerrainHeightField surface)
     {
         previewTerrain = surface;
@@ -29,6 +35,15 @@ public partial class DeploymentPainter : Node3D
     // Number of placement cells per side; defaults to the original 3×3 brush.
     public float SoldierBrushSpread { get; set; } = 1f;
     private bool fillSoldierRectangle;
+    private DeploymentOrderOverlay orderOverlay;
+    internal DeploymentOrderOverlay Orders => orderOverlay ??= CreateOrderOverlay();
+
+    private DeploymentOrderOverlay CreateOrderOverlay()
+    {
+        var overlay = new DeploymentOrderOverlay { Painter = this };
+        AddChild(overlay);
+        return overlay;
+    }
 
     public void SetSoldierPaintType(long index)
     {
@@ -118,6 +133,7 @@ public partial class DeploymentPainter : Node3D
     public override void _UnhandledInput(InputEvent input)
     {
         if (!Visible) return;
+        if (orderOverlay?.Handle(input) == true) { GetViewport().SetInputAsHandled(); return; }
         if (Camera is IsometricCamera { FreeRoam: true } &&
             input is InputEventMouseButton { ButtonIndex: MouseButton.Right }) return;
         if (paintTool == 2)
@@ -206,6 +222,7 @@ public partial class DeploymentPainter : Node3D
     public override void _Process(double delta)
     {
         if (dimensions == null || !Visible) return;
+        if (orderOverlay?.Selecting == true) { dimensions.Clear(); return; }
         foreach (var preview in previews) preview.Advance((float)delta);
         ghostRefresh -= delta;
         if (ghostRefresh > 0) return;
@@ -296,7 +313,7 @@ public partial class DeploymentPainter : Node3D
         return true;
     }
 
-    private bool TryGround(Vector2 screen, out Vector3 ground)
+    internal bool TryGround(Vector2 screen, out Vector3 ground)
     {
         ground = default;
         Vector3 origin = Camera.ProjectRayOrigin(screen);
@@ -444,6 +461,7 @@ public partial class DeploymentPainter : Node3D
     {
         CancelDrag();
         Layout = new DeploymentLayout(catalog, buildings);
+        orderOverlay?.Reset();
         ((ShaderMaterial)placementGrid.MaterialOverride).SetShaderParameter("cell_size", Layout.GridSize);
         RebuildWalls();
         RefreshDefenses();
@@ -494,6 +512,7 @@ public partial class DeploymentPainter : Node3D
     {
         CancelDrag();
         Layout = loaded;
+        orderOverlay?.Reset();
         ((ShaderMaterial)placementGrid.MaterialOverride).SetShaderParameter("cell_size", Layout.GridSize);
         RebuildWalls();
         RefreshDefenses();

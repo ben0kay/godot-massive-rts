@@ -29,7 +29,10 @@ public partial class RuntimeEntityEditor : Control
     private SubViewportContainer testScreen;
     private SubViewport testViewport;
     private BenchmarkArena arena;
-    private MeshInstance3D model;
+    private MeshInstance3D model, detectionRing;
+    private Label detectionLabel;
+    private bool showDetection;
+    private float detectionRadius;
     private Camera3D previewCamera;
     private Label status;
     private Draft current;
@@ -80,12 +83,20 @@ public partial class RuntimeEntityEditor : Control
         var (preview, world) = CreateViewport();
         previewPanel.AddChild(preview);
         previewPanel.AddChild(MenuLayout.Label("Drag to rotate · Scroll to zoom", muted: true));
+        var detection = new CheckButton { Text = "Local detection radius" };
+        previewPanel.AddChild(detection);
+        detectionLabel = MenuLayout.Label("", muted: true);
+        previewPanel.AddChild(detectionLabel);
+        detection.Toggled += enabled => { showDetection = enabled; RefreshDetection(); };
         preview.GuiInput += OrbitPreview;
         previewCamera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal };
         world.AddChild(previewCamera);
         previewCamera.MakeCurrent();
         model = new MeshInstance3D();
         world.AddChild(model);
+        detectionRing = new MeshInstance3D { Visible = false, Position = Vector3.Up * 0.025f,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        world.AddChild(detectionRing);
         var scroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         columns.AddChild(scroll);
@@ -163,6 +174,7 @@ public partial class RuntimeEntityEditor : Control
             if (field.Name is nameof(UnitDefinition.Width) or nameof(UnitDefinition.Height) or nameof(UnitDefinition.Shape) or
                 nameof(UnitDefinition.SizeMultiplier) or nameof(UnitDefinition.HullLength) or nameof(UnitDefinition.FootprintRadius))
                 RefreshPreview();
+            else if (showDetection) RefreshDetection();
             UpdateStatus();
         }
         object currentValue = field.GetValue(draft.Unit);
@@ -234,6 +246,53 @@ public partial class RuntimeEntityEditor : Control
     {
         model.Mesh = FacetedSoldierMeshes.CreatePlacementPreview(current.Unit, ArmyRenderer.FactionColor(Factions.Blue));
         modelExtent = Mathf.Max(0.1f, model.Mesh.GetAabb().Size.Length());
+        RefreshDetection();
+    }
+
+    private void RefreshDetection()
+    {
+        detectionRadius = 0f;
+        detectionRing.Visible = false;
+        detectionLabel.Text = "";
+        if (showDetection && current != null)
+        {
+            try
+            {
+                var compiled = DraftCatalog().Compile(1f);
+                if (compiled.TryResolve(current.Unit.Id, out byte id))
+                {
+                    ref readonly var stats = ref compiled[id];
+                    float cellSize = new BenchmarkConfig().CellSize;
+                    detectionRadius = !stats.TargetsUnits ? 0f : stats.Ranged ? stats.Reach :
+                        Mathf.Max(cellSize * 2f, stats.MeleeDetectionReach + compiled.MaxFootprint);
+                    detectionLabel.Text = $"Open ground · {detectionRadius:0.##} world units";
+                    if (detectionRadius > 0f)
+                    {
+                        using var lines = new SurfaceTool();
+                        lines.Begin(Mesh.PrimitiveType.Lines);
+                        lines.SetMaterial(new StandardMaterial3D { AlbedoColor = new Color(0.34f, 0.82f, 1f),
+                            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded });
+                        for (int i = 0; i < 64; i++)
+                        {
+                            Point(i);
+                            Point(i + 1);
+                        }
+                        detectionRing.Mesh = lines.Commit();
+                        detectionRing.Visible = true;
+
+                        void Point(int i)
+                        {
+                            float angle = Mathf.Tau * i / 64f;
+                            lines.AddVertex(new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * detectionRadius);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                detectionLabel.Text = "Detection preview requires a valid unit draft.";
+            }
+        }
         FramePreview();
     }
 
@@ -254,10 +313,12 @@ public partial class RuntimeEntityEditor : Control
 
     private void FramePreview()
     {
-        previewCamera.Size = modelExtent * 1.4f * zoom;
+        float extent = Mathf.Max(modelExtent, detectionRadius * 1.6f);
+        previewCamera.Size = extent * 1.4f * zoom;
         previewCamera.Position = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), -Mathf.Sin(pitch),
-            Mathf.Cos(yaw) * Mathf.Cos(pitch)) * (modelExtent * 3f);
+            Mathf.Cos(yaw) * Mathf.Cos(pitch)) * (extent * 3f);
         previewCamera.LookAt(Vector3.Zero);
+        previewCamera.Far = Mathf.Max(100f, extent * 6f);
     }
 
     private UnitCatalog DraftCatalog()

@@ -620,3 +620,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Replaced Strong with a live enemy separation toggle using the same pair scan. Allied contacts keep Normal separation and cavalry stops at surviving enemies after any resistance-based shove while the toggle is on. Godot .NET validation pending.
 
 - 2026-11-25 — Removed the stray enemy correction from the allied yield helper to restore compilation.
+
+- 2026-11-25 — Added AutoBattler deployment selection, editable attack-move routes, timed holds, and a local detection preview in the runtime Entity Editor. Godot .NET validation pending.
