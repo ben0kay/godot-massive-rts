@@ -28,6 +28,8 @@ internal static class BattlefieldLighting
             var outline = catalog[i].Outline;
             var material = new ShaderMaterial { Shader = shader };
             material.SetShaderParameter("show_fracture", crackMask != null);
+            material.SetShaderParameter("use_two_tone_armor",
+                FacetedSoldierMeshes.UsesArtilleryArmor(catalog[i].Id, outline, unitVisuals));
             if (crackMask != null) material.SetShaderParameter("crack_mask", crackMask);
             material.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
             material.SetShaderParameter("darkness", Mathf.Clamp(unitVisuals.CrackDarkness, 0f, 1f));

@@ -1,6 +1,7 @@
-#ifdef BATTLEFIELD_LIT
+#include "res://VISUALS/RENDERING/UnitArmor.gdshaderinc"
 uniform bool show_fracture = true;
-#endif
+uniform bool use_two_tone_armor = false;
+uniform vec4 armor_tint : source_color = vec4(1.0);
 uniform sampler2D crack_mask : filter_linear_mipmap, repeat_disable;
 uniform vec2 half_extent = vec2(0.5);
 uniform float darkness : hint_range(0.0, 1.0) = 0.84;
@@ -19,11 +20,9 @@ global uniform float battlefield_ambient_fill;
 #endif
 
 void fragment() {
-    ALBEDO = COLOR.rgb;
-#ifdef BATTLEFIELD_LIT
-    if (show_fracture)
-#endif
-    if (fracture >= 4.0 && fracture < 16.0 && upper_facet > 0.0) {
+    vec3 tint = COLOR.rgb * armor_tint.rgb;
+    ALBEDO = use_two_tone_armor ? unit_armor_albedo(tint, UV) : COLOR.rgb;
+    if (show_fracture && fracture >= 4.0 && fracture < 16.0 && upper_facet > 0.0) {
         float stage = floor(fracture / 4.0);
         float variant = mod(fracture, 4.0);
         vec2 p = surface_point;
@@ -39,5 +38,10 @@ void fragment() {
     }
 #ifdef BATTLEFIELD_LIT
     EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
+#else
+    EMISSION = vec3(0.0);
 #endif
+    if (use_two_tone_armor) {
+        EMISSION += unit_armor_emission(tint, UV);
+    }
 }

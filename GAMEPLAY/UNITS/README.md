@@ -111,3 +111,7 @@ Paint it in the Benchmark or Level Editor. In Fortress Defense the Fabricator pr
 ## Obliterator
 
 The Obliterator is a Tier 2 melee assault unit with a tapered hull and a raised center ridge. Its Size Multiplier is **0.9×**, reducing its mesh dimensions and collision footprint by 10%. It uses Elite Infantry's 285 HP and 22 base damage with a higher base speed of 3.5. Its single-target opener deals 33 raw damage per new enemy, then 22 on repeat hits. It is available in the unit catalogue, AutoBattler recruitment for 40 credits, and the Fabricator in batches of four for 220 Carbon.
+
+## Light Artillery visual experiment
+
+With `UseEnhancedMeshes` enabled in `UnitVisualConfig.tres`, Light Artillery (`chevron_artillery`) uses a low layered charcoal chevron hull, faction shoulder plates, a reinforced elevated barrel and restrained emissive strips. Disabling the existing option restores the plain model. The existing instance color/alpha buffer remains unchanged: enhanced mesh UVs encode steel/paint/trim and baked brightness, while instance RGB/alpha retain faction color, hit flash and fracture state. Lit and unlit battle rendering, 3D previews and reinforcement entry clipping share the mask logic. No new batches or per-unit nodes. Gameplay dimensions, muzzle, elevation, recoil, stats and all other unit meshes are unchanged. Owner visual and performance validation pending.
