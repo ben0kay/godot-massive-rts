@@ -10,6 +10,7 @@ internal sealed class DeploymentPreview
     private readonly MultiMesh mesh;
     private readonly float halfHeight;
     internal TerrainHeightField Terrain { get; set; }
+    private const float PopSpeed = 0.75f;
     private const float PeakTime = 0.11f;
     private const float DipTime = 0.20f;
     private const float ReboundTime = 0.27f;
@@ -27,13 +28,13 @@ internal sealed class DeploymentPreview
         parent.AddChild(new MultiMeshInstance3D { Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
 
-    public void Add(SoldierPlacement placement, bool animate = false)
+    public void Add(SoldierPlacement placement, bool animate = false, float delay = 0f)
     {
         int slot = placements.Count;
         placements.Add(placement);
         var cell = new Vector2I(placement.X, placement.Z);
         slots.Add(cell, slot);
-        if (animate) popping.Add(cell, animationTime);
+        if (animate) popping.Add(cell, animationTime + delay);
         if (placements.Count > mesh.InstanceCount)
         {
             mesh.InstanceCount = Math.Max(64, mesh.InstanceCount * 2);
@@ -75,8 +76,10 @@ internal sealed class DeploymentPreview
         settled.Clear();
         foreach (var (cell, startedAt) in popping)
         {
+            float age = (animationTime - startedAt) * PopSpeed;
+            if (age < 0f) continue;
             WriteTransform(slots[cell]);
-            if (animationTime - startedAt >= SettleTime) settled.Add(cell);
+            if (age >= SettleTime) settled.Add(cell);
         }
         foreach (var cell in settled) popping.Remove(cell);
     }
@@ -91,7 +94,7 @@ internal sealed class DeploymentPreview
     {
         SoldierPlacement placement = placements[slot];
         float scale = popping.TryGetValue(new Vector2I(placement.X, placement.Z), out float startedAt)
-            ? PopScale(animationTime - startedAt) : 1f;
+            ? PopScale((animationTime - startedAt) * PopSpeed) : 1f;
         Vector3 position = placement.Position();
         position.Y += halfHeight * scale + (Terrain?.At(position.X, position.Z) ?? 0f);
         mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), position));
@@ -99,6 +102,7 @@ internal sealed class DeploymentPreview
 
     private static float PopScale(float age)
     {
+        if (age < 0f) return 0f;
         if (age < PeakTime)
         {
             float remaining = 1f - age / PeakTime;

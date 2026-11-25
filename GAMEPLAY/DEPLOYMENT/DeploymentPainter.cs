@@ -338,7 +338,7 @@ public partial class DeploymentPainter : Node3D
                 bool erase = dragButton == MouseButton.Right;
                 if (soldiers)
                 {
-                    EditSoldierRectangle(area, erase);
+                    EditSoldierRectangle(area, dragStart, erase);
                     return;
                 }
                 if (Layout.TryEditObstacles(area, erase, out string message))
@@ -353,7 +353,7 @@ public partial class DeploymentPainter : Node3D
             ShowDragRectangle(DragArea(hover), soldiers);
     }
 
-    private void EditSoldierRectangle(ObstacleRectangle area, bool erase)
+    private void EditSoldierRectangle(ObstacleRectangle area, Vector2I origin, bool erase)
     {
         paintError = null;
         bool changed = false;
@@ -374,8 +374,17 @@ public partial class DeploymentPainter : Node3D
         {
             try
             {
+                const float cellsPerSecond = 22f;
+                const float maxStagger = 0.8f;
+                Vector2 start = (Vector2)origin;
+                Vector2 opposite = new(origin.X == area.X ? area.X + area.Width - 1 : area.X,
+                    origin.Y == area.Z ? area.Z + area.Depth - 1 : area.Z);
+                float secondsPerCell = 1f / Mathf.Max(cellsPerSecond, start.DistanceTo(opposite) / maxStagger);
                 foreach (var slot in DeploymentLayout.RectangleSoldierSlots(area, SoldierBrushSpread, catalog[BrushType].Footprint))
-                    changed |= PaintSoldier(slot);
+                {
+                    float distance = start.DistanceTo((Vector2)slot / DeploymentLayout.SoldierSubdivisions);
+                    changed |= PaintSoldier(slot, distance * secondsPerCell);
+                }
             }
             catch (System.InvalidOperationException error) { EditRejected?.Invoke(error.Message); }
         }
@@ -383,7 +392,7 @@ public partial class DeploymentPainter : Node3D
         if (paintError != null) EditRejected?.Invoke(paintError);
     }
 
-    private bool PaintSoldier(Vector2I point)
+    private bool PaintSoldier(Vector2I point, float delay = 0f)
     {
         bool existed = Layout.TryGet(point, out SoldierPlacement previous);
         var placement = new SoldierPlacement(point.X, point.Y, BrushFaction, BrushType, Layout.GridSize);
@@ -400,7 +409,7 @@ public partial class DeploymentPainter : Node3D
             return false;
         }
         if (existed) previews[previous.Type].Remove(point);
-        previews[placement.Type].Add(placement, animate: true);
+        previews[placement.Type].Add(placement, animate: true, delay: delay);
         return true;
     }
 
