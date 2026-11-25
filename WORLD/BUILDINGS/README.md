@@ -1,10 +1,14 @@
 # BUILDINGS — Static Defenses
 
+For future tower and structure visual work, read [authoring.md](authoring.md) alongside the [Tower Implementation Standard](TOWER_IMPLEMENTATION_STANDARD.md).
+
 ## Railgun Tower
 
 Place **Railgun Tower** through the Benchmark defense painter, Level Editor, or Fortress Defense build menu. It retains the original `laser_tower_001` ID and `DEFINITIONS/LaserTower001.tres` resource path so existing maps and deployment saves load it automatically.
 
 The default beam lasts **3 seconds**, deals **50 damage per second** to each hostile unit it touches, and sweeps at up to **45°/s** while tracking targets. It pierces enemy units and stops at cover or the terrain. The tower needs **4 seconds** to recover after a beam. Its barrel kicks back at ignition and recovers while firing. The beam follows the barrel's live position and angle.
+
+The Railgun now uses a compact two-tone charcoal chassis, faction-colored armor cheeks and emissive power rails, with one split-rail accelerator assembly. The meshes live in `RENDERING/RailgunTowerMeshes.cs` and reuse the Broadside mask shader and shared `TowerArmorGeometry` helpers. The existing yaw, pitch, recoil, 3.8-unit barrel length and beam/muzzle alignment are preserved. Visual validation pending.
 
 Use **Entity Editor → Defenses** to tune minimum and maximum targeting range, damage per second, turn speed and beam duration. The recovery rate is stored as `ShotsPerSecond`, and its inverse is the delay after the beam ends.
 

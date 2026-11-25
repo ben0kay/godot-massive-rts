@@ -6,6 +6,8 @@
 
 ## 0. Read first (mandatory for AI agents)
 
+For visual work, also read [authoring.md](authoring.md) for the shared two-tone armor language and mesh/material contracts.
+
 1. Read root `README.md`, root `CodePreferences.md`, and `endgoal.md`. Read applicable `AGENTS.md`, if any.
 2. Read `WORLD/BUILDINGS/README.md` and the **live** files below. Plans and this document can become stale.
 3. Identify whether the request concerns **visuals**, **weapon behaviour**, **support-field effects**, **placement**, or **stats**. Change only required owners.

@@ -20,10 +20,11 @@ public partial class DefenseRenderer : Node3D
     {
         Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/TowerArmor.gdshader")
     };
-    private static readonly Mesh BaseMesh = BuildBaseMesh();
-    private static readonly Mesh HeadMesh = BuildHeadMesh();
-    private static readonly Mesh BarrelMesh = BuildBarrelMesh();
-    private static readonly ShaderMaterial RocketMaterial = new()
+    private static readonly Mesh BaseMesh = RailgunTowerMeshes.CreateBase();
+    private static readonly Mesh HeadMesh = RailgunTowerMeshes.CreateHead();
+    private static readonly Mesh BarrelMesh = RailgunTowerMeshes.CreateBarrel(BarrelLength);
+    // Shared neutral metal / faction paint / emissive trim for authored two-tone towers.
+    private static readonly ShaderMaterial TwoToneTowerMaterial = new()
     {
         Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader")
     };
@@ -70,95 +71,6 @@ public partial class DefenseRenderer : Node3D
 
     public static Vector3 RocketMuzzle(Vector3 pivot, float yaw, int side, float recoil = 0f) =>
         RocketBarrelTransform(pivot, new Basis(Vector3.Up, yaw), side, recoil) * (Vector3.Forward * 4.7f);
-
-    // =========================================================
-    // Shared beveled chassis: darker outer plinth, recessed side faces, bright inset
-    // top platform. Geometry is normalized and scaled to the authored footprint.
-    private static Mesh BuildBaseMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, -0.41f, 0f),
-            new Vector3(1f, 0.18f, 1f), new Color(0.52f, 0.52f, 0.52f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.04f, 0f),
-            new Vector3(0.94f, 0.74f, 0.94f), new Color(0.80f, 0.80f, 0.80f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.43f, 0f),
-            new Vector3(0.82f, 0.16f, 0.82f), new Color(0.98f, 0.98f, 0.98f));
-        return surface.Commit();
-    }
-
-    // Wider and taller beveled triangular head with a dark mounting collar.
-    // Side-face tones follow the fake northwest light used by soldier meshes.
-    private static Mesh BuildHeadMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, -0.30f, 0f),
-            new Vector3(1.75f, 0.16f, 1.75f), new Color(0.55f, 0.55f, 0.55f));
-
-        Vector2[] outline = { new(0f, -1.22f), new(1.10f, 0.70f), new(-1.10f, 0.70f) };
-        const float bottomY = -0.26f, shoulderY = 0.27f, topY = 0.44f;
-        var bottom = new Vector3[3];
-        var shoulder = new Vector3[3];
-        var top = new Vector3[3];
-        for (int i = 0; i < 3; i++)
-        {
-            Vector2 corner = outline[i];
-            bottom[i] = new Vector3(corner.X, bottomY, corner.Y);
-            shoulder[i] = new Vector3(corner.X, shoulderY, corner.Y);
-            top[i] = new Vector3(corner.X * 0.82f, topY, corner.Y * 0.82f);
-        }
-        for (int i = 0; i < 3; i++)
-        {
-            int next = (i + 1) % 3;
-            Vector3 edge = shoulder[next] - shoulder[i];
-            Vector3 outward = new Vector3(edge.Z, 0f, -edge.X).Normalized();
-            float side = Mathf.Clamp(0.73f - 0.10f * outward.X - 0.12f * outward.Z, 0.58f, 0.86f);
-            float bevel = Mathf.Lerp(side, 1f, 0.58f);
-            // Match the clockwise front-face convention from FacetedSoldierMeshes.
-            AddFacet(surface, Vector3.Up * topY, top[next], top[i], Colors.White, Vector3.Up);
-            AddFacetQuad(surface, bottom[i], shoulder[i], shoulder[next], bottom[next],
-                new Color(side, side, side), outward);
-            Vector3 slopeNormal = (outward * (topY - shoulderY) + Vector3.Up * 0.18f).Normalized();
-            AddFacetQuad(surface, shoulder[i], top[i], top[next], shoulder[next],
-                new Color(bevel, bevel, bevel), slopeNormal);
-        }
-        return surface.Commit();
-    }
-
-    // Faceted barrel and muzzle sleeve are baked into one shared mesh; the tip
-    // remains at the same world position used by ShowBeam() and EmitFlash().
-    private static Mesh BuildBarrelMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, Vector3.Zero,
-            new Vector3(0.28f, 0.24f, BarrelLength), new Color(0.91f, 0.91f, 0.91f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-            new Vector3(0f, 0f, -BarrelCenterForward + 0.16f),
-            new Vector3(0.38f, 0.29f, 0.32f), Colors.White);
-        return surface.Commit();
-    }
-
-    private static void AddFacetQuad(SurfaceTool surface, Vector3 a, Vector3 b,
-        Vector3 c, Vector3 d, Color tint, Vector3 normal)
-    {
-        AddFacet(surface, a, b, c, tint, normal);
-        AddFacet(surface, a, c, d, tint, normal);
-    }
-
-    private static void AddFacet(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c,
-        Color tint, Vector3 normal)
-    {
-        surface.SetNormal(normal);
-        surface.SetColor(tint);
-        surface.AddVertex(a);
-        surface.AddVertex(c);
-        surface.AddVertex(b);
-    }
 
     // A small white-core/cyan-tip starburst inspired by the short flash style in Tower Defense.
     // Geometry is shared, so firing requires no nodes or mesh construction.
@@ -228,13 +140,13 @@ public partial class DefenseRenderer : Node3D
 
     private void InitializeBatches()
     {
-        bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings);
-        heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings);
-        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings);
-        rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
-        rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
-        rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
-        rightRocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
+        bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        rightRocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
@@ -264,20 +176,11 @@ public partial class DefenseRenderer : Node3D
         if (!rocket) rightRocketBarrels.SetInstanceTransform(index, hidden);
         activeBase.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
             new Vector3(pivot.X, ground + height * 0.5f, pivot.Z)));
-        if (rocket)
-        {
-            // Keep the baked material mask intact; the faction tint travels separately.
-            SetRocketTint(rocketBases, index, color);
-            SetRocketTint(rocketHeads, index, color);
-            SetRocketTint(rocketBarrels, index, color);
-            SetRocketTint(rightRocketBarrels, index, color);
-        }
-        else
-        {
-            activeBase.SetInstanceColor(index, color.Darkened(0.08f));
-            activeHead.SetInstanceColor(index, color);
-            activeBarrels.SetInstanceColor(index, color.Lightened(0.22f));
-        }
+        // Keep the baked material mask intact; the faction tint travels separately.
+        SetArmorTint(activeBase, index, color);
+        SetArmorTint(activeHead, index, color);
+        SetArmorTint(activeBarrels, index, color);
+        if (rocket) SetArmorTint(rightRocketBarrels, index, color);
         Aim(index, pivot, 0f);
         int count = Mathf.Max(bases.VisibleInstanceCount, index + 1);
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
@@ -287,7 +190,7 @@ public partial class DefenseRenderer : Node3D
 
     // =========================================================
     // Set once on placement/reuse, not during aiming or recoil.
-    private static void SetRocketTint(MultiMesh batch, int index, Color faction)
+    private static void SetArmorTint(MultiMesh batch, int index, Color faction)
     {
         batch.SetInstanceColor(index, Colors.White);
         batch.SetInstanceCustomData(index, faction);

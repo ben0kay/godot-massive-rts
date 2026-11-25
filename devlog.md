@@ -556,3 +556,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Tuned pine crowns for greener sun-facing facets while restoring the previous shade fill. Godot .NET visual validation pending.
 
 - 2026-11-24 — Shaped fake scenery shadows using a shared pine silhouette and terrain-following projected boulder outlines. Godot .NET visual validation pending.
+
+- 2026-11-24 — Railgun visual pass: added a two-tone compact armored chassis, vented rotating carriage and emissive split-rail accelerator using the existing batches and muzzle/recoil transforms. Shared Broadside geometry helpers/material and added WORLD/BUILDINGS/authoring.md; Godot visual validation pending.
