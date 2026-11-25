@@ -36,6 +36,7 @@ Use the shared palette from `GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.
 | `WORLD/BUILDINGS/RENDERING/RailgunTowerMeshes.cs` | Tapered pedestal, compact rotating capacitor carriage and one recoiling/pitching coil accelerator |
 | `WORLD/BUILDINGS/RENDERING/TowerArmorGeometry.cs` | Shared `Steel`, `Paint`, `Trim`, `Block`, `Plate` helpers |
 | `WORLD/BUILDINGS/RENDERING/ShieldGeneratorMeshes.cs` | Static radial reactor crown, armored base and emitter pylons |
+| `WORLD/BUILDINGS/RENDERING/PrefabShelterMeshes.cs` | Three compact habitation variants with square foundations, airlocks, windows and faction trim |
 | `WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader` | Shared two-tone mask shader (historical filename, used by all three towers) |
 | `WORLD/BUILDINGS/RENDERING/ShieldFieldDomeRenderer.cs` / `ShieldFieldDome.gdshader` | Optional faint stationary coverage indicator; separate compact batch |
 | `WORLD/BUILDINGS/RENDERING/TowerLighting.gdshaderinc` | Shared directional light and satin highlight |
@@ -145,3 +146,7 @@ Review source and (if practical) one build under root CodePreferences. Owner che
 ## 7. Future authoring workflow
 
 Read this guide and the relevant feature docs, inspect the live renderer and a reference asset, then scope the smallest requested change. Choose the color hierarchy by asset category, preserve the original role silhouette and gameplay contracts, and reuse the appropriate existing pipeline. For new mechanics, use the existing tower/unit implementation standards separately. Update relevant feature README and append one devlog entry for implemented changes. Report the exact commit, any assumptions and pending owner checks.
+
+### Habitation structures
+
+Prefab Shelters should read as basic sci-fi living quarters, not turrets or flat bunkers: square full-footprint foundations, tall clean walls, doors, window panels, small vents, distinct roof shapes and restrained faction accents. Visual variants share the same gameplay definition, footprint and lifecycle. Use a stable placement-cell hash rather than a frame-dependent random choice; cache one mesh and one lazy batch per design. Preserve custom-data crack state and avoid per-building nodes. Any footprint or collision change requires an explicit decision and existing-layout compatibility review.

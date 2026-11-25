@@ -6,7 +6,7 @@
 script = ExtResource("1")
 Id = "prefab_shelter"
 DisplayName = "Prefab Shelter"
-Width = 3
+Width = 2
 Depth = 2
 Health = 500.0
 ArmourClass = "Fortified"

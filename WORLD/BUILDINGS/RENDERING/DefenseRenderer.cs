@@ -57,9 +57,11 @@ public partial class DefenseRenderer : Node3D
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
     private int liveBeams, liveFlashes;
-    private MultiMesh shieldTowers, shelters;
-    private static Mesh shelterMesh;
+    private MultiMesh shieldTowers;
+    private readonly MultiMesh[] shelterBatches = new MultiMesh[PrefabShelterMeshes.VariantCount];
+    private static readonly Mesh[] ShelterMeshes = new Mesh[PrefabShelterMeshes.VariantCount];
     private readonly bool[] shelterSlots = new bool[DeploymentLayout.MaxBuildings];
+    private readonly int[] shelterVariants = new int[DeploymentLayout.MaxBuildings];
     private ShieldFieldDomeRenderer shieldDomes;
     private bool showShieldDomes = true;
     private static Mesh shieldTowerMesh;
@@ -129,10 +131,11 @@ public partial class DefenseRenderer : Node3D
     {
         InitializeBatches();
         shieldDomes?.Clear();
-        if (shelters != null)
+        foreach (var batch in shelterBatches)
         {
-            for (int i = 0; i < shelters.VisibleInstanceCount; i++) shelters.SetInstanceTransform(i, Hidden);
-            shelters.VisibleInstanceCount = 0;
+            if (batch == null) continue;
+            for (int i = 0; i < batch.VisibleInstanceCount; i++) batch.SetInstanceTransform(i, Hidden);
+            batch.VisibleInstanceCount = 0;
         }
         if (shieldTowers != null)
         {
@@ -182,7 +185,7 @@ public partial class DefenseRenderer : Node3D
             ShowShelter(index, area, faction, height, ground);
             return;
         }
-        shelters?.SetInstanceTransform(index, Hidden);
+        HideShelter(index);
         if (shield)
         {
             HideTower(index);
@@ -234,7 +237,7 @@ public partial class DefenseRenderer : Node3D
         int stage = fraction <= 0.25f ? 3 : fraction <= 0.50f ? 2 : fraction <= 0.75f ? 1 : 0;
         if (crackStages[index] == stage) return;
         crackStages[index] = stage;
-        MultiMesh batch = shelterSlots[index] ? shelters : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
+        MultiMesh batch = shelterSlots[index] ? shelterBatches[shelterVariants[index]] : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
         Color data = batch.GetInstanceCustomData(index);
         data.A = stage / 3f;
         batch.SetInstanceCustomData(index, data);
@@ -282,25 +285,35 @@ public partial class DefenseRenderer : Node3D
 
     private void ShowShelter(int index, ObstacleRectangle area, byte faction, float height, float ground)
     {
-        if (shelters == null)
+        int variant = PrefabShelterMeshes.Variant(area);
+        shelterVariants[index] = variant;
+        MultiMesh batch = shelterBatches[variant];
+        if (batch == null)
         {
-            shelterMesh ??= PrefabShelterMeshes.Create();
-            shelters = Batch(shelterMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
-            for (int i = 0; i < shelters.InstanceCount; i++) shelters.SetInstanceTransform(i, Hidden);
-            shelters.VisibleInstanceCount = 0;
+            ShelterMeshes[variant] ??= PrefabShelterMeshes.Create(variant);
+            batch = shelterBatches[variant] = Batch(ShelterMeshes[variant], DeploymentLayout.MaxBuildings,
+                TwoToneTowerMaterial, useCustomData: true);
+            for (int i = 0; i < batch.InstanceCount; i++) batch.SetInstanceTransform(i, Hidden);
+            batch.VisibleInstanceCount = 0;
         }
         var size = area.Max - area.Min;
         var center = (area.Min + area.Max) * 0.5f;
-        shelters.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
+        batch.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
             new Vector3(center.X, ground, center.Y)));
-        SetArmorTint(shelters, index, ArmyRenderer.FactionColor(faction));
-        shelters.VisibleInstanceCount = Mathf.Max(shelters.VisibleInstanceCount, index + 1);
+        SetArmorTint(batch, index, ArmyRenderer.FactionColor(faction));
+        batch.VisibleInstanceCount = Mathf.Max(batch.VisibleInstanceCount, index + 1);
+    }
+
+    private void HideShelter(int index)
+    {
+        // Only placement/reuse/destruction paths call this, not simulation ticks.
+        foreach (var batch in shelterBatches) batch?.SetInstanceTransform(index, Hidden);
     }
 
     internal void HideTower(int index)
     {
         var hidden = new Transform3D(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
-        shelters?.SetInstanceTransform(index, Hidden);
+        HideShelter(index);
         bases.SetInstanceTransform(index, hidden);
         heads.SetInstanceTransform(index, hidden);
         barrels.SetInstanceTransform(index, hidden);
