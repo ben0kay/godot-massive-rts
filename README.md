@@ -12,6 +12,8 @@ This is a **separate project** from the owner's sci-fi base-building / tower-def
 
 ## Visual and gameplay direction
 
+See [Faction Visual Authoring Guide](VISUALS/authoring.md) for the shared art language: metal-dominant buildings and faction-color-dominant units, with separate rendering contracts.
+
 - **World:** Real 3D battlefield with an **orthographic isometric Camera3D**; camera pan/zoom and clear large-scale readability. Start flat, but design positions and camera for future terrain height.
 - **Art:** Minimalistic shapes (triangles, wedges, cubes, cylinders and similar primitives). Strong team colours: **blue vs red**, neutral/white damage feedback, modest readable effects. The reference screenshot is a visual direction, not an asset to reproduce verbatim.
 - **Scale:** Thousands of simultaneous soldiers initially, with a stretch ambition of **tens of thousands and potentially 100,000** depending on measured hardware performance. No unverified FPS claims.

@@ -1,0 +1,146 @@
+# Faction Visual Authoring Guide — Units, Defenses & Structures
+
+> **Status:** Shared faction art direction established by owner feedback on Broadside and Light Artillery. Railgun, Shield Generator and the refined Light Artillery are source implemented; individual visual and FPS acceptance remains with the owner. This guide applies to future approved visual work, not permission to redesign the entire roster.
+>
+> **Read first:** root [README](../README.md), [CodePreferences](../CodePreferences.md), [endgoal](../endgoal.md), [battlefield visual plan](visual.md), [Tower Implementation Standard](../WORLD/BUILDINGS/TOWER_IMPLEMENTATION_STANDARD.md) for structures, and [unit catalogue guide](../GAMEPLAY/UNITS/README.md) for units. Those documents govern gameplay, placement and lifecycle; this guide governs faction appearance.
+
+## 1. Shared art direction and faction identity
+
+Build original, futuristic low-poly military machines with readable hard-surface geometry for the orthographic isometric camera. The accepted Broadside is the primary reference; Railgun is the compact precision-weapon interpretation. Aim for a premium geometric model, not a photorealistic prop. Soldiers remain simpler and the battlefield must stay readable with thousands of them. Mobile units must be visibly more faction-colored than static buildings; the first Light Artillery pass was too metallic and the owner requested more faction paint.
+
+### Color hierarchy
+
+| Asset category | Neutral gunmetal | Faction paint | Emissive trim |
+| --- | ---: | ---: | ---: |
+| Defenses and faction buildings | ~70% | ~25% | ~5% |
+| Detailed mobile units | ~35% | ~60% | ~5% |
+
+These are approximate visual composition targets, not measured surface-area quotas or shader blending ratios. Aim for faction color dominance on mobile units, including at normal battle zoom. Small infantry can be almost entirely faction-colored and need little or no metal or emission. Larger mobile machines may use more metal where the role needs it, but should still read as mobile units rather than buildings. Unowned terrain and scenery follow the separate battlefield visual plan, not this faction color split.
+
+Use the shared palette from `GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.tres` through `Factions.Color` / `ArmyRenderer.FactionColor`. Current factions include Blue, Red, Green and Yellow. Never hardcode a color per mesh or assume only two factions; authored factions must work with the same geometry/materials.
+
+### Buildings and defenses
+
+- **Neutral chassis:** all factions share dark charcoal / gunmetal steel. Use several related shades for plinths, recessed seams, inner mechanisms and brighter bevels. Do not tint the entire tower by faction.
+- **Faction armor:** select meaningful armor plates, corner caps, shoulder pods or weapon collars. Keep enough color visible from above and both sides to recognize ownership at normal gameplay zoom. As a starting visual heuristic, use roughly 65–75% neutral structure, 20–30% faction panels, and a small remainder of illuminated trim (not a measured or mandatory surface-area ratio).
+- **Faction emission:** short power strips, status panels and a focal core, matching the owning faction. Use bright cores against dark recessed channels; avoid outlining every edge or making the whole model glow.
+- **Shape language:** layered clipped rectangles, octagonal collars, chamfered slopes, overlapping armor and clean dark gaps. Use larger details that survive zoom; a few large vents are better than tiny bolts, noise or dense texture patterns.
+- **Distinct roles:** Broadside is broad and heavy with two independently recoiling launch tubes. Railgun is narrower, with a compact mount and a single long split-rail accelerator. Shield support can instead use a recognizable generator/ring silhouette. Do not copy one weapon silhouette onto every tower.
+- **Lighting:** use shared battlefield directional lighting and restrained satin highlights. Baked bevel masks complement real light; do not add new global exposure, sun, ambient or glow settings just for a model.
+
+## 2. Building implementation references
+
+| File | Responsibility |
+| --- | --- |
+| `WORLD/BUILDINGS/RENDERING/BroadsideTowerMeshes.cs` | Accepted heavyweight geometry: normalized base, rotating head and two identical independent barrels |
+| `WORLD/BUILDINGS/RENDERING/RailgunTowerMeshes.cs` | Compact base, separate rotating carriage and one recoiling/pitching accelerator assembly |
+| `WORLD/BUILDINGS/RENDERING/TowerArmorGeometry.cs` | Shared `Steel`, `Paint`, `Trim`, `Block`, `Plate` helpers |
+| `WORLD/BUILDINGS/RENDERING/ShieldGeneratorMeshes.cs` | Static radial reactor crown, armored base and emitter pylons |
+| `WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader` | Shared two-tone mask shader (historical filename, used by all three towers) |
+| `WORLD/BUILDINGS/RENDERING/ShieldFieldDomeRenderer.cs` / `ShieldFieldDome.gdshader` | Optional faint stationary coverage indicator; separate compact batch |
+| `WORLD/BUILDINGS/RENDERING/TowerLighting.gdshaderinc` | Shared directional light and satin highlight |
+| `WORLD/BUILDINGS/RENDERING/DefenseRenderer.cs` | Cached meshes, MultiMesh allocation, faction data, placement, aiming, hide/reset, beam/flash batches |
+| `WORLD/BUILDINGS/RENDERING/TowerArmor.gdshader` | Legacy material for other tower visuals; do not silently switch unrelated structures |
+
+The Shield Generator now shares the armor shader while retaining its static support silhouette. Command buildings still have their own render paths. Apply the language when their redesign is requested, adapting it to their function rather than duplicating the weapon renderer.
+
+## 3. Building mesh and material conventions
+
+Create a small static mesh builder per tower visual; cache each mesh once in the owning renderer. Use one `SurfaceTool` triangle surface per independently animated part, and the shared geometry primitives for armor. Neutral chassis, paint and emissive details are baked into the same surface, not separate meshes/draw calls for each panel.
+
+```csharp
+using static MassiveRts.TowerArmorGeometry;
+// RGB mask weights are not display colors.
+Block(surface, new Vector3(0f, 0f, 0f), new Vector3(1f, 0.2f, 1f), Steel(0.9f));
+Plate(surface, new Vector3(0f, 0.18f, 0f), new Vector3(0.7f, 0.2f, 0.7f),
+    0.25f, 0.82f, Paint());
+Block(surface, new Vector3(0f, 0.30f, 0f), new Vector3(0.3f, 0.04f, 0.08f), Trim());
+```
+
+- Red vertex channel = neutral steel weight, green = faction paint weight, blue = emissive trim weight. The helpers preserve face shading in these channels. Do not use normal RGB paint colors or white for the two-tone mask.
+- The current shared shader uses neutral steel `vec3(0.12, 0.15, 0.19)`, faction data in `INSTANCE_CUSTOM.rgb`, and a lighter indicator plus faction emission for trim. It respects the existing battlefield ambient fill and directional light include.
+- In `DefenseRenderer.Batch`, enable `UseCustomData` before setting instance count. Keep instance color white and supply the actual faction RGB via `SetInstanceCustomData` at placement/reuse, using `SetArmorTint`. Never multiply the mask by team color. **Custom alpha is reserved for progressive defense cracks**, initialized to zero and updated by `SetDamageCracks` at stage changes (stage / 3). Preserve the RGB while updating damage, and reset the alpha on slot reuse. The base/static generator receives the crack stage; do not assume rotating parts use it. The shared shader reuses `VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc`.
+- Use the current material rather than creating a shader per faction or weapon. Preserve the current shadow policy. Emission is a material effect, not an OmniLight3D; visible bloom depends on the environment. Do not add point lights, particles or animated lights merely to decorate a tower.
+- Preserve valid clockwise Godot winding, normals and face shading. Avoid coincident faces and intersecting decorative panels that hide the intended accent. Keep authored dimensions readable; use deliberate broad recess-like dark panels, not excessive boolean mesh detail.
+
+## 4. Building coordinate and animation contracts
+
+- XZ is ground, Y is up, and local forward is -Z. Stationary base is normalized around zero (approximately -0.5 to +0.5 in X/Y/Z), scaled to actual footprint and base height by the renderer. Grounding uses terrain height.
+- Head geometry is authored in world units relative to `DefenseRenderer.Pivot`; it rotates around Y. The weapon barrel uses its existing local transform and recoil axis. Bake attached rails, caps and trim into the moving part, not into the base.
+- Railgun barrel is centered at zero, length 3.8; muzzle at local z = -1.9. The renderer offsets its center forward 1.9 from pivot and adds recoil along the pitched axis. Beam and flash must still exit the actual central opening. Split rails are cosmetic: one weapon, one beam.
+- Broadside barrels are mounted at x = ±0.7, y = 0.9 from the pivot, tilted up 15°, with local muzzle z = -4.7. Each barrel recoils independently. Do not extend muzzle geometry past these endpoints without an explicitly approved coordinated transform change.
+- Keep the authored footprint, collision, HP, range, timing, damage, projectile behavior and stable resource ID unchanged during visual-only tasks. Real collision and targeting come from the shared simulation, not decorative triangles.
+
+## 5. Building performance and acceptance
+
+Use the existing base/head/barrel MultiMesh batches; add new variant batches only when necessary, not a node per decorative part or tower. No per-frame mesh generation, material clones, shader parameter churn, timers or new simulation queries. Extra triangles still cost GPU time; prefer modest silhouettes and a single surface per moving part. No unmeasured FPS claims.
+
+For every new visual pass:
+- Check original silhouette, faction readability at gameplay zoom and close inspection, in multiple faction colors and lighting conditions.
+- Check placement/erase, save/reload, terrain grounding, preview vs runtime, and adjacent footprints.
+- Fire/rotate/recoil, including rail beam slope and projectile muzzle alignment; check destroyed/hidden/reused slots and reset.
+- Preserve untouched towers and effects; compare visuals in Benchmark, Level Editor and Fortress Defense as applicable.
+- Follow root minimal validation policy: source review and one practical build if available; owner handles extended Godot and FPS validation.
+- Update the buildings README and append one concise devlog entry. Report exact commit and any pending checks.
+
+For entirely new tower mechanics or structures, also follow the Tower Implementation Standard and existing definition/catalog/placement contracts. This is an art/implementation guide, not a mandate to refactor all renderers.
+
+### Shield coverage indicators
+
+A dome visual represents the emitter's horizontal range, not a physical force field. Feed the compiled radius through the placement renderer, center it on the footprint, keep its face very transparent and its rim restrained. Reuse one compact MultiMesh, do not add per-generator simulation or per-recipient effects, and remove the dome on slot release/reset. The dome height is purely cosmetic; terrain may intersect the shell. No projectile blocking, collision, shield recharge changes or global glow changes belong in a visual pass.
+
+## 6. Mobile unit visual authoring
+
+### Art and silhouette
+
+- Lead with faction-colored hulls, large plates or the original geometric body. Use dark steel as a secondary material for gun tubes, exposed mechanisms, seams, undercarriages and selected armor frames.
+- Keep infantry shapes recognizable at normal gameplay zoom: circle, square, triangle, diamond, etc. Do not add machinery to every small soldier or turn every silhouette into a tank. Detail should increase selectively with size/role, not indiscriminately.
+- Light Artillery is the first two-tone unit experiment and the current reference for compact mobile hardware: faction-painted chevron hull, colored shoulder armor and barrel receiver, dark barrel and mount, restrained emissive strips. The first charcoal-heavy version was intentionally revised to be more faction-colored. Retain its lightweight appearance and raised single gun; do not give it the Broadside's heavy stationary silhouette.
+- Use broad facets, simple layered plates and readable dark gaps. Prefer a small number of large details over lots of bolts, vents or tiny lights. Limit emissive accents to functional-looking details; no persistent decorative particles, real lights or strong bloom per soldier.
+
+### Current unit implementation and references
+
+| File (repository-relative) | Responsibility |
+| --- | --- |
+| `VISUALS/RENDERING/FacetedSoldierMeshes.cs` | Shared mesh per unit type; `AppendLightArtilleryArmor`, `UsesArtilleryArmor`, `AppendPrism` and existing geometric unit builders |
+| `VISUALS/RENDERING/UnitArmor.gdshaderinc` | Unit UV armor mask to faction/steel/trim colors |
+| `VISUALS/RENDERING/ArmyRenderer.cs` | Existing faction/type MultiMesh batches, packed pose and color, sparse/dense updates, flashes and fracture state |
+| `VISUALS/RENDERING/BattlefieldLighting.cs` / `BattlefieldUnitLit.gdshader` | Per-type shared lit material selection and directional shading |
+| `VISUALS/FEEDBACK/UNIT_HITS/UnitSurface.gdshaderinc` / `UnitCracks.gdshader` | Shared lit/unlit armor and fracture rendering |
+| `LEVELS/AutoBattler/ReserveEntryClip.gdshader` | Reinforcement entry clipping with shared unit armor shading |
+| `GAMEPLAY/UNITS/UnitVisualConfig.cs` / `UnitVisualConfig.tres` | Optional enhanced meshes, independent Hexagon enhancement, fracture, shield shells and other visual settings |
+| `GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs` | Compiled `UnitOutline`, size, footprint, barrel mount/tip; visual geometry follows the authored contracts |
+
+Only the enhanced Light Artillery currently opts into the two-tone unit armor mask. Existing simpler unit meshes continue using baked grayscale vertex colors multiplied by instance faction tint. Do not silently migrate the roster, or use a building shader on a soldier. Use stable unit IDs to scope new experiments; preserve the existing plain fallback and independent visual toggles.
+
+### Material contracts — different from buildings
+
+| Channel | Enhanced units | Two-tone towers |
+| --- | --- | --- |
+| Vertex RGB | White for masked faces; baked grayscale for legacy geometry | Baked steel/paint/trim weights |
+| UV.x | 0 legacy; 1 steel; 2 paint; 3 trim | Not the unit armor mask |
+| UV.y | Baked face brightness | Not the unit armor mask |
+| Instance RGB | Faction tint or temporary white hit flash | White instance color; faction RGB in custom data |
+| Instance alpha / custom alpha | Existing color alpha encodes fracture stage and orientation, not transparency | Custom alpha encodes base damage stage, not transparency |
+
+For enhanced units, use the existing `AppendPrism(..., armorMask: true)` convention: the mesh builder supplies RGB material weights, then the triangle writer converts them to UV kind/brightness and leaves vertex color white. Legacy faces on a mixed mesh use UV zero and their ordinary vertex colors. Do not directly write the tower's RGB mask to the soldier surface. Keep the existing 16-float transform/color instance stride unchanged; do not add custom instance fields, materials per soldier, or extra batches to color panels.
+
+Set `use_two_tone_armor` consistently for both lit and unlit material creation. The placement preview uses the same enhanced builder and a preview material with `armor_tint`; normal battle instances use the actual faction color. Preserve white hit flashes, the FX2 fracture stage/orientation encoded in COLOR.a, and the shared crack mask. The current armor shader suppresses emissive trim during white hit flashes. Verify the reinforcement-entry clip shader still applies the same armor colors while retaining its map-edge discard. Do not interpret fracture alpha as transparent soldier opacity.
+
+### Geometry and motion
+
+- Build meshes once per type, with one surface for the main body and the existing independently animated mounts only where needed. Keep normal and enhanced variants aligned to the same authored size, collision footprint, height, forward axis and ground contact.
+- For ordinary units, keep the hull centered vertically at zero (bottom at -height/2); ArmyRenderer applies the ground-anchored half-height offset. Preserve existing shape-specific forward axes rather than assuming all soldiers face -Z (Diamond is an existing exception).
+- Light Artillery uses `UnitOutline.ArtilleryBarrelMount(height)` and `ArtilleryBarrelTip(height)`; preserve the authored elevation (currently 30 degrees), muzzle, length, and whole-body visual recoil. Do not move the muzzle for decorative purposes or modify combat/navigation dimensions.
+- Keep independent weapon mounts, shield shell fitting, unit death fragments, hit pulses, projectiles and preview/runtime behavior compatible. Shield shell fitting uses the visible mesh vertices; excessive decoration can enlarge the shell even without gameplay changes.
+- No stats, size tiers, attacks, range, movement, collision, targeting or saved identifiers should change in a visual-only pass.
+
+### Unit performance and validation
+
+For armies of thousands, prioritize triangle count and pixel cost much more aggressively than for a few dozen towers. Cache geometry and shared materials; do not add per-soldier nodes, lights, timers, textures per faction, new upload fields, or per-frame mesh generation. Use the existing enhanced-mesh switch for controlled before/after tests. More triangles and emissive shader work can still cost GPU time even if draw-call counts stay the same.
+
+Review source and (if practical) one build under root CodePreferences. Owner checks should include close and battle zoom in multiple factions, current/lit/real-shadow modes, Benchmark and campaign previews, hit flash/crack stages, firing/recoil, shield shells and death feedback, and reinforcement clipping. Compare identical battles at representative unit counts before broad adoption; report measured FPS only if actually measured.
+
+## 7. Future authoring workflow
+
+Read this guide and the relevant feature docs, inspect the live renderer and a reference asset, then scope the smallest requested change. Choose the color hierarchy by asset category, preserve the original role silhouette and gameplay contracts, and reuse the appropriate existing pipeline. For new mechanics, use the existing tower/unit implementation standards separately. Update relevant feature README and append one devlog entry for implemented changes. Report the exact commit, any assumptions and pending owner checks.

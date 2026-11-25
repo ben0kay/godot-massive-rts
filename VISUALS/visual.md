@@ -1,5 +1,7 @@
 # Battlefield visual plan
 
+For faction-specific unit, defense and structure appearance, see [Faction Visual Authoring Guide](authoring.md). This plan covers the wider battlefield, lighting and scenery.
+
 Aim for a dark industrial battlefield with bright, readable faction colors, satin highlights on upper bevels, and clear silhouettes at battle zoom. Apply the art direction through reusable level settings. Any authored level can serve as a before-and-after comparison with the same army, camera and map layout.
 
 ## 1. Lighting and unit finish

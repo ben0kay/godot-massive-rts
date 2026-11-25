@@ -1,6 +1,6 @@
 # BUILDINGS — Static Defenses
 
-For future tower and structure visual work, read [authoring.md](authoring.md) alongside the [Tower Implementation Standard](TOWER_IMPLEMENTATION_STANDARD.md).
+For future tower and structure visual work, read [Faction Visual Authoring Guide](../../VISUALS/authoring.md) alongside the [Tower Implementation Standard](TOWER_IMPLEMENTATION_STANDARD.md).
 
 ## Railgun Tower
 

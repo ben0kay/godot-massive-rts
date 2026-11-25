@@ -1,5 +1,7 @@
 # UNITS — Soldier Catalogue
 
+For unit appearance and shared faction coloring, read [Faction Visual Authoring Guide](../../VISUALS/authoring.md) before modifying meshes or materials.
+
 **Status:** UNIT0–UNIT3 source implemented. Awaiting owner validation.
 
 This **UPPERCASE major folder** owns the roster, unit definitions and catalogue lookup. `GAMEPLAY/SIMULATION/` owns compact runtime soldier arrays; `GAMEPLAY/COMBAT/` owns generic attacks and damage; `VISUALS/RENDERING/` owns faceted meshes and shared MultiMesh batches; `GAMEPLAY/DEPLOYMENT/` owns painting and saved placements; `BENCHMARK/` owns test scenarios and controls.
