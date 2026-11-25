@@ -150,7 +150,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             Text = DisruptorGrid.Name,
             TooltipText = "Drag to place. Right-drag to erase. Slows and damages enemies crossing the tiles."
         };
-        choose.Toggled += activate;
+        choose.Toggled += enabled => activate(enabled);
         defenses.AddChild(choose);
         trapStatus = MenuLayout.Label($"{owned:N0} tiles available", muted: true);
         defenses.AddChild(trapStatus);
