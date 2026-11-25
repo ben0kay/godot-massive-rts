@@ -1,4 +1,4 @@
-// Renders arcing trails and muzzle flashes from existing projectile pool state in two shared batches.
+// Renders arcing trails, muzzle flashes, and hot projectile cores in shared batches.
 using Godot;
 
 namespace MassiveRts;
@@ -8,7 +8,7 @@ internal sealed class ProjectileLaunchEffects
     private const float TrailSeconds = 0.32f;
     private const float FlashSeconds = 0.10f;
     private readonly ProjectileCatalog catalog;
-    private readonly MultiMesh trails, flashes;
+    private readonly MultiMesh trails, flashes, glows;
 
     internal ProjectileLaunchEffects(Node3D parent, ProjectileCatalog catalog, int capacity)
     {
@@ -19,6 +19,7 @@ internal sealed class ProjectileLaunchEffects
         };
         trails = CreateBatch(parent, new QuadMesh { SubdivideWidth = 11, Material = material }, capacity, useColors: true);
         flashes = CreateBatch(parent, new QuadMesh { Material = material }, capacity);
+        glows = CreateBatch(parent, new QuadMesh { Material = material }, capacity);
     }
 
     private static MultiMesh CreateBatch(Node3D parent, Mesh mesh, int capacity, bool useColors = false)
@@ -38,10 +39,13 @@ internal sealed class ProjectileLaunchEffects
 
     internal void Sync(ProjectileSystem projectiles)
     {
-        int trailCount = 0, flashCount = 0;
+        int trailCount = 0, flashCount = 0, glowCount = 0;
         for (int i = 0; i < projectiles.Count; i++)
         {
-            if (!catalog.UsesLaunchEffects(projectiles.Type[i])) continue;
+            int type = projectiles.Type[i];
+            if (!catalog.UsesLaunchEffects(type)) continue;
+            glows.SetInstanceTransform(glowCount, new Transform3D(Basis.Identity, projectiles.Position[i]));
+            glows.SetInstanceCustomData(glowCount++, new Color(catalog.VisualScale(type), 0f, 0f, -2f));
             float age = projectiles.AgeAt(i);
             if (age > 0f)
             {
@@ -57,5 +61,6 @@ internal sealed class ProjectileLaunchEffects
         }
         trails.VisibleInstanceCount = trailCount;
         flashes.VisibleInstanceCount = flashCount;
+        glows.VisibleInstanceCount = glowCount;
     }
 }
