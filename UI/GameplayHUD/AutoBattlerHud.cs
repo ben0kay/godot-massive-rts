@@ -108,31 +108,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             reserveType.ItemSelected += _ => RefreshReserve();
             refreshReserve = RefreshReserve;
 
-            var brushRow = new HBoxContainer();
-            brushControls.AddChild(brushRow);
-            brushRow.AddChild(MenuLayout.Label("Brush"));
-            var brushes = new ButtonGroup();
-            foreach (int size in new[] { 1, 3, 6, 10 })
-            {
-                var button = UIButtonFactory.Create($"{size}×{size}", () => brush(size), UIButtonStyle.Compact);
-                button.ToggleMode = true;
-                button.ButtonGroup = brushes;
-                if (size == 1) button.SetPressedNoSignal(true);
-                brushRow.AddChild(button);
-            }
-            var densityRow = new HBoxContainer();
-            brushControls.AddChild(densityRow);
-            densityRow.AddChild(MenuLayout.Label("Density"));
-            var spread = new HSlider { MinValue = 0, MaxValue = 3, Step = 0.1, Value = 1,
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            densityRow.AddChild(spread);
-            var valueLabel = MenuLayout.Label("1.0×");
-            densityRow.AddChild(valueLabel);
-            spread.ValueChanged += value =>
-            {
-                valueLabel.Text = value == 0 ? "Touching" : $"{value:F1}×";
-                densityChanged((float)value);
-            };
+            UnitPlacementBar.AddBrushSettings(brushControls, brush, densityChanged);
             deployment.AddChild(UIButtonFactory.Create("Clear Blue Deployment", clear, UIButtonStyle.Compact));
         }
         fight = UIButtonFactory.Create("Fight", start, UIButtonStyle.Primary);

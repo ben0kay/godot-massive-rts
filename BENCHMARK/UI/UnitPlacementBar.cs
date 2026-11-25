@@ -88,6 +88,37 @@ internal partial class UnitPlacementBar : PanelContainer
         return body;
     }
 
+    internal static HBoxContainer AddBrushSettings(VBoxContainer brushControls, Action<int> brush,
+        Action<float> densityChanged, float density = 1f)
+    {
+        var brushRow = new HBoxContainer();
+        brushControls.AddChild(brushRow);
+        brushRow.AddChild(MenuLayout.Label("Brush"));
+        var brushes = new ButtonGroup();
+        foreach (int size in new[] { 1, 3, 6, 10 })
+        {
+            var button = UIButtonFactory.Create($"{size}×{size}", () => brush(size), UIButtonStyle.Compact);
+            button.ToggleMode = true;
+            button.ButtonGroup = brushes;
+            if (size == 1) button.SetPressedNoSignal(true);
+            brushRow.AddChild(button);
+        }
+        var densityRow = new HBoxContainer();
+        brushControls.AddChild(densityRow);
+        densityRow.AddChild(MenuLayout.Label("Density"));
+        var spread = new HSlider { MinValue = 0, MaxValue = 3, Step = 0.1, Value = density,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        densityRow.AddChild(spread);
+        var valueLabel = MenuLayout.Label(density == 0 ? "Touching" : $"{density:F1}×");
+        densityRow.AddChild(valueLabel);
+        spread.ValueChanged += value =>
+        {
+            valueLabel.Text = value == 0 ? "Touching" : $"{value:F1}×";
+            densityChanged((float)value);
+        };
+        return brushRow;
+    }
+
     internal static string Stats(float hp, float damage) => $"HP {hp:0.#}   DMG {damage:0.#}";
 
     internal Control BuildCards(VBoxContainer body, int count, int columns, Func<int, string> nameFor,

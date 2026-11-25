@@ -8,6 +8,9 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
+    private enum SoldierPaintMode { Brush, Rectangle, Formation }
+    private SoldierPaintMode soldierPaintMode = SoldierPaintMode.Rectangle;
+    private int editorBrushSize = 1;
     private bool fillRectangle = true, redTower;
     private float densityScale = 1;
     private Vector2I? rectangleStart;
@@ -145,6 +148,40 @@ public partial class LevelEditor
     }
 
     // =========================================================
+    private bool HandleSoldierBrush(InputEvent input)
+    {
+        ObstacleRectangle Stamp(Vector3 point)
+        {
+            var first = ClampedCell(point) - Vector2I.One * ((editorBrushSize - 1) / 2);
+            return new ObstacleRectangle(first.X, first.Y, editorBrushSize, editorBrushSize);
+        }
+
+        if (input is InputEventMouseMotion motion)
+        {
+            if (WorldPoint(motion.Position, out var hover))
+            {
+                var stamp = Stamp(hover);
+                Vector2 center = (stamp.Min + stamp.Max) * 0.5f;
+                cursor.GlobalPosition = new Vector3(center.X, Surface(hover) + 0.15f, center.Y) + PaintOrigin;
+                cursor.Scale = new Vector3(stamp.Max.X - stamp.Min.X, 1, stamp.Max.Y - stamp.Min.Y);
+                cursor.Show();
+            }
+            else cursor.Hide();
+            return true;
+        }
+        if (input is not InputEventMouseButton mouse || mouse.ButtonIndex is not (MouseButton.Left or MouseButton.Right))
+            return false;
+        if (!mouse.Pressed || !WorldPoint(mouse.Position, out var point)) return true;
+        var area = Stamp(point);
+        try { EditSoldierRectangle(area, mouse.ButtonIndex == MouseButton.Right); }
+        catch (Exception error)
+        {
+            GD.PushError($"Soldier brush failed: {error}");
+            SetStatus(error.Message);
+        }
+        return true;
+    }
+
     private bool HandleSoldierRectangle(InputEvent input)
     {
         if (input is InputEventMouseMotion motion && rectangleStart is Vector2I start)

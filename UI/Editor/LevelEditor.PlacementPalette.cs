@@ -10,6 +10,8 @@ public partial class LevelEditor
     private Button[] paletteTabs;
     private Button paletteSelect, paletteMove, paletteErase, paletteRedOrders;
     private int paletteDefenseIndex;
+    private VBoxContainer editorBrushControls;
+    private HBoxContainer editorBrushSizes;
     private readonly ButtonGroup paletteTools = new();
 
     private void BuildPlacementPalette()
@@ -40,7 +42,6 @@ public partial class LevelEditor
         paletteSelect = AddPaletteAction(header, "Select", Tool.Select);
         paletteMove = AddPaletteAction(header, "Move", Tool.Move);
         paletteErase = AddPaletteAction(header, "Erase", Tool.Erase);
-        paletteRedOrders = AddPaletteAction(header, "Red orders", Tool.RedOrders);
 
         reserveGridButton = Button(header, "Back to battlefield", ToggleReserveGrid);
         reserveGridButton.Hide();
@@ -56,11 +57,49 @@ public partial class LevelEditor
             RefreshLayout();
         });
 
+        var columns = new HBoxContainer();
+        columns.AddThemeConstantOverride("separation", 12);
+        body.AddChild(columns);
+        editorBrushControls = new VBoxContainer { CustomMinimumSize = new Vector2(240, 0) };
+        columns.AddChild(editorBrushControls);
+        var paintModes = new HBoxContainer();
+        editorBrushControls.AddChild(paintModes);
+        var paintModeGroup = new ButtonGroup();
+        AddPaintMode("Brush", SoldierPaintMode.Brush);
+        AddPaintMode("Rectangle", SoldierPaintMode.Rectangle);
+        paletteRedOrders = AddPaletteAction(paintModes, "Select Red", Tool.RedOrders);
+        AddPaintMode("Formation", SoldierPaintMode.Formation);
+        editorBrushSizes = UnitPlacementBar.AddBrushSettings(editorBrushControls,
+            size => editorBrushSize = size, value => densityScale = value, densityScale);
+        editorBrushSizes.Hide();
+
+        void AddPaintMode(string label, SoldierPaintMode paintMode)
+        {
+            var button = UIButtonFactory.Create(label, () => SelectPaintMode(paintMode), UIButtonStyle.Compact);
+            button.ToggleMode = true;
+            button.ButtonGroup = paintModeGroup;
+            button.SetPressedNoSignal(paintMode == soldierPaintMode);
+            paintModes.AddChild(button);
+        }
+
+        void SelectPaintMode(SoldierPaintMode paintMode)
+        {
+            soldierPaintMode = paintMode;
+            rectangleStart = null;
+            editorBrushSizes.Visible = paintMode == SoldierPaintMode.Brush;
+            if (tool != Tool.Soldiers) PickPaletteTool(Tool.Soldiers);
+            else UpdateTool();
+        }
+
+        var picker = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        columns.AddChild(picker);
+        body.RemoveChild(simulation);
+        picker.AddChild(simulation);
         Color enemy = Factions.Color(Factions.Red);
         int towers = defenseDefinitions.Length;
         palettePages = new[]
         {
-            placementPalette.BuildCards(body, units.Length, (units.Length + 1) / 2, i => units[i].DisplayName,
+            placementPalette.BuildCards(picker, units.Length, (units.Length + 1) / 2, i => units[i].DisplayName,
                 i => UnitPlacementBar.Stats(units[i].Health, units[i].Damage), (icon, i) =>
                 {
                     icon.SetOutline(UnitOutline.FromDefinition(units[i], UnitOutline.EffectiveSize(units[i])));
@@ -70,7 +109,7 @@ public partial class LevelEditor
                     unitIndex = i;
                     PickPaletteTool(Tool.Soldiers);
                 }, paletteTools, selectFirst: false),
-            placementPalette.BuildCards(body, towers, towers,
+            placementPalette.BuildCards(picker, towers, towers,
                 i => defenseDefinitions[i].DisplayName,
                 i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f),
@@ -93,7 +132,7 @@ public partial class LevelEditor
         ShowPalettePage(0);
 
         Control ToolPage(string[] labels, Tool[] options) =>
-            placementPalette.BuildCards(body, labels.Length, labels.Length, i => labels[i],
+            placementPalette.BuildCards(picker, labels.Length, labels.Length, i => labels[i],
                 _ => null, null, i => PickPaletteTool(options[i]), paletteTools, selectFirst: false);
     }
 
@@ -108,6 +147,7 @@ public partial class LevelEditor
     private void ShowPalettePage(int page)
     {
         paletteTabs[page].ButtonPressed = true;
+        editorBrushControls.Visible = page == 0;
         for (int i = 0; i < palettePages.Length; i++) palettePages[i].Visible = i == page;
     }
 

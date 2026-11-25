@@ -229,6 +229,19 @@ public partial class LevelEditor
                 if (!mode.IsAutoBattler) Choice(context, "Faction", new[] { "Blue", "Red" }, redTower ? 1 : 0, index => redTower = index == 1);
                 break;
             case Tool.Soldiers:
+                if (mode.IsAutoBattler)
+                {
+                    if (soldierPaintMode == SoldierPaintMode.Formation)
+                        Number(context, "Soldiers per formation", groupSize, 1, 256).ValueChanged += value => groupSize = (int)value;
+                    Number(context, "Facing (degrees)", yaw, -180, 360).ValueChanged += value => yaw = (float)value;
+                    Heading(context, soldierPaintMode switch
+                    {
+                        SoldierPaintMode.Brush => "Click to paint. Right-click to erase.",
+                        SoldierPaintMode.Rectangle => "Drag to fill. Right-drag to erase.",
+                        _ => "Click to place a formation."
+                    }, 15);
+                    break;
+                }
                 Choice(context, "Placement", new[] { "Formation", "Rectangle fill" }, fillRectangle ? 1 : 0,
                     index => { fillRectangle = index == 1; UpdateTool(); });
                 if (!mode.IsAutoBattler)
@@ -363,7 +376,17 @@ public partial class LevelEditor
         if (tool == Tool.Wall && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
-        if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
+        if (tool == Tool.Soldiers)
+        {
+            bool handled = mode.IsAutoBattler && soldierPaintMode == SoldierPaintMode.Brush
+                ? HandleSoldierBrush(input)
+                : (mode.IsAutoBattler ? soldierPaintMode == SoldierPaintMode.Rectangle : fillRectangle) && HandleSoldierRectangle(input);
+            if (handled)
+            {
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+        }
         if (input is InputEventMouseMotion motion)
         {
             if (WorldPoint(motion.Position, out var point))
