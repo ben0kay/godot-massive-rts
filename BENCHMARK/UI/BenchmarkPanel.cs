@@ -14,6 +14,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public event Action<float> CameraTiltChanged;
 	public event Action<bool> CameraFreeRoamChanged;
 	internal event Action<BenchmarkLighting> LightingChanged;
+	internal event Action<float, float, float> PlaytestLightingChanged;
 	internal event Action<float> ShadowDistanceChanged;
 	private readonly SpinBox shadowDistance = new() { MinValue = 100, MaxValue = 6000, Step = 50, Value = 1800 };
 	internal float ShadowDistance => (float)shadowDistance.Value;
@@ -282,9 +283,9 @@ public partial class BenchmarkPanel : CanvasLayer
 		var weather = Section(column, "Weather", false, out _);
 		var weatherToggle = new CheckButton { Text = "Enable weather" };
 		weather.AddChild(weatherToggle);
-		var mist = WeatherSlider(weather, "Mist density", 100, 45, 1, "%");
-		var drift = WeatherSlider(weather, "Drift speed", 6, 2, 0.1, " u/s");
-		var haze = WeatherSlider(weather, "Haze", 100, 25, 1, "%");
+		var mist = LabeledSlider(weather, "Mist density", 100, 45, 1, "%");
+		var drift = LabeledSlider(weather, "Drift speed", 6, 2, 0.1, " u/s");
+		var haze = LabeledSlider(weather, "Haze", 100, 25, 1, "%");
 		void UpdateWeather() => WeatherChanged?.Invoke(weatherToggle.ButtonPressed,
 			(float)mist.Value / 100f, (float)drift.Value, (float)haze.Value / 100f);
 		weatherToggle.Toggled += _ => UpdateWeather();
@@ -448,7 +449,26 @@ public partial class BenchmarkPanel : CanvasLayer
 		obstacleDebug.AddChild(reuseCorridors);
 		obstacleDebug.AddChild(reuseWaypoints);
 		obstacleDebug.AddChild(ObstacleMetrics);
-		Section(debug, "Rendering and memory", false, out _, true).AddChild(EngineMetrics);
+		var rendering = Section(debug, "Rendering and memory", false, out _, true);
+		if (AutoBattlerPlaytest)
+		{
+			var lighting = Section(rendering, "Lighting", true, out _, true);
+			var sun = LabeledSlider(lighting, "Sun strength", 400, 100, 1, "%");
+			var fill = LabeledSlider(lighting, "Ambient fill", 200, 100, 1, "%");
+			var direction = LabeledSlider(lighting, "Sun direction", 360, 0, 1, "°");
+			void ApplyLighting(double _) => PlaytestLightingChanged?.Invoke(
+				(float)sun.Value / 100f, (float)fill.Value / 100f, (float)direction.Value);
+			sun.ValueChanged += ApplyLighting;
+			fill.ValueChanged += ApplyLighting;
+			direction.ValueChanged += ApplyLighting;
+			AddButton(lighting, "Reset lighting", () =>
+			{
+				sun.Value = 100;
+				fill.Value = 100;
+				direction.Value = 0;
+			});
+		}
+		rendering.AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
 		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest, brushControls: soldierControls);
@@ -467,7 +487,7 @@ public partial class BenchmarkPanel : CanvasLayer
 		left.OffsetBottom = right.OffsetBottom = unitBar.Visible ? -unitBar.BarHeight - 24 : -12;
 	}
 
-	private static HSlider WeatherSlider(VBoxContainer column, string title, double max, double initial, double step, string suffix)
+	private static HSlider LabeledSlider(VBoxContainer column, string title, double max, double initial, double step, string suffix)
 	{
 		var slider = new HSlider { MaxValue = max, Value = initial, Step = step, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		var controls = new HBoxContainer();

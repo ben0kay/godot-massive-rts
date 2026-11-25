@@ -39,3 +39,10 @@ enabled=PackedStringArray("res://addons/unit_editor/plugin.cfg", "res://addons/w
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+
+[shader_globals]
+
+battlefield_ambient_fill={
+"type": "float",
+"value": 1.0
+}

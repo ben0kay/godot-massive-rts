@@ -548,3 +548,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Reduced Obliterator size multiplier from 1.0 to 0.9 and Prism Lance from 2.0 to 1.6 (10% and 20% smaller, respectively). Existing size tiers and authored combat stats unchanged. Configuration-only source review; in-game validation pending.
 
 - 2026-11-24 — Added battlefield sun shading to painted rocks, trees, and industrial walls. Preserved fake shadows, canopy fading, and wall lamps. Godot .NET visual validation pending.
+
+- 2026-11-24 — Added live sun strength, direction and material ambient fill controls to AutoBattler playtests. Fake shadows remain enabled. Godot .NET runtime validation pending.

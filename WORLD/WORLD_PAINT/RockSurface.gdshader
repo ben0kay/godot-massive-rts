@@ -3,7 +3,9 @@ render_mode ambient_light_disabled, shadows_disabled;
 
 #include "res://VISUALS/RENDERING/SceneryLighting.gdshaderinc"
 
+global uniform float battlefield_ambient_fill;
+
 void fragment() {
     ALBEDO = COLOR.rgb;
-    EMISSION = ALBEDO * 0.58;
+    EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
 }

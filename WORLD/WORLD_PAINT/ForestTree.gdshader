@@ -10,8 +10,10 @@ void vertex() {
     opacity = COLOR.a;
 }
 
+global uniform float battlefield_ambient_fill;
+
 void fragment() {
     ALBEDO = tree_color.rgb * COLOR.rgb;
-    EMISSION = ALBEDO * 0.58;
+    EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
     ALPHA = opacity;
 }

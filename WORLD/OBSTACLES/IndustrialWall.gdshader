@@ -22,6 +22,8 @@ float panel_random(ivec3 cell) {
     return float(hash & 65535u) / 65536.0;
 }
 
+global uniform float battlefield_ambient_fill;
+
 void fragment() {
     vec3 n = normalize(world_normal);
     bool top = n.y > 0.5;
@@ -66,5 +68,5 @@ void fragment() {
         glow = tint * lamp * lamp_visibility * 2.2;
     }
     ALBEDO = basin_trim ? vec3(0.0) : steel;
-    EMISSION = steel * (basin_trim ? 1.0 : 0.58) + glow;
+    EMISSION = steel * (basin_trim ? 1.0 : 0.58 * battlefield_ambient_fill) + glow;
 }

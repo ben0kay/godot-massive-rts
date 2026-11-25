@@ -14,6 +14,10 @@ void vertex() {
     fracture = round(COLOR.a * 255.0);
 }
 
+#ifdef BATTLEFIELD_LIT
+global uniform float battlefield_ambient_fill;
+#endif
+
 void fragment() {
     ALBEDO = COLOR.rgb;
 #ifdef BATTLEFIELD_LIT
@@ -34,6 +38,6 @@ void fragment() {
         ALBEDO *= 1.0 - mask * darkness * upper_facet * (0.52 + 0.16 * stage);
     }
 #ifdef BATTLEFIELD_LIT
-    EMISSION = ALBEDO * 0.58;
+    EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
 #endif
 }
