@@ -345,6 +345,7 @@ public partial class BenchmarkArena : Node3D
             ? new RangedRecoilSystem(capacity) : null;
         return new UnitState(capacity, catalog, feedback, terrain, recoil)
         {
+            CircleUsesFacing = unitVisuals.UseCircleRobotMesh,
             DeathFeedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? deathFeedback : null
         };
     }

@@ -32,7 +32,7 @@ public partial class ArmyRenderer : Node3D
     private int typeCount;
     private float[] halfHeights;
     private bool[] facesPositiveX;
-    private Vector2[] circleRobotHeading;
+    private bool useCircleRobotHeading;
     private bool animateCircleSword;
     private bool animateCircleWalk;
     private int[] batchStrides;
@@ -69,7 +69,7 @@ public partial class ArmyRenderer : Node3D
         maxShieldShells = Mathf.Clamp(visuals.MaxShieldShells, 0, 2048);
         if (!visuals.ShowShieldShells) maxShieldShells = 0;
         cracksEnabled = visuals.UseUnitFracture;
-        circleRobotHeading = visuals.UseCircleRobotMesh ? new Vector2[state.Position.Length] : null;
+        useCircleRobotHeading = visuals.UseCircleRobotMesh;
         animateCircleSword = visuals.UseCircleRobotMesh && visuals.AnimateCircleSword;
         animateCircleWalk = visuals.UseCircleRobotMesh && visuals.AnimateCircleWalk;
         circleWalkPosition = animateCircleWalk ? new Vector2[state.Position.Length] : null;
@@ -265,68 +265,6 @@ public partial class ArmyRenderer : Node3D
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
     internal static Color FactionColor(int faction) => Factions.Color(faction);
 
-    // Reuse movement history and the current acquired target; never change Facing or AI.
-    private Vector2 RobotHeading(int id)
-    {
-        Vector2 heading = circleRobotHeading[id];
-        Vector3 point = units.Position[id];
-        Vector2 delta = Vector2.Zero;
-        if (hasPreviousPose)
-        {
-            Vector3 movement = point - previousPositions[id];
-            delta = new Vector2(movement.X, movement.Z);
-        }
-        if (delta.LengthSquared() < 0.000001f)
-        {
-            int target = units.Target[id];
-            if (target >= 0 && target < units.Count && units.Health[target] > 0f &&
-                units.Faction[target] != units.Faction[id])
-            {
-                Vector3 offset = units.Position[target] - point;
-                delta = new Vector2(offset.X, offset.Z);
-            }
-        }
-        if (delta.LengthSquared() >= 0.000001f) heading = delta.Normalized();
-        else if (heading == Vector2.Zero)
-            heading = units.Facing[id] == Vector2.Zero ? Vector2.Up : units.Facing[id].Normalized();
-        circleRobotHeading[id] = heading;
-        return heading;
-    }
-
-    // Distance-based gait, evaluated once per rendered sync, never from wall-clock time.
-    // Phase belongs to the soldier ID, not the compacted MultiMesh slot.
-    private bool UpdateCircleWalk(int id)
-    {
-        Vector3 ground = GroundPose(id);
-        Vector2 point = new(ground.X, ground.Z);
-        if (slots[id] < 0)
-        {
-            circleWalkPosition[id] = point;
-            uint seed = unchecked((uint)id * 2654435761u);
-            circleWalkPose[id] = new Vector2((seed >> 16) / 65536f, 0f);
-            return false;
-        }
-        Vector2 pose = circleWalkPose[id];
-        float radius = Mathf.Max(0.01f, units.Catalog[units.Type[id]].Footprint);
-        float distanceSquared = point.DistanceSquaredTo(circleWalkPosition[id]);
-        circleWalkPosition[id] = point;
-        float targetWeight = 0f;
-        float phase = pose.X;
-        // Ignore tiny separation jitter and large teleports rather than stepping in place.
-        if (distanceSquared > radius * radius * 0.0004f && distanceSquared < radius * radius * 16f)
-        {
-            float distance = Mathf.Sqrt(distanceSquared);
-            phase += distance / (radius * 3.8f);
-            phase -= Mathf.Floor(phase);
-            targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);
-        }
-        float weight = Mathf.MoveToward(pose.Y, targetWeight, 0.25f);
-        var next = new Vector2(phase, weight);
-        circleWalkPose[id] = next;
-        HasCircleWalkMotion |= weight > 0f;
-        return pose != next;
-    }
-
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
         buffer[offset + 12] = color.R;
@@ -371,16 +309,9 @@ public partial class ArmyRenderer : Node3D
                 position.Z += stroke.Y;
             }
         }
-        // Legacy circles remain unrotated. The optional robot has visual-only
-        // heading; its simulation still uses rotationally symmetric melee rules.
+        // The optional robot uses the same turn-limited facing as other directional meshes.
         float cosine = 1f, sine = 0f;
-        if (type == RuntimeUnitCatalog.Circle && circleRobotHeading != null)
-        {
-            Vector2 heading = RobotHeading(id);
-            cosine = -heading.Y;
-            sine = -heading.X;
-        }
-        else if (type != RuntimeUnitCatalog.Circle)
+        if (type != RuntimeUnitCatalog.Circle || useCircleRobotHeading)
         {
             Vector2 facing = units.Facing[id];
             if (hasPreviousPose && poseBlend < 1f)
@@ -548,7 +479,7 @@ public partial class ArmyRenderer : Node3D
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
                 (previousPositions[id] != units.Position[id] ||
-                 (units.Type[id] != RuntimeUnitCatalog.Circle && previousFacing[id] != units.Facing[id]));
+                 ((units.Type[id] != RuntimeUnitCatalog.Circle || useCircleRobotHeading) && previousFacing[id] != units.Facing[id]));
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;
             HasInterpolatedMotion |= moving && blend < 1f;
@@ -563,7 +494,6 @@ public partial class ArmyRenderer : Node3D
                 int last = --counts[batch], moved = members[batch][last];
                 if (slot != last) { members[batch][slot] = moved; slots[moved] = slot; Write(moved, batch, slot); }
                 slots[id] = -1; InstanceCount--;
-                if (circleRobotHeading != null) circleRobotHeading[id] = Vector2.Zero;
             }
             else
             {

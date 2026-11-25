@@ -17,7 +17,7 @@ public static class SoldierFacing
     internal static bool Aim(UnitState units, int id, Vector2 offset, float dt, float alignment)
     {
         byte type = units.Type[id];
-        if (units.Catalog[type].Shape == UnitShape.Circle || offset.LengthSquared() <= 0.000001f) return true;
+        if ((units.Catalog[type].Shape == UnitShape.Circle && !units.CircleUsesFacing) || offset.LengthSquared() <= 0.000001f) return true;
         Vector2 direction = offset.Normalized();
         if (units.Facing[id].Dot(direction) >= alignment) return true;
         Turn(units, id, direction, units.TurnSteps(dt)[type]);

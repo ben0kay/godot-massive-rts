@@ -610,3 +610,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Used each selected unit’s hull outline for deployment ghosts and halved both Twin Rocket Launcher mounts’ flight arcs. Godot .NET visual validation pending.
 
 - 2026-11-25 — VIS-CIRCLE-WALK — Circle robot sword swing slowed to half speed (0.32s, original attack pulse unchanged); independent distance-driven alternating boot gait and restrained torso bounce with stable per-unit phase offsets and settling. Extra custom data is limited to opted-in Circle batches; shield shell indexing follows each batch stride. No combat or footprint changes. Source review only; owner visual/FPS validation pending.
+
+- 2026-11-25 — Circle Infantry's robot mesh now uses turn-limited combat facing at 240°/s. It faces its target before swinging and follows deliberate movement while marching. Separation nudges no longer directly steer the renderer. Godot .NET visual validation pending.

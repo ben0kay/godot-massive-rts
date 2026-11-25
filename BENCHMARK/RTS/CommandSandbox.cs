@@ -183,6 +183,7 @@ public partial class CommandSandbox : Node3D
         units = new UnitState(capacity, catalog, new HitFeedbackSystem(capacity, hitSettings), terrain,
             catalog.HasRangedRecoil ? new RangedRecoilSystem(capacity) : null)
         {
+            CircleUsesFacing = unitVisuals.UseCircleRobotMesh,
             DeathFeedback = deathFeedback
         };
         movement = new CommandMovement(units, halfWidth);

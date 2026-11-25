@@ -50,6 +50,7 @@ public sealed class UnitState
     }
     public int Count;
     internal ForestCover Forest { get; set; }
+    internal bool CircleUsesFacing { get; init; }
 
     internal float RangedReach(Vector3 position, in UnitStats stats) =>
         Forest?.Contains(position) == true ? stats.Reach * 0.5f : stats.Reach;

@@ -177,7 +177,8 @@ public static class CombatSystem
             }
             if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];
-            if (target < 0 || units.Health[target] <= 0 || units.Cooldown[i] > 0) continue;
+            bool robotCircle = type.Shape == UnitShape.Circle && units.CircleUsesFacing;
+            if (target < 0 || units.Health[target] <= 0 || (units.Cooldown[i] > 0 && !robotCircle)) continue;
             if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? units.RangedReach(i, type) :
@@ -194,18 +195,18 @@ public static class CombatSystem
             if (attackSight != null && type.DirectFire(units.Catalog.Projectiles) &&
                 attackSight.BlocksSight(units.Position[i], units.Position[target])) continue;
             Vector2 facing = units.Facing[i];
-            if (!type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled))
+            if (!type.Ranged && (type.Shape != UnitShape.Circle || type.CleaveEnabled || robotCircle))
             {
                 Vector2 aim = new(offset.X, offset.Z);
                 float aimSquared = aim.LengthSquared();
                 if (aimSquared <= 0.000001f)
                     facing = Vector2.Zero;
-                else if (type.Shape == UnitShape.Circle)
+                else if (type.Shape == UnitShape.Circle && !robotCircle)
                     facing = aim.Normalized();
                 else
                 {
                     float forward = facing.Dot(aim);
-                    float cone = type.CleaveEnabled ? type.CleaveCosineSquared : type.MeleeFacingCosineSquared;
+                    float cone = robotCircle ? 0.99f : type.CleaveEnabled ? type.CleaveCosineSquared : type.MeleeFacingCosineSquared;
                     if (facing == Vector2.Zero || forward < 0f || forward * forward < aimSquared * cone)
                     {
                         SoldierFacing.Turn(units, i, aim / Mathf.Sqrt(aimSquared),
@@ -215,6 +216,7 @@ public static class CombatSystem
                     }
                 }
             }
+            if (units.Cooldown[i] > 0f) continue;
             float previousHealth = units.Health[target];
             bool cleaved = false;
             if (type.Ranged)

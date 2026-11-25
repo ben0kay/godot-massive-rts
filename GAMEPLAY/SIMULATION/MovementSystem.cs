@@ -194,8 +194,10 @@ public static class MovementSystem
             if (!movementMode) units.MoveSpeed[i] = !routeCorner && travel >= remaining ? 0f : speed;
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * slopeFactor * 0.5f))
                 voluntaryMovement[i] = 1;
-            // Circle infantry is rotationally symmetric; skip heading work entirely.
-            if (travel > 0.00001f && type.Shape != UnitShape.Circle && !type.Outline.IsDreadnaught)
+            // Combat owns robot Circle facing when close enough to swing.
+            bool turnCircle = units.CircleUsesFacing && (!hasTarget || detouring ||
+                next.DistanceSquaredTo(destination) > (stop + 0.35f) * (stop + 0.35f));
+            if (travel > 0.00001f && (type.Shape != UnitShape.Circle || turnCircle) && !type.Outline.IsDreadnaught)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnSteps[units.Type[i]]);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);
