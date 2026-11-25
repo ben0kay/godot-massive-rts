@@ -528,3 +528,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added per-level base terrain, industrial walls with solid closed-loop fill, and updated water, boulder and pine visuals. Runtime validation pending.
 
 - 2026-11-24 — Enabled Light Artillery-style visual firing recoil on Twin Rocket Launcher (0.35-unit kick, 0.4-second recovery). Uses existing shared recoil system; combat stats and simulation positions unchanged. Runtime validation pending.
+
+- 2026-11-24 — Moved Industrial Walls to Terrain with single-cell, line, and rectangle brushes. Removed the rubble shelf, varied the boulder meshes, and added batched directional scenery contact shadows. Godot .NET runtime validation pending.

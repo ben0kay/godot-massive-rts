@@ -96,6 +96,8 @@ public partial class WorldPaint : Node3D
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
         foreach (var cell in data.ForestCells)
             if (!Contains(cell)) return new[] { "Some forest cells lie beyond this map." };
+        foreach (var cell in data.IndustrialWallCells)
+            if (!Contains(cell)) return new[] { "Some Industrial Wall cells lie beyond this map." };
         return Array.Empty<string>();
     }
 

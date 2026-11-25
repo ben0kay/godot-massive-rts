@@ -1,4 +1,4 @@
-// Stores one level's occupied rock, water and forest cells and their appearance.
+// Stores one level's painted terrain cells and their appearance.
 using Godot;
 using Cells = Godot.Collections.Array<Godot.Vector2I>;
 
@@ -34,6 +34,21 @@ public partial class WorldPaintData : Resource
     {
         get => forestCells;
         set { forestCells = value ?? new Cells(); EmitChanged(); }
+    }
+
+    private Cells industrialWallCells = new();
+    private float industrialWallHeight = 2f;
+
+    [Export] public Cells IndustrialWallCells
+    {
+        get => industrialWallCells;
+        set => industrialWallCells = value ?? new();
+    }
+
+    [Export(PropertyHint.Range, "0.5,80,0.5")] public float IndustrialWallHeight
+    {
+        get => industrialWallHeight;
+        set => industrialWallHeight = Mathf.Clamp(value, 0.5f, 80f);
     }
 
     private Godot.Collections.Array<Rect2I> bridges = new();

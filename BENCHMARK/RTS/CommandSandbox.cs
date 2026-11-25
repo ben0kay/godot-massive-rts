@@ -361,10 +361,10 @@ public partial class CommandSandbox : Node3D
     internal ObstacleRectangle[] ReadAuthoredWalls(bool groundForPlay = false, bool updateVisuals = false)
     {
         var walls = new List<ObstacleRectangle>();
-        if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();
+        var authored = GetNodeOrNull<Node3D>("Obstacles");
 
         var terrain = groundForPlay ? GetNodeOrNull<CommandTerrain>("Terrain")?.Field : null;
-        foreach (Node child in authored.GetChildren())
+        foreach (Node child in authored?.GetChildren() ?? new Godot.Collections.Array<Node>())
         {
             if (child is not MeshInstance3D mesh || mesh.Mesh is not BoxMesh) continue;
             var basis = mesh.GlobalTransform.Basis;
@@ -394,9 +394,26 @@ public partial class CommandSandbox : Node3D
             }
             walls.Add(wall with { AirborneHeightRange = new Vector2(bottom, bottom + bounds.Size.Y) });
         }
+        var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
+        var painted = new List<ObstacleRectangle>();
+        if (paint?.Data is { IndustrialWallCells.Count: > 0 } data)
+        {
+            var cells = new HashSet<Vector2I>(data.IndustrialWallCells);
+            cells.RemoveWhere(cell => !paint.Contains(cell));
+            var field = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
+            var rectangles = ObstacleCellCompiler.Merge(cells, WorldPaint.CellSize, WorldPaint.MaxPaintedRectangles)
+                ?? System.Array.Empty<ObstacleRectangle>();
+            foreach (var rectangle in rectangles)
+            {
+                float bottom = field?.FootprintHeight(rectangle.Min, rectangle.Max, out _) ?? 0f;
+                painted.Add(rectangle with { AirborneHeightRange = new Vector2(bottom, bottom + data.IndustrialWallHeight) });
+            }
+        }
+        walls.AddRange(painted);
         var fills = IndustrialWallLoops.Fill(walls);
-        if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, fills);
         walls.AddRange(fills);
+        painted.AddRange(fills);
+        if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, painted);
         return walls.ToArray();
     }
 
@@ -406,7 +423,7 @@ public partial class CommandSandbox : Node3D
         {
             Shader = GD.Load<Shader>("res://WORLD/OBSTACLES/IndustrialWall.gdshader")
         };
-        foreach (Node child in authored.GetChildren())
+        foreach (Node child in authored?.GetChildren() ?? new Godot.Collections.Array<Node>())
             if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh) mesh.MaterialOverride = industrialWallMaterial;
 
         if (industrialRoofs == null)

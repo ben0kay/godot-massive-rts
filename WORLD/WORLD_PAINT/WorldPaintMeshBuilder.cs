@@ -1,4 +1,4 @@
-// Builds one connected rubble shelf and a set of faceted boulder clusters from painted cells.
+// Builds ground-seated faceted boulder clusters and their contact shadows from painted cells.
 using System.Collections.Generic;
 using Godot;
 
@@ -21,70 +21,55 @@ internal static class WorldPaintMeshBuilder
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         });
 
+        var shadows = new List<(Vector3 Center, Vector2 Radius)>(cells.Count);
         tint = tint.Lerp(new Color("#384256"), 0.65f);
         foreach (var cell in cells)
         {
-            Vector3 a = ShelfPoint(cell), b = ShelfPoint(cell + Vector2I.Right);
-            Vector3 c = ShelfPoint(cell + Vector2I.Down), d = ShelfPoint(cell + Vector2I.One);
-            Triangle(surface, a, b, c, tint.Darkened(0.38f));
-            Triangle(surface, b, d, c, tint.Darkened(0.42f));
-
-            // Neighbouring cells meet at the same vertices. Only exposed edges get walls.
             bool north = cells.Contains(cell + Vector2I.Up), south = cells.Contains(cell + Vector2I.Down);
             bool west = cells.Contains(cell + Vector2I.Left), east = cells.Contains(cell + Vector2I.Right);
-            if (!north) ShelfEdge(a, b);
-            if (!east) ShelfEdge(b, d);
-            if (!south) ShelfEdge(d, c);
-            if (!west) ShelfEdge(c, a);
-
             int neighbours = (north ? 1 : 0) + (south ? 1 : 0) + (east ? 1 : 0) + (west ? 1 : 0);
             // A full aligned 2×2 patch gets one broad boulder surrounded by smaller fragments.
             var anchor = new Vector2I(cell.X & ~1, cell.Y & ~1);
             bool broad = cells.Contains(anchor) && cells.Contains(anchor + Vector2I.Right) &&
                 cells.Contains(anchor + Vector2I.Down) && cells.Contains(anchor + Vector2I.One);
-            AddBoulder(surface, cell, terrain, broad ? height * 0.37f : height, tint, neighbours, broad: false);
-            if (broad && cell == anchor) AddBoulder(surface, cell, terrain, height, tint, neighbours, broad: true);
+            AddBoulder(surface, shadows, cell, terrain, broad ? height * 0.37f : height, tint, neighbours, broad: false);
+            if (broad && cell == anchor) AddBoulder(surface, shadows, cell, terrain, height, tint, neighbours, broad: true);
         }
-        return surface.Commit();
-
-        Vector3 ShelfPoint(Vector2I corner)
-        {
-            uint seed = CellSeed(corner);
-            float x = corner.X * WorldPaint.CellSize, z = corner.Y * WorldPaint.CellSize;
-            return new Vector3(x, Ground(terrain, x, z) + height * Mathf.Lerp(0.11f, 0.21f, Next(ref seed)), z);
-        }
-
-        void ShelfEdge(Vector3 a, Vector3 b)
-        {
-            Vector3 footA = new(a.X, Ground(terrain, a.X, a.Z) - 0.025f, a.Z);
-            Vector3 footB = new(b.X, Ground(terrain, b.X, b.Z) - 0.025f, b.Z);
-            Color shade = tint.Darkened(0.55f);
-            Triangle(surface, a, footA, b, shade);
-            Triangle(surface, b, footA, footB, shade);
-        }
+        var mesh = surface.Commit();
+        surface.Clear();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetMaterial(GroundShadowMeshes.Material(0.30f));
+        foreach (var shadow in shadows)
+            GroundShadowMeshes.AppendDisc(surface, shadow.Center, shadow.Radius, terrain);
+        return surface.Commit(mesh);
     }
 
     // =========================================================
     // Build uneven polygon rings with a broad cap and a chipped upper bevel.
     // Only the relative height responds to neighbours as new brush strokes join a pile.
-    private static void AddBoulder(SurfaceTool surface, Vector2I cell, TerrainHeightField terrain,
+    private static void AddBoulder(SurfaceTool surface, List<(Vector3 Center, Vector2 Radius)> shadows,
+        Vector2I cell, TerrainHeightField terrain,
         float height, Color tint, int neighbours, bool broad)
     {
         uint seed = CellSeed(cell);
         float size = WorldPaint.CellSize;
-        float x = (cell.X + Mathf.Lerp(0.45f, 0.55f, Next(ref seed))) * size;
-        float z = (cell.Y + Mathf.Lerp(0.45f, 0.55f, Next(ref seed))) * size;
+        float x = (cell.X + Mathf.Lerp(0.38f, 0.62f, Next(ref seed))) * size;
+        float z = (cell.Y + Mathf.Lerp(0.38f, 0.62f, Next(ref seed))) * size;
         if (broad) { x = (cell.X + 1f) * size; z = (cell.Y + 1f) * size; }
         float baseY = Ground(terrain, x, z);
-        float heightScale = Mathf.Lerp(0.38f, 1.12f, Next(ref seed)) + neighbours * 0.02f;
+        float heightScale = Mathf.Lerp(0.25f, 1.12f, Next(ref seed)) + neighbours * 0.02f;
         float columnHeight = height * heightScale;
-        float radius = size * (broad ? 0.9f : Mathf.Lerp(0.32f, 0.437f, Next(ref seed)));
-        float stretch = Mathf.Lerp(0.76f, 1f, Next(ref seed));
-        float inset = Mathf.Lerp(0.38f, 0.66f, Next(ref seed));
+        float radius = size * (broad ? Mathf.Lerp(0.69f, 0.93f, Next(ref seed)) : Mathf.Lerp(0.23f, 0.46f, Next(ref seed)));
+        float stretch = Mathf.Lerp(0.59f, 1f, Next(ref seed));
+        float inset = Mathf.Lerp(0.21f, 0.73f, Next(ref seed));
         float turn = Next(ref seed) * Mathf.Tau;
-        int sides = Next(ref seed) < 0.55f ? 6 : 7;
+        int sides = 5 + Mathf.FloorToInt(3 * Next(ref seed));
         Color stone = tint.Lerp(tint.Lightened(0.22f), Next(ref seed)).Darkened(0.04f);
-        var crown = new Vector3(x, baseY + columnHeight, z);
+        var crown = new Vector3(x + radius * Mathf.Lerp(-0.18f, 0.18f, Next(ref seed)),
+            baseY + columnHeight, z + radius * Mathf.Lerp(-0.18f, 0.18f, Next(ref seed)));
+        Vector2 offset = GroundShadowMeshes.SceneryOffset(columnHeight * 0.48f);
+        shadows.Add((new Vector3(x + offset.X, 0.035f, z + offset.Y),
+            new Vector2(radius + offset.X * 0.42f, radius * stretch - offset.Y * 0.42f)));
 
         System.Span<Vector3> foot = stackalloc Vector3[7];
         System.Span<Vector3> shoulder = stackalloc Vector3[7];

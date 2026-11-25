@@ -12,7 +12,7 @@ internal sealed class ForestCover
     private readonly Dictionary<Vector2I, Tree> trees = new();
     private Rect2I visibilityBounds;
     private HashSet<int> faded = new(), nearby = new();
-    private readonly MultiMesh trunks, crowns;
+    private readonly MultiMesh trunks, crowns, shadows;
     private readonly ImmediateMesh outline = new();
     private readonly StandardMaterial3D outlineMaterial = new()
     {
@@ -34,6 +34,7 @@ internal sealed class ForestCover
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
         crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"))));
+        shadows = Batch(parent, GroundShadowMeshes.Soldier(0.27f));
 
         parent.AddChild(new MeshInstance3D { Mesh = outline,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
@@ -50,9 +51,9 @@ internal sealed class ForestCover
         if (cells.Count > trunks.InstanceCount)
         {
             int capacity = System.Math.Max(cells.Count, trunks.InstanceCount * 2);
-            trunks.InstanceCount = crowns.InstanceCount = capacity;
+            trunks.InstanceCount = crowns.InstanceCount = shadows.InstanceCount = capacity;
         }
-        trunks.VisibleInstanceCount = crowns.VisibleInstanceCount = cells.Count;
+        trunks.VisibleInstanceCount = crowns.VisibleInstanceCount = shadows.VisibleInstanceCount = cells.Count;
         if (cells.Count == 0)
         {
             visibilityBounds = default;
@@ -89,6 +90,11 @@ internal sealed class ForestCover
                 new Vector3(center.X, ground + height * 0.5f, center.Y)));
             crowns.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, 0.6f + height * 0.65f, width)),
                 new Vector3(center.X, ground + height + 0.25f, center.Y)));
+            Vector2 shadeCenter = center + GroundShadowMeshes.SceneryOffset(height * 0.72f);
+            shadows.SetInstanceTransform(index, new Transform3D(
+                Basis.Identity.Scaled(new Vector3(radius * 1.26f, 1f, radius * 0.88f)),
+                OnGround(shadeCenter) - Vector3.Up * 0.025f));
+            shadows.SetInstanceColor(index, Colors.White);
             trunks.SetInstanceColor(index, Colors.White);
             crowns.SetInstanceColor(index, Colors.White);
 

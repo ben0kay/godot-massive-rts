@@ -5,30 +5,41 @@ namespace MassiveRts;
 
 internal static class GroundShadowMeshes
 {
-    private static StandardMaterial3D Material() => new()
+    internal static StandardMaterial3D Material(float opacity = 0.52f) => new()
     {
         // About twice the previous opacity for stronger near-black contact shadows.
-        AlbedoColor = new Color(0.005f, 0.008f, 0.012f, 0.52f),
+        AlbedoColor = new Color(0.005f, 0.008f, 0.012f, opacity),
         ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
         Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
         CullMode = BaseMaterial3D.CullModeEnum.Disabled
     };
 
-    public static Mesh Soldier()
+    public static Mesh Soldier(float opacity = 0.52f)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material());
+        surface.SetMaterial(Material(opacity));
+        AppendDisc(surface, Vector3.Zero, Vector2.One);
+        return surface.Commit();
+    }
+
+    internal static Vector2 SceneryOffset(float height) => new Vector2(0.45f, -0.18f) * height;
+
+    internal static void AppendDisc(SurfaceTool surface, Vector3 center, Vector2 radius, TerrainHeightField terrain = null)
+    {
         const int sides = 10;
         for (int i = 0; i < sides; i++)
         {
             float angle = Mathf.Tau * i / sides;
             float next = Mathf.Tau * (i + 1) / sides;
-            surface.AddVertex(Vector3.Zero);
-            surface.AddVertex(new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)));
-            surface.AddVertex(new Vector3(Mathf.Cos(next), 0f, Mathf.Sin(next)));
+            surface.AddVertex(OnGround(center.X, center.Z));
+            surface.AddVertex(Rim(angle));
+            surface.AddVertex(Rim(next));
         }
-        return surface.Commit();
+
+        Vector3 Rim(float angle) => OnGround(center.X + Mathf.Cos(angle) * radius.X,
+            center.Z + Mathf.Sin(angle) * radius.Y);
+        Vector3 OnGround(float x, float z) => new(x, center.Y + (terrain?.At(x, z) ?? 0f), z);
     }
 
     public static Mesh Obstacles(ObstacleField field, float height)

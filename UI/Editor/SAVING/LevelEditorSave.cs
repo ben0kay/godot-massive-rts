@@ -185,6 +185,11 @@ internal static class LevelEditorSave
         if (paint?.Data is WorldPaintData forestData && forestData.ForestCells.Count > WorldPaint.MaxPaintedCells)
             throw new InvalidOperationException("The forest layout exceeds the map paint budget.");
 
+        if (paint?.Data is WorldPaintData wallData &&
+            (wallData.IndustrialWallCells.Count > WorldPaint.MaxPaintedCells ||
+             ObstacleCellCompiler.Merge(new(wallData.IndustrialWallCells), WorldPaint.CellSize, WorldPaint.MaxPaintedRectangles) == null))
+            throw new InvalidOperationException("The Industrial Wall layout exceeds the map paint budget.");
+
         var roster = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
             .Where(unit => unit != null).Select(unit => unit.Id).ToHashSet();
         var groups = map.GetNode("StartingUnits").GetChildren().OfType<CommandUnitPlacement>().ToArray();

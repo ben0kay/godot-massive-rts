@@ -266,6 +266,7 @@ public partial class LevelEditor : Node
         if (existing == null) next.BaseTerrain = (CommandSandbox.BaseTerrainStyle)newLevelTerrain.GetSelectedId();
         EndElevation();
         CancelBridge();
+        CancelWallStroke();
         if (map != null)
         {
             RemoveChild(map);
@@ -401,6 +402,7 @@ public partial class LevelEditor : Node
     {
         if (map == null || runningTest != null) return;
         CancelBridge();
+        CancelWallStroke();
         EndElevation();
         previewing = !previewing;
         if (previewing)
@@ -420,6 +422,7 @@ public partial class LevelEditor : Node
     {
         if (map == null || runningTest != null) return;
         CancelBridge();
+        CancelWallStroke();
         EndPaint();
         try { LevelEditorSave.ValidateContent(mode, map); }
         catch (Exception error) { SetStatus(error.Message); return; }

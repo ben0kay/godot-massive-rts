@@ -25,7 +25,7 @@ public partial class LevelEditor
     private double paintPreviewCooldown;
     private float elevationRadius = 16f, elevationStrength = 2f, elevationTarget;
     private bool setElevationHeight;
-    private float wallWidth = 10, wallDepth = 4, wallHeight = 2, yaw;
+    private float yaw;
     private int unitIndex, groupSize = 1, depositCarbon = 5000;
     private bool red = true;
 
@@ -211,9 +211,11 @@ public partial class LevelEditor
                 Heading(context, "Click near a battlefield edge to set the Red entry.", 15);
                 break;
             case Tool.Wall:
-                Number(context, "Width", wallWidth, 1, 500).ValueChanged += value => wallWidth = (float)value;
-                Number(context, "Depth", wallDepth, 1, 500).ValueChanged += value => wallDepth = (float)value;
-                Number(context, "Height", wallHeight, 0.5, 80, 0.5).ValueChanged += value => wallHeight = (float)value;
+                Choice(context, "Paint mode", new[] { "1×1 Brush", "Line", "Rectangle Fill" },
+                    (int)wallPaintMode, index => { CancelWallStroke(); wallPaintMode = (WallPaintMode)index; });
+                Number(context, "Wall height", paint.Data.IndustrialWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
+                    SetWallValue(paint.Data.IndustrialWallHeight, (float)value, height => paint.Data.IndustrialWallHeight = height);
+                Heading(context, "Left-drag to paint. Right-drag to erase.", 15);
                 break;
             case Tool.DeploymentLine:
                 DeploymentLineTools();
@@ -253,6 +255,7 @@ public partial class LevelEditor
     {
         EndPaint();
         CancelBridge();
+        CancelWallStroke();
         if (cursor?.Mesh is BoxMesh box && squareCursor != box)
         {
             squareCursor = box;
@@ -346,6 +349,7 @@ public partial class LevelEditor
             return;
         }
         if (editingReserve && tool is not Tool.Soldiers) return;
+        if (tool == Tool.Wall && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.Soldiers && fillRectangle && HandleSoldierRectangle(input)) return;
@@ -392,6 +396,7 @@ public partial class LevelEditor
     public override void _Process(double delta)
     {
         UpdateElevation(delta);
+        if (wallStrokeStart.HasValue && !Input.IsMouseButtonPressed(wallStrokeButton)) CancelWallStroke();
         if (paintPreviewCooldown > 0) paintPreviewCooldown -= delta;
         if (paintPreviewPending && paintPreviewCooldown <= 0) PublishPaintPreview();
         if (rectangleStart != null && !Input.IsMouseButtonPressed(MouseButton.Left) && !Input.IsMouseButtonPressed(MouseButton.Right))
@@ -430,13 +435,13 @@ public partial class LevelEditor
 
     private void ShowCursor(Vector3 point)
     {
-        bool brush = tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment or Tool.Erase;
+        bool brush = tool is Tool.Wall or Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment or Tool.Erase;
         var position = brush ? new Vector3((Cell(point).X + 0.5f) * Grid, 0, (Cell(point).Y + 0.5f) * Grid) : Snap(point);
         position.Y = Surface(position) + 0.13f;
         cursor.GlobalPosition = position;
         cursor.Scale = tool switch
         {
-            Tool.Wall => new(wallWidth, 1, wallDepth),
+            Tool.Wall => new(Grid, 1, Grid),
             Tool.Citadel => new(10, 1, 10),
             Tool.Defense => TowerCursor(),
             Tool.Carbon or Tool.Fabricator => new(6, 1, 6),
@@ -604,11 +609,6 @@ public partial class LevelEditor
         string parent;
         switch (tool)
         {
-            case Tool.Wall:
-                node = LoadNode<MeshInstance3D>("res://WORLD/OBSTACLES/CommandWall.tscn");
-                node.Set("wall_size", new Vector3(wallWidth, wallHeight, wallDepth));
-                parent = "Obstacles";
-                break;
             case Tool.ReserveEntry:
                 SetReserveEntry(point);
                 return;
@@ -770,6 +770,7 @@ public partial class LevelEditor
         if (runningTest != null || map == null) return;
         EndPaint();
         CancelBridge();
+        CancelWallStroke();
         if (!from.TryPop(out var edit)) return;
         if (back) edit.Undo(); else edit.Redo();
         to.Push(edit);

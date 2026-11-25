@@ -69,23 +69,22 @@ public partial class LevelEditor
                     unitIndex = i;
                     PickPaletteTool(Tool.Soldiers);
                 }, paletteTools, selectFirst: false),
-            placementPalette.BuildCards(body, towers + 1, towers + 1,
-                i => i == towers ? "Industrial Walls" : defenseDefinitions[i].DisplayName,
-                i => i == towers ? null : UnitPlacementBar.Stats(defenseDefinitions[i].Health,
+            placementPalette.BuildCards(body, towers, towers,
+                i => defenseDefinitions[i].DisplayName,
+                i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f),
                 (icon, i) =>
                 {
-                    if (i == towers) return;
                     var defense = defenseDefinitions[i];
                     icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled);
                     icon.SetColor(enemy);
                 }, i =>
                 {
-                    if (i < towers) paletteDefenseIndex = i;
-                    PickPaletteTool(i == towers ? Tool.Wall : Tool.Defense);
+                    paletteDefenseIndex = i;
+                    PickPaletteTool(Tool.Defense);
                 }, paletteTools, selectFirst: false),
-            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge" },
-                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge }),
+            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls" },
+                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall }),
             ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
                 new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
             simulation
