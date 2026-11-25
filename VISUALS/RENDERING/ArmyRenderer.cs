@@ -265,6 +265,38 @@ public partial class ArmyRenderer : Node3D
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
     internal static Color FactionColor(int faction) => Factions.Color(faction);
 
+    private bool UpdateCircleWalk(int id)
+    {
+        Vector3 ground = GroundPose(id);
+        Vector2 point = new(ground.X, ground.Z);
+        if (slots[id] < 0)
+        {
+            circleWalkPosition[id] = point;
+            uint seed = unchecked((uint)id * 2654435761u);
+            circleWalkPose[id] = new Vector2((seed >> 16) / 65536f, 0f);
+            return false;
+        }
+        Vector2 pose = circleWalkPose[id];
+        float radius = Mathf.Max(0.01f, units.Catalog[units.Type[id]].Footprint);
+        float distanceSquared = point.DistanceSquaredTo(circleWalkPosition[id]);
+        circleWalkPosition[id] = point;
+        float targetWeight = 0f;
+        float phase = pose.X;
+        // Ignore tiny separation jitter and large teleports rather than stepping in place.
+        if (distanceSquared > radius * radius * 0.0004f && distanceSquared < radius * radius * 16f)
+        {
+            float distance = Mathf.Sqrt(distanceSquared);
+            phase += distance / (radius * 3.8f);
+            phase -= Mathf.Floor(phase);
+            targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);
+        }
+        float weight = Mathf.MoveToward(pose.Y, targetWeight, 0.25f);
+        var next = new Vector2(phase, weight);
+        circleWalkPose[id] = next;
+        HasCircleWalkMotion |= weight > 0f;
+        return pose != next;
+    }
+
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
         buffer[offset + 12] = color.R;
