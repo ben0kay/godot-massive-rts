@@ -2,8 +2,8 @@
 shader_type spatial;
 render_mode depth_prepass_alpha, ambient_light_disabled, shadows_disabled;
 
-#include "res://VISUALS/RENDERING/SceneryLighting.gdshaderinc"
 uniform vec4 tree_color : source_color;
+uniform bool foliage = false;
 varying float opacity;
 
 void vertex() {
@@ -14,8 +14,12 @@ global uniform float battlefield_ambient_fill;
 
 void fragment() {
     ALBEDO = tree_color.rgb * COLOR.rgb;
-    // Keep foliage legible in shade when the battlefield fill is lowered.
-    float foliage_fill = 0.75 * sqrt(battlefield_ambient_fill);
-    EMISSION = ALBEDO * foliage_fill;
+    EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
     ALPHA = opacity;
+}
+
+void light() {
+    float facing = max(dot(NORMAL, LIGHT), 0.0);
+    vec3 sun_color = foliage ? ALBEDO * vec3(1.15, 1.85, 1.02) : ALBEDO;
+    DIFFUSE_LIGHT += sun_color * LIGHT_COLOR * (0.72 / PI) * facing * ATTENUATION;
 }

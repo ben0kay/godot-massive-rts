@@ -24,16 +24,17 @@ internal sealed class ForestCover
     internal ForestCover(Node3D parent)
     {
         var shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestTree.gdshader");
-        ShaderMaterial Material(Color tint)
+        ShaderMaterial Material(Color tint, bool foliage = false)
         {
             var material = new ShaderMaterial { Shader = shader };
             material.SetShaderParameter("tree_color", tint);
+            material.SetShaderParameter("foliage", foliage);
             return material;
         }
 
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
-        crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"))));
+        crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"), foliage: true)));
         shadows = Batch(parent, GroundShadowMeshes.Soldier(0.27f));
 
         parent.AddChild(new MeshInstance3D { Mesh = outline,
