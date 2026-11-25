@@ -65,6 +65,14 @@ The model has a square faction-painted helmet and chest, broad armor shoulders, 
 
 A 0.40-second hammer swing uses the same attack-feedback phase and shader as Circle, with a longer wind-up and quick inward impact. The standard 0.16-second whole-body pulse and actual attack cooldown are unchanged. Walking uses the shared distance-driven, ID-staggered gait with a longer stride cycle, smaller foot lift and a peak torso rise of 2.5% of height (Circle 4.5%). The old Circle appearance and animation tuning are unchanged. Lit/unlit battle materials share the settings; placement previews remain static. Owner visual, shader compilation and FPS validation pending.
 
+## Triangle Archer robot trial
+
+**Use Triangle Archer Mesh**, **Animate Triangle Fire**, and **Animate Triangle Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disabling the mesh restores the original beveled triangle; animation toggles apply only to the new model. The long Triangle Marksman is unchanged.
+
+A light triangular faction shell, pointed helmet, compact power pack, thin mechanical boots and centerline laser carbine preserve the original triangular silhouette and collision size. The barrel and breech slide back on the existing successful-shot feedback event, then recover over 0.24 seconds. The existing 0.16-second attack pulse and whole-body recoil remain; the muzzle is visually aligned with the original center-height projectile axis, but actual projectiles still launch from their original position (inside the hull). No change to bolt, launch effects, aim spread, forest deflection, damage, reach, cooldown or stats.
+
+The shared distance-driven gait has a shorter cycle, staggered per-unit phase, 9.5% peak foot lift and 3% peak torso bounce. Rest geometry is baked once, using one masked surface; the existing infantry shader, packed attack phase and optional walking custom data are reused. No extra draw calls, timers or per-unit nodes. Check in-game firing, visible bolt exit, gait and old mesh fallback, plus lit/unlit and FPS.
+
 ## Enhanced Hexagon Siege mesh
 
 **Use Enhanced Hexagon Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) is a separate, default-on toggle from Circle's **Use Enhanced Meshes**. It adds six raised faction-coloured armour wedges, narrow dark radial seams and a recessed central hexagon to the Hexagon Siege Infantry. The details are built into one shared MultiMesh-compatible mesh, including deployment and Entity Editor previews. No combat size, circular clearance, balance or AI parameters change; FX2 cracks and white hit flashes still work. Turn the toggle off and relaunch the battle/editor preview for the original beveled hexagon. The additional triangles warrant a like-for-like high-count FPS comparison.

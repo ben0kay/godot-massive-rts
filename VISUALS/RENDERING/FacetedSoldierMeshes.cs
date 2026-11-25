@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -84,16 +84,21 @@ public static class FacetedSoldierMeshes
         bool circle = visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId;
         bool square = visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId;
         bool siege = visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId;
+        bool archer = visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId;
         material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
-            (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack));
+            (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
+            (archer && visuals.AnimateTriangleFire));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
-            (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk));
+            (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk) ||
+            (archer && visuals.AnimateTriangleWalk));
+        material.SetShaderParameter("triangle_archer", archer);
         material.SetShaderParameter("square_heavy", square);
         material.SetShaderParameter("hexagon_siege", siege);
         material.SetShaderParameter("infantry_height", height);
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId) ||
         (visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId) ||
         (visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId) ||
         (visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId) ||
@@ -128,6 +133,7 @@ public static class FacetedSoldierMeshes
         {
             if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SquareId) AppendSquareHeavy(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.TriangleId) AppendTriangleArcher(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -235,6 +241,54 @@ public static class FacetedSoldierMeshes
         Block(0f, -0.09f, -0.51f, 0.35f, 0.15f, 0.13f, Trim(0.90f));
         Block(0.59f, -0.21f, -0.48f, 0.14f, 0.15f, 0.33f, Steel(1f), swing: true);
         Block(0.53f, -0.20f, -0.68f, 0.14f, 0.14f, 0.20f, Trim(1f), swing: true);
+    }
+
+    // =========================================================
+    // Light ranged infantry: tapered triangular armor with a central laser carbine.
+    // -Z is forward. Keep the muzzle on the existing shot's center-height axis.
+    // All rest geometry fits inside the original triangle; no gameplay muzzle change.
+    private static void AppendTriangleArcher(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool recoil = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: recoil, walkPart: foot);
+        }
+        void Wedge(float py, float pz, float radius, float h, Color mask)
+        {
+            AppendPrism(surface, 3, x * radius, z * radius, h * height, outline.Rotation,
+                new Vector3(0f, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+        }
+
+        // Narrow underframe, swept faction shell, and pointed helmet.
+        Wedge(-0.14f, 0f, 0.70f, 0.30f, Steel(0.95f));
+        Wedge(0.08f, 0f, 0.88f, 0.32f, Paint(0.93f));
+        Wedge(0.36f, 0.13f, 0.49f, 0.28f, Paint(1f));
+        Block(0f, 0.30f, -0.21f, 0.14f, 0.09f, 0.14f, Trim(0.95f));
+
+        // Slim articulated boots and compact rear shoulder plates.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.27f, -0.36f, 0.17f, 0.22f, 0.28f, 0.34f, Steel(0.95f), foot: true);
+            Block(side * 0.43f, 0.03f, 0.23f, 0.25f, 0.25f, 0.29f, Paint(0.88f));
+        }
+        Block(0f, 0.02f, 0.34f, 0.28f, 0.24f, 0.20f, Steel(0.94f));
+        Block(0f, 0.16f, 0.35f, 0.17f, 0.05f, 0.14f, Trim(0.86f));
+
+        // Centered gun: fixed receiver and moving barrel/breech, all on one surface.
+        // The tagged barrel slides backward on fire, without rotating.
+        Block(0f, 0f, -0.30f, 0.28f, 0.24f, 0.42f, Steel(1f));
+        Block(0f, 0f, -0.50f, 0.23f, 0.16f, 0.42f, Paint(0.96f), recoil: true);
+        Block(0f, 0f, -0.75f, 0.12f, 0.12f, 0.28f, Steel(1f), recoil: true);
+        Block(0f, 0f, -0.86f, 0.10f, 0.10f, 0.06f, Trim(1f), recoil: true);
     }
 
     // =========================================================

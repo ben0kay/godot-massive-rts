@@ -5,6 +5,7 @@ uniform bool infantry_attack = false;
 uniform bool infantry_walk = false;
 uniform bool square_heavy = false;
 uniform bool hexagon_siege = false;
+uniform bool triangle_archer = false;
 uniform float infantry_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
@@ -30,6 +31,13 @@ void vertex() {
             float brace = t < 0.18 ? smoothstep(0.0, 0.18, t)
                 : 1.0 - smoothstep(0.18, 1.0, t);
             if (UV.x < 4.5) VERTEX.y -= infantry_height * 0.085 * brace;
+        } else if (triangle_archer && swing > 0.0 && UV.x < -0.5) {
+            // The projectile has already launched. Slide the barrel rearward,
+            // then return it to its receiver; retain the existing body recoil.
+            float t = (swing - 1.0) / 14.0;
+            float kick = t < 0.15 ? smoothstep(0.0, 0.15, t)
+                : 1.0 - smoothstep(0.15, 1.0, t);
+            VERTEX.z += half_extent.y * 0.18 * kick;
         } else if (swing > 0.0 && UV.x < -0.5) {
             // A quick outward wind-up, inward slash and smooth recovery.
             float t = (swing - 1.0) / 14.0;
@@ -63,13 +71,13 @@ void vertex() {
         if (UV.x > 4.5) {
             // Each boot alternates forward travel and lift. The planted boot stays grounded.
             float side = sign(VERTEX.x);
-            float travel = hexagon_siege ? 0.12 : square_heavy ? 0.17 : 0.24;
-            float lift = hexagon_siege ? 0.055 : square_heavy ? 0.075 : 0.10;
+            float travel = hexagon_siege ? 0.12 : square_heavy ? 0.17 : triangle_archer ? 0.20 : 0.24;
+            float lift = hexagon_siege ? 0.055 : square_heavy ? 0.075 : triangle_archer ? 0.095 : 0.10;
             VERTEX.z -= sin(phase) * side * half_extent.y * travel * weight;
             VERTEX.y += max(0.0, cos(phase) * side) * infantry_height * lift * weight;
         } else {
             // Two small body rises per stride; do not lift the planted feet or the shadow.
-            float bounce = hexagon_siege ? 0.009 : square_heavy ? 0.0125 : 0.0225;
+            float bounce = hexagon_siege ? 0.009 : square_heavy ? 0.0125 : triangle_archer ? 0.015 : 0.0225;
             VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * bounce * weight;
         }
     }
