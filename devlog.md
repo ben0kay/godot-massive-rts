@@ -586,3 +586,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Rebuilt bridges with terrain-following steel decks, beveled rails and amber markers. Replaced endpoint and width selection with a single rectangle drag. Bridge footprints still save as rectangles. Godot .NET visual validation pending.
 
 - 2026-11-25 — Added terrain-following dirt and grass beneath painted trees, with continuous adjoining cells and irregular feathered forest edges. Godot .NET visual validation pending.
+
+- 2026-11-25 — Enabled right-click bridge removal in Draw Bridge mode, with undo and redo and right-click cancellation during a placement drag.

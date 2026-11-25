@@ -17,8 +17,14 @@ public partial class LevelEditor
             return true;
         }
         if (input is not InputEventMouseButton mouse) return false;
-        if (mouse.ButtonIndex == MouseButton.Right && mouse.Pressed)
-            CancelBridge();
+        if (mouse.ButtonIndex == MouseButton.Right)
+        {
+            if (mouse.Pressed)
+            {
+                if (bridgeStart.HasValue) CancelBridge();
+                else if (WorldPoint(mouse.Position, out var point)) EraseBridge(Cell(point));
+            }
+        }
         else if (mouse.ButtonIndex == MouseButton.Left)
         {
             if (mouse.Pressed)

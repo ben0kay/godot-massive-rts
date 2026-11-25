@@ -172,7 +172,7 @@ public partial class LevelEditor
                 }
                 break;
             case Tool.Bridge:
-                Heading(context, "Drag a rectangle to place the bridge. Right-click cancels.", 15);
+                Heading(context, "Drag to place a bridge. Right-click to erase or cancel a drag.", 15);
                 break;
             case Tool.Rock:
             case Tool.Water:
