@@ -197,7 +197,7 @@ public static class FacetedSoldierMeshes
         }
 
         // Low round armored torso and oversized cylindrical helmet.
-        Ring(0.53f, 0.56f, -0.13f, 0.44f, Paint(0.85f));
+        Ring(0.53f, 0.56f, -0.07f, 0.56f, Paint(0.85f));
         Ring(0.60f, 0.60f, 0.24f, 0.15f, Trim(0.95f));
         Ring(0.62f, 0.62f, 0.40f, 0.20f, Paint(1f));
 
@@ -211,7 +211,7 @@ public static class FacetedSoldierMeshes
         // Chest plate and a small held energy blade; no separate weapon transform.
         Block(0f, -0.09f, -0.51f, 0.35f, 0.15f, 0.13f, Trim(0.90f));
         Block(0.59f, -0.21f, -0.48f, 0.14f, 0.15f, 0.33f, Steel(1f));
-        Block(0.53f, -0.20f, -0.70f, 0.14f, 0.14f, 0.25f, Trim(1f));
+        Block(0.53f, -0.20f, -0.68f, 0.14f, 0.14f, 0.20f, Trim(1f));
     }
 
     // =========================================================
