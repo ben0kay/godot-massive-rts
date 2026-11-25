@@ -630,3 +630,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Added a live animated/classic Circle Infantry mesh switch to AutoBattler and the Benchmark. The switch refreshes the army renderer and materials while preserving the running simulation. Godot .NET validation pending.
 
 - 2026-11-25 — Renamed the AutoBattler campaign display to Clash. The Level Editor can box-select starting Red soldiers and save opening Move and Hold orders that run in campaign battles and editor tests.
+
+- 2026-11-25 — VIS-SQUARE — Added independently toggleable heavy Square infantry mesh (faction armor, shield and hammer), 0.40s procedural strike and distance-driven staggered heavy gait with smaller bounce. Shared Circle shader, attack feedback and per-batch gait data extended to Square; legacy mesh, Circle tuning and gameplay stats retained. Source review only; owner shader/visual/FPS validation pending.

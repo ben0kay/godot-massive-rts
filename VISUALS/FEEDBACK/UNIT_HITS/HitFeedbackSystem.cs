@@ -10,7 +10,9 @@ public sealed class HitFeedbackSystem
     private readonly bool[] meleeFlash;
     private const float AttackDuration = 0.16f;
     private const float CircleSwordDuration = 0.32f;
+    private const float SquareAttackDuration = 0.40f;
     internal bool ExtendCircleSword { get; set; }
+    internal bool ExtendSquareAttack { get; set; }
     private readonly float[] attackRemaining;
     private readonly int[] attackingIds;
     private int attackingCount;
@@ -49,8 +51,7 @@ public sealed class HitFeedbackSystem
     public bool OnAttack(UnitState units, int id)
     {
         if (attackRemaining[id] <= 0f) attackingIds[attackingCount++] = id;
-        attackRemaining[id] = ExtendCircleSword && units.Type[id] == RuntimeUnitCatalog.Circle
-            ? CircleSwordDuration : AttackDuration;
+        attackRemaining[id] = AttackDurationFor(units.Type[id]);
         return units.Dirty[id] = true;
     }
 
@@ -87,13 +88,17 @@ public sealed class HitFeedbackSystem
         return changed;
     }
 
-    // Keep the original attack pulse length; only the Circle sword recovers more slowly.
-    internal float AttackPhase(int id) => attackRemaining[id] > 0f
-        ? Mathf.Clamp(1f - attackRemaining[id] / CircleSwordDuration, 0f, 1f) : -1f;
+    // Longer weapon motion is purely visual; the original attack pulse stays 0.16s.
+    private float AttackDurationFor(byte type) =>
+        ExtendCircleSword && type == RuntimeUnitCatalog.Circle ? CircleSwordDuration :
+        ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration : AttackDuration;
 
-    public (float Flash, float Scale) Evaluate(int id, bool extendedSword = false)
+    internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f
+        ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type), 0f, 1f) : -1f;
+
+    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue)
     {
-        float attackAge = ((extendedSword ? CircleSwordDuration : AttackDuration) - attackRemaining[id]) / AttackDuration;
+        float attackAge = (AttackDurationFor(type) - attackRemaining[id]) / AttackDuration;
         float attackScale = attackRemaining[id] > 0f && attackAge >= 0f && attackAge < 1f ? 0.15f * (attackAge < 0.28f
             ? Smooth(attackAge / 0.28f) : Smooth((1f - attackAge) / 0.72f)) : 0f;
         if (remaining[id] <= 0f) return (0f, 1f + attackScale);

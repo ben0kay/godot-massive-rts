@@ -534,7 +534,7 @@ public partial class CommandSandbox : Node3D
         {
             buildings.FinishDefenseEffects((float)delta);
             impactRings.Sync();
-            if (units.Shields?.AdvanceFlash((float)delta) == true || feedbackChanged || army.HasCircleWalkMotion) SyncArmy();
+            if (units.Shields?.AdvanceFlash((float)delta) == true || feedbackChanged || army.HasInfantryWalkMotion) SyncArmy();
             return;
         }
         deathFeedback.BeginTick();
@@ -544,7 +544,7 @@ public partial class CommandSandbox : Node3D
         impactRings.SampleCavalry(units, (float)delta);
         if (waves.Defeat || waves.Victory) buildings.WorkerProductionOpen = false;
         buildings.RemoveDestroyed();
-        if (feedbackChanged || changed || previousCount != units.Count || army.HasCircleWalkMotion) SyncArmy();
+        if (feedbackChanged || changed || previousCount != units.Count || army.HasInfantryWalkMotion) SyncArmy();
         projectileRenderer.Sync(waves.Projectiles);
         impactRings.Sync();
     }

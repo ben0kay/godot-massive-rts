@@ -6,7 +6,7 @@ namespace MassiveRts;
 public partial class ArmyRenderer : Node3D
 {
     private const int InstanceStride = 16; // Three affine rows, then RGBA.
-    private const int CircleWalkStride = InstanceStride + 4; // Custom phase/weight only for opted-in Circle batches.
+    private const int InfantryWalkStride = InstanceStride + 4; // Custom phase/weight only for opted-in infantry batches.
     private const int SparseUpdateLimit = 64;
     private float[][] buffers;
     private int[][] changedSlots;
@@ -35,9 +35,11 @@ public partial class ArmyRenderer : Node3D
     private bool useCircleRobotHeading;
     private bool animateCircleSword;
     private bool animateCircleWalk;
+    private bool animateSquareAttack;
+    private bool animateSquareWalk;
     private int[] batchStrides;
-    private Vector2[] circleWalkPosition, circleWalkPose;
-    internal bool HasCircleWalkMotion { get; private set; }
+    private Vector2[] infantryWalkPosition, infantryWalkPose;
+    internal bool HasInfantryWalkMotion { get; private set; }
     private UnitState units;
     private bool cracksEnabled;
     private int maxShieldShells;
@@ -72,9 +74,15 @@ public partial class ArmyRenderer : Node3D
         useCircleRobotHeading = visuals.UseCircleRobotMesh;
         animateCircleSword = visuals.UseCircleRobotMesh && visuals.AnimateCircleSword;
         animateCircleWalk = visuals.UseCircleRobotMesh && visuals.AnimateCircleWalk;
-        circleWalkPosition = animateCircleWalk ? new Vector2[state.Position.Length] : null;
-        circleWalkPose = animateCircleWalk ? new Vector2[state.Position.Length] : null;
-        if (state.HitFeedback != null) state.HitFeedback.ExtendCircleSword = animateCircleSword;
+        animateSquareAttack = visuals.UseSquareHeavyMesh && visuals.AnimateSquareAttack;
+        animateSquareWalk = visuals.UseSquareHeavyMesh && visuals.AnimateSquareWalk;
+        infantryWalkPosition = animateCircleWalk || animateSquareWalk ? new Vector2[state.Position.Length] : null;
+        infantryWalkPose = animateCircleWalk || animateSquareWalk ? new Vector2[state.Position.Length] : null;
+        if (state.HitFeedback != null)
+        {
+            state.HitFeedback.ExtendCircleSword = animateCircleSword;
+            state.HitFeedback.ExtendSquareAttack = animateSquareAttack;
+        }
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
         heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
         middleCrackHealth = (firstCrackHealth + heavyCrackHealth) * 0.5f;
@@ -83,8 +91,7 @@ public partial class ArmyRenderer : Node3D
         int batchCount = typeCount * Factions.Count;
         batchStrides = new int[batchCount];
         for (int b = 0; b < batchCount; b++)
-            batchStrides[b] = animateCircleWalk && b % typeCount == RuntimeUnitCatalog.Circle
-                ? CircleWalkStride : InstanceStride;
+            batchStrides[b] = WalkEnabled(b % typeCount) ? InfantryWalkStride : InstanceStride;
         members = new int[batchCount][];
         buffers = new float[batchCount][];
         changedSlots = new int[batchCount][];
@@ -118,7 +125,7 @@ public partial class ArmyRenderer : Node3D
             mesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                UseColors = true, UseCustomData = batchStrides[batch] == CircleWalkStride,
+                UseColors = true, UseCustomData = batchStrides[batch] == InfantryWalkStride,
                 Mesh = batchShapes[batch % typeCount]
             };
             batches[batch] = mesh;
@@ -265,35 +272,42 @@ public partial class ArmyRenderer : Node3D
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
     internal static Color FactionColor(int faction) => Factions.Color(faction);
 
-    private bool UpdateCircleWalk(int id)
+    private bool WalkEnabled(int type) => (animateCircleWalk && type == RuntimeUnitCatalog.Circle) ||
+        (animateSquareWalk && type == RuntimeUnitCatalog.Square);
+
+    private bool AttackEnabled(int type) => (animateCircleSword && type == RuntimeUnitCatalog.Circle) ||
+        (animateSquareAttack && type == RuntimeUnitCatalog.Square);
+
+    private bool UpdateInfantryWalk(int id)
     {
         Vector3 ground = GroundPose(id);
         Vector2 point = new(ground.X, ground.Z);
         if (slots[id] < 0)
         {
-            circleWalkPosition[id] = point;
+            infantryWalkPosition[id] = point;
             uint seed = unchecked((uint)id * 2654435761u);
-            circleWalkPose[id] = new Vector2((seed >> 16) / 65536f, 0f);
+            infantryWalkPose[id] = new Vector2((seed >> 16) / 65536f, 0f);
             return false;
         }
-        Vector2 pose = circleWalkPose[id];
+        Vector2 pose = infantryWalkPose[id];
         float radius = Mathf.Max(0.01f, units.Catalog[units.Type[id]].Footprint);
-        float distanceSquared = point.DistanceSquaredTo(circleWalkPosition[id]);
-        circleWalkPosition[id] = point;
+        float distanceSquared = point.DistanceSquaredTo(infantryWalkPosition[id]);
+        infantryWalkPosition[id] = point;
         float targetWeight = 0f;
         float phase = pose.X;
         // Ignore tiny separation jitter and large teleports rather than stepping in place.
         if (distanceSquared > radius * radius * 0.0004f && distanceSquared < radius * radius * 16f)
         {
             float distance = Mathf.Sqrt(distanceSquared);
-            phase += distance / (radius * 3.8f);
+            float strideLength = units.Type[id] == RuntimeUnitCatalog.Square ? 4.4f : 3.8f;
+            phase += distance / (radius * strideLength);
             phase -= Mathf.Floor(phase);
             targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);
         }
         float weight = Mathf.MoveToward(pose.Y, targetWeight, 0.25f);
         var next = new Vector2(phase, weight);
-        circleWalkPose[id] = next;
-        HasCircleWalkMotion |= weight > 0f;
+        infantryWalkPose[id] = next;
+        HasInfantryWalkMotion |= weight > 0f;
         return pose != next;
     }
 
@@ -314,11 +328,11 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * stride;
         float[] buffer = buffers[batch];
         byte type = units.Type[id];
-        var (flash, scale) = units.HitFeedback?.Evaluate(id, animateCircleSword && type == RuntimeUnitCatalog.Circle) ?? (0f, 1f);
+        var (flash, scale) = units.HitFeedback?.Evaluate(id, type) ?? (0f, 1f);
         bool white = flash > 0f;
-        if (stride == CircleWalkStride)
+        if (stride == InfantryWalkStride)
         {
-            Vector2 walk = circleWalkPose[id];
+            Vector2 walk = infantryWalkPose[id];
             buffer[offset + 16] = walk.X;
             buffer[offset + 17] = walk.Y;
         }
@@ -384,12 +398,12 @@ public partial class ArmyRenderer : Node3D
             uint variant = unchecked((uint)id * 2654435761u) >> 30;
             color.A = stage == 0 ? 1f : (stage * 4 + variant) / 255f;
         }
-        if (animateCircleSword && type == RuntimeUnitCatalog.Circle)
+        if (AttackEnabled(type))
         {
             // Keep the existing RGBA instance stride: low nibble is fracture,
             // high nibble is attack phase (0 idle, 1..15 animated).
             int fractureCode = color.A == 1f ? 0 : Mathf.RoundToInt(color.A * 255f);
-            float phase = units.HitFeedback?.AttackPhase(id) ?? -1f;
+            float phase = units.HitFeedback?.AttackPhase(id, type) ?? -1f;
             int swingCode = phase < 0f ? 0 : 1 + Mathf.RoundToInt(phase * 14f);
             color.A = (fractureCode + swingCode * 16) / 255f;
         }
@@ -431,7 +445,7 @@ public partial class ArmyRenderer : Node3D
                     new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]));
                 mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
                 mesh.SetInstanceColor(slot, new Color(buffer[offset + 12], buffer[offset + 13], buffer[offset + 14], buffer[offset + 15]));
-                if (stride == CircleWalkStride)
+                if (stride == InfantryWalkStride)
                     mesh.SetInstanceCustomData(slot, new Color(buffer[offset + 16], buffer[offset + 17], 0f, 0f));
             }
         }
@@ -506,7 +520,7 @@ public partial class ArmyRenderer : Node3D
     {
         poseBlend = blend;
         HasInterpolatedMotion = false;
-        HasCircleWalkMotion = false;
+        HasInfantryWalkMotion = false;
         for (int id = 0; id < units.Count; id++)
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
@@ -515,8 +529,8 @@ public partial class ArmyRenderer : Node3D
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;
             HasInterpolatedMotion |= moving && blend < 1f;
-            bool gaitChanged = animateCircleWalk && units.Type[id] == RuntimeUnitCatalog.Circle &&
-                units.Health[id] > 0f && UpdateCircleWalk(id);
+            bool gaitChanged = WalkEnabled(units.Type[id]) &&
+                units.Health[id] > 0f && UpdateInfantryWalk(id);
             if (!units.Dirty[id] && !moving && !wasUnsettled && !gaitChanged) continue;
             units.Dirty[id] = false;
             int batch = Batch(id), slot = slots[id];

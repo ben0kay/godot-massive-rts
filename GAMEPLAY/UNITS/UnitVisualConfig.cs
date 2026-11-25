@@ -12,6 +12,9 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseCircleRobotMesh { get; set; }
     [Export] public bool AnimateCircleSword { get; set; }
     [Export] public bool AnimateCircleWalk { get; set; }
+    [Export] public bool UseSquareHeavyMesh { get; set; }
+    [Export] public bool AnimateSquareAttack { get; set; }
+    [Export] public bool AnimateSquareWalk { get; set; }
     [Export] public bool UseEnhancedHexagonMesh { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }

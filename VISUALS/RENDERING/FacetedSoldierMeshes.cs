@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -39,11 +39,7 @@ public static class FacetedSoldierMeshes
                 var cracked = new ShaderMaterial { Shader = crackShader };
                 cracked.SetShaderParameter("show_fracture", crackMask != null);
                 cracked.SetShaderParameter("use_two_tone_armor", twoToneArmor);
-                cracked.SetShaderParameter("circle_sword_swing", visuals.UseCircleRobotMesh &&
-                    visuals.AnimateCircleSword && type.Id == RuntimeUnitCatalog.CircleId);
-                cracked.SetShaderParameter("circle_walk", visuals.UseCircleRobotMesh &&
-                    visuals.AnimateCircleWalk && type.Id == RuntimeUnitCatalog.CircleId);
-                cracked.SetShaderParameter("circle_height", type.Height);
+                ConfigureInfantryAnimation(cracked, visuals, type.Id, type.Height);
                 if (crackMask != null) cracked.SetShaderParameter("crack_mask", crackMask);
                 cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
@@ -82,7 +78,21 @@ public static class FacetedSoldierMeshes
             unit, includeIndependent: true, twoToneArmor: twoToneArmor);
     }
 
+    // Shared by the lit and unlit battle materials. Placement previews remain at rest.
+    internal static void ConfigureInfantryAnimation(ShaderMaterial material, UnitVisualConfig visuals, string id, float height)
+    {
+        bool circle = visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId;
+        bool square = visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId;
+        material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
+            (square && visuals.AnimateSquareAttack));
+        material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
+            (square && visuals.AnimateSquareWalk));
+        material.SetShaderParameter("square_heavy", square);
+        material.SetShaderParameter("infantry_height", height);
+    }
+
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId) ||
         (visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId) ||
         (visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
             (id == RuntimeUnitCatalog.TwinRocketLauncherId && outline.IsDeepFork)));
@@ -114,6 +124,7 @@ public static class FacetedSoldierMeshes
         if (twoToneArmor)
         {
             if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.SquareId) AppendSquareHeavy(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
@@ -220,6 +231,52 @@ public static class FacetedSoldierMeshes
         Block(0f, -0.09f, -0.51f, 0.35f, 0.15f, 0.13f, Trim(0.90f));
         Block(0.59f, -0.21f, -0.48f, 0.14f, 0.15f, 0.33f, Steel(1f), swing: true);
         Block(0.53f, -0.20f, -0.68f, 0.14f, 0.14f, 0.20f, Trim(1f), swing: true);
+    }
+
+    // =========================================================
+    // Strong infantry: broad squared armor, a shield and a short impact hammer.
+    // The outline stores the square's corner radius, not its half-width.
+    // All rest-pose detail fits inside the original square and height.
+    private static void AppendSquareHeavy(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        const float diagonal = 0.70710678f;
+        float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool swing = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: swing, walkPart: foot);
+        }
+
+        // A compact square helmet and broad layered faction-colored torso.
+        Block(0f, -0.15f, 0.10f, 1.04f, 0.36f, 1.05f, Steel(0.93f));
+        Block(0f, 0.04f, 0.08f, 1.22f, 0.43f, 1.20f, Paint(0.87f));
+        Block(0f, 0.36f, -0.08f, 0.82f, 0.28f, 0.86f, Paint(1f));
+        Block(0f, 0.30f, -0.52f, 0.67f, 0.09f, 0.07f, Trim(0.96f));
+        Block(0f, 0.08f, 0.70f, 0.76f, 0.24f, 0.23f, Paint(0.77f));
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.75f, 0.07f, 0.08f, 0.46f, 0.38f, 0.78f, Paint(0.96f));
+            Block(side * 0.33f, -0.34f, 0.02f, 0.52f, 0.32f, 0.70f, Steel(0.95f), foot: true);
+            Block(side * 0.33f, -0.24f, -0.02f, 0.48f, 0.12f, 0.66f, Paint(0.81f), foot: true);
+        }
+
+        // A tall, beveled left shield, with a recessed-looking dark rim.
+        Block(-0.62f, -0.11f, -0.40f, 0.35f, 0.28f, 0.57f, Steel(0.98f));
+        Block(-0.49f, -0.02f, -0.80f, 0.90f, 0.66f, 0.27f, Steel(0.98f));
+        Block(-0.49f, 0.01f, -0.93f, 0.73f, 0.53f, 0.12f, Paint(0.91f));
+        Block(-0.49f, 0.15f, -0.986f, 0.42f, 0.07f, 0.028f, Trim(0.90f));
+
+        // Right arm, handle and impact head share a single shader pivot.
+        Block(0.70f, -0.17f, -0.17f, 0.32f, 0.25f, 0.56f, Steel(1f), swing: true);
+        Block(0.69f, -0.16f, -0.54f, 0.14f, 0.15f, 0.64f, Steel(0.95f), swing: true);
+        Block(0.69f, -0.14f, -0.78f, 0.53f, 0.31f, 0.34f, Paint(0.95f), swing: true);
+        Block(0.69f, -0.14f, -0.94f, 0.35f, 0.18f, 0.10f, Trim(0.97f), swing: true);
     }
 
     // =========================================================

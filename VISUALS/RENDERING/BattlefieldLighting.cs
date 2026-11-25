@@ -38,11 +38,7 @@ internal static class BattlefieldLighting
             material.SetShaderParameter("show_fracture", crackMask != null);
             material.SetShaderParameter("use_two_tone_armor",
                 FacetedSoldierMeshes.UsesTwoToneArmor(catalog[i].Id, outline, unitVisuals));
-            material.SetShaderParameter("circle_sword_swing", unitVisuals.UseCircleRobotMesh &&
-                unitVisuals.AnimateCircleSword && catalog[i].Id == RuntimeUnitCatalog.CircleId);
-            material.SetShaderParameter("circle_walk", unitVisuals.UseCircleRobotMesh &&
-                unitVisuals.AnimateCircleWalk && catalog[i].Id == RuntimeUnitCatalog.CircleId);
-            material.SetShaderParameter("circle_height", catalog[i].Height);
+            FacetedSoldierMeshes.ConfigureInfantryAnimation(material, unitVisuals, catalog[i].Id, catalog[i].Height);
             if (crackMask != null) material.SetShaderParameter("crack_mask", crackMask);
             material.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
             material.SetShaderParameter("darkness", Mathf.Clamp(unitVisuals.CrackDarkness, 0f, 1f));
