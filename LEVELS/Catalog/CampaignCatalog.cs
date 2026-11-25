@@ -28,7 +28,7 @@ public partial class CampaignCatalog : Resource
         foreach (var campaign in catalog.Campaigns)
         {
             if (campaign == null || !ValidId(campaign.Id) || !campaigns.Add(campaign.Id) ||
-                string.IsNullOrWhiteSpace(campaign.DisplayName) || campaign.Levels == null || campaign.Levels.Count == 0)
+                string.IsNullOrWhiteSpace(campaign.DisplayName) || campaign.Levels == null)
                 throw new InvalidOperationException("The campaign catalog has an invalid or duplicate campaign.");
 
             var ids = new HashSet<string>(StringComparer.Ordinal);

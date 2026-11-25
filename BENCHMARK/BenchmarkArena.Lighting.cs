@@ -50,27 +50,9 @@ public partial class BenchmarkArena
 
     private void CreateBenchmarkSun()
     {
-        benchmarkSun = new DirectionalLight3D
-        {
-            Name = "BenchmarkSun",
-            Basis = Basis.LookingAt(new Vector3(0.48f, -0.70f, -0.53f), Vector3.Up),
-            DirectionalShadowMaxDistance = panel.ShadowDistance
-        };
-        AddChild(benchmarkSun);
-        var shader = GD.Load<Shader>("res://VISUALS/RENDERING/BattlefieldUnitLit.gdshader");
-        var crackMask = unitVisuals.UseUnitFracture
-            ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
-        litUnitMaterials = new Material[catalog.Count];
-        for (int i = 0; i < catalog.Count; i++)
-        {
-            var outline = catalog[i].Outline;
-            var material = new ShaderMaterial { Shader = shader };
-            material.SetShaderParameter("show_fracture", crackMask != null);
-            if (crackMask != null) material.SetShaderParameter("crack_mask", crackMask);
-            material.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
-            material.SetShaderParameter("darkness", Mathf.Clamp(unitVisuals.CrackDarkness, 0f, 1f));
-            litUnitMaterials[i] = material;
-        }
+        benchmarkSun = BattlefieldLighting.AddSun(this);
+        benchmarkSun.DirectionalShadowMaxDistance = panel.ShadowDistance;
+        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals);
     }
 
     private void RefreshBenchmarkGroundLighting()
@@ -95,6 +77,7 @@ public partial class BenchmarkArena
         battleObstacleShadows.Visible = FakeBenchmarkShadows;
         armyRenderer?.SetShadowsVisible(FakeBenchmarkShadows);
         armyRenderer?.SetBattlefieldLighting(
-            benchmarkLighting == BenchmarkLighting.Current ? null : litUnitMaterials, RealBenchmarkShadows);
+            autoBattlerPlaytestMap == null && benchmarkLighting == BenchmarkLighting.Current ? null : litUnitMaterials,
+            RealBenchmarkShadows);
     }
 }

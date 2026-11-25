@@ -1,4 +1,4 @@
-// Satin highlights on batched units under the Benchmark sun.
+// Satin highlights on batched units under the battlefield sun.
 shader_type spatial;
 
 #define BATTLEFIELD_LIT

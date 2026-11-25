@@ -540,3 +540,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Made amber wall lights sparse and deterministic, deepened industrial ground shading, and added baked ground shadows along exposed wall edges. Godot .NET visual validation pending.
 
 - 2026-11-24 — Broadside visual pass 2: strengthened corner armor, turret silhouette and barrel housings; added faction-emissive power rails and status strips using the same shared batches. No weapon, footprint or global glow changes; Godot visual validation pending.
+
+- 2026-11-24 — Applied the shared directional sun and lit unit materials in AutoBattler and Fortress Defense, keeping fake ground shadows. Added Offense as an empty campaign menu entry. Godot .NET runtime validation pending.

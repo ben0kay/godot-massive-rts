@@ -157,6 +157,7 @@ public partial class CommandSandbox : Node3D
             return;
         }
         if (AuthoringPreview) return;
+        BattlefieldLighting.AddSun(this);
         float halfWidth = MapSize * 0.5f;
         UpdateGroundBounds();
         var camera = new IsometricCamera { MaximumZoomSize = halfWidth * 3f, MapOverviewEnabled = true };
@@ -217,6 +218,7 @@ public partial class CommandSandbox : Node3D
         AddChild(army);
         var soldierMeshes = FacetedSoldierMeshes.Create(catalog, unitVisuals);
         army.Initialize(units, soldierMeshes, ShowGroundShadows ? GroundShadowMeshes.Soldier() : null, ShowGroundShadows, unitVisuals);
+        army.SetBattlefieldLighting(BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals), castShadows: false);
         deathRenderer = new DeathEffectRenderer();
         AddChild(deathRenderer);
         deathRenderer.Initialize(catalog, deathFeedback);

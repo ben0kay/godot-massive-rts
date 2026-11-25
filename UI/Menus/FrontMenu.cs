@@ -212,6 +212,11 @@ public partial class FrontMenu : Control
         if (!string.IsNullOrWhiteSpace(campaign.Description))
             campaignLevels.AddChild(MenuLayout.Label(campaign.Description, muted: true));
         back.GrabFocus();
+        if (campaign.Levels.Count == 0)
+        {
+            campaignLevels.AddChild(MenuLayout.Label("Coming Soon", muted: true));
+            return;
+        }
 
         var progress = CampaignProgressStore.Load(ProfileStore.Selected.Id, out bool recovered);
         if (recovered) Report("Recovered campaign progress from the previous backup.");

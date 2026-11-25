@@ -30,6 +30,8 @@ public partial class BenchmarkArena
     private void PrepareAutoBattlerPlaytest()
     {
         var map = autoBattlerPlaytestMap;
+        BattlefieldLighting.AddSun(map);
+        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals);
         map.UpdateGroundBounds();
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         var paint = autoBattlerPaint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
