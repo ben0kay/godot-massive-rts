@@ -22,12 +22,14 @@ Build original, futuristic low-poly military machines with readable hard-surface
 | `RENDERING/BroadsideTowerMeshes.cs` | Accepted heavyweight geometry: normalized base, rotating head and two identical independent barrels |
 | `RENDERING/RailgunTowerMeshes.cs` | Compact base, separate rotating carriage and one recoiling/pitching accelerator assembly |
 | `RENDERING/TowerArmorGeometry.cs` | Shared `Steel`, `Paint`, `Trim`, `Block`, `Plate` helpers |
-| `RENDERING/BroadsideArmor.gdshader` | Shared two-tone mask shader (historical filename, used by both weapons) |
+| `RENDERING/ShieldGeneratorMeshes.cs` | Static radial reactor crown, armored base and emitter pylons |
+| `RENDERING/BroadsideArmor.gdshader` | Shared two-tone mask shader (historical filename, used by all three towers) |
+| `RENDERING/ShieldFieldDomeRenderer.cs` / `ShieldFieldDome.gdshader` | Optional faint stationary coverage indicator; separate compact batch |
 | `RENDERING/TowerLighting.gdshaderinc` | Shared directional light and satin highlight |
 | `RENDERING/DefenseRenderer.cs` | Cached meshes, MultiMesh allocation, faction data, placement, aiming, hide/reset, beam/flash batches |
 | `RENDERING/TowerArmor.gdshader` | Legacy material for other tower visuals; do not silently switch unrelated structures |
 
-The Shield Generator and command buildings have their own existing render paths. Apply the language when their redesign is requested, adapting it to their function rather than duplicating the weapon renderer.
+The Shield Generator now shares the armor shader while retaining its static support silhouette. Command buildings still have their own render paths. Apply the language when their redesign is requested, adapting it to their function rather than duplicating the weapon renderer.
 
 ## 3. Mesh and material conventions
 
@@ -69,3 +71,7 @@ For every new visual pass:
 - Update the buildings README and append one concise devlog entry. Report exact commit and any pending checks.
 
 For entirely new tower mechanics or structures, also follow the Tower Implementation Standard and existing definition/catalog/placement contracts. This is an art/implementation guide, not a mandate to refactor all renderers.
+
+### Shield coverage indicators
+
+A dome visual represents the emitter's horizontal range, not a physical force field. Feed the compiled radius through the placement renderer, center it on the footprint, keep its face very transparent and its rim restrained. Reuse one compact MultiMesh, do not add per-generator simulation or per-recipient effects, and remove the dome on slot release/reset. The dome height is purely cosmetic; terrain may intersect the shell. No projectile blocking, collision, shield recharge changes or global glow changes belong in a visual pass.

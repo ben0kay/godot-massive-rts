@@ -39,7 +39,8 @@ internal sealed class DefenseSystem
         int slot = System.Array.IndexOf(structures, null);
         structures[slot] = structure;
         towers[slot] = CreateTower(structure, stats, height, ground);
-        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled);
+        renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled,
+            stats.ShieldEmitter.Radius);
         ActiveCount++;
     }
 

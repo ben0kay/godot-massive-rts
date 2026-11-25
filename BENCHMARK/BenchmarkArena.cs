@@ -202,6 +202,7 @@ public partial class BenchmarkArena : Node3D
         battleObstacleShadows = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleObstacleShadows);
         panel.ShieldShellsChanged += enabled => armyRenderer?.SetShieldShellsVisible(enabled);
+        panel.ShieldDomesChanged += enabled => defenseRenderer?.SetShieldDomesVisible(enabled);
         panel.GroundShadowsChanged += _ => ApplyArmyLighting();
         if (autoBattlerPlaytestMap == null) ConfigureBenchmarkLighting(benchmarkGround);
         if (campaignRoster == null) RefreshSavedBattles();
@@ -575,6 +576,7 @@ public partial class BenchmarkArena : Node3D
         {
             defenseRenderer = new DefenseRenderer();
             AddChild(defenseRenderer);
+            defenseRenderer.SetShieldDomesVisible(panel.ShowShieldDomes && panel.ShieldsEnabled);
             defenseRenderer.Initialize(defenses, buildings, Config.ObstacleHeight, battle: true, terrain: terrain);
             defenseSystem = new DefenseSystem(defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field, terrain);
         }

@@ -49,6 +49,9 @@ public partial class DefenseRenderer : Node3D
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
     private int liveBeams, liveFlashes;
     private MultiMesh shieldTowers;
+    private ShieldFieldDomeRenderer shieldDomes;
+    private bool showShieldDomes = true;
+    private static Mesh shieldTowerMesh;
     private static readonly Transform3D Hidden = new(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
 
     // =========================================================
@@ -114,6 +117,7 @@ public partial class DefenseRenderer : Node3D
     public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle, TerrainHeightField terrain = null)
     {
         InitializeBatches();
+        shieldDomes?.Clear();
         if (shieldTowers != null)
         {
             for (int i = 0; i < shieldTowers.VisibleInstanceCount; i++) shieldTowers.SetInstanceTransform(i, Hidden);
@@ -126,7 +130,8 @@ public partial class DefenseRenderer : Node3D
             var placement = placements[i];
             var area = placement.Footprint(catalog);
             ShowTower(i, area, placement.Faction, height, terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f,
-                catalog[placement.Type].ProjectileType >= 0, catalog[placement.Type].ShieldEmitter.Enabled);
+                catalog[placement.Type].ProjectileType >= 0, catalog[placement.Type].ShieldEmitter.Enabled,
+                catalog[placement.Type].ShieldEmitter.Radius);
         }
         if (battle)
         {
@@ -150,15 +155,16 @@ public partial class DefenseRenderer : Node3D
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
-        bool rocket = false, bool shield = false)
+        bool rocket = false, bool shield = false, float shieldRadius = 0f)
     {
         if (shield)
         {
             HideTower(index);
-            ShowShieldTower(index, area, faction, height, ground);
+            ShowShieldTower(index, area, faction, height, ground, shieldRadius);
             return;
         }
         shieldTowers?.SetInstanceTransform(index, Hidden);
+        shieldDomes?.Hide(index);
         rocketSlots[index] = rocket;
         Vector2 size = area.Max - area.Min;
         Vector3 pivot = Pivot(area, height) + Vector3.Up * ground;
@@ -196,32 +202,38 @@ public partial class DefenseRenderer : Node3D
         batch.SetInstanceCustomData(index, faction);
     }
 
-    private void ShowShieldTower(int index, ObstacleRectangle area, byte faction, float height, float ground)
+    // =========================================================
+    // The static generator reuses the same armor mask as the weapon towers.
+    private void ShowShieldTower(int index, ObstacleRectangle area, byte faction, float height, float ground, float radius)
     {
         if (shieldTowers == null)
         {
-            using var surface = new SurfaceTool();
-            surface.Begin(Mesh.PrimitiveType.Triangles);
-            surface.SetMaterial(Material);
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.26f, 0f),
-                new Vector3(0.95f, 0.52f, 0.95f), new Color(0.52f, 0.63f, 0.67f));
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.63f, 0f),
-                new Vector3(0.74f, 0.29f, 0.74f), new Color(0.79f, 0.93f, 0.96f));
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.97f, 0f),
-                new Vector3(0.31f, 0.58f, 0.31f), new Color(0.78f, 1f, 1f));
-            for (int side = -1; side <= 1; side += 2)
-                FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(side * 0.29f, 0.83f, 0f),
-                    new Vector3(0.13f, 0.53f, 0.37f), new Color(0.50f, 0.65f, 0.71f));
-            shieldTowers = Batch(surface.Commit(), DeploymentLayout.MaxBuildings);
+            shieldTowerMesh ??= ShieldGeneratorMeshes.Create();
+            shieldTowers = Batch(shieldTowerMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
             for (int i = 0; i < shieldTowers.InstanceCount; i++) shieldTowers.SetInstanceTransform(i, Hidden);
             shieldTowers.VisibleInstanceCount = 0;
         }
         Vector2 size = area.Max - area.Min;
         Vector3 pivot = Pivot(area, height);
+        Vector3 center = new(pivot.X, ground, pivot.Z);
+        Color color = Factions.Color(faction);
         shieldTowers.SetInstanceTransform(index, new Transform3D(
-            Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)), new Vector3(pivot.X, ground, pivot.Z)));
-        shieldTowers.SetInstanceColor(index, Factions.Color(faction).Lightened(0.24f));
+            Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)), center));
+        SetArmorTint(shieldTowers, index, color);
         shieldTowers.VisibleInstanceCount = Mathf.Max(shieldTowers.VisibleInstanceCount, index + 1);
+
+        if (radius > 0f)
+        {
+            shieldDomes ??= new ShieldFieldDomeRenderer(this, showShieldDomes);
+            shieldDomes.Show(index, center, radius, color);
+        }
+    }
+
+    // Benchmark's visual toggle is independent of the individual soldier shells.
+    internal void SetShieldDomesVisible(bool visible)
+    {
+        showShieldDomes = visible;
+        shieldDomes?.SetVisible(visible);
     }
 
     public static Vector3 Pivot(ObstacleRectangle area, float height)
@@ -241,6 +253,7 @@ public partial class DefenseRenderer : Node3D
         rocketBarrels.SetInstanceTransform(index, hidden);
         rightRocketBarrels.SetInstanceTransform(index, hidden);
         shieldTowers?.SetInstanceTransform(index, Hidden);
+        shieldDomes?.Hide(index);
         HideBeam(index);
     }
 

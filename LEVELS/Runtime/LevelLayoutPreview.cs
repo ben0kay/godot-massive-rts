@@ -151,8 +151,10 @@ internal static class LevelLayoutPreview
                 {
                     var area = tower.Footprint(tower.GlobalPosition);
                     float ground = terrain?.SampleFootprint(area.Min, area.Max) ?? 0f;
+                    var emitter = ShieldEmitterStats.Compile(definition.ShieldEmitterEnabled, definition.ShieldRadius,
+                        definition.ShieldCapacity, definition.ShieldRegenerationPerSecond, definition.ShieldDecayPerSecond);
                     defenses.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground,
-                        definition.Projectile != null, definition.ShieldEmitterEnabled);
+                        definition.Projectile != null, emitter.Enabled, emitter.Radius);
                 }
         }
     }

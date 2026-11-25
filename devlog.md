@@ -566,3 +566,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Light Artillery visual experiment: layered neutral-metal chevron hull, faction armor and emissive barrel accents behind the existing enhanced-mesh option. Shared UV mask preserves instance color/fracture buffers, lighting and reinforcement clip; gameplay and muzzle unchanged. Godot validation pending.
 
 - 2026-11-25 — Added a pulsing faction hologram over painted deployment zones, softened the placement grid, and animated freshly painted units from small to a 110% overshoot before settling.
+
+- 2026-11-25 — Shield Generator visual pass: shared two-tone radial reactor model and faint faction-colored coverage dome using compiled radius, a lazy compact batch, existing tower lifecycle and independent Benchmark visibility control. No shield mechanic or balance changes; Godot visual/GPU validation pending.

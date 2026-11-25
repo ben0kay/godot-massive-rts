@@ -121,6 +121,9 @@ public partial class BenchmarkPanel : CanvasLayer
 	private CheckButton performanceToggle;
 	private readonly CheckButton shieldsEnabled = new() { Text = "Enable shields", ButtonPressed = true };
 	internal event Action<bool> ShieldShellsChanged;
+	internal event Action<bool> ShieldDomesChanged;
+	private readonly CheckButton shieldDomes = new() { Text = "Show generator domes", ButtonPressed = true };
+	internal bool ShowShieldDomes => shieldDomes.ButtonPressed;
 	private readonly CheckButton shieldShells = new() { Text = "Show shield shells", ButtonPressed = true };
 	internal bool ShowShieldShells => shieldShells.ButtonPressed;
 	private readonly CheckButton shieldRadii = new() { Text = "Show generator radii" };
@@ -276,7 +279,10 @@ public partial class BenchmarkPanel : CanvasLayer
 		var shields = Section(column, "Shields", false, out _);
 		shields.AddChild(shieldsEnabled);
 		shields.AddChild(shieldRadii);
+		shields.AddChild(shieldDomes);
 		shields.AddChild(shieldShells);
+		shieldDomes.Toggled += _ => ShieldDomesChanged?.Invoke(ShowShieldDomes && ShieldsEnabled);
+		shieldsEnabled.Toggled += _ => ShieldDomesChanged?.Invoke(ShowShieldDomes && ShieldsEnabled);
 		shieldShells.Toggled += enabled => ShieldShellsChanged?.Invoke(enabled);
 		Field(shields, "Coverage refresh (s)", shieldInterval);
 
