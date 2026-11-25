@@ -11,6 +11,8 @@ public sealed class ProjectileSystem
     private readonly float[] elapsed, duration, arc, damage;
     private readonly byte[] sourceFaction;
     private readonly int[] damageTypes;
+    private readonly float[] forestDeflection;
+    private uint shotRandom = 0x9E3779B9u;
     private StructureHealth[] structureTargets;
     private readonly ProjectileCatalog catalog;
     private readonly float lifetime;
@@ -43,6 +45,7 @@ public sealed class ProjectileSystem
         origin = new Vector3[capacity]; displacement = new Vector3[capacity];
         elapsed = new float[capacity]; duration = new float[capacity]; arc = new float[capacity];
         damageTypes = new int[capacity];
+        forestDeflection = new float[capacity];
         damage = new float[capacity]; Type = new int[capacity]; sourceFaction = new byte[capacity];
     }
 
@@ -87,9 +90,16 @@ public sealed class ProjectileSystem
             muzzle = units.Position[shooter] +
                 new Vector3(-heading.X * tip.Z, type.Height * 0.5f + tip.Y, -heading.Y * tip.Z);
         }
+        var definition = units.Catalog.Definition(units.Type[shooter]);
+        float spread = Mathf.Clamp(definition.AimSpreadDegrees, 0f, 15f);
+        if (spread > 0f && !againstStructure)
+            aim = muzzle + (aim - muzzle).Rotated(Vector3.Up, Mathf.DegToRad(spread * (NextShotRoll() * 2f - 1f)));
+        int slot = Count;
         bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
             againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage),
             againstStructure ? type.StructureDamageType : type.UnitDamageType);
+        if (launched && !againstStructure)
+            forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
         if (launched && mounts.Length > 1) units.AdvanceRocketMount(shooter, mounts.Length);
         return launched;
     }
@@ -109,6 +119,7 @@ public sealed class ProjectileSystem
         elapsed[i] = 0;
         Direction[i] = path + Vector3.Up * (4f * arc[i]);
         damage[i] = amount;
+        forestDeflection[i] = 0f;
         damageTypes[i] = damageType;
         Type[i] = projectileType;
         sourceFaction[i] = faction;
@@ -166,7 +177,14 @@ public sealed class ProjectileSystem
                     : -1;
                 if (victim >= 0 || blocked)
                 {
-                    if (victim >= 0) units.Damage(victim, damage[i], damageTypes[i]);
+                    if (victim >= 0)
+                    {
+                        var forest = units.Forest;
+                        if (forestDeflection[i] > 0f && forest?.Contains(units.Position[victim]) == true &&
+                            NextShotRoll() < forestDeflection[i])
+                            forest.DropLeaves(units.Position[victim] + Vector3.Up * units.Catalog[units.Type[victim]].Height * 0.65f);
+                        else units.Damage(victim, damage[i], damageTypes[i]);
+                    }
                     Remove(i);
                     continue;
                 }
@@ -209,6 +227,14 @@ public sealed class ProjectileSystem
         return true;
     }
 
+    private float NextShotRoll()
+    {
+        shotRandom ^= shotRandom << 13;
+        shotRandom ^= shotRandom >> 17;
+        shotRandom ^= shotRandom << 5;
+        return (shotRandom >> 8) * (1f / 16777216f);
+    }
+
     private void Remove(int index)
     {
         int last = --Count;
@@ -222,6 +248,7 @@ public sealed class ProjectileSystem
         origin[index] = origin[last]; displacement[index] = displacement[last];
         elapsed[index] = elapsed[last]; duration[index] = duration[last]; arc[index] = arc[last];
         damageTypes[index] = damageTypes[last];
+        forestDeflection[index] = forestDeflection[last];
         damage[index] = damage[last]; Type[index] = Type[last]; sourceFaction[index] = sourceFaction[last];
     }
 }

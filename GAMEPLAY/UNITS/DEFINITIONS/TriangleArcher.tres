@@ -6,6 +6,8 @@
 [resource]
 script = ExtResource("1")
 Id = "triangle_archer"
+AimSpreadDegrees = 3.0
+ForestDeflectionChance = 0.5
 BattleRating = 120
 DisplayName = "Archer"
 Role = "Fragile ranged infantry"

@@ -14,10 +14,21 @@ internal sealed class ForestCover
     private readonly MultiMesh trunks, crowns, shadows;
     private readonly MeshInstance3D groundCover;
     private float timeUntilRefresh;
+    private static readonly Color LeafGreen = new("#9cb85e"), LeafGold = new("#d2bd69");
+    private const int LeafCapacity = 96, SwayCapacity = 64;
+    private readonly Node3D parent;
+    private MultiMesh leaves;
+    private uint leafSeed;
+    private readonly List<(Vector3 Start, Vector3 Drift, float Age)> fallingLeaves = new(LeafCapacity);
+    private readonly List<(int Tree, Vector2 Direction, float Strength)> swaying = new(SwayCapacity);
+    private readonly HashSet<int> movingTrees = new();
+    private Vector3[] previousHeavyPositions;
+    private UnitState sampledUnits;
     private static Color Tint(float opacity) => new(1f, 1f, 1f, opacity);
 
     internal ForestCover(Node3D parent)
     {
+        this.parent = parent;
         var shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestTree.gdshader");
         ShaderMaterial Material(Color tint, bool foliage = false)
         {
@@ -29,7 +40,7 @@ internal sealed class ForestCover
 
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
-        crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"), foliage: true)));
+        crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"), foliage: true)), customData: true);
         shadows = Batch(parent, GroundShadowMeshes.Pine());
 
         groundCover = new MeshInstance3D
@@ -44,6 +55,7 @@ internal sealed class ForestCover
     // Keep the native render objects attached for the map's lifetime.
     internal void Rebuild(HashSet<Vector2I> cells, TerrainHeightField surface)
     {
+        ResetMotion();
         trees.Clear();
         faded.Clear();
         nearby.Clear();
@@ -99,6 +111,7 @@ internal sealed class ForestCover
             shadows.SetInstanceColor(index, Colors.White);
             trunks.SetInstanceColor(index, Colors.White);
             crowns.SetInstanceColor(index, Colors.White);
+            crowns.SetInstanceCustomData(index, new Color(0, 0, 0, 0));
 
         }
         visibilityBounds = new Rect2I(min, max - min + Vector2I.One);
@@ -131,10 +144,10 @@ internal sealed class ForestCover
         return surface.Commit();
     }
 
-    private static MultiMesh Batch(Node3D parent, Mesh mesh)
+    private static MultiMesh Batch(Node3D parent, Mesh mesh, bool customData = false)
     {
         var batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true, Mesh = mesh };
+            UseColors = true, UseCustomData = customData, Mesh = mesh };
         parent.AddChild(new MultiMeshInstance3D { Multimesh = batch,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         return batch;
@@ -145,8 +158,70 @@ internal sealed class ForestCover
     private static Vector2I Cell(Vector3 position) => new(Mathf.FloorToInt(position.X / WorldPaint.CellSize),
         Mathf.FloorToInt(position.Z / WorldPaint.CellSize));
 
+    internal void DropLeaves(Vector3 point)
+    {
+        if (fallingLeaves.Count > LeafCapacity - 4) return;
+        if (leaves == null)
+        {
+            var material = new StandardMaterial3D
+            {
+                VertexColorUseAsAlbedo = true,
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                CullMode = BaseMaterial3D.CullModeEnum.Disabled
+            };
+            leaves = Batch(parent, new QuadMesh { Size = new Vector2(0.13f, 0.07f), Material = material });
+            leaves.InstanceCount = LeafCapacity;
+            leaves.VisibleInstanceCount = 0;
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            uint seed = unchecked(++leafSeed * 2654435761u);
+            float angle = (seed >> 16) * (Mathf.Tau / 65536f);
+            float speed = 0.35f + (seed & 255) / 510f;
+            fallingLeaves.Add((point, new Vector3(Mathf.Cos(angle) * speed, 0.65f, Mathf.Sin(angle) * speed), 0f));
+        }
+    }
+
+    private void AdvanceLeaves(float delta)
+    {
+        if (fallingLeaves.Count == 0) return;
+        for (int i = fallingLeaves.Count - 1; i >= 0; i--)
+        {
+            var leaf = fallingLeaves[i];
+            leaf.Age += delta;
+            if (leaf.Age >= 0.65f)
+            {
+                fallingLeaves.RemoveAt(i);
+                continue;
+            }
+            fallingLeaves[i] = leaf;
+        }
+        for (int i = 0; i < fallingLeaves.Count; i++)
+        {
+            var leaf = fallingLeaves[i];
+            float t = leaf.Age;
+            Vector3 position = leaf.Start + leaf.Drift * t - Vector3.Up * (1.65f * t * t);
+            float scale = Mathf.Min(1f, (0.65f - t) * 10f);
+            var basis = Basis.FromEuler(new Vector3(t * 7f, leaf.Drift.X * 6f, t * 5f)).Scaled(Vector3.One * scale);
+            leaves.SetInstanceTransform(i, new Transform3D(basis, position));
+            leaves.SetInstanceColor(i, LeafGreen.Lerp(LeafGold, i % 3 * 0.35f));
+        }
+        leaves.VisibleInstanceCount = fallingLeaves.Count;
+    }
+
+    private void ResetMotion()
+    {
+        foreach (var entry in swaying) crowns.SetInstanceCustomData(entry.Tree, new Color(0, 0, 0, 0));
+        swaying.Clear();
+        movingTrees.Clear();
+        fallingLeaves.Clear();
+        if (leaves != null) leaves.VisibleInstanceCount = 0;
+        sampledUnits = null;
+    }
+
     internal void ResetVisibility()
     {
+        ResetMotion();
         foreach (int index in faded)
         {
             trunks.SetInstanceColor(index, Colors.White);
@@ -160,18 +235,58 @@ internal sealed class ForestCover
     // Sample occupancy only at display cadence and upload changed tree colors.
     internal void UpdateVisibility(UnitState units, float delta)
     {
+        AdvanceLeaves(delta);
+        if (trees.Count == 0) return;
         timeUntilRefresh -= delta;
         if (timeUntilRefresh > 0f) return;
         timeUntilRefresh = 0.1f;
         nearby.Clear();
+        movingTrees.Clear();
+        for (int i = swaying.Count - 1; i >= 0; i--)
+        {
+            var entry = swaying[i];
+            entry.Strength = Mathf.Max(0f, entry.Strength - 0.16f);
+            crowns.SetInstanceCustomData(entry.Tree, new Color(entry.Direction.X * 0.5f + 0.5f,
+                entry.Direction.Y * 0.5f + 0.5f, entry.Strength, 0));
+            if (entry.Strength == 0f) swaying.RemoveAt(i);
+            else swaying[i] = entry;
+        }
+        bool trackMovement = ReferenceEquals(sampledUnits, units);
+        if (!trackMovement)
+        {
+            sampledUnits = units;
+            if (previousHeavyPositions?.Length != units.Position.Length) previousHeavyPositions = new Vector3[units.Position.Length];
+            System.Array.Copy(units.Position, previousHeavyPositions, units.Count);
+        }
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Health[id] <= 0f) continue;
             Vector3 position = units.Position[id];
+            Vector3 travel = Vector3.Zero;
+            if (units.Catalog[units.Type[id]].SizeTier >= 3f)
+            {
+                if (trackMovement) travel = position - previousHeavyPositions[id];
+                previousHeavyPositions[id] = position;
+            }
             Vector2I cell = Cell(position);
             // The crown fits inside its cell even at maximum scale and jitter.
-            if (!visibilityBounds.HasPoint(cell) || !trees.TryGetValue(cell, out var tree) ||
-                nearby.Contains(tree.Index)) continue;
+            if (!visibilityBounds.HasPoint(cell) || !trees.TryGetValue(cell, out var tree)) continue;
+            var direction = new Vector2(travel.X, travel.Z);
+            if (direction.LengthSquared() > 0.0025f && movingTrees.Add(tree.Index))
+            {
+                int slot = 0;
+                while (slot < swaying.Count && swaying[slot].Tree != tree.Index) slot++;
+                bool existing = slot < swaying.Count;
+                if (existing || swaying.Count < SwayCapacity)
+                {
+                    var normal = direction.Normalized();
+                    var entry = (tree.Index, normal, 1f);
+                    if (!existing) swaying.Add(entry);
+                    else swaying[slot] = entry;
+                    crowns.SetInstanceCustomData(tree.Index, new Color(normal.X * 0.5f + 0.5f, normal.Y * 0.5f + 0.5f, 1f, 0));
+                }
+            }
+            if (nearby.Contains(tree.Index)) continue;
             if (tree.Center.DistanceSquaredTo(new Vector2(position.X, position.Z)) <= tree.RadiusSquared)
                 nearby.Add(tree.Index);
         }

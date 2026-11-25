@@ -8,6 +8,12 @@ varying float opacity;
 
 void vertex() {
     opacity = COLOR.a;
+    if (foliage && INSTANCE_CUSTOM.b > 0.0) {
+        vec2 push = INSTANCE_CUSTOM.rg * 2.0 - 1.0;
+        float tip = smoothstep(-0.4, 0.75, VERTEX.y);
+        float sway = 0.60 + 0.40 * sin(TIME * 13.0 + MODEL_MATRIX[3].x);
+        VERTEX.xz += push * tip * sway * INSTANCE_CUSTOM.b * 0.20;
+    }
 }
 
 global uniform float battlefield_ambient_fill;
