@@ -56,7 +56,7 @@ public partial class LevelEditor
         void SaveOrders()
         {
             var before = rules.RedOpeningOrders;
-            var after = overlay.SaveAuthoredOrders();
+            var after = redOrderOverlay.SaveAuthoredOrders();
             if (before.SequenceEqual(after)) return;
             void Apply(Vector3[] data)
             {
