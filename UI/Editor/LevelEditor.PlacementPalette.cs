@@ -123,10 +123,20 @@ public partial class LevelEditor
         {
             var defenses = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
             picker.AddChild(defenses);
-            var structures = new HBoxContainer();
-            defenses.AddChild(structures);
-            structures.AddChild(MenuLayout.Label("Structures"));
-            AddPaletteAction(structures, "Faction Wall", Tool.FactionWall);
+            var tools = new HBoxContainer();
+            tools.AddThemeConstantOverride("separation", 8);
+            defenses.AddChild(tools);
+            tools.AddChild(new Label { Text = "Structures", AutowrapMode = TextServer.AutowrapMode.Off });
+            AddPaletteAction(tools, "Faction Wall", Tool.FactionWall);
+            offenseCitadel = Button(tools, "Red Citadel", () =>
+            {
+                paletteDefenseIndex = defenseDefinitions.Length;
+                PickPaletteTool(Tool.Defense);
+            });
+            tools.AddChild(new VSeparator());
+            tools.AddChild(new Label { Text = "Traps", AutowrapMode = TextServer.AutowrapMode.Off });
+            var disruptor = AddPaletteAction(tools, DisruptorGrid.Name, Tool.Disruptor);
+            disruptor.Icon = DisruptorGridVisual.PickerIcon;
             placementPalette.BuildCards(defenses, towers, towers,
                 i => defenseDefinitions[i].DisplayName,
                 i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,
@@ -141,16 +151,6 @@ public partial class LevelEditor
                     paletteDefenseIndex = i;
                     PickPaletteTool(Tool.Defense);
                 }, paletteTools, selectFirst: false);
-            offenseCitadel = Button(defenses, "Red Citadel", () =>
-            {
-                paletteDefenseIndex = defenseDefinitions.Length;
-                PickPaletteTool(Tool.Defense);
-            });
-            var traps = new HBoxContainer();
-            defenses.AddChild(traps);
-            traps.AddChild(MenuLayout.Label("Traps"));
-            var disruptor = AddPaletteAction(traps, DisruptorGrid.Name, Tool.Disruptor);
-            disruptor.Icon = DisruptorGridVisual.PickerIcon;
             return defenses;
         }
 
