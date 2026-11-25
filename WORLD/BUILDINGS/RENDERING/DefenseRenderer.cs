@@ -19,9 +19,13 @@ public partial class DefenseRenderer : Node3D
     private static readonly Mesh BaseMesh = BuildBaseMesh();
     private static readonly Mesh HeadMesh = BuildHeadMesh();
     private static readonly Mesh BarrelMesh = BuildBarrelMesh();
-    private static readonly Mesh RocketBaseMesh = BuildRocketBaseMesh();
-    private static readonly Mesh RocketHeadMesh = BuildRocketHeadMesh();
-    private static readonly Mesh RocketBarrelMesh = BuildRocketBarrelsMesh();
+    private static readonly ShaderMaterial RocketMaterial = new()
+    {
+        Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader")
+    };
+    private static readonly Mesh RocketBaseMesh = BroadsideTowerMeshes.CreateBase();
+    private static readonly Mesh RocketHeadMesh = BroadsideTowerMeshes.CreateHead();
+    private static readonly Mesh RocketBarrelMesh = BroadsideTowerMeshes.CreateBarrel();
     private static readonly Mesh BeamMesh = new BoxMesh { Size = Vector3.One };
     private static readonly Mesh FlashMesh = BuildFlashMesh();
     private static readonly StandardMaterial3D FlashMaterial = new()
@@ -135,61 +139,6 @@ public partial class DefenseRenderer : Node3D
         return surface.Commit();
     }
 
-    // =========================================================
-    // Shared heavyweight armor and twin launch tubes. The wider base remains a
-    // single faceted MultiMesh instance, while only its head and barrels rotate.
-    private static Mesh BuildRocketBaseMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, -0.43f, 0f),
-            new Vector3(1f, 0.30f, 1f), new Color(0.46f, 0.46f, 0.46f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, -0.05f, 0f),
-            new Vector3(0.95f, 0.81f, 0.95f), new Color(0.78f, 0.78f, 0.78f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.40f, 0f),
-            new Vector3(0.82f, 0.16f, 0.82f), Colors.White);
-        for (int side = -1; side <= 1; side += 2)
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-                new Vector3(side * 0.38f, 0.50f, 0f),
-                new Vector3(0.15f, 0.07f, 0.52f), new Color(0.68f, 0.77f, 0.89f));
-        return surface.Commit();
-    }
-
-    private static Mesh BuildRocketHeadMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, -0.17f, 0.18f),
-            new Vector3(2.65f, 0.30f, 2.20f), new Color(0.56f, 0.56f, 0.56f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0.18f, 0.20f),
-            new Vector3(2.16f, 0.50f, 1.62f), new Color(0.89f, 0.89f, 0.89f));
-        for (int side = -1; side <= 1; side += 2)
-        {
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-                new Vector3(side * 0.70f, 0.52f, -0.60f),
-                new Vector3(0.92f, 0.76f, 1.66f), Colors.White);
-            FacetedSoldierMeshes.AppendBeveledRectangle(surface,
-                new Vector3(side * 0.70f, 0.95f, -0.62f),
-                new Vector3(0.67f, 0.07f, 1.20f), new Color(0.75f, 0.84f, 0.94f));
-        }
-        return surface.Commit();
-    }
-
-    // Local tube tips end at the exact RocketMuzzle offsets.
-    private static Mesh BuildRocketBarrelsMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(Material);
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0f, -3.12f),
-            new Vector3(0.37f, 0.31f, 3.16f), new Color(0.84f, 0.84f, 0.84f));
-        FacetedSoldierMeshes.AppendBeveledRectangle(surface, new Vector3(0f, 0f, -4.48f),
-            new Vector3(0.54f, 0.42f, 0.44f), Colors.White);
-        return surface.Commit();
-    }
-
     private static void AddFacetQuad(SurfaceTool surface, Vector3 a, Vector3 b,
         Vector3 c, Vector3 d, Color tint, Vector3 normal)
     {
@@ -231,12 +180,12 @@ public partial class DefenseRenderer : Node3D
         return surface.Commit();
     }
 
-    private MultiMesh Batch(Mesh mesh, int capacity, Material material = null)
+    private MultiMesh Batch(Mesh mesh, int capacity, Material material = null, bool useCustomData = false)
     {
         var batch = new MultiMesh
         {
             Mesh = mesh, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
-            InstanceCount = capacity
+            UseCustomData = useCustomData, InstanceCount = capacity
         };
         AddChild(new MultiMeshInstance3D
         {
@@ -278,10 +227,10 @@ public partial class DefenseRenderer : Node3D
         bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings);
         heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings);
         barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings);
-        rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings);
-        rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings);
-        rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings);
-        rightRocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings);
+        rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
+        rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
+        rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
+        rightRocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, RocketMaterial, useCustomData: true);
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
@@ -311,15 +260,33 @@ public partial class DefenseRenderer : Node3D
         if (!rocket) rightRocketBarrels.SetInstanceTransform(index, hidden);
         activeBase.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
             new Vector3(pivot.X, ground + height * 0.5f, pivot.Z)));
-        activeBase.SetInstanceColor(index, color.Darkened(rocket ? 0.16f : 0.08f));
-        activeHead.SetInstanceColor(index, color);
-        activeBarrels.SetInstanceColor(index, color.Lightened(rocket ? 0.10f : 0.22f));
-        if (rocket) rightRocketBarrels.SetInstanceColor(index, color.Lightened(0.10f));
+        if (rocket)
+        {
+            // Keep the baked material mask intact; the faction tint travels separately.
+            SetRocketTint(rocketBases, index, color);
+            SetRocketTint(rocketHeads, index, color);
+            SetRocketTint(rocketBarrels, index, color);
+            SetRocketTint(rightRocketBarrels, index, color);
+        }
+        else
+        {
+            activeBase.SetInstanceColor(index, color.Darkened(0.08f));
+            activeHead.SetInstanceColor(index, color);
+            activeBarrels.SetInstanceColor(index, color.Lightened(0.22f));
+        }
         Aim(index, pivot, 0f);
         int count = Mathf.Max(bases.VisibleInstanceCount, index + 1);
         bases.VisibleInstanceCount = heads.VisibleInstanceCount = barrels.VisibleInstanceCount =
             rocketBases.VisibleInstanceCount = rocketHeads.VisibleInstanceCount =
                 rocketBarrels.VisibleInstanceCount = rightRocketBarrels.VisibleInstanceCount = count;
+    }
+
+    // =========================================================
+    // Set once on placement/reuse, not during aiming or recoil.
+    private static void SetRocketTint(MultiMesh batch, int index, Color faction)
+    {
+        batch.SetInstanceColor(index, Colors.White);
+        batch.SetInstanceCustomData(index, faction);
     }
 
     private void ShowShieldTower(int index, ObstacleRectangle area, byte faction, float height, float ground)
