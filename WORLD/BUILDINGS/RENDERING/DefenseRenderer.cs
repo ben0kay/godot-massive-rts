@@ -7,11 +7,6 @@ namespace MassiveRts;
 
 public partial class DefenseRenderer : Node3D
 {
-    // Keep the railgun beam visible independently of battlefield lighting.
-    private static readonly StandardMaterial3D Material = new()
-    {
-        VertexColorUseAsAlbedo = true, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
-    };
     // Preserve the existing extended barrel and its laser/muzzle endpoint.
     private const float BarrelLength = 3.8f;
     private const float BarrelCenterForward = BarrelLength * 0.5f;
@@ -39,7 +34,12 @@ public partial class DefenseRenderer : Node3D
     private static readonly Mesh RocketBaseMesh = BroadsideTowerMeshes.CreateBase();
     private static readonly Mesh RocketHeadMesh = BroadsideTowerMeshes.CreateHead();
     private static readonly Mesh RocketBarrelMesh = BroadsideTowerMeshes.CreateBarrel();
-    private static readonly Mesh BeamMesh = new BoxMesh { Size = Vector3.One };
+    private static readonly Mesh BeamMesh = new PlaneMesh { Size = Vector2.One };
+    private static readonly Mesh BeamGlowMesh = new QuadMesh();
+    private static readonly ShaderMaterial BeamMaterial = new()
+    {
+        Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/RailgunBeam.gdshader")
+    };
     private static readonly Mesh FlashMesh = BuildFlashMesh();
     private static readonly StandardMaterial3D FlashMaterial = new()
     {
@@ -51,7 +51,7 @@ public partial class DefenseRenderer : Node3D
     private const int FlashCapacity = 256;
     private readonly float[] flashTime = new float[FlashCapacity];
     private readonly Transform3D[] flashPose = new Transform3D[FlashCapacity];
-    private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, flashes;
+    private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, beamGlows, flashes;
     private readonly int[] crackStages = new int[DeploymentLayout.MaxBuildings];
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
@@ -144,10 +144,11 @@ public partial class DefenseRenderer : Node3D
         }
         if (battle)
         {
-            beams ??= Batch(BeamMesh, DeploymentLayout.MaxBuildings, Material);
+            beams ??= Batch(BeamMesh, DeploymentLayout.MaxBuildings, BeamMaterial, useCustomData: true);
+            beamGlows ??= Batch(BeamGlowMesh, DeploymentLayout.MaxBuildings * 2, BeamMaterial, useCustomData: true);
             Array.Fill(beamSlots, -1);
             flashes ??= Batch(FlashMesh, FlashCapacity, FlashMaterial);
-            beams.VisibleInstanceCount = flashes.VisibleInstanceCount = 0;
+            beams.VisibleInstanceCount = beamGlows.VisibleInstanceCount = flashes.VisibleInstanceCount = 0;
             liveBeams = liveFlashes = 0;
         }
     }
@@ -297,24 +298,33 @@ public partial class DefenseRenderer : Node3D
         }
     }
 
-    internal void ShowBeam(int index, Vector3 from, Vector3 to, byte faction)
+    internal void ShowBeam(int index, Vector3 from, Vector3 to, byte faction, Vector3? impact)
     {
         Vector3 direction = to - from;
         float length = direction.Length();
         if (beams == null) return;
         if (length < 0.001f) { HideBeam(index); return; }
         Vector3 up = Mathf.Abs(direction.Y) / length > 0.98f ? Vector3.Right : Vector3.Up;
-        Basis basis = Basis.LookingAt(direction, up) * new Basis(new Vector3(0.28f, 0, 0), new Vector3(0, 0.28f, 0), new Vector3(0, 0, length));
+        Basis basis = Basis.LookingAt(direction, up) * new Basis(new Vector3(0.92f, 0, 0), Vector3.Up, new Vector3(0, 0, length));
         int slot = beamSlots[index];
         if (slot < 0)
         {
             slot = liveBeams++;
             beamSlots[index] = slot;
             beamOwners[slot] = index;
-            beams.SetInstanceColor(slot, Factions.Color(faction).Lightened(0.55f));
+            Color tint = Factions.Color(faction);
+            beams.SetInstanceColor(slot, tint);
+            beamGlows.SetInstanceColor(slot * 2, tint);
+            beamGlows.SetInstanceColor(slot * 2 + 1, tint);
+            beamGlows.SetInstanceCustomData(slot * 2, new Color(1f, 0f, 0f, 0f));
+            beamGlows.VisibleInstanceCount = liveBeams * 2;
             beams.VisibleInstanceCount = liveBeams;
         }
         beams.SetInstanceTransform(slot, new Transform3D(basis, (from + to) * 0.5f));
+        beamGlows.SetInstanceTransform(slot * 2, new Transform3D(Basis.Identity, from));
+        beamGlows.SetInstanceCustomData(slot * 2 + 1, new Color(2f, impact.HasValue ? 1f : 0f, 0f, 0f));
+        beamGlows.SetInstanceTransform(slot * 2 + 1, new Transform3D(Basis.Identity,
+            (impact ?? to) - direction * (0.15f / length)));
     }
 
     internal void HideBeam(int index)
@@ -329,8 +339,16 @@ public partial class DefenseRenderer : Node3D
             beamSlots[moved] = slot;
             beams.SetInstanceTransform(slot, beams.GetInstanceTransform(last));
             beams.SetInstanceColor(slot, beams.GetInstanceColor(last));
+            for (int i = 0; i < 2; i++)
+            {
+                int destination = slot * 2 + i, source = last * 2 + i;
+                beamGlows.SetInstanceTransform(destination, beamGlows.GetInstanceTransform(source));
+                beamGlows.SetInstanceColor(destination, beamGlows.GetInstanceColor(source));
+                beamGlows.SetInstanceCustomData(destination, beamGlows.GetInstanceCustomData(source));
+            }
         }
         beams.VisibleInstanceCount = liveBeams;
+        beamGlows.VisibleInstanceCount = liveBeams * 2;
     }
 
     // =========================================================

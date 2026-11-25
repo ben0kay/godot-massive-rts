@@ -215,14 +215,20 @@ internal sealed class DefenseSystem
         float end = obstacles?.FirstSightHitExcept(from, segment, tower.Footprint) ?? 1f;
         end = PiercingBeam.ClipTerrain(units.Grounding?.Field, from, segment, end);
         segment *= end;
-        renderer.ShowBeam(index, from, from + segment, tower.Faction);
+        Vector3 to = from + segment;
+        Vector3? impact = end < 1f ? to : null;
 
         Vector2 flat = ObstacleField.Xz(segment);
         float reach = flat.Length();
-        if (grid == null || reach <= 0.001f) return;
+        if (grid == null || reach <= 0.001f)
+        {
+            renderer.ShowBeam(index, from, to, tower.Faction, impact);
+            return;
+        }
         const float beamRadius = 0.14f;
         Vector2 along = flat / reach;
         float slope = segment.Y / reach;
+        float nearest = float.PositiveInfinity;
         var candidates = grid.GetSegmentCandidates(from, segment, units.MaxFootprint + beamRadius, tower.Faction);
         while (candidates.MoveNext())
         {
@@ -230,9 +236,12 @@ internal sealed class DefenseSystem
             if (units.Health[id] <= 0f) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
             if (!PiercingBeam.Intersect(units.Position[id] - from, along, reach, slope,
-                type.Footprint, type.Height, beamRadius, out _)) continue;
+                type.Footprint, type.Height, beamRadius, out float entry)) continue;
+            nearest = Mathf.Min(nearest, entry);
             units.Damage(id, damage, tower.Stats.DamageType);
         }
+        if (!impact.HasValue && float.IsFinite(nearest)) impact = from + segment * (nearest / reach);
+        renderer.ShowBeam(index, from, to, tower.Faction, impact);
     }
 
     private static bool Valid(in Tower tower, UnitState units, int id, ObstacleField obstacles) =>
