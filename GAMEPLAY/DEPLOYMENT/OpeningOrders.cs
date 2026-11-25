@@ -15,6 +15,8 @@ internal sealed class OpeningOrders
         internal float CruiseSpeed;
         internal int Waypoint;
         internal float HoldUntil;
+        internal Vector3? PatrolSpawn;
+        internal bool Returning;
     }
 
     private readonly Dictionary<int, Progress> active = new();
@@ -29,7 +31,7 @@ internal sealed class OpeningOrders
         for (int id = 0; id < count; id++)
         {
             var order = orderFor(placements[id]);
-            if (order == null || order.Hold > 0f) continue;
+            if (order == null || order.Hold > 0f || order.Patrol) continue;
             float speed = catalog[placements[id].Type].Speed;
             speeds[order] = Mathf.Min(speeds.GetValueOrDefault(order, speed), speed);
         }
@@ -45,15 +47,22 @@ internal sealed class OpeningOrders
             }
             if (!routes.TryGetValue(order, out var route))
             {
-                route = new Vector3[order.Bent ? 8 : 1];
+                route = new Vector3[order.Bent && !order.Patrol ? 8 : 1];
                 for (int i = 0; i < route.Length; i++)
                 {
-                    Vector3 point = order.Point((i + 1f) / route.Length);
+                    Vector3 point = order.Patrol ? order.End : order.Point((i + 1f) / route.Length);
                     route[i] = new Vector3(Mathf.Clamp(point.X, -half, half), 0f, Mathf.Clamp(point.Z, -half, half));
                 }
                 routes.Add(order, route);
             }
-            result.active.Add(id, new Progress { Route = route, Offset = placements[id].Position() - order.Start, CruiseSpeed = speeds[order] });
+            Vector3 spawn = placements[id].Position();
+            result.active.Add(id, new Progress
+            {
+                Route = route,
+                Offset = order.Patrol ? Vector3.Zero : spawn - order.Start,
+                CruiseSpeed = order.Patrol ? catalog[placements[id].Type].Speed : speeds[order],
+                PatrolSpawn = order.Patrol ? spawn : null
+            });
         }
         return result.active.Count == 0 ? null : result;
     }
@@ -66,7 +75,7 @@ internal sealed class OpeningOrders
         float bound = Mathf.Max(0f, halfWidth - footprint);
         while (true)
         {
-            Vector3 point = progress.Route[progress.Waypoint] + progress.Offset;
+            Vector3 point = progress.Returning ? progress.PatrolSpawn.Value : progress.Route[progress.Waypoint] + progress.Offset;
             var goal = new Vector3(Mathf.Clamp(point.X, -bound, bound), 0f, Mathf.Clamp(point.Z, -bound, bound));
             finalWaypoint = progress.Waypoint == progress.Route.Length - 1;
             if (finalWaypoint || ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(goal)) >
@@ -80,7 +89,12 @@ internal sealed class OpeningOrders
 
     internal float CruiseSpeed(int id) => active[id].CruiseSpeed;
 
-    internal void CompleteRoute(int id) => active.Remove(id);
+    internal void CompleteRoute(int id)
+    {
+        var progress = active[id];
+        if (progress.PatrolSpawn.HasValue) progress.Returning = !progress.Returning;
+        else active.Remove(id);
+    }
 
     internal bool Advance(UnitState units, float delta)
     {

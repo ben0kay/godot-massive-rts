@@ -31,7 +31,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         internal float Hold;
         internal Behavior Mode;
         internal AfterCombat After;
-        internal bool Bent;
+        internal bool Bent, Patrol;
         internal Vector3 Point(float t) => Bent
             ? Start.Lerp(Bend, t).Lerp(Bend.Lerp(End, t), t)
             : Start.Lerp(End, t);
@@ -40,6 +40,8 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     private PanelContainer orderPopup;
     private Button move;
     private bool placingRoute;
+    private bool patrolDestination;
+    private Button patrol;
 
     internal void AddControls(VBoxContainer parent)
     {
@@ -84,8 +86,11 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         var rows = new VBoxContainer();
         orderPopup.AddChild(rows);
         rows.AddChild(actions);
-        move = UIButtonFactory.Create("Order move", () => placingRoute = !placingRoute, UIButtonStyle.Compact);
+        move = UIButtonFactory.Create("Order move", () => ChooseDestination(false), UIButtonStyle.Compact);
         actions.AddChild(move);
+        patrol = UIButtonFactory.Create("Patrol", () => ChooseDestination(true), UIButtonStyle.Compact);
+        patrol.TooltipText = "Loop between each unit's spawn and the point you click.";
+        actions.AddChild(patrol);
         if (OffenseEditor)
         {
             AddBehavior("Guard", Behavior.Guard);
@@ -147,11 +152,17 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         }, UIButtonStyle.Compact));
     }
 
+    private void ChooseDestination(bool patrolMode)
+    {
+        placingRoute = !placingRoute || patrolDestination != patrolMode;
+        patrolDestination = patrolMode;
+    }
+
     private void PlaceRoute(Vector3 end)
     {
         Vector3 center = Vector3.Zero;
         foreach (var soldier in selected) center += soldier.Position();
-        var order = new Order { Start = center / selected.Count, End = end };
+        var order = new Order { Start = center / selected.Count, End = end, Patrol = patrolDestination };
         foreach (var soldier in selected) orders[soldier] = order;
         placingRoute = false;
         OrdersChanged?.Invoke();
@@ -221,7 +232,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             foreach (var soldier in selected)
             {
                 var order = For(soldier);
-                if (order == null || order.Mode != Behavior.OpeningOrder || order.Hold > 0f || !drawn.Add(order)) continue;
+                if (order == null || order.Mode != Behavior.OpeningOrder || order.Hold > 0f || order.Patrol || !drawn.Add(order)) continue;
                 for (int i = 0; i < 16; i++)
                 {
                     Vector2 a = Screen(order.Point(i / 16f)), b = Screen(order.Point((i + 1) / 16f));
@@ -287,7 +298,8 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             int index = mixed ? -1 : (int)(value ?? AfterCombat.StayStill);
             if (afterCombat.Selected != index) afterCombat.Select(index);
         }
-        move.Text = placingRoute ? "Click destination" : "Order move";
+        move.Text = placingRoute && !patrolDestination ? "Click destination" : "Order move";
+        patrol.Text = placingRoute && patrolDestination ? "Click patrol point" : "Patrol";
         Vector2 bounds = GetViewportRect().Size;
         float bottom = float.NegativeInfinity, left = float.PositiveInfinity, right = float.NegativeInfinity;
         foreach (var soldier in selected)
@@ -340,6 +352,8 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
                     a = b;
                 }
                 DrawCircle(Screen(order.End), 3.5f, Colors.White);
+                if (order.Patrol)
+                    DrawString(ThemeDB.FallbackFont, Screen(order.End) + new Vector2(7f, -5f), "Patrol");
             }
         }
     }
