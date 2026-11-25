@@ -12,5 +12,5 @@
 [resource]
 script = ExtResource("8_5p2ta")
 Id = "Campaign001"
-DisplayName = "AutoBattler"
+DisplayName = "Clash"
 Levels = Array[ExtResource("1_bckq0")]([ExtResource("2_sjlrd"), ExtResource("3_05r42"), ExtResource("4_6hao6"), ExtResource("5_rdle0"), ExtResource("6_8bmrf"), ExtResource("7_urgmb")])

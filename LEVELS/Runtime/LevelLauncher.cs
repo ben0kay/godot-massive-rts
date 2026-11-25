@@ -45,7 +45,7 @@ internal static class LevelLauncher
         if (instance is not CommandSandbox { AutoBattlerRules: not null } map)
         {
             instance.Free();
-            throw new InvalidOperationException("This level needs an authored AutoBattler map.");
+            throw new InvalidOperationException("This level needs an authored Clash map.");
         }
 
         var arena = arenaScene.Instantiate<BenchmarkArena>();

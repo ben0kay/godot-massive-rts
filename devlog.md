@@ -628,3 +628,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Opening attack-move curves now use pass-through waypoints and preserve marching speed between samples. Final arrival allows a small margin so rounding cannot prevent an order from completing. Godot .NET validation pending.
 
 - 2026-11-25 — Added a live animated/classic Circle Infantry mesh switch to AutoBattler and the Benchmark. The switch refreshes the army renderer and materials while preserving the running simulation. Godot .NET validation pending.
+
+- 2026-11-25 — Renamed the AutoBattler campaign display to Clash. The Level Editor can box-select starting Red soldiers and save opening Move and Hold orders that run in campaign battles and editor tests.

@@ -34,7 +34,7 @@ internal sealed partial class AutoBattlerCampaignHeadquarters : Control
         body.AddThemeConstantOverride("separation", config.Spacing);
         margin.AddChild(body);
 
-        var title = MenuLayout.Label("AutoBattler Headquarters");
+        var title = MenuLayout.Label("Clash Headquarters");
         title.AddThemeFontSizeOverride("font_size", config.HeadingSize);
         body.AddChild(title);
         summary = MenuLayout.Label("", muted: true);

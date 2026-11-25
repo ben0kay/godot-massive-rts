@@ -7,6 +7,14 @@ namespace MassiveRts;
 internal sealed partial class DeploymentOrderOverlay : Node2D
 {
     internal DeploymentPainter Painter { get; init; }
+    internal IReadOnlyList<SoldierPlacement> AuthoredSoldiers { get; init; }
+    internal Camera3D EditorCamera { get; init; }
+    internal System.Func<Vector3, Vector3> EditorSurface { get; init; }
+    internal delegate bool GroundPicker(Vector2 screen, out Vector3 point);
+    internal GroundPicker EditorGround { get; init; }
+    internal System.Action OrdersChanged { get; init; }
+    private IReadOnlyList<SoldierPlacement> Soldiers => Painter?.Layout.Placements ?? AuthoredSoldiers;
+    private byte Faction => Painter == null ? Factions.Red : Factions.Blue;
     internal bool Selecting { get; private set; }
     private readonly HashSet<SoldierPlacement> selected = new();
     private readonly Dictionary<SoldierPlacement, Order> orders = new();
@@ -54,6 +62,12 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             row.AddChild(button);
         }
 
+        BuildPopup();
+    }
+
+    internal void BuildPopup()
+    {
+        Selecting = Painter == null || Selecting;
         orderPopup = new PanelContainer { Visible = false };
         orderPopup.AddThemeStyleboxOverride("panel", UIButtonFactory.Box(UIMasterConfig.Current.Panel,
             UIMasterConfig.Current.Accent, 8));
@@ -71,11 +85,13 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             placingRoute = false;
             var order = new Order { Hold = (float)seconds.Value };
             foreach (var soldier in selected) orders[soldier] = order;
+            OrdersChanged?.Invoke();
         }, UIButtonStyle.Compact));
         actions.AddChild(UIButtonFactory.Create("Clear", () =>
         {
             placingRoute = false;
             foreach (var soldier in selected) orders.Remove(soldier);
+            OrdersChanged?.Invoke();
         }, UIButtonStyle.Compact));
     }
 
@@ -86,11 +102,12 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         var order = new Order { Start = center / selected.Count, End = end };
         foreach (var soldier in selected) orders[soldier] = order;
         placingRoute = false;
+        OrdersChanged?.Invoke();
     }
 
-    public override void _Ready() => Painter.Changed += Prune;
+    public override void _Ready() { if (Painter != null) Painter.Changed += Prune; }
 
-    public override void _ExitTree() => Painter.Changed -= Prune;
+    public override void _ExitTree() { if (Painter != null) Painter.Changed -= Prune; }
 
     private void Prune()
     {
@@ -106,6 +123,19 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         Painter.Layout.TryGet(new Vector2I(soldier.X, soldier.Z), out var current) && current == soldier;
 
     internal void Reset() { placingRoute = false; selected.Clear(); orders.Clear(); anchor = null; editing = null; }
+    internal void LoadAuthoredOrders(AutoBattlerRules rules)
+    {
+        orders.Clear();
+        var saved = rules.ReadRedOrders();
+        foreach (var soldier in Soldiers)
+            if (saved.TryGetValue(AutoBattlerRules.RedOrderKey(soldier.Position()), out var order)) orders[soldier] = order;
+    }
+
+    internal Vector3[] SaveAuthoredOrders() => AutoBattlerRules.WriteRedOrders(orders);
+
+    private bool TryGround(Vector2 screen, out Vector3 point) => Painter != null
+        ? Painter.TryGround(screen, out point) : EditorGround(screen, out point);
+
     internal Order For(SoldierPlacement soldier) => orders.GetValueOrDefault(soldier);
 
     internal bool Handle(InputEvent input)
@@ -113,7 +143,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         if (!Selecting) return false;
         if (input is InputEventMouseMotion motion)
         {
-            if (editing != null && Painter.TryGround(motion.Position, out Vector3 bend))
+            if (editing != null && TryGround(motion.Position, out Vector3 bend))
             {
                 editing.Bent = true;
                 editing.Bend = bend * 2f - (editing.Start + editing.End) * 0.5f;
@@ -123,14 +153,14 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         if (input is not InputEventMouseButton mouse) return false;
         if (mouse.ButtonIndex == MouseButton.Right)
         {
-            if (mouse.Pressed && placingRoute && selected.Count > 0 && Painter.TryGround(mouse.Position, out Vector3 end))
+            if (mouse.Pressed && placingRoute && selected.Count > 0 && TryGround(mouse.Position, out Vector3 end))
                 PlaceRoute(end);
             return true;
         }
         if (mouse.ButtonIndex != MouseButton.Left) return false;
         if (mouse.Pressed && placingRoute && selected.Count > 0)
         {
-            if (Painter.TryGround(mouse.Position, out Vector3 end)) PlaceRoute(end);
+            if (TryGround(mouse.Position, out Vector3 end)) PlaceRoute(end);
             return true;
         }
         if (mouse.Pressed)
@@ -156,23 +186,31 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             {
                 selected.Clear();
                 var box = new Rect2(start, mouse.Position - start).Abs().Grow(4f);
-                foreach (var soldier in Painter.Layout.Placements)
-                    if (soldier.Faction == Factions.Blue && box.HasPoint(Screen(soldier.Position()))) selected.Add(soldier);
+                foreach (var soldier in Soldiers)
+                    if (soldier.Faction == Faction && box.HasPoint(Screen(soldier.Position()))) selected.Add(soldier);
             }
             anchor = null;
+            if (editing != null) OrdersChanged?.Invoke();
             editing = null;
         }
         return true;
     }
 
-    private Vector2 Screen(Vector3 point) => Painter.Camera.UnprojectPosition(Painter.OnPreviewTerrain(point) + Vector3.Up * 0.1f);
+    private Vector2 Screen(Vector3 point) => Painter != null
+        ? Painter.Camera.UnprojectPosition(Painter.OnPreviewTerrain(point) + Vector3.Up * 0.1f)
+        : EditorCamera.UnprojectPosition(EditorSurface(point) + Vector3.Up * 0.1f);
 
     public override void _Process(double delta)
     {
-        Visible = Painter.Visible;
+        if (Painter != null) Visible = Painter.Visible;
         UpdatePopup();
         if (!Visible || (!Selecting && orders.Count == 0)) return;
-        if (!Input.IsMouseButtonPressed(MouseButton.Left)) { anchor = null; editing = null; }
+        if (!Input.IsMouseButtonPressed(MouseButton.Left))
+        {
+            anchor = null;
+            if (editing != null) OrdersChanged?.Invoke();
+            editing = null;
+        }
         QueueRedraw();
     }
 
@@ -198,7 +236,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
 
     public override void _Draw()
     {
-        if (!Painter.Visible || Painter.Camera == null || (!Selecting && orders.Count == 0)) return;
+        if (!Visible || (Painter != null && (!Painter.Visible || Painter.Camera == null)) || (!Selecting && orders.Count == 0)) return;
         if (anchor is Vector2 start)
         {
             var box = new Rect2(start, GetGlobalMousePosition() - start).Abs();
@@ -206,10 +244,10 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             DrawRect(box, new Color(0.53f, 0.85f, 1f, 0.9f), false, 1f);
         }
         drawn.Clear();
-        foreach (var soldier in Painter.Layout.Placements)
+        foreach (var soldier in Soldiers)
         {
             if (Selecting && selected.Contains(soldier))
-                DrawArc(Screen(soldier.Position()), 6f, 0f, Mathf.Tau, 16, new Color(0.55f, 0.89f, 1f), 1.5f, true);
+                DrawArc(Screen(soldier.Position()), 6f, 0f, Mathf.Tau, 16, Factions.Color(Faction).Lightened(0.4f), 1.5f, true);
             var order = For(soldier);
             if (order == null || !drawn.Add(order)) continue;
             if (order.Hold > 0f)

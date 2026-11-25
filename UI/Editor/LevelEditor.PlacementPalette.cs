@@ -8,7 +8,7 @@ public partial class LevelEditor
     private UnitPlacementBar placementPalette;
     private Control[] palettePages;
     private Button[] paletteTabs;
-    private Button paletteSelect, paletteMove, paletteErase;
+    private Button paletteSelect, paletteMove, paletteErase, paletteRedOrders;
     private int paletteDefenseIndex;
     private readonly ButtonGroup paletteTools = new();
 
@@ -40,6 +40,7 @@ public partial class LevelEditor
         paletteSelect = AddPaletteAction(header, "Select", Tool.Select);
         paletteMove = AddPaletteAction(header, "Move", Tool.Move);
         paletteErase = AddPaletteAction(header, "Erase", Tool.Erase);
+        paletteRedOrders = AddPaletteAction(header, "Red orders", Tool.RedOrders);
 
         reserveGridButton = Button(header, "Back to battlefield", ToggleReserveGrid);
         reserveGridButton.Hide();
@@ -112,6 +113,7 @@ public partial class LevelEditor
 
     private void PickPaletteTool(Tool next)
     {
+        if (next == Tool.RedOrders && editingReserve) ToggleReserveGrid();
         if (next != Tool.Move) selected = null;
         SwitchTool(next);
     }
@@ -120,6 +122,7 @@ public partial class LevelEditor
     {
         switch (next)
         {
+            case Tool.RedOrders: paletteRedOrders.ButtonPressed = true; break;
             case Tool.Select: paletteSelect.ButtonPressed = true; break;
             case Tool.Move: paletteMove.ButtonPressed = true; break;
             case Tool.Erase: paletteErase.ButtonPressed = true; break;

@@ -14,6 +14,57 @@ public partial class LevelEditor
     private MouseButton rectangleButton;
     private RuntimeUnitCatalog placementCatalog;
 
+    private DeploymentOrderOverlay redOrderOverlay;
+
+    private void CloseRedOrders()
+    {
+        if (redOrderOverlay == null) return;
+        redOrderOverlay.GetParent().RemoveChild(redOrderOverlay);
+        redOrderOverlay.QueueFree();
+        redOrderOverlay = null;
+    }
+
+    private IEnumerable<SoldierPlacement> AuthoredRedSoldiers()
+    {
+        foreach (var group in map.GetNode("StartingUnits").GetChildren().OfType<CommandUnitPlacement>())
+        {
+            if (group.Unit == null || group.Faction != CommandUnitPlacement.Team.Red) continue;
+            float footprint = UnitOutline.FromDefinition(group.Unit, UnitOutline.EffectiveSize(group.Unit)).Footprint;
+            foreach (var point in group.Positions(footprint))
+                yield return new SoldierPlacement(0, 0, Factions.Red, 0) { AuthoredPosition = point };
+        }
+
+    }
+
+    private void OpenRedOrders()
+    {
+        var rules = map.AutoBattlerRules;
+        var overlay = new DeploymentOrderOverlay
+        {
+            AuthoredSoldiers = AuthoredRedSoldiers().ToArray(), EditorCamera = camera, EditorGround = WorldPoint,
+            EditorSurface = point => new Vector3(point.X, Surface(point), point.Z),
+            ZIndex = 10, OrdersChanged = SaveOrders
+        };
+        redOrderOverlay = overlay;
+        interfaceRoot.AddChild(overlay);
+        overlay.BuildPopup();
+        overlay.LoadAuthoredOrders(rules);
+
+        void SaveOrders()
+        {
+            var before = rules.RedOpeningOrders;
+            var after = overlay.SaveAuthoredOrders();
+            if (before.SequenceEqual(after)) return;
+            void Apply(Vector3[] data)
+            {
+                rules.RedOpeningOrders = data;
+                redOrderOverlay?.LoadAuthoredOrders(rules);
+            }
+            rules.RedOpeningOrders = after;
+            Remember(() => Apply(before), () => Apply(after));
+        }
+    }
+
     // =========================================================
     public override void _Input(InputEvent input)
     {

@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -38,9 +38,10 @@ public partial class LevelEditor
         {
             if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
-            if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine) continue;
+            if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders) continue;
             toolPicker.AddItem(entry switch
             {
+                Tool.RedOrders => "Red orders",
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Elevation => "Paint elevation",
@@ -161,6 +162,9 @@ public partial class LevelEditor
         };
         switch (tool)
         {
+            case Tool.RedOrders:
+                Heading(context, "Drag a box around Red units, then assign Move or Wait.", 15);
+                break;
             case Tool.Select:
             case Tool.Move:
                 Heading(context, selected == null ? "Click an object to select it." : $"Selected · {selected.Name}", 15);
@@ -270,7 +274,9 @@ public partial class LevelEditor
             cursor.Mesh = next == Tool.Elevation ? elevationCursor : squareCursor;
             cursor.Hide();
         }
+        CloseRedOrders();
         tool = next;
+        if (tool == Tool.RedOrders && !editingReserve) OpenRedOrders();
         toolPicker.Select(toolPicker.GetItemIndex((int)next));
         if (next != Tool.Defense && !mode.IsAutoBattler) defensePicker.Select(0);
         if (mode.IsAutoBattler) SyncPaletteTool(next);
@@ -330,6 +336,11 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
+        if (tool == Tool.RedOrders)
+        {
+            if (redOrderOverlay?.Handle(input) == true) GetViewport().SetInputAsHandled();
+            return;
+        }
         if (editingReserve && input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } reserveClick &&
             (tool is Tool.Select or Tool.Move or Tool.Erase) && WorldPoint(reserveClick.Position, out var reservePoint))
         {
@@ -760,6 +771,25 @@ public partial class LevelEditor
 
     private void Remember(Action back, Action forward)
     {
+        var rules = map.AutoBattlerRules;
+        if (rules?.RedOpeningOrders.Length > 0 && tool != Tool.RedOrders)
+        {
+            var before = rules.RedOpeningOrders;
+            var remaining = rules.ReadRedOrders();
+            var orders = new Dictionary<SoldierPlacement, DeploymentOrderOverlay.Order>();
+            foreach (var soldier in AuthoredRedSoldiers())
+                if (remaining.TryGetValue(AutoBattlerRules.RedOrderKey(soldier.Position()), out var order))
+                    orders[soldier] = order;
+            var after = AutoBattlerRules.WriteRedOrders(orders);
+            if (before.Length != after.Length)
+            {
+                rules.RedOpeningOrders = after;
+                var undoEdit = back;
+                var redoEdit = forward;
+                back = () => { undoEdit(); rules.RedOpeningOrders = before; };
+                forward = () => { redoEdit(); rules.RedOpeningOrders = after; };
+            }
+        }
         undo.Push((back, forward));
         redo.Clear();
         dirty = true;
@@ -774,6 +804,7 @@ public partial class LevelEditor
         CancelWallStroke();
         if (!from.TryPop(out var edit)) return;
         if (back) edit.Undo(); else edit.Redo();
+        if (tool == Tool.RedOrders) { CloseRedOrders(); OpenRedOrders(); }
         to.Push(edit);
         UpdateTool();
         dirty = true;

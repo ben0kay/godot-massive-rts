@@ -547,10 +547,15 @@ public partial class BenchmarkArena : Node3D
         }
         var orders = settings.Orders;
         var openingOverlay = autoBattlerPlaytestMap != null && ReferenceEquals(layout, painter.Layout) ? painter.Orders : null;
+        var redOrders = autoBattlerPlaytestMap?.AutoBattlerRules?.ReadRedOrders();
+        DeploymentOrderOverlay.Order OrderFor(SoldierPlacement placement) =>
+            placement.Faction == Factions.Red
+                ? redOrders?.GetValueOrDefault(AutoBattlerRules.RedOrderKey(placement.Position()))
+                : openingOverlay?.For(placement);
         var snapshot = new SoldierPlacement[placements.Count];
         int attackerCount = 0;
         foreach (SoldierPlacement placement in placements)
-            if (orders[placement.Faction] == GuardOrder.AutoAttack || openingOverlay?.For(placement) != null)
+            if (orders[placement.Faction] == GuardOrder.AutoAttack || OrderFor(placement) != null)
                 snapshot[attackerCount++] = placement;
 
         Clear();
@@ -570,7 +575,7 @@ public partial class BenchmarkArena : Node3D
                 if (order == GuardOrder.AutoAttack) continue;
                 int start = next;
                 foreach (SoldierPlacement placement in placements)
-                    if (placement.Faction == faction && openingOverlay?.For(placement) == null) snapshot[next++] = placement;
+                    if (placement.Faction == faction && OrderFor(placement) == null) snapshot[next++] = placement;
                 if (start < next)
                     guards[faction] = new GuardGroup(start, next, snapshot, settings.GuardRadius, order);
             }
@@ -592,8 +597,8 @@ public partial class BenchmarkArena : Node3D
         }
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
-        if (openingOverlay != null)
-            units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, openingOverlay, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
+        if (autoBattlerPlaytestMap != null && (openingOverlay != null || redOrders?.Count > 0))
+            units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, OrderFor, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = autoBattlerForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);

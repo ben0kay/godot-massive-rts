@@ -22,13 +22,13 @@ internal sealed class OpeningOrders
     private float elapsed;
     private float halfWidth;
 
-    internal static OpeningOrders Create(SoldierPlacement[] placements, int count, DeploymentOrderOverlay overlay, float half, RuntimeUnitCatalog catalog)
+    internal static OpeningOrders Create(SoldierPlacement[] placements, int count, System.Func<SoldierPlacement, DeploymentOrderOverlay.Order> orderFor, float half, RuntimeUnitCatalog catalog)
     {
         var result = new OpeningOrders { halfWidth = half };
         var speeds = new Dictionary<DeploymentOrderOverlay.Order, float>();
         for (int id = 0; id < count; id++)
         {
-            var order = overlay.For(placements[id]);
+            var order = orderFor(placements[id]);
             if (order == null || order.Hold > 0f) continue;
             float speed = catalog[placements[id].Type].Speed;
             speeds[order] = Mathf.Min(speeds.GetValueOrDefault(order, speed), speed);
@@ -36,7 +36,7 @@ internal sealed class OpeningOrders
         var routes = new Dictionary<DeploymentOrderOverlay.Order, Vector3[]>();
         for (int id = 0; id < count; id++)
         {
-            var order = overlay.For(placements[id]);
+            var order = orderFor(placements[id]);
             if (order == null) continue;
             if (order.Hold > 0f)
             {

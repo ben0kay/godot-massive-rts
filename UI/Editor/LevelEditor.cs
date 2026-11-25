@@ -267,6 +267,7 @@ public partial class LevelEditor : Node
         EndElevation();
         CancelBridge();
         CancelWallStroke();
+        CloseRedOrders();
         if (map != null)
         {
             RemoveChild(map);
@@ -286,7 +287,7 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        testButton.Text = mode.IsAutoBattler ? "Test AutoBattler" : "Test Fortress";
+        testButton.Text = mode.IsAutoBattler ? "Test Clash" : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
         map = next;
@@ -317,6 +318,7 @@ public partial class LevelEditor : Node
         placementPalette.Visible = toolSidebar.Visible && mode.IsAutoBattler;
         toolSidebar.OffsetBottom = placementPalette.Visible ? -placementPalette.BarHeight - 24 : -12;
         map.Visible = runningTest == null;
+        if (redOrderOverlay != null) redOrderOverlay.Visible = toolSidebar.Visible;
     }
 
     private void SetStatus(string message = "") =>

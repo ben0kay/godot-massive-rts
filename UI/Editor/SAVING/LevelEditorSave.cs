@@ -231,7 +231,7 @@ internal static class LevelEditorSave
             }
             long reserveCount = staged.Length > 0 ? staged.Sum(group => (long)group.SoldierCount) : rules.RedReserveCount;
             if (groups.Sum(group => (long)group.SoldierCount) + reserveCount > 100000)
-                throw new InvalidOperationException("AutoBattler supports up to 100,000 authored soldiers.");
+                throw new InvalidOperationException("Clash supports up to 100,000 authored soldiers.");
             if (groups.Any(group => group.Faction != CommandUnitPlacement.Team.Red) ||
                 map.AutoBattlerRules.BlueUnitLimit < 0 || map.AutoBattlerRules.AllowedBlueUnitIds.Any(id => !roster.Contains(id)))
                 throw new InvalidOperationException("Check the Red formation factions and Blue deployment settings.");

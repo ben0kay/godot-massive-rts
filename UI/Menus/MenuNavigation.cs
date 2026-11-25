@@ -25,7 +25,7 @@ internal static class MenuNavigation
         if (campaignId == AutoBattlerCampaignStore.CampaignId)
         {
             var campaign = CampaignCatalog.Load().Campaigns.FirstOrDefault(entry => entry.Id == campaignId)
-                ?? throw new InvalidOperationException("AutoBattler is unavailable.");
+                ?? throw new InvalidOperationException("Clash is unavailable.");
             OpenHeadquarters(source, campaign);
             return;
         }
