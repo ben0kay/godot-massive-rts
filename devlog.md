@@ -608,3 +608,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — VIS-CIRCLE-SWING — Optional 0.16-second procedural sword/forearm swing for the Circle robot, driven by existing attack feedback and tagged mesh vertices in shared lit/unlit shaders. Preserves fracture data and instance stride; no skeletal animation or combat changes. Awaiting owner visual/FPS validation.
 
 - 2026-11-25 — Used each selected unit’s hull outline for deployment ghosts and halved both Twin Rocket Launcher mounts’ flight arcs. Godot .NET visual validation pending.
+
+- 2026-11-25 — VIS-CIRCLE-WALK — Circle robot sword swing slowed to half speed (0.32s, original attack pulse unchanged); independent distance-driven alternating boot gait and restrained torso bounce with stable per-unit phase offsets and settling. Extra custom data is limited to opted-in Circle batches; shield shell indexing follows each batch stride. No combat or footprint changes. Source review only; owner visual/FPS validation pending.

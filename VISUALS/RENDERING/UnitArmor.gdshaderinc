@@ -1,7 +1,7 @@
 // UV.x = 0 legacy, 1 steel, 2 paint, 3 emissive trim; UV.y = baked face brightness.
-// Negative kinds mark the Circle robot swing parts; their material is otherwise identical.
+// Negative kinds mark the Circle sword arm; +4 marks boots. Both retain the base armor kind.
 vec3 unit_armor_albedo(vec3 tint, vec2 mask) {
-    float kind = abs(mask.x);
+    float kind = mod(abs(mask.x), 4.0);
     if (kind < 0.5) return tint;
     float shade = mask.y;
     // The existing hit-feedback path writes white RGB for one flash.
@@ -12,6 +12,6 @@ vec3 unit_armor_albedo(vec3 tint, vec2 mask) {
 }
 
 vec3 unit_armor_emission(vec3 tint, vec2 mask) {
-    if (abs(mask.x) < 2.5 || min(tint.r, min(tint.g, tint.b)) > 0.99) return vec3(0.0);
+    if (mod(abs(mask.x), 4.0) < 2.5 || min(tint.r, min(tint.g, tint.b)) > 0.99) return vec3(0.0);
     return tint * mask.y * 0.75;
 }

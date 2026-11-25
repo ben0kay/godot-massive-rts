@@ -18,7 +18,7 @@ internal sealed class ShieldShellRenderer(Node3D owner, UnitState units, Mesh[] 
         batch.VisibleInstanceCount = 0;
     }
 
-    internal void Sync(ShieldSystem shields, int[] slots, float[][] buffers, int stride)
+    internal void Sync(ShieldSystem shields, int[] slots, float[][] buffers, int[] strides)
     {
         bool hasShells = shields.ShieldedCount > 0 || shields.HasFlashes;
         if (!hasShells && visible == 0) return;
@@ -32,8 +32,9 @@ internal sealed class ShieldShellRenderer(Node3D owner, UnitState units, Mesh[] 
             float strength = shields.Strength(id), flash = shields.Flash(id);
             if (strength <= 0f && flash <= 0f) continue;
             int type = units.Type[id];
-            float[] buffer = buffers[units.Faction[id] * soldierMeshes.Length + type];
-            int offset = slot * stride;
+            int armyBatch = units.Faction[id] * soldierMeshes.Length + type;
+            float[] buffer = buffers[armyBatch];
+            int offset = slot * strides[armyBatch];
             Vector3 center = new(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
             if (camera != null && !camera.IsPositionInFrustum(center)) continue;
 

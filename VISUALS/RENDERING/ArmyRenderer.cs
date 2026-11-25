@@ -6,6 +6,7 @@ namespace MassiveRts;
 public partial class ArmyRenderer : Node3D
 {
     private const int InstanceStride = 16; // Three affine rows, then RGBA.
+    private const int CircleWalkStride = InstanceStride + 4; // Custom phase/weight only for opted-in Circle batches.
     private const int SparseUpdateLimit = 64;
     private float[][] buffers;
     private int[][] changedSlots;
@@ -33,6 +34,10 @@ public partial class ArmyRenderer : Node3D
     private bool[] facesPositiveX;
     private Vector2[] circleRobotHeading;
     private bool animateCircleSword;
+    private bool animateCircleWalk;
+    private int[] batchStrides;
+    private Vector2[] circleWalkPosition, circleWalkPose;
+    internal bool HasCircleWalkMotion { get; private set; }
     private UnitState units;
     private bool cracksEnabled;
     private int maxShieldShells;
@@ -66,12 +71,20 @@ public partial class ArmyRenderer : Node3D
         cracksEnabled = visuals.UseUnitFracture;
         circleRobotHeading = visuals.UseCircleRobotMesh ? new Vector2[state.Position.Length] : null;
         animateCircleSword = visuals.UseCircleRobotMesh && visuals.AnimateCircleSword;
+        animateCircleWalk = visuals.UseCircleRobotMesh && visuals.AnimateCircleWalk;
+        circleWalkPosition = animateCircleWalk ? new Vector2[state.Position.Length] : null;
+        circleWalkPose = animateCircleWalk ? new Vector2[state.Position.Length] : null;
+        if (state.HitFeedback != null) state.HitFeedback.ExtendCircleSword = animateCircleSword;
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
         heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
         middleCrackHealth = (firstCrackHealth + heavyCrackHealth) * 0.5f;
         units = state; slots = new int[state.Position.Length]; System.Array.Fill(slots, -1);
         typeCount = state.Catalog.Count;
         int batchCount = typeCount * Factions.Count;
+        batchStrides = new int[batchCount];
+        for (int b = 0; b < batchCount; b++)
+            batchStrides[b] = animateCircleWalk && b % typeCount == RuntimeUnitCatalog.Circle
+                ? CircleWalkStride : InstanceStride;
         members = new int[batchCount][];
         buffers = new float[batchCount][];
         changedSlots = new int[batchCount][];
@@ -105,7 +118,8 @@ public partial class ArmyRenderer : Node3D
             mesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                UseColors = true, Mesh = batchShapes[batch % typeCount]
+                UseColors = true, UseCustomData = batchStrides[batch] == CircleWalkStride,
+                Mesh = batchShapes[batch % typeCount]
             };
             batches[batch] = mesh;
             changedSlots[batch] = new int[SparseUpdateLimit];
@@ -115,9 +129,10 @@ public partial class ArmyRenderer : Node3D
         }
         int previousCapacity = members[batch]?.Length ?? 0;
         System.Array.Resize(ref members[batch], capacity);
-        System.Array.Resize(ref buffers[batch], capacity * InstanceStride);
+        int stride = batchStrides[batch];
+        System.Array.Resize(ref buffers[batch], capacity * stride);
         Color faction = FactionColor(batch / typeCount);
-        for (int offset = previousCapacity * InstanceStride; offset < buffers[batch].Length; offset += InstanceStride)
+        for (int offset = previousCapacity * stride; offset < buffers[batch].Length; offset += stride)
         {
             buffers[batch][offset] = buffers[batch][offset + 5] = buffers[batch][offset + 10] = 1f;
             StoreColor(buffers[batch], offset, faction);
@@ -278,6 +293,40 @@ public partial class ArmyRenderer : Node3D
         return heading;
     }
 
+    // Distance-based gait, evaluated once per rendered sync, never from wall-clock time.
+    // Phase belongs to the soldier ID, not the compacted MultiMesh slot.
+    private bool UpdateCircleWalk(int id)
+    {
+        Vector3 ground = GroundPose(id);
+        Vector2 point = new(ground.X, ground.Z);
+        if (slots[id] < 0)
+        {
+            circleWalkPosition[id] = point;
+            uint seed = unchecked((uint)id * 2654435761u);
+            circleWalkPose[id] = new Vector2((seed >> 16) / 65536f, 0f);
+            return false;
+        }
+        Vector2 pose = circleWalkPose[id];
+        float radius = Mathf.Max(0.01f, units.Catalog[units.Type[id]].Footprint);
+        float distanceSquared = point.DistanceSquaredTo(circleWalkPosition[id]);
+        circleWalkPosition[id] = point;
+        float targetWeight = 0f;
+        float phase = pose.X;
+        // Ignore tiny separation jitter and large teleports rather than stepping in place.
+        if (distanceSquared > radius * radius * 0.0004f && distanceSquared < radius * radius * 16f)
+        {
+            float distance = Mathf.Sqrt(distanceSquared);
+            phase += distance / (radius * 3.8f);
+            phase -= Mathf.Floor(phase);
+            targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);
+        }
+        float weight = Mathf.MoveToward(pose.Y, targetWeight, 0.25f);
+        var next = new Vector2(phase, weight);
+        circleWalkPose[id] = next;
+        HasCircleWalkMotion |= weight > 0f;
+        return pose != next;
+    }
+
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
         buffer[offset + 12] = color.R;
@@ -291,11 +340,18 @@ public partial class ArmyRenderer : Node3D
     {
         Vector3 position = GroundPose(id);
         if (shadowsEnabled) WriteShadow(batch, slot, position);
-        int offset = slot * InstanceStride;
+        int stride = batchStrides[batch];
+        int offset = slot * stride;
         float[] buffer = buffers[batch];
-        var (flash, scale) = units.HitFeedback?.Evaluate(id) ?? (0f, 1f);
-        bool white = flash > 0f;
         byte type = units.Type[id];
+        var (flash, scale) = units.HitFeedback?.Evaluate(id, animateCircleSword && type == RuntimeUnitCatalog.Circle) ?? (0f, 1f);
+        bool white = flash > 0f;
+        if (stride == CircleWalkStride)
+        {
+            Vector2 walk = circleWalkPose[id];
+            buffer[offset + 16] = walk.X;
+            buffer[offset + 17] = walk.Y;
+        }
         // Visual mesh only; the authoritative position and projectile spawn stay unchanged.
         if (units.RangedRecoil != null && units.Catalog[type].RangedRecoil.Distance > 0f)
         {
@@ -398,11 +454,12 @@ public partial class ArmyRenderer : Node3D
         {
             SparseUploads++;
             float[] buffer = buffers[batch];
+            int stride = batchStrides[batch];
             for (int i = 0; i < changed; i++)
             {
                 int slot = changedSlots[batch][i];
                 if (slot >= visible) continue;
-                int offset = slot * InstanceStride;
+                int offset = slot * stride;
                 var position = new Vector3(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
                 // Packed transforms are affine rows, while Basis takes columns.
                 Basis basis = new(
@@ -411,6 +468,8 @@ public partial class ArmyRenderer : Node3D
                     new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]));
                 mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
                 mesh.SetInstanceColor(slot, new Color(buffer[offset + 12], buffer[offset + 13], buffer[offset + 14], buffer[offset + 15]));
+                if (stride == CircleWalkStride)
+                    mesh.SetInstanceCustomData(slot, new Color(buffer[offset + 16], buffer[offset + 17], 0f, 0f));
             }
         }
         if (mesh.VisibleInstanceCount != visible) mesh.VisibleInstanceCount = visible;
@@ -476,7 +535,7 @@ public partial class ArmyRenderer : Node3D
             shieldShells = new ShieldShellRenderer(this, units, batchShapes, maxShieldShells);
         if (shieldShells == null) return;
         long start = Stopwatch.GetTimestamp();
-        shieldShells.Sync(shields, slots, buffers, InstanceStride);
+        shieldShells.Sync(shields, slots, buffers, batchStrides);
         ShieldVisualMilliseconds = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
     }
 
@@ -484,6 +543,7 @@ public partial class ArmyRenderer : Node3D
     {
         poseBlend = blend;
         HasInterpolatedMotion = false;
+        HasCircleWalkMotion = false;
         for (int id = 0; id < units.Count; id++)
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
@@ -492,7 +552,9 @@ public partial class ArmyRenderer : Node3D
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;
             HasInterpolatedMotion |= moving && blend < 1f;
-            if (!units.Dirty[id] && !moving && !wasUnsettled) continue;
+            bool gaitChanged = animateCircleWalk && units.Type[id] == RuntimeUnitCatalog.Circle &&
+                units.Health[id] > 0f && UpdateCircleWalk(id);
+            if (!units.Dirty[id] && !moving && !wasUnsettled && !gaitChanged) continue;
             units.Dirty[id] = false;
             int batch = Batch(id), slot = slots[id];
             if (units.Health[id] <= 0)

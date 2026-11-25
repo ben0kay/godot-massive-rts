@@ -2,6 +2,8 @@
 uniform bool show_fracture = true;
 uniform bool use_two_tone_armor = false;
 uniform bool circle_sword_swing = false;
+uniform bool circle_walk = false;
+uniform float circle_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
 uniform vec2 half_extent = vec2(0.5);
@@ -29,6 +31,19 @@ void vertex() {
             mat2 rotation = mat2(vec2(c, -s), vec2(s, c));
             VERTEX.xz = pivot + rotation * (VERTEX.xz - pivot);
             NORMAL.xz = rotation * NORMAL.xz;
+        }
+    }
+    if (circle_walk && INSTANCE_CUSTOM.y > 0.0) {
+        float phase = INSTANCE_CUSTOM.x * TAU;
+        float weight = INSTANCE_CUSTOM.y;
+        if (UV.x > 4.5) {
+            // Each boot alternates forward travel and lift. The planted boot stays grounded.
+            float side = sign(VERTEX.x);
+            VERTEX.z -= sin(phase) * side * half_extent.y * 0.24 * weight;
+            VERTEX.y += max(0.0, cos(phase) * side) * circle_height * 0.10 * weight;
+        } else {
+            // Two small body rises per stride; do not lift the planted feet or the shadow.
+            VERTEX.y += (1.0 - cos(phase * 2.0)) * circle_height * 0.0225 * weight;
         }
     }
 }

@@ -41,6 +41,9 @@ public static class FacetedSoldierMeshes
                 cracked.SetShaderParameter("use_two_tone_armor", twoToneArmor);
                 cracked.SetShaderParameter("circle_sword_swing", visuals.UseCircleRobotMesh &&
                     visuals.AnimateCircleSword && type.Id == RuntimeUnitCatalog.CircleId);
+                cracked.SetShaderParameter("circle_walk", visuals.UseCircleRobotMesh &&
+                    visuals.AnimateCircleWalk && type.Id == RuntimeUnitCatalog.CircleId);
+                cracked.SetShaderParameter("circle_height", type.Height);
                 if (crackMask != null) cracked.SetShaderParameter("crack_mask", crackMask);
                 cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
@@ -185,12 +188,12 @@ public static class FacetedSoldierMeshes
         Color Steel(float shade) => new(shade, 0f, 0f);
         Color Paint(float shade) => new(0f, shade, 0f);
         Color Trim(float shade) => new(0f, 0f, shade);
-        void Block(float px, float py, float pz, float w, float h, float d, Color mask, bool swing = false)
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask, bool swing = false, bool foot = false)
         {
             const float diagonal = 0.70710678f;
             AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
                 Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
-                sideShade: SoldierSideShade, armorMask: true, swingPart: swing);
+                sideShade: SoldierSideShade, armorMask: true, swingPart: swing, walkPart: foot);
         }
         void Ring(float rx, float rz, float y, float h, Color mask)
         {
@@ -211,7 +214,7 @@ public static class FacetedSoldierMeshes
                 Block(0.65f, -0.18f, -0.13f, 0.25f, 0.22f, 0.48f, Steel(0.95f), swing: true);
             else
                 Block(-0.65f, -0.18f, -0.05f, 0.25f, 0.22f, 0.32f, Steel(0.95f));
-            Block(side * 0.27f, -0.38f, -0.10f, 0.36f, 0.24f, 0.50f, Steel(1f));
+            Block(side * 0.27f, -0.38f, -0.10f, 0.36f, 0.24f, 0.50f, Steel(1f), foot: true);
         }
         // Right forearm and blade share a vertex-shader pivot; chest stays rigid.
         Block(0f, -0.09f, -0.51f, 0.35f, 0.15f, 0.13f, Trim(0.90f));
@@ -555,16 +558,16 @@ public static class FacetedSoldierMeshes
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
         UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,
         float yaw = 0f, float topCapBrightness = 1f, float pitch = 0f, bool armorMask = false,
-        Vector2[] visualOutline = null, bool swingPart = false)
+        Vector2[] visualOutline = null, bool swingPart = false, bool walkPart = false)
     {
         // The artillery barrel is tilted once during mesh construction, never per soldier.
         Basis tilt = pitch == 0f ? Basis.Identity : new Basis(Vector3.Right, pitch);
         Vector3 Point(Vector3 p) => pitch == 0f ? p : center + tilt * (p - center);
         Vector3 Normal(Vector3 n) => pitch == 0f ? n : tilt * n;
         void Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 normal, Color color) =>
-            AddTriangle(surface, Point(a), Point(b), Point(c), Normal(normal), color, armorMask, swingPart);
+            AddTriangle(surface, Point(a), Point(b), Point(c), Normal(normal), color, armorMask, swingPart, walkPart);
         void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Color color) =>
-            AddQuad(surface, Point(a), Point(b), Point(c), Point(d), Normal(normal), color, armorMask, swingPart);
+            AddQuad(surface, Point(a), Point(b), Point(c), Point(d), Normal(normal), color, armorMask, swingPart, walkPart);
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
         float insetDistance = Mathf.Min(radiusX, radiusZ) * TopInsetFraction;
@@ -674,14 +677,14 @@ public static class FacetedSoldierMeshes
     }
 
     private static void AddQuad(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c, Vector3 d,
-        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false)
+        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false)
     {
-        AddTriangle(surface, a, b, c, normal, tint, armorMask, swingPart);
-        AddTriangle(surface, a, c, d, normal, tint, armorMask, swingPart);
+        AddTriangle(surface, a, b, c, normal, tint, armorMask, swingPart, walkPart);
+        AddTriangle(surface, a, c, d, normal, tint, armorMask, swingPart, walkPart);
     }
 
     private static void AddTriangle(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c,
-        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false)
+        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false)
     {
         surface.SetNormal(normal);
         if (armorMask)
@@ -689,8 +692,9 @@ public static class FacetedSoldierMeshes
             // Store material kind + baked face brightness in UV; COLOR remains
             // white so the existing instance RGB and fracture alpha survive.
             float kind = tint.R > 0f ? 1f : tint.G > 0f ? 2f : 3f;
-            // Negative kinds mark the Circle robot's articulated forearm/blade.
-            surface.SetUV(new Vector2(swingPart ? -kind : kind, Mathf.Max(tint.R, Mathf.Max(tint.G, tint.B))));
+            // Negative kinds mark the arm; +4 marks boots. Material stays the same.
+            float taggedKind = swingPart ? -kind : walkPart ? kind + 4f : kind;
+            surface.SetUV(new Vector2(taggedKind, Mathf.Max(tint.R, Mathf.Max(tint.G, tint.B))));
             surface.SetColor(Colors.White);
         }
         else surface.SetColor(tint);
