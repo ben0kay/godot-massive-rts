@@ -121,37 +121,38 @@ public partial class LevelEditor
 
         Control BuildDefenses()
         {
-            var defenses = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
-            picker.AddChild(defenses);
-            var tools = new HBoxContainer();
-            tools.AddThemeConstantOverride("separation", 8);
-            defenses.AddChild(tools);
-            tools.AddChild(new Label { Text = "Structures", AutowrapMode = TextServer.AutowrapMode.Off });
-            AddPaletteAction(tools, "Faction Wall", Tool.FactionWall);
-            offenseCitadel = Button(tools, "Red Citadel", () =>
-            {
-                paletteDefenseIndex = defenseDefinitions.Length;
-                PickPaletteTool(Tool.Defense);
-            });
-            tools.AddChild(new VSeparator());
-            tools.AddChild(new Label { Text = "Traps", AutowrapMode = TextServer.AutowrapMode.Off });
-            var disruptor = AddPaletteAction(tools, DisruptorGrid.Name, Tool.Disruptor);
-            disruptor.Icon = DisruptorGridVisual.PickerIcon;
-            placementPalette.BuildCards(defenses, towers, towers,
-                i => defenseDefinitions[i].DisplayName,
-                i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,
-                    defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f),
+            int wall = towers;
+            int disruptor = towers + 1;
+            int citadel = towers + 2;
+            return placementPalette.BuildCards(picker, towers + 3, (towers + 4) / 2,
+                i => i < towers ? defenseDefinitions[i].DisplayName :
+                    i == wall ? "Faction Wall" : i == disruptor ? DisruptorGrid.Name : "Red Citadel",
+                i => i < towers ? UnitPlacementBar.Stats(defenseDefinitions[i].Health,
+                    defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f) : null,
                 (icon, i) =>
                 {
-                    var defense = defenseDefinitions[i];
-                    icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled);
                     icon.SetColor(enemy);
-                }, i =>
+                    if (i == disruptor) icon.SetTexture(DisruptorGridVisual.PickerIcon);
+                    else if (i >= towers) icon.SetWall();
+                    else
+                    {
+                        var defense = defenseDefinitions[i];
+                        icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled);
+                    }
+                },
+                i =>
                 {
-                    paletteDefenseIndex = i;
-                    PickPaletteTool(Tool.Defense);
-                }, paletteTools, selectFirst: false);
-            return defenses;
+                    if (i == wall) PickPaletteTool(Tool.FactionWall);
+                    else if (i == disruptor) PickPaletteTool(Tool.Disruptor);
+                    else
+                    {
+                        paletteDefenseIndex = i == citadel ? defenseDefinitions.Length : i;
+                        PickPaletteTool(Tool.Defense);
+                    }
+                }, paletteTools, selectFirst: false, configureCard: (card, i) =>
+                {
+                    if (i == citadel) offenseCitadel = card;
+                });
         }
 
         Control ToolPage(string[] labels, Tool[] options) =>

@@ -93,7 +93,7 @@ internal partial class UnitPlacementBar : PanelContainer
     {
         var brushRow = new HBoxContainer();
         brushControls.AddChild(brushRow);
-        brushRow.AddChild(MenuLayout.Label("Brush"));
+        brushRow.AddChild(new Label { Text = "Brush" });
         var brushes = new ButtonGroup();
         foreach (int size in new[] { 1, 3, 6, 10 })
         {
@@ -105,11 +105,18 @@ internal partial class UnitPlacementBar : PanelContainer
         }
         var densityRow = new HBoxContainer();
         brushControls.AddChild(densityRow);
-        densityRow.AddChild(MenuLayout.Label("Density"));
+        densityRow.AddThemeConstantOverride("separation", 8);
+        densityRow.AddChild(new Label { Text = "Density", VerticalAlignment = VerticalAlignment.Center });
         var spread = new HSlider { MinValue = 0, MaxValue = 3, Step = 0.1, Value = density,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         densityRow.AddChild(spread);
-        var valueLabel = MenuLayout.Label(density == 0 ? "Touching" : $"{density:F1}×");
+        var valueLabel = new Label
+        {
+            Text = density == 0 ? "Touching" : $"{density:F1}×",
+            CustomMinimumSize = new Vector2(68, 0),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
+        };
         densityRow.AddChild(valueLabel);
         spread.ValueChanged += value =>
         {
@@ -123,7 +130,7 @@ internal partial class UnitPlacementBar : PanelContainer
 
     internal Control BuildCards(VBoxContainer body, int count, int columns, Func<int, string> nameFor,
         Func<int, string> statsFor, Action<UnitSilhouette, int> setIcon, Action<int> select,
-        ButtonGroup group = null, bool selectFirst = true)
+        ButtonGroup group = null, bool selectFirst = true, Action<Button, int> configureCard = null)
     {
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill,
             VerticalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true };
@@ -193,6 +200,7 @@ internal partial class UnitPlacementBar : PanelContainer
                 values.AddThemeColorOverride("font_color", new Color("#b3cde0"));
                 details.AddChild(values);
             }
+            configureCard?.Invoke(card, type);
             card.Pressed += () => select(type);
         }
         return scroll;
@@ -203,6 +211,22 @@ internal partial class UnitPlacementBar : PanelContainer
         private Vector2[] points = Array.Empty<Vector2>();
 
         private (bool Projectile, bool Shield)? defense;
+        private Texture2D texture;
+        private bool wall;
+
+        internal void SetTexture(Texture2D value)
+        {
+            texture = value;
+            CustomMinimumSize = new Vector2(28, 0);
+            QueueRedraw();
+        }
+
+        internal void SetWall()
+        {
+            wall = true;
+            CustomMinimumSize = new Vector2(28, 0);
+            QueueRedraw();
+        }
         private Color tint = Factions.Color(Factions.Blue);
 
         internal void SetColor(Color color)
@@ -236,6 +260,20 @@ internal partial class UnitPlacementBar : PanelContainer
         public override void _Draw()
         {
             Color edge = tint.Lerp(Colors.White, 0.58f);
+            if (texture != null)
+            {
+                DrawTextureRect(texture, new Rect2(Size * 0.5f - Vector2.One * 11f, Vector2.One * 22f), false);
+                return;
+            }
+            if (wall)
+            {
+                Vector2 center = Size * 0.5f;
+                var block = new Rect2(center - new Vector2(11, 7), new Vector2(22, 14));
+                DrawRect(block, tint);
+                DrawRect(block, edge, false, 1.2f);
+                DrawLine(center - new Vector2(11, 2), center + new Vector2(11, -2), edge, 1.2f);
+                return;
+            }
             if (defense is { } stats)
             {
                 Vector2 center = Size * 0.5f;
