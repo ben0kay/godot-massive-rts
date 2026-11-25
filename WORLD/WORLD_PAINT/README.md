@@ -20,7 +20,7 @@ The full painted footprint remains impassable. Existing rock paint automatically
 
 Select **WorldPaint → Data → Water appearance**. Adjust the surface, deep-water and shoreline colours, the width and height of the visible bank, and the ripple strength and speed. Setting ripple strength to zero gives still water. Paint strokes and Undo/Redo retain the appearance settings.
 
-The water follows the terrain at its existing surface offset. Along exposed cell edges, a raised visual bank slopes inward to that surface. Shore distance darkens deeper-looking areas and shades the bank. The bank and surface share one indexed mesh and one opaque material. The complete visible shoreline sits inside the same painted cells that block movement and construction. Terrain heights, pathfinding, line of sight and shots use the existing gameplay geometry.
+The opaque water surface follows the terrain below a raised steel rim. Exposed edges have beveled caps and inward-facing retaining walls with cyan emissive strips. The shader adds animated caustics and a soft cyan reflection near the rim. The shoreline stays inside the painted footprint used for movement and construction.
 
 ## Forest
 

@@ -27,19 +27,15 @@ void fragment() {
     variation *= sin(dot(map_position, vec2(0.43, -0.82)) + time * 0.34);
     color *= 1.0 + variation * ripple_strength * smoothstep(0.4, 1.4, edge);
 
-    float bank = 1.0 - smoothstep(0.08, 0.66, edge);
-    float contact = smoothstep(0.18, 0.42, edge) * (1.0 - smoothstep(0.45, 0.84, edge));
-    float highlight = smoothstep(0.37, 0.79, edge) * (1.0 - smoothstep(1.0, 1.55, edge));
-    color = mix(color, shoreline_color.rgb, bank * 0.92);
-    color *= 1.0 - contact * 0.15;
-    // Narrow retaining lip and cyan trim inside the painted shoreline.
-    float aa = clamp(fwidth(shore_distance), 0.025, 0.14);
-    float lip = 1.0 - smoothstep(0.22 - aa, 0.22 + aa, shore_distance);
-    float trim = smoothstep(0.15 - aa, 0.15 + aa, shore_distance) *
-        (1.0 - smoothstep(0.25 - aa, 0.25 + aa, shore_distance));
-    vec2 panel = abs(fract(map_position / 2.0 + 0.5) - 0.5);
-    float joint = 1.0 - smoothstep(0.018, 0.04, max(panel.x, panel.y));
-    vec3 steel = vec3(0.16, 0.21, 0.29) * (1.0 - 0.28 * joint);
-    ALBEDO = mix(color + shallow * highlight * 0.09, steel, lip);
-    ALBEDO = mix(ALBEDO, vec3(0.23, 0.73, 0.87), trim * 0.72);
+    float contact = 1.0 - smoothstep(0.16, 0.9, shore_distance);
+    color = mix(color, shoreline_color.rgb * 0.33, contact * 0.60);
+    vec2 wave = map_position * 2.6 + vec2(time * 0.9, -time * 0.58);
+    float crests = abs(sin(wave.x + sin(wave.y * 0.92)) + sin(wave.y + sin(wave.x * 0.73)));
+    float caustics = 1.0 - smoothstep(0.016, 0.23, crests);
+    color += vec3(0.085, 0.33, 0.44) * caustics * clamp(ripple_strength * 8.0, 0.0, 1.0) *
+        smoothstep(0.24, 0.58, shore_distance);
+    float reflected_light = exp(-abs(shore_distance - 0.32) * 4.0) *
+        (0.45 + 0.55 * sin(map_position.x * 3.14) * sin(map_position.x * 3.14) *
+            sin(map_position.y * 3.14) * sin(map_position.y * 3.14));
+    ALBEDO = color + vec3(0.025, 0.24, 0.39) * reflected_light;
 }
