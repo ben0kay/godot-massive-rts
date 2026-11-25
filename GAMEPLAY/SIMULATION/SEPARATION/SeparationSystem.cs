@@ -333,7 +333,6 @@ public sealed class SeparationSystem
             ? new Vector2(dx / distance, dz / distance)
             : CoincidentDirection(slotId[i], slotId[j]);
         float penetration = limit - distance;
-        float correction = strong ? penetration + MathF.Min(penetration * 0.35f, Slop) : penetration;
         float pairCap = yielding ? yieldSettings.PairCap : yieldSettings.ExitCap;
         float share = yielding ? (firstIsMelee ? yieldSettings.MeleeShare : 1f - yieldSettings.MeleeShare) : 0.5f;
         Vector2 correction = direction * Mathf.Min(penetration, pairCap);
