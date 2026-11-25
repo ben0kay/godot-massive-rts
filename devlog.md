@@ -526,3 +526,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added opt-in Benchmark directional lighting and real-shadow comparisons with adjustable shadow distance, shared unit materials, and shadow-receiving ground. GPU performance and visual validation pending.
 
 - 2026-11-24 — Added per-level base terrain, industrial walls with solid closed-loop fill, and updated water, boulder and pine visuals. Runtime validation pending.
+
+- 2026-11-24 — Enabled Light Artillery-style visual firing recoil on Twin Rocket Launcher (0.35-unit kick, 0.4-second recovery). Uses existing shared recoil system; combat stats and simulation positions unchanged. Runtime validation pending.

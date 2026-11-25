@@ -39,3 +39,6 @@ Reach = 35.0
 MinimumFireRange = 5.0
 Projectile = ExtResource("2")
 RocketMounts = Array[ExtResource("3")]([SubResource("Left"), SubResource("Right")])
+RangedRecoilEnabled = true
+RangedRecoilDistance = 0.35
+RangedRecoilReturnSeconds = 0.4
