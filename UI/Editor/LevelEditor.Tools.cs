@@ -172,7 +172,7 @@ public partial class LevelEditor
                 }
                 break;
             case Tool.Bridge:
-                Heading(context, "Click A, then B. Scroll for width, then click to place. Right-click cancels.", 15);
+                Heading(context, "Drag a rectangle to place the bridge. Right-click cancels.", 15);
                 break;
             case Tool.Rock:
             case Tool.Water:
@@ -396,6 +396,7 @@ public partial class LevelEditor
     public override void _Process(double delta)
     {
         UpdateElevation(delta);
+        if (bridgeStart.HasValue && !Input.IsMouseButtonPressed(MouseButton.Left)) CancelBridge();
         if (wallStrokeStart.HasValue && !Input.IsMouseButtonPressed(wallStrokeButton)) CancelWallStroke();
         if (paintPreviewCooldown > 0) paintPreviewCooldown -= delta;
         if (paintPreviewPending && paintPreviewCooldown <= 0) PublishPaintPreview();

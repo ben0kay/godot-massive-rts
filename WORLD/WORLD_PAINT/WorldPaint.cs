@@ -22,7 +22,6 @@ public partial class WorldPaint : Node3D
     internal ObstacleRectangle[] MovementWater { get; private set; } = Array.Empty<ObstacleRectangle>();
     internal Rect2[] BridgeAreas { get; private set; } = Array.Empty<Rect2>();
     internal const int MaxBridges = 32;
-    internal const int MaxBridgeWidthCells = 24;
     private bool visualDirty;
     private float displayedHalfWidth;
 
@@ -57,6 +56,7 @@ public partial class WorldPaint : Node3D
         rocksView.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         waterView = AddView("WaterPreview");
         bridgeView = AddView("BridgePreview");
+        bridgeView.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         if (Engine.IsEditorHint()) Invalidate();
         SetProcess(Engine.IsEditorHint());
     }
@@ -244,7 +244,6 @@ public partial class WorldPaint : Node3D
     {
         int edge = GridEdge;
         return bridge.Size.X > 0 && bridge.Size.Y > 0 &&
-            Mathf.Min(bridge.Size.X, bridge.Size.Y) <= MaxBridgeWidthCells &&
             (long)bridge.Size.X * bridge.Size.Y <= MaxPaintedCells &&
             bridge.Position.X >= -edge && bridge.Position.Y >= -edge &&
             (long)bridge.Position.X + bridge.Size.X <= edge &&

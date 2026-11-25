@@ -118,7 +118,6 @@ public partial class IsometricCamera : Camera3D
         SetYawDegrees(yaw);
     }
 
-    internal bool SuppressWheelZoom { get; set; }
 
     public override void _UnhandledInput(InputEvent input)
     {
@@ -139,7 +138,7 @@ public partial class IsometricCamera : Camera3D
             targetSize = MaximumZoomSize;
             GetViewport().SetInputAsHandled();
         }
-        if (!SuppressWheelZoom && input is InputEventMouseButton mouse && mouse.Pressed)
+        if (input is InputEventMouseButton mouse && mouse.Pressed)
         {
             if (mouse.ButtonIndex == MouseButton.WheelUp) targetSize = Mathf.Max(15, targetSize * 0.88f);
             if (mouse.ButtonIndex == MouseButton.WheelDown) targetSize = Mathf.Min(MaximumZoomSize, targetSize / 0.88f);

@@ -25,7 +25,7 @@ Fortress Defense uses the existing command scene structure and the shared moveme
 
 ## Draw bridge
 
-Pick **Draw bridge**, click the first bank, then click the opposite bank. The span snaps to the dominant X or Z axis on the paint grid. Scroll to set the width in grid steps, then left-click to commit, or right-click to cancel. Extend both ends onto dry land so units can enter and leave. **Erase** removes a bridge with a left-click. Placement and removal support undo and redo and save with the map.
+Pick **Draw bridge**, then drag a rectangle and release to place it. The longer side sets the direction of the deck and its rail lights. You can paint the rectangle anywhere within the map. Right-click cancels a drag. **Erase** removes a bridge with a left-click. Placement and removal support undo and redo and save with the map.
 
 The deck follows the terrain and opens only the painted water beneath it. Walls, rocks and structures remain solid. Fortress Defense and the Level Editor's AutoBattler test cache crossing approaches per unit footprint when their navigation graphs are built. A bridge's clear width must exceed the unit's footprint diameter. Oversized units need a wider route or a way around the water.
 
