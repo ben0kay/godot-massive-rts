@@ -235,7 +235,11 @@ internal partial class UnitPlacementBar : PanelContainer
             QueueRedraw();
         }
 
-        internal void SetDefense(BuildingStats stats) => SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled);
+        internal void SetDefense(BuildingStats stats)
+        {
+            if (stats.Id == PrefabShelterMeshes.Id) SetWall();
+            else SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled);
+        }
 
         internal void SetDefense(bool projectile, bool shield)
         {

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BuildingCatalog" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="BuildingCatalog" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://WORLD/BUILDINGS/CATALOG/BuildingCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFINITIONS/BuildingDefinition.cs" id="2"]
@@ -7,6 +7,8 @@
 
 [ext_resource type="Resource" path="res://WORLD/BUILDINGS/DEFINITIONS/ShieldGeneratorTower.tres" id="5"]
 
+[ext_resource type="Resource" path="res://WORLD/BUILDINGS/DEFINITIONS/PrefabShelter.tres" id="6"]
+
 [resource]
 script = ExtResource("1")
-Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5")])
+Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")])
