@@ -524,6 +524,7 @@ public partial class CommandSandbox : Node3D
         int previousCount = units.Count;
         buildings.Step((float)delta);
         bool changed = waves.Step((float)delta);
+        impactRings.SampleCavalry(units, (float)delta);
         if (waves.Defeat || waves.Victory) buildings.WorkerProductionOpen = false;
         buildings.RemoveDestroyed();
         if (feedbackChanged || changed || previousCount != units.Count) SyncArmy();

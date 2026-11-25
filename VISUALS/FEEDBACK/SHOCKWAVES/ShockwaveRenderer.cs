@@ -13,6 +13,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private readonly Ring[] rings = new Ring[Capacity];
     private MultiMesh bursts, chips;
     private MeleeEffects meleeEffects;
+    private readonly CavalryDust cavalryDust = new();
     private int count;
     private bool dirty;
 
@@ -101,10 +102,12 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             meleeEffects.Emit(contact, direction, Mathf.Clamp(footprint * 3.9f, 1.3f, 3.1f), 1);
     }
 
-    internal void EmitChargeDust(Vector3 position)
+    internal void SampleCavalry(UnitState units, float delta) => cavalryDust.Sample(units, delta, this);
+
+    internal void EmitCavalryDust(Vector3 position, float size)
     {
         meleeEffects ??= new MeleeEffects(this);
-        meleeEffects.Emit(position, Vector2.Zero, 1.25f, 2);
+        meleeEffects.Emit(position, Vector2.Zero, size, 2);
     }
 
     public void Advance(float dt)
@@ -170,6 +173,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
 
     public void Clear()
     {
+        cavalryDust.Clear();
         meleeEffects?.Clear();
         count = 0;
         dirty = true;

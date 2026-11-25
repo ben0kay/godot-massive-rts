@@ -18,7 +18,7 @@ public sealed class TrampleSystem
     private struct Charge
     {
         public Vector2 Start, Heading, Approach;
-        public float RunUp, Distance, Momentum, Recovery, DustDistance;
+        public float RunUp, Distance, Momentum, Recovery;
         public int Hits;
         public bool Active, BypassThisTick;
     }
@@ -138,7 +138,6 @@ public sealed class TrampleSystem
                 obstacles?.BlocksCorridor(charge.Start, Xz(units.Position[target]), 0f) != true)
             {
                 charge.Active = true;
-                charge.DustDistance = 1.1f;
                 charge.Distance = type.Trample.Distance;
                 charge.Momentum = type.Trample.Efficiency;
                 charge.Hits = 0;
@@ -239,13 +238,7 @@ public sealed class TrampleSystem
         {
             if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, charge.Heading, turnStep);
             Place(units, id, origin + charge.Heading * travel);
-            charge.DustDistance += travel;
-            if (feedback != null && charge.DustDistance >= 1.1f)
-            {
-                charge.DustDistance = 0f;
-                Vector2 rear = Xz(units.Position[id]) - charge.Heading * type.Footprint;
-                feedback.EmitChargeDust(units.OnTerrain(new Vector3(rear.X, 0f, rear.Y)) + Vector3.Up * 0.18f);
-            }
+
         }
         charge.Distance -= travel;
         if (blocked || charge.Distance <= 0.0001f ||

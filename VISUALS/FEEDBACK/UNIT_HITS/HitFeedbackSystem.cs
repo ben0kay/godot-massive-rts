@@ -87,7 +87,7 @@ public sealed class HitFeedbackSystem
     public (float Flash, float Scale) Evaluate(int id)
     {
         float attackAge = 1f - attackRemaining[id] / AttackDuration;
-        float attackScale = attackRemaining[id] > 0f ? 0.095f * (attackAge < 0.28f
+        float attackScale = attackRemaining[id] > 0f ? 0.15f * (attackAge < 0.28f
             ? Smooth(attackAge / 0.28f) : Smooth((1f - attackAge) / 0.72f)) : 0f;
         if (remaining[id] <= 0f) return (0f, 1f + attackScale);
         float age = duration - remaining[id];
