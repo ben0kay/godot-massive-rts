@@ -4,6 +4,8 @@ Aim for a dark industrial battlefield with bright, readable faction colors, sati
 
 ## 1. Lighting and unit finish
 
+The comparison controls are in **Benchmark → Display and controls → Battlefield lighting**. Real-shadow mode exposes **Shadow distance**, defaulting to 1,800 world units to cover the elevated orthographic camera. Use the performance overlay’s **Viewport GPU** reading for like-for-like comparisons. In-game visual and performance validation is pending.
+
 Start with one shared directional light and a restrained top-face and bevel highlight. Adapt the unshaded unit materials and fracture shader to support the lit mode while preserving faction tint, hit flashes and fracture detail. Keep the current look and fake undershadows as the default while evaluating the experiment. Keep instanced unit batches and use shared shader materials without individual lights on soldiers.
 
 | Benchmark mode | Unit lighting | Shadows |

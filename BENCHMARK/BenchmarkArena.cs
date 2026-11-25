@@ -202,11 +202,8 @@ public partial class BenchmarkArena : Node3D
         battleObstacleShadows = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleObstacleShadows);
         panel.ShieldShellsChanged += enabled => armyRenderer?.SetShieldShellsVisible(enabled);
-        panel.GroundShadowsChanged += enabled =>
-        {
-            battleObstacleShadows.Visible = enabled;
-            armyRenderer?.SetShadowsVisible(enabled);
-        };
+        panel.GroundShadowsChanged += _ => ApplyArmyLighting();
+        if (autoBattlerPlaytestMap == null) ConfigureBenchmarkLighting(benchmarkGround);
         if (campaignRoster == null) RefreshSavedBattles();
         panel.SpawnRequested += SpawnSelectedBattle;
         panel.SavePresetRequested += SaveBattlePreset;
@@ -331,6 +328,7 @@ public partial class BenchmarkArena : Node3D
         start = Stamp();
         terrainMeshes = TerrainRenderer.Build(terrain, rise, 2500f);
         AddChild(terrainMeshes);
+        if (RealBenchmarkShadows) RefreshBenchmarkGroundLighting();
         flatGround.Visible = false;
         terrainMeshMs = Elapsed(start);
     }
@@ -653,7 +651,8 @@ public partial class BenchmarkArena : Node3D
                 if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
-                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, panel.GroundShadows, unitVisuals);
+                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, FakeBenchmarkShadows, unitVisuals);
+                ApplyArmyLighting();
                 armyRenderer.SetShieldShellsVisible(panel.ShowShieldShells);
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,

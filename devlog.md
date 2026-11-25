@@ -522,3 +522,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Moved deployment brush controls beside unit selection and reused Fortress Defense footprint outlines for brush and rectangle previews. Runtime validation pending.
 
 - 2026-11-24 — Reused Level Editor unit and tower preview batches across placement edits and skipped unrelated scenery rebuilds on ordinary placement. Windows crash validation pending.
+
+- 2026-11-24 — Added opt-in Benchmark directional lighting and real-shadow comparisons with adjustable shadow distance, shared unit materials, and shadow-receiving ground. GPU performance and visual validation pending.

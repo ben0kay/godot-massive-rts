@@ -16,6 +16,9 @@ public partial class ArmyRenderer : Node3D
     private Mesh shadowMesh;
     private Mesh[] batchShapes;
     private Material batchMaterialOverride;
+    private Material[] lightingMaterials;
+    private MultiMeshInstance3D[] unitViews;
+    private bool castUnitShadows;
     private bool shadowsEnabled;
     private const int ShadowStride = 12;
     // Relative to the previous oval footprint; large elites get extra reduction.
@@ -71,6 +74,7 @@ public partial class ArmyRenderer : Node3D
         changeCounts = new int[batchCount];
         batches = new MultiMesh[batchCount];
         counts = new int[batchCount];
+        unitViews = new MultiMeshInstance3D[batchCount];
         halfHeights = new float[typeCount];
         facesPositiveX = new bool[typeCount];
         for (int i = 0; i < typeCount; i++)
@@ -101,8 +105,9 @@ public partial class ArmyRenderer : Node3D
             };
             batches[batch] = mesh;
             changedSlots[batch] = new int[SparseUpdateLimit];
-            AddChild(new MultiMeshInstance3D { Multimesh = mesh, MaterialOverride = batchMaterialOverride,
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            unitViews[batch] = new MultiMeshInstance3D { Multimesh = mesh };
+            ApplyBatchLighting(batch);
+            AddChild(unitViews[batch]);
         }
         int previousCapacity = members[batch]?.Length ?? 0;
         System.Array.Resize(ref members[batch], capacity);
@@ -125,6 +130,22 @@ public partial class ArmyRenderer : Node3D
             shadow.VisibleInstanceCount = counts[batch];
             if (counts[batch] > 0) shadow.Buffer = shadowBuffers[batch];
         }
+    }
+
+    internal void SetBattlefieldLighting(Material[] materials, bool castShadows)
+    {
+        lightingMaterials = materials;
+        castUnitShadows = castShadows;
+        for (int batch = 0; batch < unitViews.Length; batch++)
+            if (unitViews[batch] != null) ApplyBatchLighting(batch);
+    }
+
+    private void ApplyBatchLighting(int batch)
+    {
+        var view = unitViews[batch];
+        view.MaterialOverride = lightingMaterials?[batch % typeCount] ?? batchMaterialOverride;
+        view.CastShadow = castUnitShadows ? GeometryInstance3D.ShadowCastingSetting.On :
+            GeometryInstance3D.ShadowCastingSetting.Off;
     }
 
     private void EnsureShadowBatch(int batch)

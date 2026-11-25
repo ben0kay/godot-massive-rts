@@ -13,6 +13,10 @@ public partial class BenchmarkPanel : CanvasLayer
 	public event Action<float> CameraRotationChanged;
 	public event Action<float> CameraTiltChanged;
 	public event Action<bool> CameraFreeRoamChanged;
+	internal event Action<BenchmarkLighting> LightingChanged;
+	internal event Action<float> ShadowDistanceChanged;
+	private readonly SpinBox shadowDistance = new() { MinValue = 100, MaxValue = 6000, Step = 50, Value = 1800 };
+	internal float ShadowDistance => (float)shadowDistance.Value;
 	public event Action<bool> GroundShadowsChanged;
 	public event Action<bool> PlacementGridChanged;
 	public event Action<long> PaintToolSelected;
@@ -386,6 +390,25 @@ public partial class BenchmarkPanel : CanvasLayer
 		display.AddChild(DeathEffects);
 		groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
 		display.AddChild(groundShadows);
+		if (!AutoBattlerPlaytest)
+		{
+			var lighting = new OptionButton();
+			lighting.AddItem("Current");
+			lighting.AddItem("Lit");
+			lighting.AddItem("Lit + real shadows");
+			lighting.Select(0);
+			Field(display, "Battlefield lighting", lighting);
+			var distanceRow = Field(display, "Shadow distance", shadowDistance);
+			distanceRow.Visible = false;
+			lighting.ItemSelected += index =>
+			{
+				bool real = index == (long)BenchmarkLighting.RealShadows;
+				groundShadows.Disabled = real;
+				distanceRow.Visible = real;
+				LightingChanged?.Invoke((BenchmarkLighting)index);
+			};
+			shadowDistance.ValueChanged += value => ShadowDistanceChanged?.Invoke((float)value);
+		}
 		display.AddChild(attackRangesToggle);
 		display.AddChild(Hint("Gold: attack arc at target size (Circle if none)\nGreen/red: in/out of melee geometry\nBlue: shockwave radius"));
 		performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
