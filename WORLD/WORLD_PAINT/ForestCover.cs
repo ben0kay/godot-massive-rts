@@ -136,9 +136,12 @@ internal sealed class ForestCover
             {
                 float angle = Mathf.Tau * side / sides;
                 float next = Mathf.Tau * (side + 1) / sides;
-                surface.SetColor(Colors.White.Darkened(0.24f + 0.16f * Mathf.Cos(angle) - 0.07f * tier));
-                surface.AddVertex(new Vector3(Mathf.Cos(angle) * radius, bottom, Mathf.Sin(angle) * radius));
-                surface.AddVertex(new Vector3(Mathf.Cos(next) * radius, bottom, Mathf.Sin(next) * radius));
+                var a = new Vector3(Mathf.Cos(angle) * radius, bottom, Mathf.Sin(angle) * radius);
+                var b = new Vector3(Mathf.Cos(next) * radius, bottom, Mathf.Sin(next) * radius);
+                surface.SetNormal((tip - a).Cross(b - a).Normalized());
+                surface.SetColor(Colors.White.Darkened(0.14f - 0.05f * tier));
+                surface.AddVertex(a);
+                surface.AddVertex(b);
                 surface.AddVertex(tip);
             }
         }

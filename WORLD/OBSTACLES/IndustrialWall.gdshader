@@ -1,6 +1,8 @@
 // Modular steel panels and inset lights shared by walls and basin trim.
 shader_type spatial;
-render_mode unshaded, cull_disabled;
+render_mode cull_disabled, ambient_light_disabled, shadows_disabled;
+
+#include "res://VISUALS/RENDERING/SceneryLighting.gdshaderinc"
 
 uniform bool basin_trim = false;
 varying vec3 world_point;
@@ -41,9 +43,12 @@ void fragment() {
     float panel_seed = panel_random(ivec3(int(tile.x), int(tile.y), 7));
     vec3 steel = top ? vec3(0.15, 0.19, 0.26) : vec3(0.047, 0.067, 0.104);
     steel *= mix(0.84, 1.10, panel_seed);
-    steel *= 0.75 + 0.25 * max(dot(n, normalize(vec3(-0.5, 0.7, 0.5))), 0.0);
+    if (basin_trim) {
+        steel *= 0.75 + 0.25 * max(dot(n, normalize(vec3(-0.5, 0.7, 0.5))), 0.0);
+    }
     steel = steel * (1.0 - 0.59 * seam) + mix(vec3(-0.035), vec3(0.12, 0.15, 0.20), clamp(lit_edge, 0.0, 1.0)) * bevel;
 
+    vec3 glow = vec3(0.0);
     float light_row = 1.0 - step(0.5, abs(floor(panel.y)));
     if (!top && (basin_trim ? UV.x > 0.5 : panel_seed < 0.10)) {
         vec2 center = basin_trim ? vec2(0.5, 0.79) : vec2(0.5, 0.65);
@@ -58,7 +63,8 @@ void fragment() {
         steel = mix(steel, vec3(0.018, 0.026, 0.04), slot * lamp_visibility * 0.9);
         steel += tint * halo * lamp_visibility * 0.49;
         steel = mix(steel, mix(tint, vec3(1.0), 0.70), lamp * lamp_visibility);
-        EMISSION = tint * lamp * lamp_visibility * 2.2;
+        glow = tint * lamp * lamp_visibility * 2.2;
     }
-    ALBEDO = steel;
+    ALBEDO = basin_trim ? vec3(0.0) : steel;
+    EMISSION = steel * (basin_trim ? 1.0 : 0.58) + glow;
 }

@@ -54,6 +54,7 @@ public partial class WorldPaint : Node3D
     public override void _Ready()
     {
         rocksView = AddView("RockPreview");
+        rocksView.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         waterView = AddView("WaterPreview");
         bridgeView = AddView("BridgePreview");
         if (Engine.IsEditorHint()) Invalidate();

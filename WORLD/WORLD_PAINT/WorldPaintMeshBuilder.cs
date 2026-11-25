@@ -15,10 +15,9 @@ internal static class WorldPaintMeshBuilder
         if (cells.Count == 0) return null;
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
-        surface.SetMaterial(new StandardMaterial3D
+        surface.SetMaterial(new ShaderMaterial
         {
-            VertexColorUseAsAlbedo = true,
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+            Shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/RockSurface.gdshader")
         });
 
         var shadows = new List<(Vector3 Center, Vector2 Radius)>(cells.Count);
@@ -89,10 +88,8 @@ internal static class WorldPaintMeshBuilder
         for (int i = 0; i < sides; i++)
         {
             int j = (i + 1) % sides;
-            Vector3 edge = shoulder[j] - shoulder[i];
-            float facing = (edge.Z - edge.X) / Mathf.Max(0.001f, new Vector2(edge.X, edge.Z).Length());
-            Color wall = stone.Darkened(Mathf.Clamp(0.32f - facing * 0.11f, 0f, 1f));
-            Color bevel = stone.Darkened(Mathf.Clamp(0.13f - facing * 0.07f, 0f, 1f));
+            Color wall = stone.Darkened(0.10f);
+            Color bevel = stone.Darkened(0.04f);
             Triangle(surface, shoulder[i], foot[i], shoulder[j], wall);
             Triangle(surface, shoulder[j], foot[i], foot[j], wall);
             Triangle(surface, cap[i], shoulder[i], cap[j], bevel);
@@ -116,6 +113,7 @@ internal static class WorldPaintMeshBuilder
 
     private static void Triangle(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c, Color color)
     {
+        surface.SetNormal((c - a).Cross(b - a).Normalized());
         surface.SetColor(color);
         surface.AddVertex(a);
         surface.AddVertex(b);

@@ -443,13 +443,18 @@ public partial class CommandSandbox : Node3D
             Shader = GD.Load<Shader>("res://WORLD/OBSTACLES/IndustrialWall.gdshader")
         };
         foreach (Node child in authored?.GetChildren() ?? new Godot.Collections.Array<Node>())
-            if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh) mesh.MaterialOverride = industrialWallMaterial;
+            if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh)
+            {
+                mesh.MaterialOverride = industrialWallMaterial;
+                mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            }
 
         if (industrialWallBatch == null)
         {
             if (painted.Count == 0) return;
             industrialWallBatch = new MultiMesh { Mesh = new BoxMesh { Size = Vector3.One }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
-            AddChild(new MultiMeshInstance3D { Multimesh = industrialWallBatch, MaterialOverride = industrialWallMaterial },
+            AddChild(new MultiMeshInstance3D { Multimesh = industrialWallBatch, MaterialOverride = industrialWallMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off },
                 false, InternalMode.Back);
         }
         if (industrialWallBatch.InstanceCount < painted.Count) industrialWallBatch.InstanceCount = painted.Count;
