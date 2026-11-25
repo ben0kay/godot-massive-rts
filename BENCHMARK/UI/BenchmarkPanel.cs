@@ -124,6 +124,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	private CheckButton performanceToggle;
 	private readonly CheckButton shieldsEnabled = new() { Text = "Enable shields", ButtonPressed = true };
 	internal event Action<bool> ShieldShellsChanged;
+	internal CheckButton CircleMeshToggle { get; init; }
 	internal event Action<bool> ShieldDomesChanged;
 	private readonly CheckButton shieldDomes = new() { Text = "Show generator domes", ButtonPressed = true };
 	internal bool ShowShieldDomes => shieldDomes.ButtonPressed;
@@ -385,6 +386,7 @@ public partial class BenchmarkPanel : CanvasLayer
 			AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
 		}
 		var renderingControls = Section(column, "Rendering", false, out _);
+		if (CircleMeshToggle != null) renderingControls.AddChild(CircleMeshToggle);
 		if (AutoBattlerPlaytest)
 		{
 			var lighting = Section(renderingControls, "Lighting", true, out _);

@@ -39,7 +39,7 @@ public partial class BenchmarkArena
             BattlefieldLighting.SetAmbientFill(fill);
         };
         TreeExiting += () => BattlefieldLighting.SetAmbientFill(BattlefieldLighting.DefaultFillPercent / 100f);
-        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals);
+        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, battleUnitVisuals);
         map.UpdateGroundBounds();
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         var paint = autoBattlerPaint = map.GetNodeOrNull<WorldPaint>("WorldPaint");

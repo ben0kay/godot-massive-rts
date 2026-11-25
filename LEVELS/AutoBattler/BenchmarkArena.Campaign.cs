@@ -88,7 +88,7 @@ public partial class BenchmarkArena
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
             () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
-            spread => painter.SoldierBrushSpread = spread);
+            spread => painter.SoldierBrushSpread = spread, CreateCircleMeshToggle());
         AddChild(campaignHud);
         if (campaignHud.DeploymentOrderControls != null) painter.Orders.AddControls(campaignHud.DeploymentOrderControls);
     }

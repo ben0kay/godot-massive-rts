@@ -61,6 +61,7 @@ public partial class BenchmarkArena : Node3D
     private ShockwaveRenderer shockwaves;
     private DeathFeedbackSystem deathFeedback;
     private UnitVisualConfig unitVisuals;
+    private UnitVisualConfig battleUnitVisuals;
     private DeathEffectRenderer deathRenderer;
     private IsometricCamera camera;
     private BattlefieldWeather weather;
@@ -112,7 +113,8 @@ public partial class BenchmarkArena : Node3D
         // Keep the distance cap implied by the authored projectile lifetime.
         projectileLifetime = Config.ProjectileLifetime / movementScale;
         unitVisuals = UnitVisualConfig.Load();
-        soldierMeshes = FacetedSoldierMeshes.Create(catalog, unitVisuals);
+        battleUnitVisuals = (UnitVisualConfig)unitVisuals.Duplicate();
+        soldierMeshes = FacetedSoldierMeshes.Create(catalog, battleUnitVisuals);
         soldierShadow = GroundShadowMeshes.Soldier();
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         Config.MaxSoldiers = Mathf.Clamp(Config.MaxSoldiers, 1000, 100000);
@@ -152,7 +154,12 @@ public partial class BenchmarkArena : Node3D
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
-        panel = new BenchmarkPanel { Catalog = catalog, Buildings = buildings, AutoBattlerPlaytest = autoBattlerPlaytestMap != null }; AddChild(panel);
+        panel = new BenchmarkPanel
+        {
+            Catalog = catalog, Buildings = buildings, AutoBattlerPlaytest = autoBattlerPlaytestMap != null,
+            CircleMeshToggle = CreateCircleMeshToggle()
+        };
+        AddChild(panel);
         if (campaignRoster != null)
         {
             panel.Hide();
@@ -658,9 +665,7 @@ public partial class BenchmarkArena : Node3D
                 if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
-                armyRenderer = new ArmyRenderer(); AddChild(armyRenderer); armyRenderer.Initialize(units, soldierMeshes, soldierShadow, FakeBenchmarkShadows, unitVisuals);
-                ApplyArmyLighting();
-                armyRenderer.SetShieldShellsVisible(panel.ShowShieldShells);
+                CreateArmyRenderer();
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
                     autoBattlerPlaytestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);

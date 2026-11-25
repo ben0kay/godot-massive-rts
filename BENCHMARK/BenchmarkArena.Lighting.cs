@@ -48,11 +48,49 @@ public partial class BenchmarkArena
         };
     }
 
+    private CheckButton CreateCircleMeshToggle()
+    {
+        var toggle = new CheckButton
+        {
+            Text = "Animated Circle Infantry",
+            TooltipText = "Switch Circle Infantry between the robot and classic mesh during battle.",
+            ButtonPressed = battleUnitVisuals.UseCircleRobotMesh
+        };
+        toggle.Toggled += SetBattleCircleMesh;
+        return toggle;
+    }
+
+    private void SetBattleCircleMesh(bool enabled)
+    {
+        if (enabled == battleUnitVisuals.UseCircleRobotMesh) return;
+        battleUnitVisuals.UseCircleRobotMesh = enabled;
+        soldierMeshes = FacetedSoldierMeshes.Create(catalog, battleUnitVisuals);
+        if (litUnitMaterials != null)
+            litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, battleUnitVisuals);
+        if (armyRenderer == null) return;
+
+        // Batch strides differ between the meshes. Rebuild the renderer against the same live state.
+        RemoveChild(armyRenderer);
+        armyRenderer.QueueFree();
+        for (int id = 0; id < units.Count; id++)
+            if (units.Health[id] > 0f) units.Dirty[id] = true;
+        CreateArmyRenderer();
+    }
+
+    private void CreateArmyRenderer()
+    {
+        armyRenderer = new ArmyRenderer();
+        AddChild(armyRenderer);
+        armyRenderer.Initialize(units, soldierMeshes, soldierShadow, FakeBenchmarkShadows, battleUnitVisuals);
+        ApplyArmyLighting();
+        armyRenderer.SetShieldShellsVisible(panel.ShowShieldShells);
+    }
+
     private void CreateBenchmarkSun()
     {
         benchmarkSun = BattlefieldLighting.AddSun(this);
         benchmarkSun.DirectionalShadowMaxDistance = panel.ShadowDistance;
-        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals);
+        litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, battleUnitVisuals);
     }
 
     private void RefreshBenchmarkGroundLighting()

@@ -626,3 +626,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Preserved deployment formation offsets along opening routes, moved orders to a selection popup, added direct paint mode buttons, shortened Marksman, and added ranged attack rings to the Entity Editor. Godot .NET validation pending.
 
 - 2026-11-25 — Opening attack-move curves now use pass-through waypoints and preserve marching speed between samples. Final arrival allows a small margin so rounding cannot prevent an order from completing. Godot .NET validation pending.
+
+- 2026-11-25 — Added a live animated/classic Circle Infantry mesh switch to AutoBattler and the Benchmark. The switch refreshes the army renderer and materials while preserving the running simulation. Godot .NET validation pending.

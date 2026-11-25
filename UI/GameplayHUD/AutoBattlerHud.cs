@@ -22,7 +22,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
         Action<byte> select, Action<int> brush, Action clear, Action start,
         Action reset, Action retreat, Action leave, Func<byte, int> maxReserve,
-        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged)
+        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged, CheckButton circleMeshToggle)
     {
         Layer = 3;
         var panel = new PanelContainer { Position = new Vector2(16, 16), CustomMinimumSize = new Vector2(360, 0) };
@@ -141,6 +141,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         arrival.Hide();
         body.AddChild(result);
         body.AddChild(status);
+        body.AddChild(circleMeshToggle);
         retry = UIButtonFactory.Create("Retry Deployment", reset, UIButtonStyle.Primary);
         withdraw = UIButtonFactory.Create("Withdraw", retreat);
         body.AddChild(retry);
