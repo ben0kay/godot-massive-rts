@@ -180,9 +180,10 @@ public static class FacetedSoldierMeshes
         }
 
         float x = outline.RadiusX;
-        // Full-size outer hull still starts at the original ground contact.
+        // Faction-painted main hull distinguishes mobile units from neutral-metal buildings.
+        // Keep the original ground contact and all existing dimensions.
         AppendPrism(surface, outline.Sides, x, outline.RadiusZ, height * 0.78f, outline.Rotation,
-            Vector3.Down * height * 0.11f, Steel(0.83f), customOutline: outline,
+            Vector3.Down * height * 0.11f, Paint(0.86f), customOutline: outline,
             sideShade: SoldierSideShade, armorMask: true);
         float deck = height * 0.28f;
         // Swept shoulder pods run along the two original chevron arms.
@@ -208,7 +209,7 @@ public static class FacetedSoldierMeshes
         Box(mount + axis * (length * 0.49f),
             new Vector3(width, height * 0.24f, length * 0.98f), Steel(1f), pitch);
         Box(mount + axis * (length * 0.16f),
-            new Vector3(width * 1.48f, height * 0.35f, length * 0.30f), Steel(0.70f), pitch);
+            new Vector3(width * 1.48f, height * 0.35f, length * 0.30f), Paint(0.77f), pitch);
         Vector3 top = new Basis(Vector3.Right, pitch) * Vector3.Up;
         Box(mount + axis * (length * 0.48f) + top * (height * 0.132f),
             new Vector3(width * 0.46f, height * 0.036f, length * 0.34f), Trim(0.90f), pitch);
