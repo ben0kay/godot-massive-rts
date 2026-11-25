@@ -5,12 +5,21 @@ render_mode cull_disabled, ambient_light_disabled, shadows_disabled;
 #include "res://VISUALS/RENDERING/SceneryLighting.gdshaderinc"
 
 uniform bool basin_trim = false;
+uniform bool faction_wall = false;
+uniform vec4 lamp_tint : source_color = vec4(1.0, 0.43, 0.12, 1.0);
+varying float profile_height;
 varying vec3 world_point;
 varying vec3 world_normal;
 varying float wall_height_from_center;
 
 void vertex() {
     world_point = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    profile_height = VERTEX.y + 0.5;
+    if (faction_wall) {
+        float recess = smoothstep(0.12, 0.32, profile_height) * (1.0 - smoothstep(0.68, 0.88, profile_height));
+        vec2 dimensions = vec2(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[2].xyz));
+        VERTEX.xz *= 1.0 - recess * 0.28 / max(dimensions, vec2(0.1));
+    }
     wall_height_from_center = world_point.y - MODEL_MATRIX[3].y;
     world_normal = normalize(MODEL_NORMAL_MATRIX * NORMAL);
 }
@@ -50,6 +59,19 @@ void fragment() {
     }
     if (!top || basin_trim) steel = steel * (1.0 - 0.59 * seam) + mix(vec3(-0.035), vec3(0.12, 0.15, 0.20), clamp(lit_edge, 0.0, 1.0)) * bevel;
 
+    if (faction_wall) {
+        float collar = 1.0 - smoothstep(0.09, 0.19, min(profile_height, 1.0 - profile_height));
+        float chamfer = smoothstep(0.08, 0.15, min(profile_height, 1.0 - profile_height))
+            * (1.0 - smoothstep(0.18, 0.25, min(profile_height, 1.0 - profile_height)));
+        float grit = fract(sin(dot(floor(world_point * 21.0), vec3(13.37, 37.53, 73.19))) * 43758.5453);
+        float wear = mix(0.85, 1.12, grit);
+        steel *= wear;
+        if (!top) {
+            steel = mix(steel, vec3(0.105, 0.13, 0.17) * wear, collar * 0.8);
+            steel += vec3(0.06, 0.07, 0.085) * chamfer;
+        }
+    }
+
     vec3 glow = vec3(0.0);
     float light_row = 1.0 - step(0.5, abs(floor(panel.y)));
     if (!top && (basin_trim ? UV.x > 0.5 : panel_seed < 0.10)) {
@@ -61,7 +83,7 @@ void fragment() {
         float slot = 1.0 - smoothstep(0.022, 0.044, distance_to_strip);
         float lamp = 1.0 - smoothstep(-aa, aa, distance_to_strip);
         float halo = exp(-max(distance_to_strip, 0.0) * 10.0);
-        vec3 tint = basin_trim ? vec3(0.08, 0.65, 1.0) : vec3(1.0, 0.43, 0.12);
+        vec3 tint = basin_trim ? vec3(0.08, 0.65, 1.0) : (faction_wall ? lamp_tint.rgb : vec3(1.0, 0.43, 0.12));
         steel = mix(steel, vec3(0.018, 0.026, 0.04), slot * lamp_visibility * 0.9);
         steel += tint * halo * lamp_visibility * 0.49;
         steel = mix(steel, mix(tint, vec3(1.0), 0.70), lamp * lamp_visibility);

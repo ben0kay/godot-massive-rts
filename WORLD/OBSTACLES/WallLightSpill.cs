@@ -6,7 +6,7 @@ namespace MassiveRts;
 
 internal static class WallLightSpill
 {
-    internal static Mesh Build(IReadOnlyList<ObstacleRectangle> walls, TerrainHeightField terrain, Transform3D toLocal)
+    internal static Mesh Build(IReadOnlyList<ObstacleRectangle> walls, TerrainHeightField terrain, Transform3D toLocal, IReadOnlyList<ObstacleRectangle> occluders = null)
     {
         if (walls.Count == 0) return null;
         using var surface = new SurfaceTool();
@@ -34,7 +34,7 @@ internal static class WallLightSpill
                 if (!HasLamp(Mathf.FloorToInt(tile.X), Mathf.FloorToInt(tile.Y))) continue;
                 Vector2 probe = origin + outward * 0.06f;
                 bool occluded = false;
-                foreach (var other in walls)
+                foreach (var other in occluders ?? walls)
                 {
                     if (probe.X >= other.Min.X && probe.X < other.Max.X &&
                         probe.Y >= other.Min.Y && probe.Y < other.Max.Y)

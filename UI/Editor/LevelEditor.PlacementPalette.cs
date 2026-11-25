@@ -123,7 +123,10 @@ public partial class LevelEditor
         {
             var defenses = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
             picker.AddChild(defenses);
-            defenses.AddChild(MenuLayout.Label("Structures"));
+            var structures = new HBoxContainer();
+            defenses.AddChild(structures);
+            structures.AddChild(MenuLayout.Label("Structures"));
+            AddPaletteAction(structures, "Faction Wall", Tool.FactionWall);
             placementPalette.BuildCards(defenses, towers, towers,
                 i => defenseDefinitions[i].DisplayName,
                 i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,

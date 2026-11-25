@@ -362,6 +362,9 @@ public partial class CommandSandbox : Node3D
     }
 
     // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
+    private MultiMesh blueWallBatch, redWallBatch;
+    private MeshInstance3D blueWallSpill, redWallSpill;
+
     internal ObstacleRectangle[] ReadAuthoredWalls(bool groundForPlay = false, bool updateVisuals = false)
     {
         var walls = new List<ObstacleRectangle>();
@@ -399,30 +402,73 @@ public partial class CommandSandbox : Node3D
             walls.Add(wall with { AirborneHeightRange = new Vector2(bottom, bottom + bounds.Size.Y) });
         }
         var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
-        var painted = new List<ObstacleRectangle>();
-        if (paint?.Data is { IndustrialWallCells.Count: > 0 } data)
+        var field = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
+        var data = paint?.Data;
+        var painted = CompileWalls(data?.IndustrialWallCells, data?.IndustrialWallHeight ?? 0f);
+        var blue = CompileWalls(data?.BlueWallCells, data?.FactionWallHeight ?? 0f);
+        var red = CompileWalls(data?.RedWallCells, data?.FactionWallHeight ?? 0f);
+        walls.AddRange(painted);
+        if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, painted);
+        int neutralCount = walls.Count;
+        walls.AddRange(blue);
+        walls.AddRange(red);
+        if (groundForPlay || updateVisuals)
         {
-            var cells = new HashSet<Vector2I>(data.IndustrialWallCells);
+            var toLocal = GlobalTransform.AffineInverse();
+            UpdateIndustrialWallShadows(walls, field, neutralCount);
+            UpdateFactionWallViews(blue, Factions.Blue, ref blueWallBatch, ref blueWallSpill, walls, field, toLocal);
+            UpdateFactionWallViews(red, Factions.Red, ref redWallBatch, ref redWallSpill, walls, field, toLocal);
+        }
+        return walls.ToArray();
+
+        List<ObstacleRectangle> CompileWalls(IEnumerable<Vector2I> source, float height)
+        {
+            var result = new List<ObstacleRectangle>();
+            if (source == null) return result;
+            var cells = new HashSet<Vector2I>(source);
             cells.RemoveWhere(cell => !paint.Contains(cell));
-            var field = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
             var rectangles = ObstacleCellCompiler.Merge(cells, WorldPaint.CellSize, WorldPaint.MaxPaintedRectangles)
                 ?? System.Array.Empty<ObstacleRectangle>();
             foreach (var rectangle in rectangles)
             {
                 float bottom = field?.FootprintHeight(rectangle.Min, rectangle.Max, out _) ?? 0f;
-                painted.Add(rectangle with { AirborneHeightRange = new Vector2(bottom, bottom + data.IndustrialWallHeight) });
+                result.Add(rectangle with { AirborneHeightRange = new Vector2(bottom, bottom + height) });
             }
+            return result;
         }
-        walls.AddRange(painted);
-        if (groundForPlay || updateVisuals)
-        {
-            UpdateIndustrialWallViews(authored, painted);
-            UpdateIndustrialWallShadows(walls, GetNodeOrNull<CommandTerrain>("Terrain")?.Field);
-        }
-        return walls.ToArray();
     }
 
-    private void UpdateIndustrialWallShadows(List<ObstacleRectangle> walls, TerrainHeightField terrain)
+    private void UpdateFactionWallViews(List<ObstacleRectangle> walls, byte faction, ref MultiMesh batch,
+        ref MeshInstance3D spillView, List<ObstacleRectangle> occluders, TerrainHeightField terrain, Transform3D toLocal)
+    {
+        Color tint = Factions.Color(faction);
+        if (batch == null && walls.Count > 0)
+        {
+            var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://WORLD/OBSTACLES/IndustrialWall.gdshader") };
+            material.SetShaderParameter("faction_wall", true);
+            material.SetShaderParameter("lamp_tint", tint);
+            batch = new MultiMesh
+            {
+                Mesh = new BoxMesh { Size = Vector3.One, SubdivideHeight = 11 },
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D
+            };
+            AddChild(new MultiMeshInstance3D { Multimesh = batch, MaterialOverride = material,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off }, false, InternalMode.Back);
+        }
+        if (batch != null) WriteWallBatch(batch, walls);
+        var spill = WallLightSpill.Build(walls, terrain, toLocal, occluders);
+        if (spillView == null && spill != null)
+        {
+            var material = new ShaderMaterial { RenderPriority = 1,
+                Shader = GD.Load<Shader>("res://WORLD/OBSTACLES/WallLightSpill.gdshader") };
+            material.SetShaderParameter("spill_tint", tint);
+            spillView = new MeshInstance3D { MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+            AddChild(spillView, false, InternalMode.Back);
+        }
+        if (spillView != null) spillView.Mesh = spill;
+    }
+
+    private void UpdateIndustrialWallShadows(List<ObstacleRectangle> walls, TerrainHeightField terrain, int neutralCount)
     {
         if (industrialWallShadows == null)
         {
@@ -436,7 +482,7 @@ public partial class CommandSandbox : Node3D
         }
         Transform3D toLocal = GlobalTransform.AffineInverse();
         industrialWallShadows.Mesh = GroundShadowMeshes.ExposedWallEdges(walls, terrain, toLocal);
-        var spill = WallLightSpill.Build(walls, terrain, toLocal);
+        var spill = WallLightSpill.Build(walls.GetRange(0, neutralCount), terrain, toLocal, walls);
         if (industrialWallSpill == null && spill != null)
         {
             industrialWallSpill = new MeshInstance3D
@@ -474,17 +520,22 @@ public partial class CommandSandbox : Node3D
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off },
                 false, InternalMode.Back);
         }
-        if (industrialWallBatch.InstanceCount < painted.Count) industrialWallBatch.InstanceCount = painted.Count;
+        WriteWallBatch(industrialWallBatch, painted);
+    }
+
+    private void WriteWallBatch(MultiMesh batch, List<ObstacleRectangle> painted)
+    {
+        if (batch.InstanceCount < painted.Count) batch.InstanceCount = painted.Count;
         for (int i = 0; i < painted.Count; i++)
         {
             var wall = painted[i];
             var height = wall.AirborneHeightRange.Value;
             Vector2 size = wall.Max - wall.Min, center = (wall.Min + wall.Max) * 0.5f;
             var dimensions = new Vector3(size.X, height.Y - height.X, size.Y);
-            industrialWallBatch.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(dimensions),
+            batch.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(dimensions),
                 ToLocal(new Vector3(center.X, (height.X + height.Y) * 0.5f, center.Y))));
         }
-        industrialWallBatch.VisibleInstanceCount = painted.Count;
+        batch.VisibleInstanceCount = painted.Count;
     }
 
     public override void _Process(double delta)

@@ -36,6 +36,10 @@ public partial class WorldPaintData : Resource
         set { forestCells = value ?? new Cells(); EmitChanged(); }
     }
 
+    [Export] public Cells BlueWallCells { get; set; } = new();
+    [Export] public Cells RedWallCells { get; set; } = new();
+    [Export(PropertyHint.Range, "0.5,80,0.5")] public float FactionWallHeight { get; set; } = 2.5f;
+
     private Cells industrialWallCells = new();
     private float industrialWallHeight = 2f;
 

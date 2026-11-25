@@ -9,6 +9,7 @@ public partial class LevelEditor
 {
     private enum WallPaintMode { Brush, Line, Fill }
     private WallPaintMode wallPaintMode;
+    private bool factionWallRed = true;
     private Vector2I? wallStrokeStart;
     private Vector2I wallStrokeEnd;
     private MouseButton wallStrokeButton;
@@ -88,7 +89,15 @@ public partial class LevelEditor
 
     private void CommitWallStroke(bool erase)
     {
-        var before = paint.Data.IndustrialWallCells;
+        var data = paint.Data;
+        bool faction = tool == Tool.FactionWall;
+        bool redWall = factionWallRed;
+        var before = !faction ? data.IndustrialWallCells : redWall ? data.RedWallCells : data.BlueWallCells;
+        var occupied = new HashSet<Vector2I>();
+        if (faction) occupied.UnionWith(data.IndustrialWallCells);
+        if (!faction || !redWall) occupied.UnionWith(data.RedWallCells);
+        if (!faction || redWall) occupied.UnionWith(data.BlueWallCells);
+        bool CanPaint(Vector2I cell) => paint.Contains(cell) && !occupied.Contains(cell);
         var draft = new HashSet<Vector2I>(before);
         bool changed = false;
         if (wallPaintMode == WallPaintMode.Fill)
@@ -107,12 +116,12 @@ public partial class LevelEditor
                 for (int x = area.X; x < area.X + area.Width; x++)
                 {
                     var cell = new Vector2I(x, z);
-                    if (paint.Contains(cell)) changed |= draft.Add(cell);
+                    if (CanPaint(cell)) changed |= draft.Add(cell);
                 }
         }
         else
             foreach (var cell in wallStrokeCells)
-                if (paint.Contains(cell)) changed |= erase ? draft.Remove(cell) : draft.Add(cell);
+                if (erase || CanPaint(cell)) changed |= erase ? draft.Remove(cell) : draft.Add(cell);
 
         CancelWallStroke();
         if (!changed) return;
@@ -122,7 +131,12 @@ public partial class LevelEditor
             RejectWallStroke();
             return;
         }
-        SetWallValue(before, Sorted(draft), cells => paint.Data.IndustrialWallCells = cells);
+        SetWallValue(before, Sorted(draft), cells =>
+        {
+            if (!faction) data.IndustrialWallCells = cells;
+            else if (redWall) data.RedWallCells = cells;
+            else data.BlueWallCells = cells;
+        });
     }
 
     private void SetWallValue<T>(T before, T after, Action<T> setter)

@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -36,7 +36,7 @@ public partial class LevelEditor
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
-            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry) continue;
+            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry or Tool.FactionWall) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
             if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders or Tool.Disruptor) continue;
             toolPicker.AddItem(entry switch
@@ -219,11 +219,20 @@ public partial class LevelEditor
             case Tool.ReserveEntry:
                 Heading(context, "Click near a battlefield edge to set the Red entry.", 15);
                 break;
+            case Tool.FactionWall:
             case Tool.Wall:
                 Choice(context, "Paint mode", new[] { "1×1 Brush", "Line", "Rectangle Fill" },
                     (int)wallPaintMode, index => { CancelWallStroke(); wallPaintMode = (WallPaintMode)index; });
-                Number(context, "Wall height", paint.Data.IndustrialWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
-                    SetWallValue(paint.Data.IndustrialWallHeight, (float)value, height => paint.Data.IndustrialWallHeight = height);
+                if (tool == Tool.FactionWall)
+                {
+                    Choice(context, "Faction", new[] { "Blue", "Red" }, factionWallRed ? 1 : 0,
+                        index => { CancelWallStroke(); factionWallRed = index == 1; });
+                    Number(context, "Wall height", paint.Data.FactionWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
+                        SetWallValue(paint.Data.FactionWallHeight, (float)value, height => paint.Data.FactionWallHeight = height);
+                }
+                else
+                    Number(context, "Wall height", paint.Data.IndustrialWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
+                        SetWallValue(paint.Data.IndustrialWallHeight, (float)value, height => paint.Data.IndustrialWallHeight = height);
                 Heading(context, "Left-drag to paint. Right-drag to erase.", 15);
                 break;
             case Tool.DeploymentLine:
@@ -385,7 +394,7 @@ public partial class LevelEditor
             return;
         }
         if (editingReserve && tool is not Tool.Soldiers) return;
-        if (tool == Tool.Wall && HandleWallPaint(input)) return;
+        if ((tool is Tool.Wall or Tool.FactionWall) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.Soldiers)

@@ -193,6 +193,12 @@ internal static class LevelEditorSave
         var roster = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres").Definitions
             .Where(unit => unit != null).Select(unit => unit.Id).ToHashSet();
         var groups = map.GetNode("StartingUnits").GetChildren().OfType<CommandUnitPlacement>().ToArray();
+        if (map.GetNodeOrNull<WorldPaint>("WorldPaint")?.Data is { } factionWalls)
+            foreach (var cells in new[] { factionWalls.BlueWallCells, factionWalls.RedWallCells })
+                if (cells.Count > WorldPaint.MaxPaintedCells ||
+                    ObstacleCellCompiler.Merge(new(cells), WorldPaint.CellSize, WorldPaint.MaxPaintedRectangles) == null)
+                    throw new InvalidOperationException("The faction wall layout exceeds the map paint budget.");
+
         if (groups.Any(group => group.Unit == null || !roster.Contains(group.Unit.Id) || group.Count is < 1 or > 256))
             throw new InvalidOperationException("Every soldier formation needs a registered unit type and a count between 1 and 256.");
         var towers = map.GetNodeOrNull<Node3D>("StartingDefenses")?.GetChildren().OfType<CommandLaserPlacement>().ToArray()
