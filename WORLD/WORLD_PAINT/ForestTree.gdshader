@@ -9,6 +9,6 @@ void vertex() {
 }
 
 void fragment() {
-    ALBEDO = tree_color.rgb;
+    ALBEDO = tree_color.rgb * COLOR.rgb;
     ALPHA = opacity;
 }

@@ -32,5 +32,14 @@ void fragment() {
     float highlight = smoothstep(0.37, 0.79, edge) * (1.0 - smoothstep(1.0, 1.55, edge));
     color = mix(color, shoreline_color.rgb, bank * 0.92);
     color *= 1.0 - contact * 0.15;
-    ALBEDO = color + shallow * highlight * 0.09;
+    // Narrow retaining lip and cyan trim inside the painted shoreline.
+    float aa = clamp(fwidth(shore_distance), 0.025, 0.14);
+    float lip = 1.0 - smoothstep(0.22 - aa, 0.22 + aa, shore_distance);
+    float trim = smoothstep(0.15 - aa, 0.15 + aa, shore_distance) *
+        (1.0 - smoothstep(0.25 - aa, 0.25 + aa, shore_distance));
+    vec2 panel = abs(fract(map_position / 2.0 + 0.5) - 0.5);
+    float joint = 1.0 - smoothstep(0.018, 0.04, max(panel.x, panel.y));
+    vec3 steel = vec3(0.16, 0.21, 0.29) * (1.0 - 0.28 * joint);
+    ALBEDO = mix(color + shallow * highlight * 0.09, steel, lip);
+    ALBEDO = mix(ALBEDO, vec3(0.23, 0.73, 0.87), trim * 0.72);
 }

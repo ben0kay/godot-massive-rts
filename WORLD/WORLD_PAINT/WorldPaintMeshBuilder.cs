@@ -1,4 +1,4 @@
-// Builds one connected rubble shelf and a set of faceted rock columns from painted cells.
+// Builds one connected rubble shelf and a set of faceted boulder clusters from painted cells.
 using System.Collections.Generic;
 using Godot;
 
@@ -21,6 +21,7 @@ internal static class WorldPaintMeshBuilder
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         });
 
+        tint = tint.Lerp(new Color("#384256"), 0.65f);
         foreach (var cell in cells)
         {
             Vector3 a = ShelfPoint(cell), b = ShelfPoint(cell + Vector2I.Right);
@@ -37,7 +38,12 @@ internal static class WorldPaintMeshBuilder
             if (!west) ShelfEdge(c, a);
 
             int neighbours = (north ? 1 : 0) + (south ? 1 : 0) + (east ? 1 : 0) + (west ? 1 : 0);
-            AddColumn(surface, cell, terrain, height, tint, neighbours);
+            // A full aligned 2×2 patch gets one broad boulder surrounded by smaller fragments.
+            var anchor = new Vector2I(cell.X & ~1, cell.Y & ~1);
+            bool broad = cells.Contains(anchor) && cells.Contains(anchor + Vector2I.Right) &&
+                cells.Contains(anchor + Vector2I.Down) && cells.Contains(anchor + Vector2I.One);
+            AddBoulder(surface, cell, terrain, broad ? height * 0.37f : height, tint, neighbours, broad: false);
+            if (broad && cell == anchor) AddBoulder(surface, cell, terrain, height, tint, neighbours, broad: true);
         }
         return surface.Commit();
 
@@ -61,19 +67,20 @@ internal static class WorldPaintMeshBuilder
     // =========================================================
     // Build uneven polygon rings with a broad cap and a chipped upper bevel.
     // Only the relative height responds to neighbours as new brush strokes join a pile.
-    private static void AddColumn(SurfaceTool surface, Vector2I cell, TerrainHeightField terrain,
-        float height, Color tint, int neighbours)
+    private static void AddBoulder(SurfaceTool surface, Vector2I cell, TerrainHeightField terrain,
+        float height, Color tint, int neighbours, bool broad)
     {
         uint seed = CellSeed(cell);
         float size = WorldPaint.CellSize;
         float x = (cell.X + Mathf.Lerp(0.45f, 0.55f, Next(ref seed))) * size;
         float z = (cell.Y + Mathf.Lerp(0.45f, 0.55f, Next(ref seed))) * size;
-        float baseY = Ground(terrain, (cell.X + 0.5f) * size, (cell.Y + 0.5f) * size);
+        if (broad) { x = (cell.X + 1f) * size; z = (cell.Y + 1f) * size; }
+        float baseY = Ground(terrain, x, z);
         float heightScale = Mathf.Lerp(0.38f, 1.12f, Next(ref seed)) + neighbours * 0.02f;
         float columnHeight = height * heightScale;
-        float radius = size * Mathf.Lerp(0.32f, 0.437f, Next(ref seed));
+        float radius = size * (broad ? 0.9f : Mathf.Lerp(0.32f, 0.437f, Next(ref seed)));
         float stretch = Mathf.Lerp(0.76f, 1f, Next(ref seed));
-        float inset = Mathf.Lerp(0.72f, 0.91f, Next(ref seed));
+        float inset = Mathf.Lerp(0.38f, 0.66f, Next(ref seed));
         float turn = Next(ref seed) * Mathf.Tau;
         int sides = Next(ref seed) < 0.55f ? 6 : 7;
         Color stone = tint.Lerp(tint.Lightened(0.22f), Next(ref seed)).Darkened(0.04f);
@@ -90,7 +97,7 @@ internal static class WorldPaintMeshBuilder
             float fx = x + dx, fz = z + dz;
             foot[i] = new Vector3(fx, Ground(terrain, fx, fz) - 0.025f, fz);
             float topY = crown.Y - columnHeight * Mathf.Lerp(0.01f, 0.12f, Next(ref seed));
-            shoulder[i] = new Vector3(x + dx * 0.98f, topY - columnHeight * 0.14f, z + dz * 0.98f);
+            shoulder[i] = new Vector3(x + dx * 0.98f, topY - columnHeight * 0.40f, z + dz * 0.98f);
             cap[i] = new Vector3(x + dx * inset, topY, z + dz * inset);
         }
 

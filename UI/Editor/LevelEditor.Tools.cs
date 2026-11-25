@@ -44,7 +44,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Elevation => "Paint elevation",
-                Tool.Wall => "Place solid wall",
+                Tool.Wall => "Industrial Walls",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -84,6 +84,7 @@ public partial class LevelEditor
     {
         if (terrainChanged) map.GetNodeOrNull<CommandTerrain>("Terrain")?.Rebuild(force: true);
         UpdateEditorGround();
+        map.ReadAuthoredWalls(updateVisuals: true);
         paint.Compile();
         RefreshLayout();
     }

@@ -34,7 +34,7 @@ public partial class BenchmarkArena
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         var paint = autoBattlerPaint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         var (rocks, water) = paint?.Compile() ?? (Array.Empty<ObstacleRectangle>(), Array.Empty<ObstacleRectangle>());
-        autoBattlerCover = map.ReadAuthoredWalls().Concat(rocks).ToArray();
+        autoBattlerCover = map.ReadAuthoredWalls(updateVisuals: true).Concat(rocks).ToArray();
         autoBattlerWater = water;
         weather.SetWater(paint?.MovementWater ?? water);
         autoBattlerForest = paint?.Forest;

@@ -70,7 +70,7 @@ public partial class LevelEditor
                     PickPaletteTool(Tool.Soldiers);
                 }, paletteTools, selectFirst: false),
             placementPalette.BuildCards(body, towers + 1, towers + 1,
-                i => i == towers ? "Solid Wall" : defenseDefinitions[i].DisplayName,
+                i => i == towers ? "Industrial Walls" : defenseDefinitions[i].DisplayName,
                 i => i == towers ? null : UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f),
                 (icon, i) =>

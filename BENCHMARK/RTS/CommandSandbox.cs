@@ -23,6 +23,11 @@ public partial class CommandSandbox : Node3D
     internal const int WaveUnitCapacity = 2048;
     [Export(PropertyHint.Range, "0,50000,1")] public float CitadelHealth { get; set; }
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
+    public enum BaseTerrainStyle { Industrial, SteelSlate }
+    [Export] public BaseTerrainStyle BaseTerrain { get; set; }
+    private MultiMesh industrialRoofs;
+    private ShaderMaterial industrialWallMaterial;
+
     [Export] public AutoBattlerRules AutoBattlerRules { get; set; }
     [Export] public int StartingCarbon { get; set; } = 10000;
     internal bool AuthoringPreview { get; set; }
@@ -160,6 +165,7 @@ public partial class CommandSandbox : Node3D
         var terrain = GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         if (AutoBattlerRules != null)
         {
+            ReadAuthoredWalls(updateVisuals: true);
             GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile();
             LevelLayoutPreview.Build(this);
             return;
@@ -320,6 +326,10 @@ public partial class CommandSandbox : Node3D
             ground.GetActiveMaterial(0) is not ShaderMaterial shared) return;
         var material = ground.MaterialOverride as ShaderMaterial ?? (ShaderMaterial)shared.Duplicate();
         material.ResourceLocalToScene = true;
+        bool industrial = BaseTerrain == BaseTerrainStyle.Industrial;
+        material.SetShaderParameter("slate_color", industrial ? new Color("#3f4a60") : new Color(0.31f, 0.34f, 0.39f));
+        material.SetShaderParameter("panel_size", industrial ? new Vector2(9f, 7f) : new Vector2(3.8f, 2.9f));
+        material.SetShaderParameter("industrial_panels", industrial);
         material.SetShaderParameter("map_half_width", MapSize * 0.5f);
         material.SetShaderParameter("editor_grid_size", showEditorGrid ? DeploymentLayout.CellSize : 0f);
         ground.MaterialOverride = material;
@@ -348,7 +358,7 @@ public partial class CommandSandbox : Node3D
     }
 
     // Register editor-placed box meshes as XZ rectangles in the shared obstacle field.
-    internal ObstacleRectangle[] ReadAuthoredWalls(bool groundForPlay = false)
+    internal ObstacleRectangle[] ReadAuthoredWalls(bool groundForPlay = false, bool updateVisuals = false)
     {
         var walls = new List<ObstacleRectangle>();
         if (GetNodeOrNull<Node3D>("Obstacles") is not Node3D authored) return walls.ToArray();
@@ -384,7 +394,39 @@ public partial class CommandSandbox : Node3D
             }
             walls.Add(wall with { AirborneHeightRange = new Vector2(bottom, bottom + bounds.Size.Y) });
         }
+        var fills = IndustrialWallLoops.Fill(walls);
+        if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, fills);
+        walls.AddRange(fills);
         return walls.ToArray();
+    }
+
+    private void UpdateIndustrialWallViews(Node3D authored, List<ObstacleRectangle> fills)
+    {
+        industrialWallMaterial ??= new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://WORLD/OBSTACLES/IndustrialWall.gdshader")
+        };
+        foreach (Node child in authored.GetChildren())
+            if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh) mesh.MaterialOverride = industrialWallMaterial;
+
+        if (industrialRoofs == null)
+        {
+            if (fills.Count == 0) return;
+            industrialRoofs = new MultiMesh { Mesh = new BoxMesh { Size = Vector3.One }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+            AddChild(new MultiMeshInstance3D { Multimesh = industrialRoofs, MaterialOverride = industrialWallMaterial },
+                false, InternalMode.Back);
+        }
+        if (industrialRoofs.InstanceCount < fills.Count) industrialRoofs.InstanceCount = fills.Count;
+        for (int i = 0; i < fills.Count; i++)
+        {
+            var fill = fills[i];
+            var height = fill.AirborneHeightRange.Value;
+            Vector2 size = fill.Max - fill.Min, center = (fill.Min + fill.Max) * 0.5f;
+            var dimensions = new Vector3(size.X, height.Y - height.X, size.Y);
+            industrialRoofs.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(dimensions),
+                ToLocal(new Vector3(center.X, (height.X + height.Y) * 0.5f, center.Y))));
+        }
+        industrialRoofs.VisibleInstanceCount = fills.Count;
     }
 
     public override void _Process(double delta)

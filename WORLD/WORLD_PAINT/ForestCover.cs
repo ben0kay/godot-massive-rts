@@ -33,8 +33,7 @@ internal sealed class ForestCover
 
         trunks = Batch(parent, new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.18f, Height = 1f,
             RadialSegments = 6, Rings = 0, Material = Material(new Color("#523322")) });
-        crowns = Batch(parent, new SphereMesh { Radius = CrownRadius, Height = 1.18f,
-            RadialSegments = 8, Rings = 4, Material = Material(new Color("#427c3b")) });
+        crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"))));
 
         parent.AddChild(new MeshInstance3D { Mesh = outline,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
@@ -114,6 +113,30 @@ internal sealed class ForestCover
         }
         visibilityBounds = new Rect2I(min, max - min + Vector2I.One);
         outline.SurfaceEnd();
+    }
+
+    private static Mesh PineCrown(Material material)
+    {
+        using var surface = new SurfaceTool();
+        surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetMaterial(material);
+        const int sides = 7;
+        for (int tier = 0; tier < 3; tier++)
+        {
+            float radius = CrownRadius * (1f - 0.23f * tier);
+            float bottom = -0.4f + 0.29f * tier;
+            var tip = Vector3.Up * (bottom + 0.63f);
+            for (int side = 0; side < sides; side++)
+            {
+                float angle = Mathf.Tau * side / sides;
+                float next = Mathf.Tau * (side + 1) / sides;
+                surface.SetColor(Colors.White.Darkened(0.24f + 0.16f * Mathf.Cos(angle) - 0.07f * tier));
+                surface.AddVertex(new Vector3(Mathf.Cos(angle) * radius, bottom, Mathf.Sin(angle) * radius));
+                surface.AddVertex(new Vector3(Mathf.Cos(next) * radius, bottom, Mathf.Sin(next) * radius));
+                surface.AddVertex(tip);
+            }
+        }
+        return surface.Commit();
     }
 
     private static MultiMesh Batch(Node3D parent, Mesh mesh)

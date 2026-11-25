@@ -25,6 +25,12 @@ public partial class LevelEditor
         var form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         scroll.AddChild(form);
         mapSize = Number(form, "Map width and depth", metadata.MapSize, 64, LevelDefinition.DefaultMapSize, 4);
+        Heading(form, "Base Terrain", 15);
+        var baseTerrain = new OptionButton();
+        baseTerrain.AddItem("Industrial");
+        baseTerrain.AddItem("Steel Slate");
+        baseTerrain.Select((int)map.BaseTerrain);
+        form.AddChild(baseTerrain);
         Heading(form, "Custom name (optional)", 15);
         levelTitle = new LineEdit { Text = metadata.CustomName };
         form.AddChild(levelTitle);
@@ -44,18 +50,20 @@ public partial class LevelEditor
             try
             {
                 string title = levelTitle.Text.Trim(), description = levelDescription.Text;
-                var before = (metadata.DisplayName, metadata.Description, metadata.MapSize, map.OpeningCameraSize, cameraMarker.Transform);
+                var before = (metadata.DisplayName, metadata.Description, metadata.MapSize, map.OpeningCameraSize, cameraMarker.Transform, map.BaseTerrain);
                 var after = (title, description, (float)mapSize.Value, (float)zoom.Value,
                     new Transform3D(new Basis(Vector3.Up, Mathf.DegToRad((float)yawDegrees.Value)),
-                        new Vector3((float)x.Value, cameraMarker.Position.Y, (float)z.Value)));
+                        new Vector3((float)x.Value, cameraMarker.Position.Y, (float)z.Value)),
+                    (CommandSandbox.BaseTerrainStyle)baseTerrain.Selected);
                 var rules = readRules();
-                void Apply((string Title, string Description, float Size, float Zoom, Transform3D Camera) values, Action rulesAction)
+                void Apply((string Title, string Description, float Size, float Zoom, Transform3D Camera, CommandSandbox.BaseTerrainStyle Terrain) values, Action rulesAction)
                 {
                     metadata.DisplayName = values.Title;
                     metadata.Description = values.Description;
                     metadata.MapSize = values.Size;
                     map.OpeningCameraSize = values.Zoom;
                     cameraMarker.Transform = values.Camera;
+                    map.BaseTerrain = values.Terrain;
                     rulesAction();
                     RefreshMap();
                     FrameEditor();

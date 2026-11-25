@@ -13,7 +13,7 @@ public partial class LevelEditor : Node
     private Label toolsHeading;
     private Control legacyUnitPicker, legacyDefenseHeading, legacyUnitDivider, legacyDefenseDivider;
     private Label status, startStatus, strength;
-    private OptionButton toolPicker, defensePicker;
+    private OptionButton toolPicker, defensePicker, newLevelTerrain;
     private HBoxContainer campaignButtons;
     private GridContainer levelGrid;
     private Button returnToLevel;
@@ -76,7 +76,16 @@ public partial class LevelEditor : Node
         Heading(start, "Available levels", 18);
         levelGrid = new GridContainer { Columns = 3, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         start.AddChild(levelGrid);
-        var newLevel = Button(start, "+ New Level", () => Open(null));
+        var creation = new HBoxContainer();
+        start.AddChild(creation);
+        Heading(creation, "Base Terrain", 15);
+        newLevelTerrain = new OptionButton { CustomMinimumSize = new Vector2(140, 0) };
+        newLevelTerrain.AddItem("Industrial", (int)CommandSandbox.BaseTerrainStyle.Industrial);
+        newLevelTerrain.AddItem("Steel Slate", (int)CommandSandbox.BaseTerrainStyle.SteelSlate);
+        newLevelTerrain.Select(0);
+        creation.AddChild(newLevelTerrain);
+        var newLevel = Button(creation, "+ New Level", () => Open(null));
+        newLevel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         newLevel.CustomMinimumSize = new Vector2(0, 38);
         startStatus = Heading(start, "", 15);
         startStatus.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -254,6 +263,7 @@ public partial class LevelEditor : Node
         LevelDefinition nextMetadata;
         try { next = adapter.Open(existing, out nextMetadata); }
         catch (Exception error) { startStatus.Text = error.Message; return; }
+        if (existing == null) next.BaseTerrain = (CommandSandbox.BaseTerrainStyle)newLevelTerrain.GetSelectedId();
         EndElevation();
         CancelBridge();
         if (map != null)
