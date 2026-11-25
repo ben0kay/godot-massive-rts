@@ -51,6 +51,12 @@ The catalogue fits each circular collision footprint around the scaled mesh outl
 
 Open [UnitVisualConfig.tres](UnitVisualConfig.tres) in the Godot Inspector, set **Use Enhanced Meshes**, and save before running a scene. The switch ships enabled for the Circle Infantry trial. Circle keeps its footprint and height and gets a bright faction-coloured rim around a shallow recessed cap. The shared renderer uses the setting for battles and placement previews. Turn it off and relaunch to compare against the original meshes.
 
+## Circle Infantry robot mesh trial
+
+Enable **Use Circle Robot Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) (on by default), save and relaunch. It replaces Circle Infantry's visual with a compact static low-poly robot: round faction-painted helmet and torso, emissive visor, shoulder plates, boots and short energy blade. All geometry is baked once into the existing shared unit mesh and uses the two-tone unit armor shader. The original radius, height, grounded origin, combat stats and rotationally symmetric simulation are unchanged. The renderer derives a cosmetic heading from existing motion or an acquired target; no skeleton or limb animation. Existing whole-body pulses, flash and fracture paths remain in use.
+
+Disable **Use Circle Robot Mesh** to restore the previous Circle appearance: recessed-rim Circle when **Use Enhanced Meshes** is enabled, plain Circle otherwise. The new switch is independent of artillery, rocket and Hexagon visuals. Owner visual/FPS comparison is pending.
+
 ## Enhanced Hexagon Siege mesh
 
 **Use Enhanced Hexagon Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) is a separate, default-on toggle from Circle's **Use Enhanced Meshes**. It adds six raised faction-coloured armour wedges, narrow dark radial seams and a recessed central hexagon to the Hexagon Siege Infantry. The details are built into one shared MultiMesh-compatible mesh, including deployment and Entity Editor previews. No combat size, circular clearance, balance or AI parameters change; FX2 cracks and white hit flashes still work. Turn the toggle off and relaunch the battle/editor preview for the original beveled hexagon. The additional triangles warrant a like-for-like high-count FPS comparison.

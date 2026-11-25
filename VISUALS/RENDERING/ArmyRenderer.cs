@@ -31,6 +31,7 @@ public partial class ArmyRenderer : Node3D
     private int typeCount;
     private float[] halfHeights;
     private bool[] facesPositiveX;
+    private Vector2[] circleRobotHeading;
     private UnitState units;
     private bool cracksEnabled;
     private int maxShieldShells;
@@ -62,6 +63,7 @@ public partial class ArmyRenderer : Node3D
         maxShieldShells = Mathf.Clamp(visuals.MaxShieldShells, 0, 2048);
         if (!visuals.ShowShieldShells) maxShieldShells = 0;
         cracksEnabled = visuals.UseUnitFracture;
+        circleRobotHeading = visuals.UseCircleRobotMesh ? new Vector2[state.Position.Length] : null;
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
         heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
         middleCrackHealth = (firstCrackHealth + heavyCrackHealth) * 0.5f;
@@ -246,6 +248,34 @@ public partial class ArmyRenderer : Node3D
     private int Batch(int id) => units.Faction[id] * typeCount + units.Type[id];
     internal static Color FactionColor(int faction) => Factions.Color(faction);
 
+    // Reuse movement history and the current acquired target; never change Facing or AI.
+    private Vector2 RobotHeading(int id)
+    {
+        Vector2 heading = circleRobotHeading[id];
+        Vector3 point = units.Position[id];
+        Vector2 delta = Vector2.Zero;
+        if (hasPreviousPose)
+        {
+            Vector3 movement = point - previousPositions[id];
+            delta = new Vector2(movement.X, movement.Z);
+        }
+        if (delta.LengthSquared() < 0.000001f)
+        {
+            int target = units.Target[id];
+            if (target >= 0 && target < units.Count && units.Health[target] > 0f &&
+                units.Faction[target] != units.Faction[id])
+            {
+                Vector3 offset = units.Position[target] - point;
+                delta = new Vector2(offset.X, offset.Z);
+            }
+        }
+        if (delta.LengthSquared() >= 0.000001f) heading = delta.Normalized();
+        else if (heading == Vector2.Zero)
+            heading = units.Facing[id] == Vector2.Zero ? Vector2.Up : units.Facing[id].Normalized();
+        circleRobotHeading[id] = heading;
+        return heading;
+    }
+
     private static void StoreColor(float[] buffer, int offset, Color color)
     {
         buffer[offset + 12] = color.R;
@@ -283,10 +313,16 @@ public partial class ArmyRenderer : Node3D
                 position.Z += stroke.Y;
             }
         }
-        // A circle looks identical from every direction: keep its transform unrotated,
-        // but still interpolate position and apply the normal hit-feedback scale.
+        // Legacy circles remain unrotated. The optional robot has visual-only
+        // heading; its simulation still uses rotationally symmetric melee rules.
         float cosine = 1f, sine = 0f;
-        if (type != RuntimeUnitCatalog.Circle)
+        if (type == RuntimeUnitCatalog.Circle && circleRobotHeading != null)
+        {
+            Vector2 heading = RobotHeading(id);
+            cosine = -heading.Y;
+            sine = -heading.X;
+        }
+        else if (type != RuntimeUnitCatalog.Circle)
         {
             Vector2 facing = units.Facing[id];
             if (hasPreviousPose && poseBlend < 1f)
@@ -454,6 +490,7 @@ public partial class ArmyRenderer : Node3D
                 int last = --counts[batch], moved = members[batch][last];
                 if (slot != last) { members[batch][slot] = moved; slots[moved] = slot; Write(moved, batch, slot); }
                 slots[id] = -1; InstanceCount--;
+                if (circleRobotHeading != null) circleRobotHeading[id] = Vector2.Zero;
             }
             else
             {

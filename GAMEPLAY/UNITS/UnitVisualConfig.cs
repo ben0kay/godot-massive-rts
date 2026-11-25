@@ -9,6 +9,7 @@ public partial class UnitVisualConfig : Resource
     internal const string DefaultPath = "res://GAMEPLAY/UNITS/UnitVisualConfig.tres";
 
     [Export] public bool UseEnhancedMeshes { get; set; }
+    [Export] public bool UseCircleRobotMesh { get; set; }
     [Export] public bool UseEnhancedHexagonMesh { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }

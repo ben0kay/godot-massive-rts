@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -78,8 +78,9 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
-        visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
-            (id == RuntimeUnitCatalog.TwinRocketLauncherId && outline.IsDeepFork));
+        (visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId) ||
+        (visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
+            (id == RuntimeUnitCatalog.TwinRocketLauncherId && outline.IsDeepFork)));
 
     private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material,
         bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent, bool twoToneArmor)
@@ -107,7 +108,8 @@ public static class FacetedSoldierMeshes
 
         if (twoToneArmor)
         {
-            if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
+            if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
+            else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
         }
@@ -170,6 +172,46 @@ public static class FacetedSoldierMeshes
                 new Color(0.86f, 0.86f, 0.86f), SoldierSideShade, pitch: outline.ChevronBarrelElevation);
         }
         return surface.Commit();
+    }
+
+    // =========================================================
+    // Experimental rigid infantry robot. All pieces share the same masked surface.
+    // Preserve the old radius and ground-anchored height; -Z is forward.
+    private static void AppendCircleRobot(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask)
+        {
+            const float diagonal = 0.70710678f;
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+        }
+        void Ring(float rx, float rz, float y, float h, Color mask)
+        {
+            AppendPrism(surface, 10, x * rx, z * rz, height * h, -Mathf.Pi * 0.5f,
+                Vector3.Up * (height * y), mask, sideShade: SoldierSideShade, armorMask: true);
+        }
+
+        // Low round armored torso and oversized cylindrical helmet.
+        Ring(0.53f, 0.56f, -0.13f, 0.44f, Paint(0.85f));
+        Ring(0.60f, 0.60f, 0.24f, 0.15f, Trim(0.95f));
+        Ring(0.62f, 0.62f, 0.40f, 0.20f, Paint(1f));
+
+        // Chunky shoulders and boots; keep every corner within the old footprint.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.69f, 0.04f, 0.02f, 0.34f, 0.37f, 0.48f, Paint(0.92f));
+            Block(side * 0.65f, -0.18f, -0.05f, 0.25f, 0.22f, 0.32f, Steel(0.95f));
+            Block(side * 0.27f, -0.38f, -0.10f, 0.36f, 0.24f, 0.50f, Steel(1f));
+        }
+        // Chest plate and a small held energy blade; no separate weapon transform.
+        Block(0f, -0.09f, -0.51f, 0.35f, 0.15f, 0.13f, Trim(0.90f));
+        Block(0.59f, -0.21f, -0.48f, 0.14f, 0.15f, 0.33f, Steel(1f));
+        Block(0.53f, -0.20f, -0.70f, 0.14f, 0.14f, 0.25f, Trim(1f));
     }
 
     // =========================================================

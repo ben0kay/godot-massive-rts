@@ -602,3 +602,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Refined the enhanced Twin Rocket Launcher silhouette with tapered fork tips, swept shoulders and prong armor, a deeper visual notch, compact rear deck and tapered muzzle collars. Retained both authored mount poses, original collision outline, material colors, triangle topology and all gameplay. Owner visual validation pending.
 
 - 2026-11-25 — Added a white-hot Railgun beam with faction glow, sustained muzzle glare and flickering impact sparks at observed contacts. Effects use capped shared batches. Godot .NET visual validation pending.
+
+- 2026-11-25 — VIS-CIRCLE — Added an independent, default-on static Circle robot mesh trial with faction paint, visor, compact limbs and energy blade; visual-only heading uses existing movement/target data. Previous Circle mesh remains selectable; stats, footprint and other units unchanged. Source review only; owner visual/FPS validation pending.
