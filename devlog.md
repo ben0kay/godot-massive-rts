@@ -594,3 +594,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Added grounded attack scale pulses, a 35% melee hit tint, and a capped shared batch for clash sparks, directional cleave slashes, and cavalry charge dust. Godot .NET visual and performance validation pending.
 
 - 2026-11-25 — Increased unit attack pulses to 15% and Diamond Cavalry top speed from 9.0 to 10.8. Cavalry moving in or out of combat now leaves batched dust that grows with actual speed.
+
+- 2026-11-25 — Grouped lighting and fog controls in the left Rendering panel and revised painted water with moving ripple normals, viewing-angle reflections and directional glints. Godot .NET visual validation pending.

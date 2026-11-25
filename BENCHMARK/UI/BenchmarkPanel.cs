@@ -286,19 +286,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		shieldShells.Toggled += enabled => ShieldShellsChanged?.Invoke(enabled);
 		Field(shields, "Coverage refresh (s)", shieldInterval);
 
-		var weather = Section(column, "Weather", false, out _);
-		var weatherToggle = new CheckButton { Text = "Enable weather" };
-		weather.AddChild(weatherToggle);
-		var mist = LabeledSlider(weather, "Mist density", 100, 45, 1, "%");
-		var drift = LabeledSlider(weather, "Drift speed", 6, 2, 0.1, " u/s");
-		var haze = LabeledSlider(weather, "Haze", 100, 25, 1, "%");
-		void UpdateWeather() => WeatherChanged?.Invoke(weatherToggle.ButtonPressed,
-			(float)mist.Value / 100f, (float)drift.Value, (float)haze.Value / 100f);
-		weatherToggle.Toggled += _ => UpdateWeather();
-		mist.ValueChanged += _ => UpdateWeather();
-		drift.ValueChanged += _ => UpdateWeather();
-		haze.ValueChanged += _ => UpdateWeather();
-
 		AddButton(column, AutoBattlerPlaytest ? "Edit Blue deployment" : "Edit painted deployment", () => PaintRequested?.Invoke());
 		paintSection = new VBoxContainer { Visible = false };
 		column.AddChild(paintSection);
@@ -392,11 +379,25 @@ public partial class BenchmarkPanel : CanvasLayer
 			AddButton(paintControls, "Save deployment", () => SaveRequested?.Invoke());
 			AddButton(paintControls, "Load deployment", () => LoadRequested?.Invoke());
 		}
-		var display = Section(column, "Display and controls", false, out _);
-		display.AddChild(smoothMotion);
-		display.AddChild(DeathEffects);
-		groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
-		display.AddChild(groundShadows);
+		var renderingControls = Section(column, "Rendering", false, out _);
+		if (AutoBattlerPlaytest)
+		{
+			var lighting = Section(renderingControls, "Lighting", true, out _);
+			var sun = LabeledSlider(lighting, "Sun strength", 400, BattlefieldLighting.DefaultSunPercent, 1, "%");
+			var fill = LabeledSlider(lighting, "Ambient fill", 200, BattlefieldLighting.DefaultFillPercent, 1, "%");
+			var direction = LabeledSlider(lighting, "Sun direction", 360, 0, 1, "°");
+			void ApplyLighting(double _) => PlaytestLightingChanged?.Invoke(
+				(float)sun.Value / 100f, (float)fill.Value / 100f, (float)direction.Value);
+			sun.ValueChanged += ApplyLighting;
+			fill.ValueChanged += ApplyLighting;
+			direction.ValueChanged += ApplyLighting;
+			AddButton(lighting, "Reset lighting", () =>
+			{
+				sun.Value = BattlefieldLighting.DefaultSunPercent;
+				fill.Value = BattlefieldLighting.DefaultFillPercent;
+				direction.Value = 0;
+			});
+		}
 		if (!AutoBattlerPlaytest)
 		{
 			var lighting = new OptionButton();
@@ -404,8 +405,8 @@ public partial class BenchmarkPanel : CanvasLayer
 			lighting.AddItem("Lit");
 			lighting.AddItem("Lit + real shadows");
 			lighting.Select(0);
-			Field(display, "Battlefield lighting", lighting);
-			var distanceRow = Field(display, "Shadow distance", shadowDistance);
+			Field(renderingControls, "Battlefield lighting", lighting);
+			var distanceRow = Field(renderingControls, "Shadow distance", shadowDistance);
 			distanceRow.Visible = false;
 			lighting.ItemSelected += index =>
 			{
@@ -416,6 +417,24 @@ public partial class BenchmarkPanel : CanvasLayer
 			};
 			shadowDistance.ValueChanged += value => ShadowDistanceChanged?.Invoke((float)value);
 		}
+		var weather = Section(renderingControls, "Fog and haze", false, out _);
+		var weatherToggle = new CheckButton { Text = "Enable fog and haze" };
+		weather.AddChild(weatherToggle);
+		var mist = LabeledSlider(weather, "Mist density", 100, 45, 1, "%");
+		var drift = LabeledSlider(weather, "Drift speed", 6, 2, 0.1, " u/s");
+		var haze = LabeledSlider(weather, "Haze", 100, 25, 1, "%");
+		void UpdateWeather() => WeatherChanged?.Invoke(weatherToggle.ButtonPressed,
+			(float)mist.Value / 100f, (float)drift.Value, (float)haze.Value / 100f);
+		weatherToggle.Toggled += _ => UpdateWeather();
+		mist.ValueChanged += _ => UpdateWeather();
+		drift.ValueChanged += _ => UpdateWeather();
+		haze.ValueChanged += _ => UpdateWeather();
+
+		var display = Section(column, "Display and controls", false, out _);
+		display.AddChild(smoothMotion);
+		display.AddChild(DeathEffects);
+		groundShadows.Toggled += enabled => GroundShadowsChanged?.Invoke(enabled);
+		display.AddChild(groundShadows);
 		display.AddChild(attackRangesToggle);
 		display.AddChild(Hint("Gold: attack arc at target size (Circle if none)\nGreen/red: in/out of melee geometry\nBlue: shockwave radius"));
 		performanceToggle = new CheckButton { Text = "Performance details (F4)", ButtonPressed = true };
@@ -456,24 +475,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		obstacleDebug.AddChild(reuseWaypoints);
 		obstacleDebug.AddChild(ObstacleMetrics);
 		var rendering = Section(debug, "Rendering and memory", false, out _, true);
-		if (AutoBattlerPlaytest)
-		{
-			var lighting = Section(rendering, "Lighting", true, out _, true);
-			var sun = LabeledSlider(lighting, "Sun strength", 400, BattlefieldLighting.DefaultSunPercent, 1, "%");
-			var fill = LabeledSlider(lighting, "Ambient fill", 200, BattlefieldLighting.DefaultFillPercent, 1, "%");
-			var direction = LabeledSlider(lighting, "Sun direction", 360, 0, 1, "°");
-			void ApplyLighting(double _) => PlaytestLightingChanged?.Invoke(
-				(float)sun.Value / 100f, (float)fill.Value / 100f, (float)direction.Value);
-			sun.ValueChanged += ApplyLighting;
-			fill.ValueChanged += ApplyLighting;
-			direction.ValueChanged += ApplyLighting;
-			AddButton(lighting, "Reset lighting", () =>
-			{
-				sun.Value = BattlefieldLighting.DefaultSunPercent;
-				fill.Value = BattlefieldLighting.DefaultFillPercent;
-				direction.Value = 0;
-			});
-		}
 		rendering.AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);

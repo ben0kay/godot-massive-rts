@@ -6,7 +6,7 @@ Aim for a dark industrial battlefield with bright, readable faction colors, sati
 
 ## 1. Lighting and unit finish
 
-The comparison controls are in **Benchmark → Display and controls → Battlefield lighting**. Real-shadow mode exposes **Shadow distance**, defaulting to 1,800 world units to cover the elevated orthographic camera. Use the performance overlay’s **Viewport GPU** reading for like-for-like comparisons. In-game visual and performance validation is pending.
+The comparison controls are in **Benchmark → Rendering → Battlefield lighting**. Real-shadow mode exposes **Shadow distance**, defaulting to 1,800 world units to cover the elevated orthographic camera. Use the performance overlay’s **Viewport GPU** reading for like-for-like comparisons. In-game visual and performance validation is pending.
 
 Start with one shared directional light and a restrained top-face and bevel highlight. Adapt the unshaded unit materials and fracture shader to support the lit mode while preserving faction tint, hit flashes and fracture detail. Keep the current look and fake undershadows as the default while evaluating the experiment. Keep instanced unit batches and use shared shader materials without individual lights on soldiers.
 
@@ -28,13 +28,13 @@ Later, allow painting ground materials over the base terrain, such as dirt or gr
 
 ## 3. Industrial walls
 
-The wall style and closed-loop fill are implemented. In-game validation is pending.
+The wall style and manual Rectangle Fill are implemented. In-game validation is pending.
 
 Rename the solid obstacle authoring tool **Industrial Walls**. Open runs look like segmented barriers with beveled caps and restrained amber accents. Closed loops stay hollow, and only painted wall cells block movement and line of sight. Rectangle Fill paints solid blocks for flat-topped structures. Use the same resolved geometry in the editor preview and battle.
 
 ## 4. Painted scenery
 
-The water edge, boulder and pine treatments are implemented. In-game validation is pending.
+The water edge, bridge redesign, boulder and pine treatments are implemented. In-game validation is pending.
 
 - **Water:** Give painted shores an engineered edge with a narrow steel retaining lip and a restrained cyan highlight. Keep bridge openings clear and preserve existing water boundaries.
 - **Rocks:** Replace the light pillars with darker, irregular faceted boulders. Use a few broad silhouettes with small rubble around the base and retain the painted obstacle footprints.
@@ -42,4 +42,4 @@ The water edge, boulder and pine treatments are implemented. In-game validation 
 
 ## Later
 
-Revisit projectile trails after the ground, scenery and unit finish are settled. Keep material tuning in `.tres`, shader code in `.gdshader`, and introduce a `.gdshaderinc` when multiple shaders share the same calculation.
+Projectile trails and deployment feedback have had their first visual passes. Remaining work includes paintable ground materials and in-game visual and GPU validation. Keep material tuning in `.tres`, shader code in `.gdshader`, and introduce a `.gdshaderinc` when multiple shaders share the same calculation.
