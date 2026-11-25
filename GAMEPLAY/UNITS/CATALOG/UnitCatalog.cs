@@ -365,7 +365,7 @@ public sealed class RuntimeUnitCatalog
     private MountedRocket CompileMount(RocketMount mount, UnitDefinition unit, float size)
     {
         int projectile = Projectiles.Register(mount.Projectile ?? unit.Projectile, mount.ProjectileScale,
-            mount.SplashRadiusOverride, mount.SplashEdgeFractionOverride);
+            mount.SplashRadiusOverride, mount.SplashEdgeFractionOverride, arcScale: mount.ArcScale);
         float defaultReach = mount.TwinMinigunModel ? 30f : mount.IndependentAim ? 38f : Positive(unit.Reach, 1.6f);
         float maximum = Positive(mount.MaximumRange, defaultReach);
         float minimum = mount.MinimumRange >= 0f ? mount.MinimumRange :

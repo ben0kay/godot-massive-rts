@@ -219,7 +219,7 @@ public partial class DeploymentPainter : Node3D
         Color color = ArmyRenderer.FactionColor(BrushFaction).Lerp(Colors.White, 0.5f);
         color.A = 0.7f;
         float radius = catalog[BrushType].Footprint;
-        dimensions.SetBrushGhost(Camera, radius, color);
+        dimensions.SetBrushGhost(Camera, catalog[BrushType].Outline, color);
         if (paintTool != 0 || GetViewport().GuiGetHoveredControl() != null ||
             Input.IsMouseButtonPressed(MouseButton.Right) ||
             !TryGround(GetViewport().GetMousePosition(), out var ground)) return;

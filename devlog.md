@@ -606,3 +606,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — VIS-CIRCLE — Added an independent, default-on static Circle robot mesh trial with faction paint, visor, compact limbs and energy blade; visual-only heading uses existing movement/target data. Previous Circle mesh remains selectable; stats, footprint and other units unchanged. Source review only; owner visual/FPS validation pending.
 
 - 2026-11-25 — VIS-CIRCLE-SWING — Optional 0.16-second procedural sword/forearm swing for the Circle robot, driven by existing attack feedback and tagged mesh vertices in shared lit/unlit shaders. Preserves fracture data and instance stride; no skeletal animation or combat changes. Awaiting owner visual/FPS validation.
+
+- 2026-11-25 — Used each selected unit’s hull outline for deployment ghosts and halved both Twin Rocket Launcher mounts’ flight arcs. Godot .NET visual validation pending.

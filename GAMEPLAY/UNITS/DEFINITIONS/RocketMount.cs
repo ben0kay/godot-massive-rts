@@ -17,6 +17,7 @@ public partial class RocketMount : Resource
     [Export] public float MaximumRange { get; set; } = -1f;
     [Export] public float Interval { get; set; } = -1f;
     [Export] public float ProjectileScale { get; set; } = 1f;
+    [Export(PropertyHint.Range, "0.5,3,0.05")] public float ArcScale { get; set; } = 1f;
     [Export] public float SplashRadiusOverride { get; set; } = -1f;
     [Export] public float SplashEdgeFractionOverride { get; set; } = -1f;
 }

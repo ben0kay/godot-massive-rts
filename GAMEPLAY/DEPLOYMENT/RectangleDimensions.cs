@@ -8,13 +8,13 @@ public partial class RectangleDimensions : Node2D
 {
     private Camera3D camera, brushCamera;
     private readonly System.Collections.Generic.List<Vector3> brushPoints = new();
-    private float brushRadius;
+    private UnitOutline brushOutline;
     private Color brushInk;
 
-    internal void SetBrushGhost(Camera3D view, float radius, Color color)
+    internal void SetBrushGhost(Camera3D view, UnitOutline outline, Color color)
     {
         brushCamera = view;
-        brushRadius = radius;
+        brushOutline = outline;
         brushInk = color;
         brushPoints.Clear();
         Visible = camera != null;
@@ -59,7 +59,7 @@ public partial class RectangleDimensions : Node2D
 
     public override void _Draw()
     {
-        foreach (var point in brushPoints) DrawFootprint(brushCamera, point, brushRadius, brushInk);
+        foreach (var point in brushPoints) DrawBrushOutline(point);
         if (camera == null) return;
         Vector3 origin = new(min.X, 0f, min.Y);
         Vector3 width = new(max.X, 0f, min.Y);
@@ -71,6 +71,24 @@ public partial class RectangleDimensions : Node2D
         Vector2 lengthEnd = camera.UnprojectPosition(length);
         DrawDimension(corner, widthEnd, lengthEnd - corner, widthText);
         DrawDimension(corner, lengthEnd, widthEnd - corner, lengthText);
+    }
+
+    private void DrawBrushOutline(Vector3 center)
+    {
+        if (brushCamera.IsPositionBehind(center) || brushOutline.Sides < 3) return;
+        Vector2 previous = Project(brushOutline.Sides - 1);
+        for (int i = 0; i < brushOutline.Sides; i++)
+        {
+            Vector2 next = Project(i);
+            DrawLine(previous, next, brushInk, 1f, true);
+            previous = next;
+        }
+
+        Vector2 Project(int index)
+        {
+            Vector2 vertex = brushOutline.Vertex(index);
+            return brushCamera.UnprojectPosition(center + new Vector3(vertex.X, 0f, vertex.Y));
+        }
     }
 
     protected void DrawFootprint(Camera3D view, Vector3 center, float radius, Color color)
