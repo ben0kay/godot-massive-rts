@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://BENCHMARK/RTS/CommandSandbox.cs" id="1"]
+[ext_resource type="Script" path="res://LEVELS/AutoBattler/AutoBattlerRules.cs" id="2"]
+[ext_resource type="PlaneMesh" path="res://WORLD/TERRAIN/RENDERING/DefaultLevelGround.tres" id="3"]
+[ext_resource type="Script" path="res://WORLD/TERRAIN/AUTHORING/CommandTerrain.cs" id="4"]
+[ext_resource type="PackedScene" path="res://GAMEPLAY/DEPLOYMENT/COMMAND/CommandUnitPlacement.tscn" id="5"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/Pikeman.tres" id="6"]
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/SquareInfantry.tres" id="7"]
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFENSE/CommandLaserPlacement.cs" id="8"]
+[ext_resource type="Resource" path="res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres" id="9"]
+
+[sub_resource type="Resource" id="Rules"]
+script = ExtResource("2")
+LineAxis = 2
+Objective = 1
+
+[node name="Level001" type="Node3D"]
+script = ExtResource("1")
+AutoBattlerRules = SubResource("Rules")
+SpawnDefaultBlueSquad = false
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = ExtResource("3")
+
+[node name="Terrain" type="Node3D" parent="."]
+script = ExtResource("4")
+
+[node name="StartingUnits" type="Node3D" parent="."]
+
+[node name="FrontGuard" parent="StartingUnits" instance=ExtResource("5")]
+position = Vector3(0, 0, 22)
+Unit = ExtResource("6")
+Faction = 1
+Count = 8
+
+[node name="SideGuard" parent="StartingUnits" instance=ExtResource("5")]
+position = Vector3(16, 0, 30)
+Unit = ExtResource("7")
+Faction = 1
+Count = 6
+
+[node name="CameraStart" type="Marker3D" parent="."]
+
+[node name="Obstacles" type="Node3D" parent="."]
+
+[node name="StartingDefenses" type="Node3D" parent="."]
+
+[node name="RedCitadel" type="Marker3D" parent="StartingDefenses"]
+position = Vector3(0, 0, 38)
+script = ExtResource("8")
+Definition = ExtResource("9")
+Red = true

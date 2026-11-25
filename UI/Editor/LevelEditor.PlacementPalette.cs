@@ -10,6 +10,7 @@ public partial class LevelEditor
     private Button[] paletteTabs;
     private Button paletteSelect, paletteMove, paletteErase, paletteRedOrders;
     private int paletteDefenseIndex;
+    private Button offenseCitadel;
     private VBoxContainer editorBrushControls;
     private HBoxContainer editorBrushSizes;
     private readonly ButtonGroup paletteTools = new();
@@ -109,7 +110,21 @@ public partial class LevelEditor
                     unitIndex = i;
                     PickPaletteTool(Tool.Soldiers);
                 }, paletteTools, selectFirst: false),
-            placementPalette.BuildCards(picker, towers, towers,
+            BuildDefenses(),
+            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls" },
+                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall }),
+            ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
+                new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
+            simulation
+        };
+        ShowPalettePage(0);
+
+        Control BuildDefenses()
+        {
+            var defenses = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+            picker.AddChild(defenses);
+            defenses.AddChild(MenuLayout.Label("Structures"));
+            placementPalette.BuildCards(defenses, towers, towers,
                 i => defenseDefinitions[i].DisplayName,
                 i => UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f),
@@ -122,14 +137,18 @@ public partial class LevelEditor
                 {
                     paletteDefenseIndex = i;
                     PickPaletteTool(Tool.Defense);
-                }, paletteTools, selectFirst: false),
-            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls" },
-                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall }),
-            ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
-                new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
-            simulation
-        };
-        ShowPalettePage(0);
+                }, paletteTools, selectFirst: false);
+            offenseCitadel = Button(defenses, "Red Citadel", () =>
+            {
+                paletteDefenseIndex = defenseDefinitions.Length;
+                PickPaletteTool(Tool.Defense);
+            });
+            var traps = new HBoxContainer();
+            defenses.AddChild(traps);
+            traps.AddChild(MenuLayout.Label("Traps"));
+            AddPaletteAction(traps, DisruptorGrid.Name, Tool.Disruptor);
+            return defenses;
+        }
 
         Control ToolPage(string[] labels, Tool[] options) =>
             placementPalette.BuildCards(picker, labels.Length, labels.Length, i => labels[i],
@@ -172,6 +191,8 @@ public partial class LevelEditor
     private void SetPlacementPaletteMode()
     {
         bool legacy = !mode.IsAutoBattler;
+        offenseCitadel.Visible = mode.CampaignId == "Offense";
+        if (!offenseCitadel.Visible && paletteDefenseIndex == defenseDefinitions.Length) paletteDefenseIndex = 0;
         toolsHeading.Text = legacy ? "Map tools" : "Tool settings";
         toolPicker.Visible = legacyUnitPicker.Visible = legacyDefenseHeading.Visible = defensePicker.Visible =
             legacyUnitDivider.Visible = legacyDefenseDivider.Visible = legacy;

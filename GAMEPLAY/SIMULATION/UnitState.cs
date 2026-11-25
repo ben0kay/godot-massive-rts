@@ -58,8 +58,11 @@ public sealed class UnitState
 
     internal float RangedReach(int id, in UnitStats stats) => RangedReach(Position[id], stats);
 
+    internal DisruptorGrid Disruptors { get; set; }
+
     internal float TravelSpeed(int id, in UnitStats stats) =>
-        stats.SizeTier == 2f && Forest?.Contains(Position[id]) == true ? stats.Speed * 0.75f : stats.Speed;
+        stats.Speed * (stats.SizeTier == 2f && Forest?.Contains(Position[id]) == true ? 0.75f : 1f) *
+        (Disruptors?.SpeedScale(Position[id], Faction[id]) ?? 1f);
 
     private const float DownhillBonus = 0.10f;
     internal float MaximumTravelSpeed => Catalog.MaxSpeed * (Grounding == null ? 1f : 1f + DownhillBonus);

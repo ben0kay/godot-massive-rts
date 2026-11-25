@@ -60,7 +60,7 @@ internal static class LevelEditorSave
         level.Id = target.Id;
         level.DisplayName = title;
         level.ScenePath = target.Scene;
-        level.Order = target.Existing?.Order ?? checked(campaign.Levels.Max(entry => entry.Order) + 1);
+        level.Order = target.Existing?.Order ?? checked(campaign.Levels.Select(entry => entry.Order).DefaultIfEmpty(0).Max() + 1);
 
         ValidateContent(mode, map);
 
@@ -202,6 +202,13 @@ internal static class LevelEditorSave
         if (mode.IsAutoBattler)
         {
             var rules = map.AutoBattlerRules;
+            if (rules.Objective == AutoBattlerRules.ObjectiveType.DestroyCitadel &&
+                towers.Count(tower => tower.Red && tower.EffectiveDefinition?.Id == "citadel") != 1)
+                throw new InvalidOperationException("Offense requires exactly one Red Citadel.");
+            if (rules.RedDisruptorCells.Count > DisruptorGrid.MaxTiles ||
+                rules.RedDisruptorCells.Any(cell => !DisruptorGrid.Inside(cell, map.MapSize) ||
+                    !rules.AllowsSide(DisruptorGrid.Center(cell), DisruptorGrid.Size * 0.5f, blue: false)))
+                throw new InvalidOperationException("Keep Red Disruptor Grid tiles inside the Red side of the map.");
             if (rules.LineAxis != AutoBattlerRules.DeploymentAxis.Disabled &&
                 Mathf.Abs(rules.LineOffset) >= map.MapSize * 0.5f)
                 throw new InvalidOperationException("Move the deployment line inside the map boundary.");

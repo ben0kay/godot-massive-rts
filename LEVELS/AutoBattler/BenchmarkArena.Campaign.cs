@@ -55,9 +55,12 @@ public partial class BenchmarkArena
     private bool campaignBattleRunning;
     private string campaignMapError;
 
-    internal void ConfigureCampaignBattle(CommandSandbox map, AutoBattlerCampaignState roster)
+    private string battleCampaignId;
+
+    internal void ConfigureCampaignBattle(CommandSandbox map, AutoBattlerCampaignState roster, string campaignId)
     {
         campaignRoster = roster;
+        battleCampaignId = campaignId;
         ConfigureAutoBattlerPlaytest(map);
     }
 
@@ -90,6 +93,12 @@ public partial class BenchmarkArena
             () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
             spread => painter.SoldierBrushSpread = spread, CreateCircleMeshToggle());
         AddChild(campaignHud);
+        campaignHud.AddDisruptorControls(campaignRoster.OwnedDisruptorTiles, enabled =>
+        {
+            painter.CancelDrag();
+            CancelBlueDisruptorLine();
+            painter.TrapInput = enabled ? HandleBlueDisruptors : null;
+        });
         if (campaignHud.DeploymentOrderControls != null) painter.Orders.AddControls(campaignHud.DeploymentOrderControls);
     }
 
@@ -174,7 +183,7 @@ public partial class BenchmarkArena
         {
             int owned = campaignRoster.Owned(catalog[type].Id), deployed = layout.CountForType(type);
             return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
-        }, $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
+        }, (IsOffense ? "Destroy the Red Citadel\n" : "") + $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
             (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : ""),
             CampaignStartError());
     }
@@ -193,8 +202,9 @@ public partial class BenchmarkArena
     {
         if (!campaignBattleRunning || steps == 0) return;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
-        if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
-        else if (units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
+        if (IsOffense && offenseCitadel?.Destroyed == true) FinishCampaignBattle("Victory");
+        else if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
+        else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
         else if (AutoBattlerElapsedSeconds >= (redWave?.Lanes != null ?
@@ -221,7 +231,7 @@ public partial class BenchmarkArena
 
     private void ReturnFromCampaignBattle()
     {
-        try { MenuNavigation.ReturnToCampaign(this, AutoBattlerCampaignStore.CampaignId); }
+        try { MenuNavigation.ReturnToCampaign(this, battleCampaignId); }
         catch (InvalidOperationException error) { campaignHud.Report(error.Message); }
     }
 }

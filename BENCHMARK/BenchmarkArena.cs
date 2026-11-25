@@ -153,7 +153,14 @@ public partial class BenchmarkArena : Node3D
             Material = benchmarkGround } };
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
-        buildings ??= new RuntimeBuildingCatalog(GD.Load<BuildingCatalog>(BuildingCatalogPath), catalog.DamageRules, catalog.Projectiles);
+        var authoredBuildings = GD.Load<BuildingCatalog>(BuildingCatalogPath);
+        if (IsOffense)
+        {
+            var definitions = new Godot.Collections.Array<BuildingDefinition>(authoredBuildings.Definitions);
+            definitions.Add(GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres"));
+            authoredBuildings = new BuildingCatalog { Definitions = definitions };
+        }
+        buildings ??= new RuntimeBuildingCatalog(authoredBuildings, catalog.DamageRules, catalog.Projectiles);
         panel = new BenchmarkPanel
         {
             Catalog = catalog, Buildings = buildings, AutoBattlerPlaytest = autoBattlerPlaytestMap != null,
@@ -277,6 +284,7 @@ public partial class BenchmarkArena : Node3D
         deathFeedback.Clear();
         deathRenderer.Sync(deathFeedback);
         defenseSystem = null;
+        offenseCitadel = null;
         defenseCombat = null;
         if (defenseRenderer != null)
         {
@@ -361,6 +369,7 @@ public partial class BenchmarkArena : Node3D
     private void SetDeploymentEditing(bool editing)
     {
         painter.CancelDrag();
+        CancelBlueDisruptorLine();
         painter.Visible = editing;
         panel.EditingDeployment = editing;
         deploymentStrengthBar.Visible = editing && campaignRoster == null;
@@ -545,7 +554,13 @@ public partial class BenchmarkArena : Node3D
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
+        if (IsOffense && campaignMapError != null) { ReportStartError(campaignMapError); return; }
         var orders = settings.Orders;
+        if (IsOffense)
+        {
+            orders = (GuardOrder[])orders.Clone();
+            orders[Factions.Red] = GuardOrder.Return;
+        }
         var openingOverlay = autoBattlerPlaytestMap != null && ReferenceEquals(layout, painter.Layout) ? painter.Orders : null;
         var redOrders = autoBattlerPlaytestMap?.AutoBattlerRules?.ReadRedOrders();
         DeploymentOrderOverlay.Order OrderFor(SoldierPlacement placement) =>
@@ -577,7 +592,7 @@ public partial class BenchmarkArena : Node3D
                 foreach (SoldierPlacement placement in placements)
                     if (placement.Faction == faction && OrderFor(placement) == null) snapshot[next++] = placement;
                 if (start < next)
-                    guards[faction] = new GuardGroup(start, next, snapshot, settings.GuardRadius, order);
+                    guards[faction] = new GuardGroup(start, next, snapshot, IsOffense && faction == Factions.Red ? 12f : settings.GuardRadius, order);
             }
         }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;
@@ -595,12 +610,16 @@ public partial class BenchmarkArena : Node3D
             defenseRenderer.Initialize(defenses, buildings, Config.ObstacleHeight, battle: true, terrain: terrain);
             defenseSystem = new DefenseSystem(defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field, terrain);
         }
+        if (IsOffense && offenseCitadelSlot >= 0) offenseCitadel = defenseSystem?.Structures[offenseCitadelSlot];
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
         if (autoBattlerPlaytestMap != null && (openingOverlay != null || redOrders?.Count > 0))
             units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, OrderFor, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = autoBattlerForest;
+        var redTraps = autoBattlerPlaytestMap?.AutoBattlerRules.RedDisruptorCells;
+        if (redTraps != null && (redTraps.Count > 0 || blueDisruptors.Count > 0))
+            units.Disruptors = new DisruptorGrid(blueDisruptors, redTraps);
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);
         grid = new SpatialGrid(units.Position.Length, Config.CellSize, profileTargeting: campaignRoster == null);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
@@ -746,6 +765,12 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
             AdvanceAutoBattlerClock(steps);
+            if (steps > 0 && IsOffense && campaignRoster == null && !paused &&
+                (offenseCitadel?.Destroyed == true || (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true)))
+            {
+                paused = true;
+                panel.Status.Text = offenseCitadel?.Destroyed == true ? "Victory · Red Citadel destroyed" : "Defeat · Blue army eliminated";
+            }
             if (campaignHud != null) UpdateCampaignOutcome(steps);
             else if (ReserveCapacity > 0)
             {
@@ -826,21 +851,30 @@ public partial class BenchmarkArena : Node3D
 
     private void AcquireDefenseTargets(int step)
     {
-        if (defenseCombat == null || !units.HasStructureAttackers) return;
+        if (defenseCombat == null || !HasDefenseAttackers) return;
         const int interval = 6;
         for (int slot = step % interval; slot < autoAttackCount; slot += interval)
         {
             int id = autoAttackIds == null ? slot : autoAttackIds[slot];
             if (units.Health[id] <= 0f) continue;
             ref readonly var type = ref catalog[units.Type[id]];
-            if (!type.TargetsStructures || units.OpeningOrders?.Active(id) == true) continue;
+            bool opening = units.OpeningOrders?.Active(id) == true;
+            var sight = StructureCombat.Sight(type, units, BattleSight);
+            bool siege = offenseCitadel?.Destroyed == false && units.Faction[id] == Factions.Blue &&
+                (type.TargetsUnits || type.TargetsStructures) && type.AgainstStructures(type.Damage) > 0f;
+            if (siege && defenseCombat.TryPrioritize(id, type, offenseCitadel, sight, obstacles, tick, navigation,
+                !opening && (units.Target[id] < 0 || units.Health[units.Target[id]] <= 0f))) continue;
+            if (opening || !type.TargetsStructures)
+            {
+                if (IsOffense) defenseCombat.SetTarget(id, null);
+                continue;
+            }
 
             // Reuse the shared soldier acquisition result and its normal search budget.
             int soldier = units.Target[id];
             if (soldier >= 0 && units.Health[soldier] <= 0f) soldier = -1;
             Vector3 position = units.Position[id];
             float soldierDistance = soldier >= 0 ? position.DistanceTo(units.Position[soldier]) : float.PositiveInfinity;
-            var sight = StructureCombat.Sight(type, units, BattleSight);
             var building = defenseCombat.Acquire(id, type, soldierDistance, true, true, obstacles, sight, tick, navigation);
             Vector2 ground = ObstacleField.Xz(position);
             if (building != null && soldier >= 0 &&
@@ -851,7 +885,7 @@ public partial class BenchmarkArena : Node3D
 
     private void AttackDefenses(float dt)
     {
-        if (defenseCombat == null || !units.HasStructureAttackers) return;
+        if (defenseCombat == null || !HasDefenseAttackers) return;
         for (int slot = 0; slot < autoAttackCount; slot++)
         {
             int id = autoAttackIds == null ? slot : autoAttackIds[slot];
@@ -864,6 +898,7 @@ public partial class BenchmarkArena : Node3D
     {
         if (units.OpeningOrders?.Advance(units, dt) == false) units.OpeningOrders = null;
         deathFeedback.BeginTick();
+        units.Disruptors?.Step(units, dt);
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
@@ -936,7 +971,7 @@ public partial class BenchmarkArena : Node3D
         else if (meleeSteering == null || !meleeSteering.Matches(holdMelee, sidestepMelee))
             meleeSteering = new MeleeSteering(units.Position.Length, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
-            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, activeTrample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, units.HasStructureAttackers ? defenseCombat : null,
+            Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, activeTrample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, HasDefenseAttackers ? defenseCombat : null,
             BattleSight, autoBattlerPlaytestMap != null);
         if (guards != null)
             foreach (GuardGroup group in guards)
@@ -992,7 +1027,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp();
-            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, activeTrample, BattleSight, shockwaves, units.HasStructureAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null, meleeObstacles: obstacles);
+            CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, activeTrample, BattleSight, shockwaves, HasDefenseAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null, meleeObstacles: obstacles);
             dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.MaximumTravelSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
             AttackDefenses(dt);
             combatMs += Elapsed(start);

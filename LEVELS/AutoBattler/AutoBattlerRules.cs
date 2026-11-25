@@ -7,7 +7,8 @@ namespace MassiveRts;
 [GlobalClass]
 public partial class AutoBattlerRules : Resource
 {
-    public enum ObjectiveType { EliminateEnemy }
+    public enum ObjectiveType { EliminateEnemy, DestroyCitadel }
+    [Export] public Godot.Collections.Array<Vector2I> RedDisruptorCells { get; set; } = new();
     public enum DeploymentAxis { Disabled, X, Z }
     [Export] public DeploymentAxis LineAxis { get; set; }
     [Export] public float LineOffset { get; set; }

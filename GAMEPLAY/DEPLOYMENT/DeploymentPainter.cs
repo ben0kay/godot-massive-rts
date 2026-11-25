@@ -130,9 +130,12 @@ public partial class DeploymentPainter : Node3D
         dimensions.Clear();
     }
 
+    internal System.Func<InputEvent, bool> TrapInput { get; set; }
+
     public override void _UnhandledInput(InputEvent input)
     {
         if (!Visible) return;
+        if (TrapInput?.Invoke(input) == true) { GetViewport().SetInputAsHandled(); return; }
         if (orderOverlay?.Handle(input) == true) { GetViewport().SetInputAsHandled(); return; }
         if (Camera is IsometricCamera { FreeRoam: true } &&
             input is InputEventMouseButton { ButtonIndex: MouseButton.Right }) return;

@@ -59,7 +59,7 @@ public partial class LevelBriefing : Control
         }
         if (!string.IsNullOrWhiteSpace(Level.Description)) AddLabel(details, Level.Description, 16);
 
-        if (Campaign.Id == AutoBattlerCampaignStore.CampaignId)
+        if ((Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense"))
             details.AddChild(UIButtonFactory.Create("Headquarters Recruitment",
                 () => Navigate(() => MenuNavigation.OpenHeadquarters(this, Campaign, recruitment: true))));
         else
@@ -97,7 +97,7 @@ public partial class LevelBriefing : Control
         map.UpdateGroundBounds();
         try { map.GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile(); }
         catch (InvalidOperationException error) { GD.PushWarning(error.Message); }
-        LevelLayoutPreview.Build(map, redOnly: Campaign.Id == AutoBattlerCampaignStore.CampaignId);
+        LevelLayoutPreview.Build(map, redOnly: (Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense"));
 
         var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal,
             Size = map.MapSize * 1.08f, Far = 18000f };
@@ -128,7 +128,7 @@ public partial class LevelBriefing : Control
             AddLabel(details, $"Incoming waves: {map.WaveDefinitions.Count:N0} · {reinforcements:N0} units", 16);
         }
 
-        if (Campaign.Id == AutoBattlerCampaignStore.CampaignId && map.AutoBattlerRules is AutoBattlerRules rules)
+        if ((Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense") && map.AutoBattlerRules is AutoBattlerRules rules)
         {
             foreach (var enemy in groups.Where(group => group.Faction == CommandUnitPlacement.Team.Red)
                          .GroupBy(group => group.Unit.DisplayName))

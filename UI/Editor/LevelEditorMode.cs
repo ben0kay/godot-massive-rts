@@ -10,6 +10,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
     public static readonly LevelEditorMode[] Supported =
     {
         new("Campaign001", "res://LEVELS/AutoBattler", true),
+        new("Offense", "res://LEVELS/Offense", true),
         new("OpenRTS", "res://LEVELS/FortressDefense", false)
     };
 
@@ -52,6 +53,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
             level.Free();
             throw new InvalidOperationException("The scene's authoring rules do not match this campaign.");
         }
+        if (CampaignId == "Offense") level.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.DestroyCitadel;
         return level;
     }
 }

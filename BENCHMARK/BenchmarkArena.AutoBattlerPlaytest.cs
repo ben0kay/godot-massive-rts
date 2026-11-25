@@ -17,6 +17,39 @@ public partial class BenchmarkArena
     private WorldPaint autoBattlerPaint;
     private ObstacleField autoBattlerSight, autoBattlerPaintCollision;
 
+    private readonly DisruptorGrid.LineTool blueDisruptorLine = new();
+    private HashSet<Vector2I> blueDisruptors = new();
+    private MultiMeshInstance3D blueDisruptorView, blueDisruptorPreview;
+    private bool IsOffense => autoBattlerPlaytestMap?.AutoBattlerRules?.Objective == AutoBattlerRules.ObjectiveType.DestroyCitadel;
+    private int offenseCitadelSlot = -1;
+    private StructureHealth offenseCitadel;
+    private bool HasDefenseAttackers => units.HasStructureAttackers || IsOffense;
+
+    private float DisruptorHeight(Vector3 point) =>
+        autoBattlerPlaytestMap.GetNodeOrNull<CommandTerrain>("Terrain")?.Field?.At(point.X, point.Z) ?? 0f;
+
+    private void PreviewBlueDisruptors(IReadOnlyCollection<Vector2I> cells)
+    {
+        if (blueDisruptorPreview != null)
+            DisruptorGridVisual.Refresh(blueDisruptorPreview, cells, Factions.Blue, DisruptorHeight);
+    }
+
+    private void CancelBlueDisruptorLine()
+    {
+        blueDisruptorLine.Cancel();
+        PreviewBlueDisruptors(Array.Empty<Vector2I>());
+    }
+
+    private bool HandleBlueDisruptors(InputEvent input) =>
+        blueDisruptorLine.Handle(input, painter.TryGround, blueDisruptors, campaignRoster.OwnedDisruptorTiles,
+            cell => DisruptorGrid.Inside(cell, autoBattlerPlaytestMap.MapSize) &&
+                autoBattlerPlaytestMap.AutoBattlerRules.AllowsBlueDeployment(DisruptorGrid.Center(cell), DisruptorGrid.Size * 0.5f),
+            draft =>
+            {
+                blueDisruptors = draft;
+                DisruptorGridVisual.Refresh(blueDisruptorView, draft, Factions.Blue, DisruptorHeight);
+            }, campaignHud.ReportDisruptors, PreviewBlueDisruptors);
+
     private ObstacleField BattleSight => autoBattlerPlaytestMap != null ? autoBattlerSight : obstacles;
 
     internal void ConfigureAutoBattlerPlaytest(CommandSandbox map)
@@ -41,6 +74,14 @@ public partial class BenchmarkArena
         TreeExiting += () => BattlefieldLighting.SetAmbientFill(BattlefieldLighting.DefaultFillPercent / 100f);
         litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, battleUnitVisuals);
         map.UpdateGroundBounds();
+        blueDisruptorView = new MultiMeshInstance3D { Visible = false };
+        blueDisruptorPreview = new MultiMeshInstance3D { Visible = false };
+        var redDisruptorView = new MultiMeshInstance3D { Visible = false };
+        map.AddChild(blueDisruptorView);
+        map.AddChild(blueDisruptorPreview);
+        map.AddChild(redDisruptorView);
+        DisruptorGridVisual.Refresh(redDisruptorView, map.AutoBattlerRules.RedDisruptorCells.ToArray(),
+            Factions.Red, DisruptorHeight);
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         var paint = autoBattlerPaint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         var (rocks, water) = paint?.Compile() ?? (Array.Empty<ObstacleRectangle>(), Array.Empty<ObstacleRectangle>());
@@ -88,10 +129,16 @@ public partial class BenchmarkArena
                         break;
                     }
                     var area = tower.Footprint(tower.GlobalPosition);
+                    if (IsOffense && tower.EffectiveDefinition.Id == "citadel")
+                    {
+                        if (offenseCitadelSlot >= 0) campaignMapError = "Offense requires exactly one Red Citadel.";
+                        offenseCitadelSlot = autoBattlerDefenses.Count;
+                    }
                     autoBattlerDefenses.Add(new BuildingPlacement(area.X, area.Z, Factions.Red, type,
                         campaignRoster != null ? area.GridSize : DeploymentLayout.CellSize));
                 }
 
+        if (IsOffense && offenseCitadelSlot < 0) campaignMapError = "Offense requires exactly one Red Citadel.";
         autoBattlerPaintCollision = BuildAutoBattlerField(autoBattlerCover.Concat(autoBattlerWater)
             .Concat(autoBattlerDefenses.Select(defense => defense.Footprint(buildings))));
         painter.BrushFaction = Factions.Blue;

@@ -24,6 +24,16 @@ internal static class AutoBattlerCampaignStore
         string path = PathFor(profileId);
         using var transaction = BeginTransaction(path);
         var state = Load(path, profileId, out _);
+        if (unitId == DisruptorGrid.Id)
+        {
+            long tileCost = (long)quantity * DisruptorGrid.Price;
+            if (quantity <= 0 || quantity > DisruptorGrid.MaxTiles - state.OwnedDisruptorTiles || tileCost > state.Credits)
+                throw new InvalidOperationException("Not enough credits or inventory space for those tiles.");
+            state.Credits -= (int)tileCost;
+            state.OwnedDisruptorTiles += quantity;
+            AtomicJsonFile.Save(path, state, value => value.IsValid(profileId));
+            return state;
+        }
         if (!recruitment.TryQuote(state, unitId, quantity, out long cost, out string reason))
             throw new InvalidOperationException(reason);
 

@@ -103,7 +103,7 @@ internal sealed partial class AutoBattlerCampaignHeadquarters : Control
     {
         state = AutoBattlerCampaignStore.Recruit(profile.Id, recruitment, unitId, quantity);
         Refresh();
-        Report($"Recruited {quantity:N0} × {recruitment.Name(unitId)}.");
+        Report($"Recruited {quantity:N0} × {(unitId == DisruptorGrid.Id ? DisruptorGrid.Name : recruitment.Name(unitId))}.");
     });
 
     private void Refresh()

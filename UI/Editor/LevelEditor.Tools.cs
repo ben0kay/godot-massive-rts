@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -38,7 +38,7 @@ public partial class LevelEditor
         {
             if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
-            if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders) continue;
+            if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders or Tool.Disruptor) continue;
             toolPicker.AddItem(entry switch
             {
                 Tool.RedOrders => "Red orders",
@@ -88,6 +88,7 @@ public partial class LevelEditor
         map.ReadAuthoredWalls(updateVisuals: true);
         paint.Compile();
         RefreshLayout();
+        RefreshRedDisruptors();
     }
 
     private void RefreshPlacement(Node3D node)
@@ -162,6 +163,9 @@ public partial class LevelEditor
         };
         switch (tool)
         {
+            case Tool.Disruptor:
+                Heading(context, "Drag to place a Disruptor Grid line. Right-drag to erase.", 15);
+                break;
             case Tool.RedOrders:
                 Heading(context, "Drag a box around Red units, then assign Move or Wait.", 15);
                 break;
@@ -287,6 +291,8 @@ public partial class LevelEditor
             cursor.Mesh = next == Tool.Elevation ? elevationCursor : squareCursor;
             cursor.Hide();
         }
+        redDisruptorLine.Cancel();
+        PreviewRedDisruptors(Array.Empty<Vector2I>());
         CloseRedOrders();
         tool = next;
         if (tool == Tool.RedOrders && !editingReserve) OpenRedOrders();
@@ -349,6 +355,11 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
+        if (tool == Tool.Disruptor && !editingReserve)
+        {
+            if (HandleRedDisruptors(input)) GetViewport().SetInputAsHandled();
+            return;
+        }
         if (tool == Tool.RedOrders)
         {
             if (redOrderOverlay?.Handle(input) == true) GetViewport().SetInputAsHandled();

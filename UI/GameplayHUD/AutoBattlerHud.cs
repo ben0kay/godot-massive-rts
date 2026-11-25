@@ -10,6 +10,9 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     private readonly VBoxContainer body = new();
     private readonly VBoxContainer deployment = new();
     private Control deploymentBar;
+    private VBoxContainer placementShell;
+    private HBoxContainer unitPage;
+    private Label trapStatus;
     internal VBoxContainer DeploymentOrderControls { get; private set; }
     private readonly Label status = MenuLayout.Label("", muted: true);
     private readonly Label strength = MenuLayout.Label("");
@@ -44,9 +47,10 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             var palette = new UnitPlacementBar();
             deploymentBar = palette;
             AddChild(palette);
-            var columns = new HBoxContainer();
+            var columns = unitPage = new HBoxContainer();
             columns.AddThemeConstantOverride("separation", 12);
-            palette.BuildShell(154).AddChild(columns);
+            placementShell = palette.BuildShell(154);
+            placementShell.AddChild(columns);
             var brushControls = new VBoxContainer { CustomMinimumSize = new Vector2(240, 0) };
             columns.AddChild(brushControls);
             DeploymentOrderControls = brushControls;
@@ -123,6 +127,60 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         body.AddChild(retry);
         body.AddChild(withdraw);
         body.AddChild(UIButtonFactory.Create("Headquarters", leave));
+    }
+
+    internal void AddDisruptorControls(int owned, Action<bool> activate)
+    {
+        if (owned <= 0) return;
+        if (placementShell == null)
+        {
+            var palette = new UnitPlacementBar();
+            deploymentBar = palette;
+            AddChild(palette);
+            placementShell = palette.BuildShell(154);
+        }
+        var tabs = new HBoxContainer();
+        placementShell.AddChild(tabs);
+        placementShell.MoveChild(tabs, 0);
+        var defenses = new VBoxContainer { Visible = unitPage == null };
+        placementShell.AddChild(defenses);
+        defenses.AddChild(MenuLayout.Label("Traps"));
+        var choose = new CheckButton
+        {
+            Text = DisruptorGrid.Name,
+            TooltipText = "Drag to place. Right-drag to erase. Slows and damages enemies crossing the tiles."
+        };
+        choose.Toggled += activate;
+        defenses.AddChild(choose);
+        trapStatus = MenuLayout.Label($"{owned:N0} tiles available", muted: true);
+        defenses.AddChild(trapStatus);
+
+        var group = new ButtonGroup();
+        if (unitPage != null) AddTab("Units", true, () =>
+        {
+            choose.ButtonPressed = false;
+            defenses.Hide();
+            unitPage.Show();
+        });
+        AddTab("Defenses", unitPage == null, () =>
+        {
+            unitPage?.Hide();
+            defenses.Show();
+        });
+
+        void AddTab(string title, bool selected, Action action)
+        {
+            var button = UIButtonFactory.Create(title, action, UIButtonStyle.Compact);
+            button.ToggleMode = true;
+            button.ButtonGroup = group;
+            button.SetPressedNoSignal(selected);
+            tabs.AddChild(button);
+        }
+    }
+
+    internal void ReportDisruptors(string message)
+    {
+        if (trapStatus != null) trapStatus.Text = message;
     }
 
     internal void ShowDeployment(Func<byte, string> counts, string rating, string blocked)

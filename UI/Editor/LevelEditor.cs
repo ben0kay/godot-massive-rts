@@ -287,10 +287,11 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        testButton.Text = mode.IsAutoBattler ? "Test Clash" : "Test Fortress";
+        testButton.Text = mode.CampaignId == "Offense" ? "Test Offense" : mode.IsAutoBattler ? "Test Clash" : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
         map = next;
+        redDisruptorView = redDisruptorPreview = null;
         metadata = nextMetadata;
         AddChild(map);
         EnsurePaint();

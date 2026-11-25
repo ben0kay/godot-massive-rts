@@ -11,6 +11,7 @@ internal sealed class AutoBattlerCampaignState
 
     public int Version { get; set; }
     public string ProfileId { get; set; }
+    public int OwnedDisruptorTiles { get; set; }
     public int Credits { get; set; } = -1;
     public Dictionary<string, int> OwnedUnits { get; set; }
     public List<string> PurchasedResearchIds { get; set; }
@@ -21,7 +22,7 @@ internal sealed class AutoBattlerCampaignState
     public int Owned(string unitId) => OwnedUnits.GetValueOrDefault(unitId);
 
     internal bool IsValid(string profileId) =>
-        Version == 1 && ProfileId == profileId && Credits >= 0 &&
+        OwnedDisruptorTiles is >= 0 and <= DisruptorGrid.MaxTiles && Version == 1 && ProfileId == profileId && Credits >= 0 &&
         OwnedUnits != null && OwnedUnits.Count <= MaxIds &&
         OwnedUnits.All(entry => CampaignCatalog.ValidId(entry.Key) && entry.Value > 0) &&
         ValidIds(PurchasedResearchIds) && ValidIds(CompletedLevelIds) &&

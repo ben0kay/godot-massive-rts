@@ -55,6 +55,18 @@ internal sealed class StructureCombat
         return targets[id] = target;
     }
 
+    internal bool TryPrioritize(int id, in UnitStats type, StructureHealth objective, ObstacleField sight,
+        ObstacleField field, int tick, ObstacleNavigation navigation, bool approach)
+    {
+        Vector3 goal = units.Position[id];
+        if (!CanHit(id, type, objective, sight) &&
+            (!approach || !TryApproach(id, type, objective, field, sight, tick, navigation, null, out goal)))
+            return false;
+        approachGoals[id] = goal;
+        targets[id] = objective;
+        return true;
+    }
+
     public void SetTarget(int id, StructureHealth target) => targets[id] = target;
     public StructureHealth Target(int id) => targets[id];
     public Vector3 ApproachGoal(int id) => approachGoals[id];

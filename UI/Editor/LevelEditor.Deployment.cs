@@ -18,6 +18,37 @@ public partial class LevelEditor
     private RuntimeUnitCatalog placementCatalog;
 
     private DeploymentOrderOverlay redOrderOverlay;
+    private readonly DisruptorGrid.LineTool redDisruptorLine = new();
+    private MultiMeshInstance3D redDisruptorView, redDisruptorPreview;
+
+    private bool HandleRedDisruptors(InputEvent input)
+    {
+        var rules = map.AutoBattlerRules;
+        return redDisruptorLine.Handle(input, WorldPoint, rules.RedDisruptorCells, DisruptorGrid.MaxTiles,
+            cell => DisruptorGrid.Inside(cell, map.MapSize) &&
+                rules.AllowsSide(DisruptorGrid.Center(cell), DisruptorGrid.Size * 0.5f, blue: false),
+            draft => SetValue(rules.RedDisruptorCells, new Godot.Collections.Array<Vector2I>(draft),
+                value => rules.RedDisruptorCells = value), SetStatus, PreviewRedDisruptors);
+    }
+
+    private void RefreshRedDisruptors()
+    {
+        if (map.AutoBattlerRules is not { } rules) return;
+        if (redDisruptorView == null)
+        {
+            redDisruptorView = new MultiMeshInstance3D();
+            redDisruptorPreview = new MultiMeshInstance3D { Visible = false };
+            map.AddChild(redDisruptorView, false, InternalMode.Back);
+            map.AddChild(redDisruptorPreview, false, InternalMode.Back);
+        }
+        DisruptorGridVisual.Refresh(redDisruptorView, rules.RedDisruptorCells.ToArray(), Factions.Red, Surface);
+    }
+
+    private void PreviewRedDisruptors(IReadOnlyCollection<Vector2I> cells)
+    {
+        if (redDisruptorPreview != null)
+            DisruptorGridVisual.Refresh(redDisruptorPreview, cells, Factions.Red, Surface);
+    }
 
     private void CloseRedOrders()
     {
@@ -111,7 +142,9 @@ public partial class LevelEditor
         UpdateTool();
     }
 
-    private BuildingDefinition SelectedDefense => defenseDefinitions[mode.IsAutoBattler ? paletteDefenseIndex : defensePicker.Selected - 1];
+    private BuildingDefinition SelectedDefense => mode.CampaignId == "Offense" && paletteDefenseIndex == defenseDefinitions.Length
+        ? GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres")
+        : defenseDefinitions[mode.IsAutoBattler ? paletteDefenseIndex : defensePicker.Selected - 1];
 
     private Vector3 TowerCursor()
     {

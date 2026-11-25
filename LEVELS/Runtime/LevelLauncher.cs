@@ -19,9 +19,9 @@ internal static class LevelLauncher
     {
         if (!source.IsInsideTree()) return;
         var (catalog, _, level, profile) = Resolve(campaignId, levelId);
-        if (campaignId == AutoBattlerCampaignStore.CampaignId)
+        if (campaignId == AutoBattlerCampaignStore.CampaignId || campaignId == "Offense")
         {
-            LaunchAutoBattler(source, level, profile.Id);
+            LaunchAutoBattler(source, level, profile.Id, campaignId);
             return;
         }
 
@@ -31,7 +31,7 @@ internal static class LevelLauncher
         MenuNavigation.Change(source, scene);
     }
 
-    private static void LaunchAutoBattler(Node source, LevelDefinition level, string profileId)
+    private static void LaunchAutoBattler(Node source, LevelDefinition level, string profileId, string campaignId)
     {
         AutoBattlerCampaignState state;
         try { state = AutoBattlerCampaignStore.Open(profileId, out _); }
@@ -51,7 +51,8 @@ internal static class LevelLauncher
         var arena = arenaScene.Instantiate<BenchmarkArena>();
         arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
         map.LevelSettings = level;
-        arena.ConfigureCampaignBattle(map, state);
+        if (campaignId == "Offense") map.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.DestroyCitadel;
+        arena.ConfigureCampaignBattle(map, state, campaignId);
         MenuNavigation.Change(source, arena);
     }
 

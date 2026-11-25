@@ -14,6 +14,8 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
     private readonly List<(AutoBattlerRecruitment.Offer Offer, Label Owned, Button Buy)> cards = new();
     private readonly SpinBox quantity;
     private AutoBattlerCampaignState state;
+    private readonly Button buyTrap;
+    private readonly Label trapStock;
 
     public AutoBattlerRecruitmentPage(AutoBattlerRecruitment recruitment, Action<string, int> buy)
     {
@@ -44,6 +46,12 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
         var offers = recruitment.Offers.ToArray();
         AddSection("Available to recruit", offers.Where(offer => offer.Available).ToArray(), buy, spacing);
         AddSection("Locked units", offers.Where(offer => !offer.Available).ToArray(), buy, spacing);
+        AddChild(CardLabel("Defenses", 19));
+        AddChild(CardLabel("Traps", 16));
+        trapStock = CardLabel("", 16);
+        AddChild(trapStock);
+        buyTrap = UIButtonFactory.Create("", () => buy(DisruptorGrid.Id, (int)quantity.Value), UIButtonStyle.Compact);
+        AddChild(buyTrap);
     }
 
     private void AddSection(string title, AutoBattlerRecruitment.Offer[] offers, Action<string, int> buy, int spacing)
@@ -135,6 +143,10 @@ internal sealed partial class AutoBattlerRecruitmentPage : VBoxContainer
     private void RefreshOffers()
     {
         if (state == null) return;
+        long costForTiles = (long)quantity.Value * DisruptorGrid.Price;
+        trapStock.Text = $"Disruptor Grid · {state.OwnedDisruptorTiles:N0} owned · {DisruptorGrid.Price} credits per tile";
+        buyTrap.Text = $"Buy tiles · {costForTiles:N0} cr";
+        buyTrap.Disabled = costForTiles > state.Credits || quantity.Value > DisruptorGrid.MaxTiles - state.OwnedDisruptorTiles;
         foreach (var card in cards)
         {
             if (card.Buy == null) continue;
