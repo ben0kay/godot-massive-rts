@@ -32,6 +32,7 @@ public partial class ArmyRenderer : Node3D
     private float[] halfHeights;
     private bool[] facesPositiveX;
     private Vector2[] circleRobotHeading;
+    private bool animateCircleSword;
     private UnitState units;
     private bool cracksEnabled;
     private int maxShieldShells;
@@ -64,6 +65,7 @@ public partial class ArmyRenderer : Node3D
         if (!visuals.ShowShieldShells) maxShieldShells = 0;
         cracksEnabled = visuals.UseUnitFracture;
         circleRobotHeading = visuals.UseCircleRobotMesh ? new Vector2[state.Position.Length] : null;
+        animateCircleSword = visuals.UseCircleRobotMesh && visuals.AnimateCircleSword;
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
         heavyCrackHealth = Mathf.Clamp(visuals.HeavyCrackHealth, 0f, firstCrackHealth);
         middleCrackHealth = (firstCrackHealth + heavyCrackHealth) * 0.5f;
@@ -362,6 +364,15 @@ public partial class ArmyRenderer : Node3D
             // Opaque unit shader reads the existing alpha byte as stage and stable orientation.
             uint variant = unchecked((uint)id * 2654435761u) >> 30;
             color.A = stage == 0 ? 1f : (stage * 4 + variant) / 255f;
+        }
+        if (animateCircleSword && type == RuntimeUnitCatalog.Circle)
+        {
+            // Keep the existing RGBA instance stride: low nibble is fracture,
+            // high nibble is attack phase (0 idle, 1..15 animated).
+            int fractureCode = color.A == 1f ? 0 : Mathf.RoundToInt(color.A * 255f);
+            float phase = units.HitFeedback?.AttackPhase(id) ?? -1f;
+            int swingCode = phase < 0f ? 0 : 1 + Mathf.RoundToInt(phase * 14f);
+            color.A = (fractureCode + swingCode * 16) / 255f;
         }
         if (buffer[offset + 12] != color.R || buffer[offset + 13] != color.G ||
             buffer[offset + 14] != color.B || buffer[offset + 15] != color.A)

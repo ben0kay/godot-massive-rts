@@ -84,6 +84,10 @@ public sealed class HitFeedbackSystem
         return changed;
     }
 
+    // Existing attack pulse already marks its active soldiers dirty until recovery.
+    internal float AttackPhase(int id) => attackRemaining[id] > 0f
+        ? Mathf.Clamp(1f - attackRemaining[id] / AttackDuration, 0f, 1f) : -1f;
+
     public (float Flash, float Scale) Evaluate(int id)
     {
         float attackAge = 1f - attackRemaining[id] / AttackDuration;
