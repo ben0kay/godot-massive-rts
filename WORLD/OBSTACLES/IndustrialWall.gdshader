@@ -44,11 +44,11 @@ void fragment() {
     vec2 tile = floor((world_point.xz - n.xz * 0.05) / 2.0);
     float panel_seed = panel_random(ivec3(int(tile.x), int(tile.y), 7));
     vec3 steel = top ? vec3(0.15, 0.19, 0.26) : vec3(0.047, 0.067, 0.104);
-    steel *= mix(0.84, 1.10, panel_seed);
+    if (!top || basin_trim) steel *= mix(0.84, 1.10, panel_seed);
     if (basin_trim) {
         steel *= 0.75 + 0.25 * max(dot(n, normalize(vec3(-0.5, 0.7, 0.5))), 0.0);
     }
-    steel = steel * (1.0 - 0.59 * seam) + mix(vec3(-0.035), vec3(0.12, 0.15, 0.20), clamp(lit_edge, 0.0, 1.0)) * bevel;
+    if (!top || basin_trim) steel = steel * (1.0 - 0.59 * seam) + mix(vec3(-0.035), vec3(0.12, 0.15, 0.20), clamp(lit_edge, 0.0, 1.0)) * bevel;
 
     vec3 glow = vec3(0.0);
     float light_row = 1.0 - step(0.5, abs(floor(panel.y)));

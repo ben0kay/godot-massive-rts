@@ -614,3 +614,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Circle Infantry's robot mesh now uses turn-limited combat facing at 240°/s. It faces its target before swinging and follows deliberate movement while marching. Separation nudges no longer directly steer the renderer. Godot .NET visual validation pending.
 
 - 2026-11-25 — Restored the Circle gait update omitted during the facing refactor.
+
+- 2026-11-25 — Added a mipmapped forest-floor detail texture, continuous industrial wall tops, occasional loose stones in rock patches and batched amber wall-lamp ground spill. Godot .NET visual validation pending.

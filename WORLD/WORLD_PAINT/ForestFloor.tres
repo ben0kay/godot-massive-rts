@@ -1,0 +1,21 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3]
+
+[ext_resource type="Shader" path="res://WORLD/WORLD_PAINT/ForestFloor.gdshader" id="1"]
+
+[sub_resource type="FastNoiseLite" id="SoilDetail"]
+seed = 912
+frequency = 0.068
+fractal_octaves = 4
+fractal_gain = 0.62
+
+[sub_resource type="NoiseTexture2D" id="DetailTile"]
+width = 1024
+height = 1024
+seamless = true
+generate_mipmaps = true
+noise = SubResource("SoilDetail")
+
+[resource]
+render_priority = -1
+shader = ExtResource("1")
+shader_parameter/ground_detail = SubResource("DetailTile")

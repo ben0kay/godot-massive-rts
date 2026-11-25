@@ -35,6 +35,7 @@ internal static class WorldPaintMeshBuilder
                 cells.Contains(anchor + Vector2I.Down) && cells.Contains(anchor + Vector2I.One);
             AddBoulder(surface, shadows, cell, terrain, broad ? height * 0.37f : height, tint, neighbours, broad: false);
             if (broad && cell == anchor) AddBoulder(surface, shadows, cell, terrain, height, tint, neighbours, broad: true);
+            AddLooseStones(surface, cell, terrain, tint);
         }
         return shadows.Commit(surface.Commit());
     }
@@ -108,6 +109,36 @@ internal static class WorldPaintMeshBuilder
             Triangle(surface, cap[i], shoulder[i], cap[j], bevel);
             Triangle(surface, cap[j], shoulder[i], shoulder[j], bevel);
             Triangle(surface, crown, cap[i], cap[j], stone.Lightened(Next(ref seed) * 0.10f));
+        }
+    }
+
+    private static void AddLooseStones(SurfaceTool surface, Vector2I cell, TerrainHeightField terrain, Color tint)
+    {
+        uint seed = CellSeed(cell) ^ 0xA23B917Du;
+        if (Next(ref seed) > 0.30f) return;
+        float size = WorldPaint.CellSize;
+        Vector2 center = ((Vector2)cell + Vector2.One * 0.5f) * size;
+        float start = Next(ref seed) * Mathf.Tau;
+        int count = 2 + Mathf.FloorToInt(Next(ref seed) * 4f);
+        System.Span<Vector3> rim = stackalloc Vector3[5];
+        for (int chip = 0; chip < count; chip++)
+        {
+            float angle = start + chip * 1.26f;
+            Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * size * Mathf.Lerp(0.30f, 0.47f, Next(ref seed));
+            Vector2 point = center + offset;
+            float radius = size * Mathf.Lerp(0.030f, 0.092f, Next(ref seed));
+            float ground = Ground(terrain, point.X, point.Y);
+            var peak = new Vector3(point.X + radius * 0.15f, ground + radius * 0.85f, point.Y);
+            Color stone = tint.Lightened(Next(ref seed) * 0.22f);
+            for (int side = 0; side < rim.Length; side++)
+            {
+                float bearing = angle + side * Mathf.Tau / rim.Length;
+                float reach = radius * Mathf.Lerp(0.71f, 1.1f, Next(ref seed));
+                float x = point.X + Mathf.Cos(bearing) * reach, z = point.Y + Mathf.Sin(bearing) * reach;
+                rim[side] = new Vector3(x, Ground(terrain, x, z) - 0.008f, z);
+            }
+            for (int side = 0; side < rim.Length; side++)
+                Triangle(surface, peak, rim[side], rim[(side + 1) % rim.Length], stone);
         }
     }
 

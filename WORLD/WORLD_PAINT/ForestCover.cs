@@ -36,11 +36,7 @@ internal sealed class ForestCover
         {
             Name = "ForestFloor",
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            MaterialOverride = new ShaderMaterial
-            {
-                RenderPriority = -1,
-                Shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestFloor.gdshader")
-            }
+            MaterialOverride = GD.Load<ShaderMaterial>("res://WORLD/WORLD_PAINT/ForestFloor.tres")
         };
         parent.AddChild(groundCover);
     }
