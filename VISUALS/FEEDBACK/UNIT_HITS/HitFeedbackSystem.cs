@@ -11,6 +11,10 @@ public sealed class HitFeedbackSystem
     private const float AttackDuration = 0.16f;
     private const float CircleSwordDuration = 0.32f;
     private const float SquareAttackDuration = 0.40f;
+    private const float HexagonAttackDuration = 0.58f;
+    private bool[] hexagonStomp;
+    internal void EnableHexagonAttack(bool enabled) => hexagonStomp = enabled ? new bool[attackRemaining.Length] : null;
+    internal bool IsHexagonStomp(int id) => hexagonStomp != null && attackRemaining[id] > 0f && hexagonStomp[id];
     internal bool ExtendCircleSword { get; set; }
     internal bool ExtendSquareAttack { get; set; }
     private readonly float[] attackRemaining;
@@ -48,10 +52,11 @@ public sealed class HitFeedbackSystem
         hitRegistered = true;
     }
 
-    public bool OnAttack(UnitState units, int id)
+    public bool OnAttack(UnitState units, int id, bool stomp = false)
     {
         if (attackRemaining[id] <= 0f) attackingIds[attackingCount++] = id;
         attackRemaining[id] = AttackDurationFor(units.Type[id]);
+        if (hexagonStomp != null && units.Type[id] == RuntimeUnitCatalog.Hexagon) hexagonStomp[id] = stomp;
         return units.Dirty[id] = true;
     }
 
@@ -91,7 +96,8 @@ public sealed class HitFeedbackSystem
     // Longer weapon motion is purely visual; the original attack pulse stays 0.16s.
     private float AttackDurationFor(byte type) =>
         ExtendCircleSword && type == RuntimeUnitCatalog.Circle ? CircleSwordDuration :
-        ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration : AttackDuration;
+        ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration :
+        hexagonStomp != null && type == RuntimeUnitCatalog.Hexagon ? HexagonAttackDuration : AttackDuration;
 
     internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f
         ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type), 0f, 1f) : -1f;

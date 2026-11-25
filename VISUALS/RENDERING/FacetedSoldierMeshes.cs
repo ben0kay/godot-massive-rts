@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -83,15 +83,18 @@ public static class FacetedSoldierMeshes
     {
         bool circle = visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId;
         bool square = visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId;
+        bool siege = visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId;
         material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
-            (square && visuals.AnimateSquareAttack));
+            (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
-            (square && visuals.AnimateSquareWalk));
+            (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk));
         material.SetShaderParameter("square_heavy", square);
+        material.SetShaderParameter("hexagon_siege", siege);
         material.SetShaderParameter("infantry_height", height);
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId) ||
         (visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId) ||
         (visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId) ||
         (visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
@@ -125,6 +128,7 @@ public static class FacetedSoldierMeshes
         {
             if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SquareId) AppendSquareHeavy(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
@@ -450,6 +454,64 @@ public static class FacetedSoldierMeshes
     // Six beveled-look deck plates sit over a darkened cap. Built once per type
     // so the existing faction MultiMesh, FX2 cracks and hit colours still work.
     // All detail stays inside the original hexagonal footprint.
+    // =========================================================
+    // Tier-3 siege infantry: six-sided armored torso, two planted piston legs,
+    // a recessed power core and a broad blade on a central rotary bearing.
+    // Rest pose and blade orbit stay inside the original circular clearance.
+    private static void AppendHexagonSiegeRobot(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool swing = false, bool foot = false, float yaw = 0f)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, yaw: yaw, armorMask: true, swingPart: swing, walkPart: foot);
+        }
+        void Hex(float px, float py, float pz, float radius, float h, Color mask, bool swing = false)
+        {
+            AppendPrism(surface, 6, x * radius, z * radius, height * h, outline.Rotation,
+                new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: swing);
+        }
+
+        Hex(0f, -0.19f, 0.08f, 0.60f, 0.30f, Steel(0.95f));
+        Hex(0f, 0.02f, 0.07f, 0.66f, 0.34f, Paint(0.89f));
+        Hex(0f, 0.20f, 0.07f, 0.56f, 0.16f, Paint(0.98f));
+        // Broad shoulders preserve the hexagonal silhouette, with dark mechanical gaps.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Hex(side * 0.54f, 0.04f, 0.10f, 0.29f, 0.37f, Paint(0.96f));
+            Block(side * 0.39f, -0.30f, 0.05f, 0.30f, 0.40f, 0.49f, Steel(0.92f), foot: true);
+            Block(side * 0.39f, -0.40f, -0.03f, 0.46f, 0.20f, 0.66f, Paint(0.90f), foot: true);
+            Block(side * 0.39f, -0.29f, -0.24f, 0.25f, 0.06f, 0.19f, Trim(0.78f), foot: true);
+            Block(side * 0.27f, 0.29f, 0.43f, 0.22f, 0.09f, 0.20f, Steel(0.91f));
+        }
+        // Low hexagonal command head with recessed visor and a rear power pack.
+        Hex(0f, 0.38f, 0.15f, 0.33f, 0.24f, Paint(1f));
+        Block(0f, 0.37f, -0.17f, 0.40f, 0.07f, 0.06f, Trim(0.97f));
+        Block(0f, 0.17f, 0.63f, 0.35f, 0.16f, 0.20f, Steel(0.90f));
+        Block(0f, 0.24f, 0.63f, 0.22f, 0.06f, 0.13f, Trim(0.85f));
+
+        // Central bearing and angled arm. All marked parts rotate around the
+        // origin in XZ; the weapon stays connected throughout the cleave.
+        Hex(0f, 0.26f, 0f, 0.19f, 0.14f, Steel(1f));
+        Block(0.18f, 0.27f, -0.29f, 0.18f, 0.12f, 0.66f, Steel(1f), swing: true, yaw: 0.55f);
+        // Broad faceted blade with a luminous cutting edge, not a second FX emitter.
+        Vector2[] blade = { new(-0.92f, -0.25f), new(-0.35f, -0.85f), new(0.82f, -0.70f),
+            new(1f, 0.15f), new(0.45f, 0.76f), new(-0.80f, 0.48f) };
+        AppendPrism(surface, blade.Length, x * 0.31f, z * 0.22f, height * 0.14f, 0f,
+            new Vector3(x * 0.35f, height * 0.27f, -z * 0.59f), Paint(0.96f),
+            sideShade: SoldierSideShade, yaw: 0.30f, armorMask: true, visualOutline: blade, swingPart: true);
+        AppendPrism(surface, blade.Length, x * 0.25f, z * 0.17f, height * 0.045f, 0f,
+            new Vector3(x * 0.35f, height * 0.35f, -z * 0.61f), Trim(0.92f),
+            sideShade: SoldierSideShade, yaw: 0.30f, armorMask: true, visualOutline: blade, swingPart: true);
+    }
+
     private static void AppendHexagonSiegeArmor(SurfaceTool surface, UnitOutline outline, float height)
     {
         float deck = height * 0.5f;

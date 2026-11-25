@@ -223,7 +223,7 @@ public static class CombatSystem
             }
             if (units.Cooldown[i] > 0f) continue;
             float previousHealth = units.Health[target];
-            bool cleaved = false;
+            bool cleaved = false, stomped = false;
             if (type.Ranged)
             {
                 if (!SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
@@ -239,6 +239,7 @@ public static class CombatSystem
             }
             else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
             {
+                stomped = true;
                 ShockwaveStats stomp = type.Shockwave;
                 Vector3 impact = units.Position[i];
                 AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, type.AgainstUnits(stomp.Damage), stomp.EdgeDamageFraction,
@@ -260,7 +261,7 @@ public static class CombatSystem
             }
             if (!type.Ranged)
             {
-                visualsChanged |= units.HitFeedback?.OnAttack(units, i) == true;
+                visualsChanged |= units.HitFeedback?.OnAttack(units, i, stomped) == true;
                 if (shockwaves != null && (cleaved || units.Health[target] < previousHealth))
                 {
                     var contact = units.Position[i] + offset * 0.5f + Vector3.Up * (type.Height * 0.52f);

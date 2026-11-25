@@ -632,3 +632,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Renamed the AutoBattler campaign display to Clash. The Level Editor can box-select starting Red soldiers and save opening Move and Hold orders that run in campaign battles and editor tests.
 
 - 2026-11-25 — VIS-SQUARE — Added independently toggleable heavy Square infantry mesh (faction armor, shield and hammer), 0.40s procedural strike and distance-driven staggered heavy gait with smaller bounce. Shared Circle shader, attack feedback and per-batch gait data extended to Square; legacy mesh, Circle tuning and gameplay stats retained. Source review only; owner shader/visual/FPS validation pending.
+
+- 2026-11-25 — VIS-HEXAGON — Added independent tier-3 siege robot mesh and walking/attack toggles. Central rotary blade sweeps alongside existing cleave contact effect; real radial stomp event drives separate bracing pose. Shared infantry animation data/armor pipeline reused; both older Hexagon meshes, damage cone, shockwave, cooldown, stats and footprint retained. Source review only; owner shader/visual/FPS validation pending.
