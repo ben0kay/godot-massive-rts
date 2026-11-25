@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="LevelDefinition" format=3]
 
-[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_wl178"]
+[ext_resource type="Script" path="res://LEVELS/Catalog/LevelDefinition.cs" id="1_n7rek"]
 
 [resource]
-script = ExtResource("1_wl178")
+script = ExtResource("1_n7rek")
 Id = "Level009"
 DisplayName = "Level009"
 Order = 5
