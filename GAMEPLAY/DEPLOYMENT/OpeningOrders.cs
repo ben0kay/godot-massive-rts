@@ -6,6 +6,8 @@ namespace MassiveRts;
 
 internal sealed class OpeningOrders
 {
+    private const float WaypointArrivalDistance = 0.10f;
+
     private sealed class Progress
     {
         internal Vector3[] Route;
@@ -58,21 +60,27 @@ internal sealed class OpeningOrders
 
     internal bool Active(int id) => active.ContainsKey(id);
     internal bool Holding(int id) => active[id].Route == null;
-    internal Vector3 Goal(int id, float footprint)
+    internal Vector3 Goal(int id, Vector3 position, float footprint, out bool finalWaypoint)
     {
         var progress = active[id];
-        Vector3 point = progress.Route[progress.Waypoint] + progress.Offset;
         float bound = Mathf.Max(0f, halfWidth - footprint);
-        return new Vector3(Mathf.Clamp(point.X, -bound, bound), 0f, Mathf.Clamp(point.Z, -bound, bound));
+        while (true)
+        {
+            Vector3 point = progress.Route[progress.Waypoint] + progress.Offset;
+            var goal = new Vector3(Mathf.Clamp(point.X, -bound, bound), 0f, Mathf.Clamp(point.Z, -bound, bound));
+            finalWaypoint = progress.Waypoint == progress.Route.Length - 1;
+            if (finalWaypoint || ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(goal)) >
+                WaypointArrivalDistance * WaypointArrivalDistance)
+                return goal;
+
+            // Curve samples guide the march. Only the last point is a stopping destination.
+            progress.Waypoint++;
+        }
     }
 
     internal float CruiseSpeed(int id) => active[id].CruiseSpeed;
 
-    internal void Arrive(int id)
-    {
-        var progress = active[id];
-        if (++progress.Waypoint == progress.Route.Length) active.Remove(id);
-    }
+    internal void CompleteRoute(int id) => active.Remove(id);
 
     internal bool Advance(UnitState units, float delta)
     {

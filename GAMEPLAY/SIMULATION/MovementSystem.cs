@@ -6,6 +6,7 @@ namespace MassiveRts;
 public static class MovementSystem
 {
     private const float RangedStandOffBuffer = 0.25f;
+    private const float OpeningArrivalMargin = 0.005f;
     // =========================================================
     internal static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
@@ -40,7 +41,7 @@ public static class MovementSystem
                 units.MoveSpeed[i] = 0f;
                 continue;
             }
-            bool followRoute = hasOrder && !hasTarget;
+            bool followRoute = hasOrder && !hasTarget && !hasStructure && !movementMode;
             bool followingLastPosition = !hasTarget && !movementMode && target >= 0 &&
                 units.Alive > units.FactionAlive[units.Faction[i]];
             if (!hasTarget && !movementMode && !followingLastPosition && !hasStructure && !followRoute)
@@ -54,15 +55,17 @@ public static class MovementSystem
             if (!hasTarget) melee?.Reset(i);
             // Hold the firing line until there is a living target worth moving toward.
             if (rangedCombat && !hasTarget && !hasStructure && !followRoute && units.MoveSpeed[i] == 0f) continue;
+            bool finalWaypoint = false;
             Vector3 destination = movementMode ? units.Goal[i] : hasStructure
-                ? structureCombat.ApproachGoal(i) : followRoute ? opening.Goal(i, type.Footprint) : units.Position[target];
+                ? structureCombat.ApproachGoal(i) : followRoute ? opening.Goal(i, units.Position[i], type.Footprint, out finalWaypoint) : units.Position[target];
             if (hasStructure && structureCombat.CanHit(i, type, structure, StructureCombat.Sight(type, units, sight)))
             {
                 units.MoveSpeed[i] = 0f;
                 continue;
             }
             Vector3 offset = destination - units.Position[i];
-            float stop = hasStructure ? 0f : followRoute ? Mathf.Max(0.2f, type.Footprint * 0.7f) : 0.2f;
+            bool passingWaypoint = followRoute && !finalWaypoint;
+            float stop = hasStructure || passingWaypoint ? 0f : followRoute ? Mathf.Max(0.2f, type.Footprint * 0.7f) : 0.2f;
             bool hasClearShot = false;
             if (hasTarget)
             {
@@ -126,15 +129,17 @@ public static class MovementSystem
             offset.Y = 0f;
             bool marchingInLane = movementMode && offset.Z == 0f;
             float distance = marchingInLane ? Mathf.Abs(offset.X) : offset.Length();
-            if (distance <= stop)
+            bool finishingRoute = followRoute && finalWaypoint && !detouring && distance <= stop + OpeningArrivalMargin;
+            if (distance <= stop || finishingRoute)
             {
-                if (followRoute && !detouring) opening.Arrive(i);
+                if (finishingRoute) opening.CompleteRoute(i);
                 if (steerMelee) melee.ResetSidestep(i);
                 // Movement-only mode continuously marches back and forth along separate lanes.
                 if (movementMode && !detouring) units.Goal[i].X = -units.Goal[i].X;
                 else units.MoveSpeed[i] = 0f;
                 continue;
             }
+            bool keepMoving = routeCorner || (passingWaypoint && !detouring);
             float remaining = distance - stop;
             float topSpeed = units.TravelSpeed(i, type);
             if (followRoute) topSpeed = Mathf.Min(topSpeed, opening.CruiseSpeed(i));
@@ -147,7 +152,7 @@ public static class MovementSystem
                 advanceSpeed = Mathf.Min(topSpeed, units.MoveSpeed[i] + topSpeed * accelerationRate * dt);
                 // Limit speed near the stopping point. Most soldiers can skip the square root.
                 float brakingSpeedSquared = 2f * topSpeed * rampRate * remaining;
-                speed = !routeCorner && rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
+                speed = !keepMoving && rampRate > 0f && advanceSpeed * advanceSpeed > brakingSpeedSquared
                     ? Mathf.Sqrt(brakingSpeedSquared) : advanceSpeed;
             }
             float travel = Mathf.Min(speed * dt, remaining);
@@ -201,7 +206,7 @@ public static class MovementSystem
                     next.Z = safe.Y;
                 }
             }
-            if (!movementMode) units.MoveSpeed[i] = !routeCorner && travel >= remaining ? 0f : speed;
+            if (!movementMode) units.MoveSpeed[i] = !keepMoving && travel >= remaining ? 0f : speed;
             if (voluntaryMovement != null && travel > 0.00001f && (type.Ranged || travel >= advanceSpeed * dt * slopeFactor * 0.5f))
                 voluntaryMovement[i] = 1;
             // Combat owns robot Circle facing when close enough to swing.
