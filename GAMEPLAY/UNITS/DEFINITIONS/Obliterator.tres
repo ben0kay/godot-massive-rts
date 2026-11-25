@@ -12,6 +12,7 @@ BattleRating = 270
 Shape = 14
 Width = 1.55
 Height = 0.7
+SizeMultiplier = 0.9
 SizeTier = 2.0
 Speed = 3.9
 TurnDegreesPerSecond = 180.0

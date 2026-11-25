@@ -544,3 +544,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Applied the shared directional sun and lit unit materials in AutoBattler and Fortress Defense, keeping fake ground shadows. Added Offense as an empty campaign menu entry. Godot .NET runtime validation pending.
 
 - 2026-11-24 — Added directional shading to shared defense tower armor, including Broadside, while retaining emissive trim and fake ground shadows. Godot .NET visual validation pending.
+
+- 2026-11-24 — Reduced Obliterator size multiplier from 1.0 to 0.9 and Prism Lance from 2.0 to 1.6 (10% and 20% smaller, respectively). Existing size tiers and authored combat stats unchanged. Configuration-only source review; in-game validation pending.
