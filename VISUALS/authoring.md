@@ -25,7 +25,7 @@ Use the shared palette from `GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.
 - **Faction armor:** select meaningful armor plates, corner caps, shoulder pods or weapon collars. Keep enough color visible from above and both sides to recognize ownership at normal gameplay zoom. As a starting visual heuristic, use roughly 65–75% neutral structure, 20–30% faction panels, and a small remainder of illuminated trim (not a measured or mandatory surface-area ratio).
 - **Faction emission:** short power strips, status panels and a focal core, matching the owning faction. Use bright cores against dark recessed channels; avoid outlining every edge or making the whole model glow.
 - **Shape language:** layered clipped rectangles, octagonal collars, chamfered slopes, overlapping armor and clean dark gaps. Use larger details that survive zoom; a few large vents are better than tiny bolts, noise or dense texture patterns.
-- **Distinct roles:** Broadside is broad and heavy with two independently recoiling launch tubes. Railgun is narrower, with a compact mount and a single long split-rail accelerator. Shield support can instead use a recognizable generator/ring silhouette. Do not copy one weapon silhouette onto every tower.
+- **Distinct roles:** Broadside is broad and heavy with two independently recoiling launch tubes. Railgun is a sleek directed-energy weapon, with a tapered pedestal, narrow cradle, rear capacitor bank, a single long coil-wrapped accelerator and recessed circular focusing aperture. Avoid bulky artillery-style armor pods or twin-tube silhouettes. Shield support can instead use a recognizable generator/ring silhouette. Do not copy one weapon silhouette onto every tower.
 - **Lighting:** use shared battlefield directional lighting and restrained satin highlights. Baked bevel masks complement real light; do not add new global exposure, sun, ambient or glow settings just for a model.
 
 ## 2. Building implementation references
@@ -33,7 +33,7 @@ Use the shared palette from `GAMEPLAY/SIMULATION/FACTIONS/DefaultFactionCatalog.
 | File | Responsibility |
 | --- | --- |
 | `WORLD/BUILDINGS/RENDERING/BroadsideTowerMeshes.cs` | Accepted heavyweight geometry: normalized base, rotating head and two identical independent barrels |
-| `WORLD/BUILDINGS/RENDERING/RailgunTowerMeshes.cs` | Compact base, separate rotating carriage and one recoiling/pitching accelerator assembly |
+| `WORLD/BUILDINGS/RENDERING/RailgunTowerMeshes.cs` | Tapered pedestal, compact rotating capacitor carriage and one recoiling/pitching coil accelerator |
 | `WORLD/BUILDINGS/RENDERING/TowerArmorGeometry.cs` | Shared `Steel`, `Paint`, `Trim`, `Block`, `Plate` helpers |
 | `WORLD/BUILDINGS/RENDERING/ShieldGeneratorMeshes.cs` | Static radial reactor crown, armored base and emitter pylons |
 | `WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader` | Shared two-tone mask shader (historical filename, used by all three towers) |
@@ -67,7 +67,7 @@ Block(surface, new Vector3(0f, 0.30f, 0f), new Vector3(0.3f, 0.04f, 0.08f), Trim
 
 - XZ is ground, Y is up, and local forward is -Z. Stationary base is normalized around zero (approximately -0.5 to +0.5 in X/Y/Z), scaled to actual footprint and base height by the renderer. Grounding uses terrain height.
 - Head geometry is authored in world units relative to `DefenseRenderer.Pivot`; it rotates around Y. The weapon barrel uses its existing local transform and recoil axis. Bake attached rails, caps and trim into the moving part, not into the base.
-- Railgun barrel is centered at zero, length 3.8; muzzle at local z = -1.9. The renderer offsets its center forward 1.9 from pivot and adds recoil along the pitched axis. Beam and flash must still exit the actual central opening. Split rails are cosmetic: one weapon, one beam.
+- Railgun barrel is centered at zero, length 3.8; muzzle at local z = -1.9. The renderer offsets its center forward 1.9 from pivot and adds recoil along the pitched axis. Beam and flash must still exit the actual central opening. The induction coils and recessed focusing aperture are cosmetic and baked into the pitching/recoiling barrel: one weapon, one beam.
 - Broadside barrels are mounted at x = ±0.7, y = 0.9 from the pivot, tilted up 15°, with local muzzle z = -4.7. Each barrel recoils independently. Do not extend muzzle geometry past these endpoints without an explicitly approved coordinated transform change.
 - Keep the authored footprint, collision, HP, range, timing, damage, projectile behavior and stable resource ID unchanged during visual-only tasks. Real collision and targeting come from the shared simulation, not decorative triangles.
 

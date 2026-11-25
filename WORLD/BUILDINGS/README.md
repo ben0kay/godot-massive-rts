@@ -8,7 +8,7 @@ Place **Railgun Tower** through the Benchmark defense painter, Level Editor, or 
 
 The default beam lasts **3 seconds**, deals **50 damage per second** to each hostile unit it touches, and sweeps at up to **45°/s** while tracking targets. It pierces enemy units and stops at cover or the terrain. The tower needs **4 seconds** to recover after a beam. Its barrel kicks back at ignition and recovers while firing. The beam follows the barrel's live position and angle.
 
-The Railgun now uses a compact two-tone charcoal chassis, faction-colored armor cheeks and emissive power rails, with one split-rail accelerator assembly. The meshes live in `RENDERING/RailgunTowerMeshes.cs` and reuse the Broadside mask shader and shared `TowerArmorGeometry` helpers. The existing yaw, pitch, recoil, 3.8-unit barrel length and beam/muzzle alignment are preserved. Visual validation pending.
+The Railgun uses a tapered octagonal gunmetal pedestal, narrow trunnion cradle, aft capacitor bank and one long directed-energy accelerator barrel. Four faceted emissive induction coils surround the central spine, leading to a recessed circular focusing aperture. Faction armor and restrained lighting distinguish the beam turret from the Broadside's bulky twin artillery launchers. The meshes live in `RENDERING/RailgunTowerMeshes.cs` and reuse the Broadside mask shader and shared `TowerArmorGeometry` helpers. The existing yaw, pitch, recoil, 3.8-unit barrel length and beam/muzzle alignment are preserved. Visual validation pending.
 
 Use **Entity Editor → Defenses** to tune minimum and maximum targeting range, damage per second, turn speed and beam duration. The recovery rate is stored as `ShotsPerSecond`, and its inverse is the delay after the beam ends.
 

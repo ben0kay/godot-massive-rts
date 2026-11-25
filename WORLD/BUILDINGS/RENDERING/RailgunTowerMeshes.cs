@@ -1,4 +1,4 @@
-// Builds the Railgun's compact armored base, rotating wedge carriage and single recoiling rail assembly.
+// Railgun directed-energy turret: compact pedestal, capacitor carriage and single coil accelerator.
 using Godot;
 using static MassiveRts.TowerArmorGeometry;
 
@@ -7,110 +7,154 @@ namespace MassiveRts;
 internal static class RailgunTowerMeshes
 {
     // =========================================================
-    // A smaller 2x2 footprint than the Broadside, with a diamond-like inset deck,
-    // clipped corners and slender faction panels. Base coordinates are normalized.
+    // Keep the original normalized footprint and grounding; taper the
+    // visible upper pedestal instead of using the Broadside's corner armor.
     public static Mesh CreateBase()
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
-        Plate(surface, new Vector3(0f, -0.41f, 0f), new Vector3(1f, 0.18f, 1f), 0.20f, 0.96f, Steel(0.46f));
-        Plate(surface, new Vector3(0f, -0.08f, 0f), new Vector3(0.95f, 0.58f, 0.95f), 0.24f, 0.81f, Steel(0.88f));
-        Plate(surface, new Vector3(0f, 0.31f, 0f), new Vector3(0.84f, 0.30f, 0.84f), 0.40f, 0.91f, Steel(1f));
+        Plate(surface, new Vector3(0f, -0.41f, 0f), new Vector3(1f, 0.18f, 1f), 0.80f, 0.92f, Steel(0.48f));
+        Plate(surface, new Vector3(0f, -0.17f, 0f), new Vector3(0.83f, 0.30f, 0.83f), 0.85f, 0.78f, Steel(0.92f));
+        Plate(surface, new Vector3(0f, 0.04f, 0f), new Vector3(0.64f, 0.16f, 0.64f), 0.85f, 0.98f, Paint(0.82f));
+        Plate(surface, new Vector3(0f, 0.27f, 0f), new Vector3(0.60f, 0.30f, 0.60f), 0.85f, 0.92f, Steel(1f));
+        Plate(surface, new Vector3(0f, 0.44f, 0f), new Vector3(0.66f, 0.12f, 0.66f), 0.85f, 0.95f, Steel(0.63f));
 
         for (int side = -1; side <= 1; side += 2)
         {
-            for (int end = -1; end <= 1; end += 2)
-            {
-                Plate(surface, new Vector3(side * 0.34f, -0.03f, end * 0.34f),
-                    new Vector3(0.24f, 0.70f, 0.24f), 0.38f, 0.78f, Steel(0.96f));
-                Plate(surface, new Vector3(side * 0.34f, 0.27f, end * 0.34f),
-                    new Vector3(0.19f, 0.30f, 0.19f), 0.35f, 0.81f, Paint());
-                Block(surface, new Vector3(side * 0.34f, 0.432f, end * 0.34f),
-                    new Vector3(0.073f, 0.026f, 0.052f), Trim(0.84f));
-            }
-            // Recess-like dark side panel and illuminated transverse strip.
-            Block(surface, new Vector3(side * 0.463f, -0.06f, 0f),
-                new Vector3(0.048f, 0.28f, 0.44f), Steel(0.30f));
-            Block(surface, new Vector3(0f, -0.06f, side * 0.463f),
-                new Vector3(0.44f, 0.28f, 0.048f), Steel(0.30f));
-            Block(surface, new Vector3(side * 0.493f, -0.025f, 0f),
-                new Vector3(0.013f, 0.088f, 0.32f), Trim());
-            Block(surface, new Vector3(0f, -0.025f, side * 0.493f),
-                new Vector3(0.32f, 0.088f, 0.013f), Trim());
-            // Long faction-colored deck rails contrast with the dark central mount.
-            Plate(surface, new Vector3(side * 0.31f, 0.42f, 0f),
-                new Vector3(0.10f, 0.12f, 0.41f), 0.25f, 0.83f, Paint());
+            // Small power conduits climb the pedestal, leaving its octagonal
+            // shoulders exposed and avoiding a broad square turret base.
+            Block(surface, new Vector3(side * 0.302f, 0.23f, 0f),
+                new Vector3(0.055f, 0.25f, 0.12f), Steel(0.33f));
+            Block(surface, new Vector3(side * 0.334f, 0.23f, 0f),
+                new Vector3(0.016f, 0.18f, 0.065f), Trim(0.90f));
+            Block(surface, new Vector3(0f, 0.23f, side * 0.302f),
+                new Vector3(0.12f, 0.25f, 0.055f), Steel(0.33f));
+            Block(surface, new Vector3(0f, 0.23f, side * 0.334f),
+                new Vector3(0.065f, 0.18f, 0.016f), Trim(0.90f));
         }
         return surface.Commit();
     }
 
     // =========================================================
-    // Compact pointed turret with swept armor cheeks and a central saddle.
-    // All offsets are in world units relative to the existing yaw pivot.
+    // Compact trunnion cradle with an isolated aft capacitor bank.
+    // Head coordinates are relative to the existing yaw pivot in world units.
     public static Mesh CreateHead()
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
-        Plate(surface, new Vector3(0f, -0.25f, 0.05f), new Vector3(2.65f, 0.20f, 2.52f), 0.62f, 0.96f, Steel(0.52f));
-        Plate(surface, new Vector3(0f, -0.08f, 0.08f), new Vector3(2.42f, 0.22f, 2.29f), 0.55f, 0.83f, Steel(1f));
-        Plate(surface, new Vector3(0f, 0.21f, 0.29f), new Vector3(1.72f, 0.62f, 1.90f), 0.50f, 0.74f, Steel(0.86f));
-        Plate(surface, new Vector3(0f, 0.55f, 0.57f), new Vector3(1.08f, 0.30f, 1.06f), 0.36f, 0.76f, Steel(1f));
-        // Rear-facing illuminated power cell, visible above the single gun.
-        Block(surface, new Vector3(0f, 0.72f, 0.68f), new Vector3(0.57f, 0.06f, 0.48f), Paint());
-        Block(surface, new Vector3(0f, 0.76f, 0.68f), new Vector3(0.35f, 0.035f, 0.28f), Trim());
+        Plate(surface, new Vector3(0f, -0.24f, 0f), new Vector3(1.95f, 0.22f, 1.95f), 0.85f, 0.94f, Steel(0.65f));
+        Plate(surface, new Vector3(0f, -0.08f, 0.18f), new Vector3(1.55f, 0.20f, 1.73f), 0.72f, 0.84f, Steel(1f));
 
+        // Short slender side supports, not full-length artillery armor pods.
+        // Leave space for the existing pitching/recoiling barrel between them.
         for (int side = -1; side <= 1; side += 2)
         {
-            // Separate side armor pods keep the central gun corridor legible.
-            Plate(surface, new Vector3(side * 0.89f, 0.18f, 0.12f),
-                new Vector3(0.72f, 0.60f, 1.95f), 0.48f, 0.78f, Steel(0.88f));
-            Plate(surface, new Vector3(side * 0.91f, 0.49f, 0.12f),
-                new Vector3(0.64f, 0.32f, 1.78f), 0.43f, 0.76f, Paint());
-            for (int vent = 0; vent < 3; vent++)
-                Block(surface, new Vector3(side * 0.91f, 0.66f, 0.18f + vent * 0.18f),
-                    new Vector3(0.32f, 0.028f, 0.09f), Steel(0.22f));
-            Block(surface, new Vector3(side * 1.26f, 0.18f, 0.15f),
-                new Vector3(0.07f, 0.17f, 0.84f), Steel(0.30f));
-            Block(surface, new Vector3(side * 1.31f, 0.18f, 0.15f),
-                new Vector3(0.033f, 0.07f, 0.66f), Trim());
-            Block(surface, new Vector3(side * 0.52f, -0.09f, 1.25f),
-                new Vector3(0.42f, 0.10f, 0.06f), Trim());
+            Plate(surface, new Vector3(side * 0.56f, 0.11f, 0.02f),
+                new Vector3(0.30f, 0.58f, 0.68f), 0.42f, 0.76f, Steel(0.92f));
+            Plate(surface, new Vector3(side * 0.56f, 0.39f, 0.02f),
+                new Vector3(0.30f, 0.14f, 0.44f), 0.48f, 0.76f, Paint());
+            Block(surface, new Vector3(side * 0.718f, 0.12f, 0.02f),
+                new Vector3(0.035f, 0.23f, 0.22f), Trim(0.86f));
         }
+
+        // Rear power assembly is behind the barrel's 0.64-unit recoil travel.
+        Plate(surface, new Vector3(0f, 0.12f, 0.96f),
+            new Vector3(0.90f, 0.55f, 0.46f), 0.34f, 0.88f, Steel(0.85f));
+        Plate(surface, new Vector3(0f, 0.41f, 0.96f),
+            new Vector3(0.77f, 0.18f, 0.43f), 0.40f, 0.80f, Paint());
+        for (int side = -1; side <= 1; side += 2)
+            Block(surface, new Vector3(side * 0.23f, 0.512f, 0.96f),
+                new Vector3(0.12f, 0.035f, 0.26f), Trim());
+        Block(surface, new Vector3(0f, 0.13f, 1.205f),
+            new Vector3(0.48f, 0.15f, 0.04f), Trim(0.85f));
         return surface.Commit();
     }
 
     // =========================================================
-    // One weapon, two visible conductor rails. All pieces share the existing
-    // barrel pitch and recoil transform, and the beam exits the clear central gap.
-    // The authored barrel is centered at zero: the muzzle is z = -length / 2.
+    // One long, faceted circular accelerator with four luminous induction
+    // coils and a recessed focusing aperture. Every section is part of the
+    // existing barrel mesh and therefore pitches and recoils with the beam.
+    // Local z = -length / 2 is exactly the existing beam origin.
     public static Mesh CreateBarrel(float length)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         float half = length * 0.5f;
-        // Long central receiver, ending before the split muzzle.
-        Block(surface, new Vector3(0f, 0f, 0.29f), new Vector3(0.47f, 0.36f, length - 0.78f), Steel(0.88f));
-        Plate(surface, new Vector3(0f, 0f, 1.23f), new Vector3(0.86f, 0.65f, 1.18f), 0.28f, 0.79f, Steel(0.98f));
-        Block(surface, new Vector3(0f, 0.342f, 1.22f), new Vector3(0.49f, 0.055f, 0.49f), Paint());
-        Plate(surface, new Vector3(0f, 0f, 0.33f), new Vector3(0.85f, 0.61f, 0.43f), 0.24f, 0.85f, Steel(0.61f));
+        float Z(float progress) => half - length * progress;
+        float lastZ = Z(0f), lastRadius = 0f;
 
-        for (int side = -1; side <= 1; side += 2)
+        // A continuous lathed profile avoids overlapping rings and hidden caps.
+        void Profile(float progress, float radius, Color mask)
         {
-            // A single broad linear accelerator silhouette, not two separate barrels.
-            Block(surface, new Vector3(side * 0.255f, 0f, -0.59f),
-                new Vector3(0.29f, 0.40f, 2.58f), Steel(1f));
-            Block(surface, new Vector3(side * 0.255f, 0.216f, -0.57f),
-                new Vector3(0.21f, 0.046f, 1.94f), Steel(0.27f));
-            Block(surface, new Vector3(side * 0.255f, 0.247f, -0.57f),
-                new Vector3(0.105f, 0.030f, 1.78f), Trim());
-            // Faceted painted end caps stop short of the exact beam endpoint.
-            Plate(surface, new Vector3(side * 0.265f, 0f, -half + 0.25f),
-                new Vector3(0.41f, 0.53f, 0.46f), 0.24f, 0.85f, Paint());
-            Block(surface, new Vector3(side * 0.265f, 0f, -half + 0.01f),
-                new Vector3(0.30f, 0.33f, 0.02f), Steel(0.23f));
-            Block(surface, new Vector3(side * 0.265f, 0.285f, -half + 0.25f),
-                new Vector3(0.17f, 0.032f, 0.22f), Trim());
+            float z = Z(progress);
+            AxialBand(surface, lastZ, lastRadius, z, radius, mask);
+            lastZ = z;
+            lastRadius = radius;
         }
+
+        Profile(0f, 0.28f, Steel(0.50f));
+        Profile(0.035f, 0.34f, Steel(0.95f));
+        Profile(0.125f, 0.34f, Paint(0.88f));
+        Profile(0.16f, 0.22f, Steel(0.83f));
+
+        // Four widely spaced rings read as an electromagnetic accelerator,
+        // not a pair of shell-firing tubes. Dark flanges frame each light band.
+        for (int i = 0; i < 4; i++)
+        {
+            float t = 0.20f + i * 0.155f;
+            Profile(t, 0.22f, Steel(0.94f));
+            Profile(t + 0.015f, 0.36f, Steel(0.88f));
+            Profile(t + 0.032f, 0.36f, Steel(0.67f));
+            Profile(t + 0.038f, 0.31f, Steel(0.52f));
+            Profile(t + 0.069f, 0.31f, Trim(0.93f));
+            Profile(t + 0.075f, 0.36f, Steel(0.52f));
+            Profile(t + 0.092f, 0.36f, Steel(0.67f));
+            Profile(t + 0.107f, 0.22f, Steel(0.88f));
+        }
+        Profile(0.83f, 0.22f, Steel(0.94f));
+
+        // Tapered focusing head and a genuine open circular muzzle recess.
+        // Return inward at the exact endpoint, then back into the aperture.
+        Profile(0.87f, 0.32f, Steel(0.86f));
+        Profile(0.94f, 0.32f, Paint(0.88f));
+        Profile(0.985f, 0.25f, Steel(1f));
+        Profile(1f, 0.23f, Steel(0.90f));
+        Profile(1f, 0.15f, Trim(0.85f));
+        Profile(0.95f, 0.15f, Steel(0.35f));
+        Profile(0.95f, 0f, Trim(0.75f));
         return surface.Commit();
+    }
+
+    // =========================================================
+    // Twelve-sided axial surface in XY, along local -Z. The normal derives
+    // from the surface profile and is valid for outer walls, end faces and
+    // reversed inner walls. Emit Godot's clockwise front-face winding.
+    private static void AxialBand(SurfaceTool surface, float zA, float rA, float zB, float rB, Color mask)
+    {
+        const int sides = 12;
+        Vector3 Point(float radius, float z, int i)
+        {
+            float angle = Mathf.Tau * i / sides;
+            return new Vector3(radius * Mathf.Cos(angle), radius * Mathf.Sin(angle), z);
+        }
+        for (int i = 0; i < sides; i++)
+        {
+            Vector3 a = Point(rA, zA, i), b = Point(rA, zA, i + 1);
+            Vector3 c = Point(rB, zB, i + 1), d = Point(rB, zB, i);
+            Vector3 normal = rA == 0f
+                ? (d - a).Cross(c - a).Normalized()
+                : (d - a).Cross(b - a).Normalized();
+            float shade = Mathf.Clamp(0.82f + 0.15f * normal.Y - 0.08f * normal.X, 0.58f, 1f);
+            void Triangle(Vector3 first, Vector3 second, Vector3 third)
+            {
+                surface.SetNormal(normal);
+                surface.SetColor(mask * shade);
+                surface.AddVertex(first);
+                surface.AddVertex(third);
+                surface.AddVertex(second);
+            }
+            if (rB > 0f) Triangle(a, d, c);
+            if (rA > 0f) Triangle(a, c, b);
+        }
     }
 }

@@ -596,3 +596,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Increased unit attack pulses to 15% and Diamond Cavalry top speed from 9.0 to 10.8. Cavalry moving in or out of combat now leaves batched dust that grows with actual speed.
 
 - 2026-11-25 — Grouped lighting and fog controls in the left Rendering panel and revised painted water with moving ripple normals, viewing-angle reflections and directional glints. Godot .NET visual validation pending.
+
+- 2026-11-25 — Railgun directed-energy visual refinement: tapered pedestal, narrow cradle, aft capacitor bank, four emissive induction coils and recessed focusing muzzle. Preserved shared armor material, footprint, exact beam origin and recoil transforms; no gameplay or extra batches. Owner visual validation pending.
