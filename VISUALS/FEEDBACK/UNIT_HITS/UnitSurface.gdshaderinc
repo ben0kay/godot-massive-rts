@@ -6,6 +6,7 @@ uniform bool infantry_walk = false;
 uniform bool square_heavy = false;
 uniform bool hexagon_siege = false;
 uniform bool triangle_archer = false;
+uniform bool pentagon_elite = false;
 uniform float infantry_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
@@ -56,9 +57,17 @@ void vertex() {
                     : t < 0.29 ? mix(-0.75, 1.85, smoothstep(0.07, 0.29, t))
                     : mix(1.85, 0.0, smoothstep(0.29, 1.0, t));
             }
+            // Elite axe: approximately 85 degrees of travel during the existing
+            // contact crescent, followed by a deliberately slower recovery.
+            if (pentagon_elite) {
+                angle = t < 0.07 ? mix(0.0, -0.50, smoothstep(0.0, 0.07, t))
+                    : t < 0.36 ? mix(-0.50, 0.98, smoothstep(0.07, 0.36, t))
+                    : mix(0.98, 0.0, smoothstep(0.36, 1.0, t));
+            }
             float c = cos(angle), s = sin(angle);
             vec2 pivot = hexagon_siege ? vec2(0.0) :
-                half_extent * (square_heavy ? vec2(0.49, -0.035) : vec2(0.65, -0.05));
+                half_extent * (pentagon_elite ? vec2(0.48, 0.04) :
+                    square_heavy ? vec2(0.49, -0.035) : vec2(0.65, -0.05));
             // Rotate only the tagged right arm and sword around the shoulder.
             mat2 rotation = mat2(vec2(c, -s), vec2(s, c));
             VERTEX.xz = pivot + rotation * (VERTEX.xz - pivot);
@@ -71,13 +80,13 @@ void vertex() {
         if (UV.x > 4.5) {
             // Each boot alternates forward travel and lift. The planted boot stays grounded.
             float side = sign(VERTEX.x);
-            float travel = hexagon_siege ? 0.12 : square_heavy ? 0.17 : triangle_archer ? 0.20 : 0.24;
-            float lift = hexagon_siege ? 0.055 : square_heavy ? 0.075 : triangle_archer ? 0.095 : 0.10;
+            float travel = hexagon_siege ? 0.12 : pentagon_elite ? 0.15 : square_heavy ? 0.17 : triangle_archer ? 0.20 : 0.24;
+            float lift = hexagon_siege ? 0.055 : pentagon_elite ? 0.065 : square_heavy ? 0.075 : triangle_archer ? 0.095 : 0.10;
             VERTEX.z -= sin(phase) * side * half_extent.y * travel * weight;
             VERTEX.y += max(0.0, cos(phase) * side) * infantry_height * lift * weight;
         } else {
             // Two small body rises per stride; do not lift the planted feet or the shadow.
-            float bounce = hexagon_siege ? 0.009 : square_heavy ? 0.0125 : triangle_archer ? 0.015 : 0.0225;
+            float bounce = hexagon_siege ? 0.009 : pentagon_elite ? 0.011 : square_heavy ? 0.0125 : triangle_archer ? 0.015 : 0.0225;
             VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * bounce * weight;
         }
     }

@@ -13,6 +13,8 @@ public sealed class HitFeedbackSystem
     private const float SquareAttackDuration = 0.40f;
     private const float HexagonAttackDuration = 0.58f;
     private const float TriangleFireDuration = 0.24f;
+    private const float PentagonAttackDuration = 0.46f;
+    internal bool ExtendPentagonAttack { get; set; }
     internal bool ExtendTriangleFire { get; set; }
     private bool[] hexagonStomp;
     internal void EnableHexagonAttack(bool enabled) => hexagonStomp = enabled ? new bool[attackRemaining.Length] : null;
@@ -100,6 +102,7 @@ public sealed class HitFeedbackSystem
         ExtendCircleSword && type == RuntimeUnitCatalog.Circle ? CircleSwordDuration :
         ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration :
         ExtendTriangleFire && type == RuntimeUnitCatalog.Triangle ? TriangleFireDuration :
+        ExtendPentagonAttack && type == RuntimeUnitCatalog.Pentagon ? PentagonAttackDuration :
         hexagonStomp != null && type == RuntimeUnitCatalog.Hexagon ? HexagonAttackDuration : AttackDuration;
 
     internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f

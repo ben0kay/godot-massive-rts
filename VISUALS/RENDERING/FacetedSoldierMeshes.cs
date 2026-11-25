@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -85,12 +85,14 @@ public static class FacetedSoldierMeshes
         bool square = visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId;
         bool siege = visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId;
         bool archer = visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId;
+        bool elite = visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId;
         material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
-            (archer && visuals.AnimateTriangleFire));
+            (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
             (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk) ||
-            (archer && visuals.AnimateTriangleWalk));
+            (archer && visuals.AnimateTriangleWalk) || (elite && visuals.AnimatePentagonWalk));
+        material.SetShaderParameter("pentagon_elite", elite);
         material.SetShaderParameter("triangle_archer", archer);
         material.SetShaderParameter("square_heavy", square);
         material.SetShaderParameter("hexagon_siege", siege);
@@ -98,6 +100,7 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId) ||
         (visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId) ||
         (visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId) ||
         (visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId) ||
@@ -134,6 +137,7 @@ public static class FacetedSoldierMeshes
             if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SquareId) AppendSquareHeavy(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.TriangleId) AppendTriangleArcher(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.PentagonId) AppendPentagonElite(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -289,6 +293,62 @@ public static class FacetedSoldierMeshes
         Block(0f, 0f, -0.50f, 0.23f, 0.16f, 0.42f, Paint(0.96f), recoil: true);
         Block(0f, 0f, -0.75f, 0.12f, 0.12f, 0.28f, Steel(1f), recoil: true);
         Block(0f, 0f, -0.86f, 0.10f, 0.10f, 0.06f, Trim(1f), recoil: true);
+    }
+
+    // =========================================================
+    // Elite assault infantry. Five-sided chest, angular pauldrons and
+    // a broad energy axe; retain the original radius, height and -Z facing.
+    private static void AppendPentagonElite(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool swing = false, bool foot = false, float yaw = 0f)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, yaw: yaw, armorMask: true, swingPart: swing, walkPart: foot);
+        }
+        void Plate(float px, float py, float pz, float radius, float h, Color mask, float yaw = 0f)
+        {
+            AppendPrism(surface, 5, x * radius, z * radius, height * h, outline.Rotation,
+                new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, yaw: yaw, armorMask: true);
+        }
+
+        // Layered pentagonal cuirass and compact pointed command helmet.
+        Plate(0f, -0.17f, 0.08f, 0.61f, 0.30f, Steel(0.95f));
+        Plate(0f, 0.06f, 0.06f, 0.73f, 0.38f, Paint(0.91f));
+        Plate(0f, 0.25f, 0.10f, 0.49f, 0.12f, Paint(0.98f));
+        Plate(0f, 0.38f, 0.13f, 0.31f, 0.24f, Paint(1f));
+        Block(0f, 0.36f, -0.105f, 0.16f, 0.07f, 0.09f, Trim(0.98f));
+        Block(0f, 0.09f, -0.56f, 0.16f, 0.12f, 0.10f, Trim(0.86f));
+
+        // Swept angular shoulders and plated mechanical legs.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Plate(side * 0.49f, 0.11f, 0.08f, 0.29f, 0.32f, Paint(0.97f), side * 0.30f);
+            Block(side * 0.32f, -0.31f, 0.06f, 0.31f, 0.38f, 0.42f, Steel(0.94f), foot: true);
+            Block(side * 0.32f, -0.40f, -0.01f, 0.40f, 0.20f, 0.58f, Paint(0.92f), foot: true);
+        }
+        Block(-0.54f, -0.08f, -0.06f, 0.28f, 0.26f, 0.34f, Steel(0.96f));
+        Plate(0f, 0.12f, 0.43f, 0.26f, 0.24f, Steel(0.91f));
+        Block(0f, 0.26f, 0.43f, 0.25f, 0.05f, 0.16f, Trim(0.85f));
+
+        // Tagged axe and mechanical arm share a shoulder pivot at (0.48, 0.04).
+        // A short diagonal haft overlaps the arm and keeps the axe assembled.
+        Block(0.46f, 0.16f, -0.09f, 0.22f, 0.20f, 0.34f, Steel(1f), swing: true, yaw: -0.25f);
+        Block(0.34f, 0.24f, -0.29f, 0.12f, 0.12f, 0.59f, Steel(0.98f), swing: true, yaw: -0.42f);
+        // Faceted axe head and raised cutting edge, visibly different from Square's hammer.
+        Vector2[] axe = { new(-0.85f, -0.70f), new(0.76f, -0.90f), new(1f, -0.22f),
+            new(0.86f, 0.58f), new(-0.25f, 0.82f), new(-0.70f, 0.26f) };
+        AppendPrism(surface, axe.Length, x * 0.23f, z * 0.18f, height * 0.15f, 0f,
+            new Vector3(x * 0.22f, height * 0.24f, -z * 0.55f), Paint(0.97f),
+            sideShade: SoldierSideShade, yaw: -0.20f, armorMask: true, visualOutline: axe, swingPart: true);
+        Block(0.37f, 0.24f, -0.58f, 0.075f, 0.13f, 0.25f, Trim(1f), swing: true, yaw: -0.20f);
     }
 
     // =========================================================

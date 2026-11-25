@@ -18,6 +18,9 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseTriangleArcherMesh { get; set; }
     [Export] public bool AnimateTriangleFire { get; set; }
     [Export] public bool AnimateTriangleWalk { get; set; }
+    [Export] public bool UsePentagonEliteMesh { get; set; }
+    [Export] public bool AnimatePentagonAttack { get; set; }
+    [Export] public bool AnimatePentagonWalk { get; set; }
     [Export] public bool UseEnhancedHexagonMesh { get; set; }
     [Export] public bool UseHexagonSiegeRobotMesh { get; set; }
     [Export] public bool AnimateHexagonAttack { get; set; }

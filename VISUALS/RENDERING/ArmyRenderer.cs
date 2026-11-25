@@ -39,6 +39,8 @@ public partial class ArmyRenderer : Node3D
     private bool animateSquareWalk;
     private bool animateTriangleFire;
     private bool animateTriangleWalk;
+    private bool animatePentagonAttack;
+    private bool animatePentagonWalk;
     private bool animateHexagonAttack;
     private bool animateHexagonWalk;
     private int[] batchStrides;
@@ -84,7 +86,9 @@ public partial class ArmyRenderer : Node3D
         animateHexagonWalk = visuals.UseHexagonSiegeRobotMesh && visuals.AnimateHexagonWalk;
         animateTriangleFire = visuals.UseTriangleArcherMesh && visuals.AnimateTriangleFire;
         animateTriangleWalk = visuals.UseTriangleArcherMesh && visuals.AnimateTriangleWalk;
-        bool anyWalk = animateCircleWalk || animateSquareWalk || animateHexagonWalk || animateTriangleWalk;
+        animatePentagonAttack = visuals.UsePentagonEliteMesh && visuals.AnimatePentagonAttack;
+        animatePentagonWalk = visuals.UsePentagonEliteMesh && visuals.AnimatePentagonWalk;
+        bool anyWalk = animateCircleWalk || animateSquareWalk || animateHexagonWalk || animateTriangleWalk || animatePentagonWalk;
         infantryWalkPosition = anyWalk ? new Vector2[state.Position.Length] : null;
         infantryWalkPose = anyWalk ? new Vector2[state.Position.Length] : null;
         if (state.HitFeedback != null)
@@ -92,6 +96,7 @@ public partial class ArmyRenderer : Node3D
             state.HitFeedback.ExtendCircleSword = animateCircleSword;
             state.HitFeedback.ExtendSquareAttack = animateSquareAttack;
             state.HitFeedback.ExtendTriangleFire = animateTriangleFire;
+            state.HitFeedback.ExtendPentagonAttack = animatePentagonAttack;
             state.HitFeedback.EnableHexagonAttack(animateHexagonAttack);
         }
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
@@ -287,11 +292,13 @@ public partial class ArmyRenderer : Node3D
     private bool WalkEnabled(int type) => (animateCircleWalk && type == RuntimeUnitCatalog.Circle) ||
         (animateSquareWalk && type == RuntimeUnitCatalog.Square) ||
         (animateTriangleWalk && type == RuntimeUnitCatalog.Triangle) ||
+        (animatePentagonWalk && type == RuntimeUnitCatalog.Pentagon) ||
         (animateHexagonWalk && type == RuntimeUnitCatalog.Hexagon);
 
     private bool AttackEnabled(int type) => (animateCircleSword && type == RuntimeUnitCatalog.Circle) ||
         (animateSquareAttack && type == RuntimeUnitCatalog.Square) ||
         (animateTriangleFire && type == RuntimeUnitCatalog.Triangle) ||
+        (animatePentagonAttack && type == RuntimeUnitCatalog.Pentagon) ||
         (animateHexagonAttack && type == RuntimeUnitCatalog.Hexagon);
 
     private bool UpdateInfantryWalk(int id)
@@ -317,7 +324,8 @@ public partial class ArmyRenderer : Node3D
             float distance = Mathf.Sqrt(distanceSquared);
             float strideLength = units.Type[id] == RuntimeUnitCatalog.Hexagon ? 3.0f :
                 units.Type[id] == RuntimeUnitCatalog.Square ? 4.4f :
-                units.Type[id] == RuntimeUnitCatalog.Triangle ? 3.4f : 3.8f;
+                units.Type[id] == RuntimeUnitCatalog.Triangle ? 3.4f :
+                units.Type[id] == RuntimeUnitCatalog.Pentagon ? 4.0f : 3.8f;
             phase += distance / (radius * strideLength);
             phase -= Mathf.Floor(phase);
             targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);

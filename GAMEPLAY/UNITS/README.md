@@ -73,6 +73,14 @@ A light triangular faction shell, pointed helmet, compact power pack, thin mecha
 
 The shared distance-driven gait has a shorter cycle, staggered per-unit phase, 9.5% peak foot lift and 3% peak torso bounce. Rest geometry is baked once, using one masked surface; the existing infantry shader, packed attack phase and optional walking custom data are reused. No extra draw calls, timers or per-unit nodes. Check in-game firing, visible bolt exit, gait and old mesh fallback, plus lit/unlit and FPS.
 
+## Pentagon Elite robot trial
+
+**Use Pentagon Elite Mesh**, **Animate Pentagon Attack**, and **Animate Pentagon Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disable the mesh to restore the original beveled pentagon; the animation toggles apply only to the new robot.
+
+The tier-2 elite assault robot has a layered five-sided faction-painted cuirass, pointed helmet, glowing visor, angular shoulder armor, mechanical boots and a compact energy axe. The weapon arm, haft and head share one shoulder pivot. The attack-feedback phase drives an approximately 85-degree sweeping axe strike in the initial 0.17-second contact-effect window, followed by recovery (0.46 seconds total). The existing cleave crescent, 85-degree damage cone, damage timing, 0.16-second body pulse and all gameplay stats are unchanged. No new effect emitters.
+
+The distance-driven, ID-staggered gait has a restrained 2.2% peak torso bounce and 6.5% peak foot lift, between Square and Hexagon. Reuses the single shared armor surface, existing infantry shader, attack alpha encoding and optional walking data; no new per-unit nodes, timers or draw calls. Owner validation: mesh silhouette, swing/cleave visual alignment, grounded stance, legacy fallback, cracks, lit/unlit, shield shells and FPS.
+
 ## Enhanced Hexagon Siege mesh
 
 **Use Enhanced Hexagon Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) is a separate, default-on toggle from Circle's **Use Enhanced Meshes**. It adds six raised faction-coloured armour wedges, narrow dark radial seams and a recessed central hexagon to the Hexagon Siege Infantry. The details are built into one shared MultiMesh-compatible mesh, including deployment and Entity Editor previews. No combat size, circular clearance, balance or AI parameters change; FX2 cracks and white hit flashes still work. Turn the toggle off and relaunch the battle/editor preview for the original beveled hexagon. The additional triangles warrant a like-for-like high-count FPS comparison.
