@@ -261,7 +261,8 @@ public partial class ArmyRenderer : Node3D
         if (shadowsEnabled) WriteShadow(batch, slot, position);
         int offset = slot * InstanceStride;
         float[] buffer = buffers[batch];
-        var (white, scale) = units.HitFeedback?.Evaluate(id) ?? (false, 1f);
+        var (flash, scale) = units.HitFeedback?.Evaluate(id) ?? (0f, 1f);
+        bool white = flash > 0f;
         byte type = units.Type[id];
         // Visual mesh only; the authoritative position and projectile spawn stay unchanged.
         if (units.RangedRecoil != null && units.Catalog[type].RangedRecoil.Distance > 0f)
@@ -312,7 +313,8 @@ public partial class ArmyRenderer : Node3D
         buffer[offset + 3] = position.X;
         buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
         buffer[offset + 11] = position.Z;
-        Color color = white ? Colors.White : FactionColor(units.Faction[id]);
+        Color color = FactionColor(units.Faction[id]);
+        if (white) color = color.Lerp(Colors.White, flash);
         if (!white && stats.PrismBeam.Enabled)
             color = color.Lerp(new Color(0.70f, 0.94f, 1f), units.PrismCharge(id) / stats.PrismBeam.ChargeSeconds * 0.25f);
         if (cracksEnabled && !white)

@@ -252,7 +252,7 @@ internal partial class DreadnaughtCombat : Node3D
                 obstacles?.BlocksSight(center, position) != true)
             {
                 hull.NextContact[victim] = time + stats.Interval;
-                units.Damage(victim, stats.AgainstUnits(stats.Damage), stats.UnitDamageType);
+                units.Damage(victim, stats.AgainstUnits(stats.Damage), stats.UnitDamageType, melee: true);
             }
 
             if (units.Health[victim] <= 0 || clearance >= radius) continue;

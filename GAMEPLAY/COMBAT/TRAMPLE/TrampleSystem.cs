@@ -212,7 +212,7 @@ public sealed class TrampleSystem
             float resistance = units.Catalog[units.Type[defender]].Trample.Resistance;
             bool penetrates = charge.Momentum > resistance;
             float damage = type.Damage * type.Trample.DamageMultiplier * (penetrates ? 1f : 0.5f) / (1f + resistance);
-            units.Damage(defender, type.AgainstUnits(damage), type.UnitDamageType);
+            units.Damage(defender, type.AgainstUnits(damage), type.UnitDamageType, melee: true);
             if (!penetrates)
             {
                 blocked = true;

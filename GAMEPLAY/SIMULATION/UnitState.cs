@@ -200,7 +200,7 @@ public sealed class UnitState
         return targets.Add(defender);
     }
 
-    public void Damage(int id, float damage, int damageType = 0)
+    public void Damage(int id, float damage, int damageType = 0, bool melee = false)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
         float previous = Health[id];
@@ -211,7 +211,7 @@ public sealed class UnitState
         if (Health[id] == 0) RecordDeath(id);
         else if (Health[id] < previous)
         {
-            HitFeedback?.OnHit(id);
+            HitFeedback?.OnHit(id, melee);
             Dirty[id] = true;
         }
     }

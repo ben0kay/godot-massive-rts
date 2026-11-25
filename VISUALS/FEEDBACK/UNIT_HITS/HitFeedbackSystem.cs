@@ -7,6 +7,7 @@ public sealed class HitFeedbackSystem
 {
     private readonly float[] remaining, riseStart;
     private readonly int[] activeIds;
+    private readonly bool[] meleeFlash;
     private readonly float duration, flashDuration, pulseDuration, riseDuration, fallDuration, peakExpansion;
     private int activeCount;
     private bool hitRegistered;
@@ -22,9 +23,10 @@ public sealed class HitFeedbackSystem
         remaining = new float[capacity];
         riseStart = new float[capacity];
         activeIds = new int[capacity];
+        meleeFlash = new bool[capacity];
     }
 
-    public void OnHit(int id)
+    public void OnHit(int id, bool melee)
     {
         if (duration <= 0f) return;
         bool active = remaining[id] > 0f;
@@ -32,6 +34,7 @@ public sealed class HitFeedbackSystem
         riseStart[id] = active ? Expansion(id, duration - remaining[id]) : 0f;
         if (!active) activeIds[activeCount++] = id;
         remaining[id] = duration;
+        meleeFlash[id] = melee;
         hitRegistered = true;
     }
 
@@ -60,11 +63,12 @@ public sealed class HitFeedbackSystem
         return changed;
     }
 
-    public (bool White, float Scale) Evaluate(int id)
+    public (float Flash, float Scale) Evaluate(int id)
     {
-        if (remaining[id] <= 0f) return (false, 1f);
+        if (remaining[id] <= 0f) return (0f, 1f);
         float age = duration - remaining[id];
-        return (age < flashDuration, 1f + Expansion(id, age));
+        float flash = age < flashDuration ? (meleeFlash[id] ? 0.60f : 1f) : 0f;
+        return (flash, 1f + Expansion(id, age));
     }
 
     private float Expansion(int id, float age)

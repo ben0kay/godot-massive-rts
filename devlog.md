@@ -588,3 +588,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Added terrain-following dirt and grass beneath painted trees, with continuous adjoining cells and irregular feathered forest edges. Godot .NET visual validation pending.
 
 - 2026-11-25 — Enabled right-click bridge removal in Draw Bridge mode, with undo and redo and right-click cancellation during a placement drag.
+
+- 2026-11-25 — Blended melee hit flashes 60% toward white to preserve faction readability. Godot .NET visual validation pending.
