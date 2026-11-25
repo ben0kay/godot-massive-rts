@@ -584,3 +584,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Twin Rocket Launcher enhanced visual pass: layered faction-painted deep fork, gunmetal underframe, stepped rear deck and recessed twin launcher collars. Reuses the unit UV armor pipeline, authored mount poses and existing shared batches; gameplay unchanged. Owner validation pending.
 
 - 2026-11-25 — Rebuilt bridges with terrain-following steel decks, beveled rails and amber markers. Replaced endpoint and width selection with a single rectangle drag. Bridge footprints still save as rectangles. Godot .NET visual validation pending.
+
+- 2026-11-25 — Added terrain-following dirt and grass beneath painted trees, with continuous adjoining cells and irregular feathered forest edges. Godot .NET visual validation pending.

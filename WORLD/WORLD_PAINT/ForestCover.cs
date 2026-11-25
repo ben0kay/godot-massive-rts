@@ -1,4 +1,4 @@
-// Compiles passable forest cells into batched trees and a shared outer boundary.
+// Compiles passable forest cells into batched trees and an organic forest floor.
 using System.Collections.Generic;
 using Godot;
 
@@ -6,18 +6,13 @@ namespace MassiveRts;
 
 internal sealed class ForestCover
 {
-    private static readonly Vector2I[] Neighbors = { Vector2I.Up, Vector2I.Right, Vector2I.Down, Vector2I.Left };
     private const float CrownRadius = 0.56f;
     private readonly record struct Tree(int Index, Vector2 Center, float RadiusSquared);
     private readonly Dictionary<Vector2I, Tree> trees = new();
     private Rect2I visibilityBounds;
     private HashSet<int> faded = new(), nearby = new();
     private readonly MultiMesh trunks, crowns, shadows;
-    private readonly ImmediateMesh outline = new();
-    private readonly StandardMaterial3D outlineMaterial = new()
-    {
-        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color("#668d4d")
-    };
+    private readonly MeshInstance3D groundCover;
     private float timeUntilRefresh;
     private static Color Tint(float opacity) => new(1f, 1f, 1f, opacity);
 
@@ -37,8 +32,17 @@ internal sealed class ForestCover
         crowns = Batch(parent, PineCrown(Material(new Color("#3b683d"), foliage: true)));
         shadows = Batch(parent, GroundShadowMeshes.Pine());
 
-        parent.AddChild(new MeshInstance3D { Mesh = outline,
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        groundCover = new MeshInstance3D
+        {
+            Name = "ForestFloor",
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            MaterialOverride = new ShaderMaterial
+            {
+                RenderPriority = -1,
+                Shader = GD.Load<Shader>("res://WORLD/WORLD_PAINT/ForestFloor.gdshader")
+            }
+        };
+        parent.AddChild(groundCover);
     }
 
     // Keep the native render objects attached for the map's lifetime.
@@ -48,7 +52,7 @@ internal sealed class ForestCover
         faded.Clear();
         nearby.Clear();
         timeUntilRefresh = 0f;
-        outline.ClearSurfaces();
+        groundCover.Mesh = ForestFloor.Build(cells, surface);
         if (cells.Count > trunks.InstanceCount)
         {
             int capacity = System.Math.Max(cells.Count, trunks.InstanceCount * 2);
@@ -60,7 +64,6 @@ internal sealed class ForestCover
             visibilityBounds = default;
             return;
         }
-        outline.SurfaceBegin(Mesh.PrimitiveType.Lines, outlineMaterial);
         float cellSize = WorldPaint.CellSize;
         float Ground(Vector2 point) => surface?.At(point.X, point.Y) ?? 0f;
         Vector3 OnGround(Vector2 point) => new(point.X, Ground(point) + 0.06f, point.Y);
@@ -101,27 +104,8 @@ internal sealed class ForestCover
             trunks.SetInstanceColor(index, Colors.White);
             crowns.SetInstanceColor(index, Colors.White);
 
-            for (int edge = 0; edge < 4; edge++)
-            {
-                if (cells.Contains(cell + Neighbors[edge])) continue;
-                Vector2 a = low + (edge is 1 or 2 ? Vector2.Right * cellSize : Vector2.Zero) +
-                    (edge == 2 ? Vector2.Down * cellSize : Vector2.Zero);
-                Vector2 b = edge switch
-                {
-                    0 => low + Vector2.Right * cellSize,
-                    1 => low + Vector2.One * cellSize,
-                    2 => low + Vector2.Down * cellSize,
-                    _ => low + Vector2.Down * cellSize
-                };
-                outline.SurfaceAddVertex(OnGround(a));
-                Vector3 midpoint = OnGround((a + b) * 0.5f);
-                outline.SurfaceAddVertex(midpoint);
-                outline.SurfaceAddVertex(midpoint);
-                outline.SurfaceAddVertex(OnGround(b));
-            }
         }
         visibilityBounds = new Rect2I(min, max - min + Vector2I.One);
-        outline.SurfaceEnd();
     }
 
     private static Mesh PineCrown(Material material)
