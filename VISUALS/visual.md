@@ -28,7 +28,7 @@ Later, allow painting ground materials over the base terrain, such as dirt or gr
 
 The wall style and closed-loop fill are implemented. In-game validation is pending.
 
-Rename the solid obstacle authoring tool **Industrial Walls**. Open runs look like segmented barriers with beveled caps and restrained amber accents. A fully closed loop, such as four connected sides of a square, fills with a flat roof and reads as one solid structure. The filled area also blocks movement and line of sight so the roof and gameplay agree. Opening a gap restores an open wall run. Use the same resolved geometry in the editor preview and battle.
+Rename the solid obstacle authoring tool **Industrial Walls**. Open runs look like segmented barriers with beveled caps and restrained amber accents. Closed loops stay hollow, and only painted wall cells block movement and line of sight. Rectangle Fill paints solid blocks for flat-topped structures. Use the same resolved geometry in the editor preview and battle.
 
 ## 4. Painted scenery
 

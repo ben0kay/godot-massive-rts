@@ -25,7 +25,7 @@ public partial class CommandSandbox : Node3D
     [Export(PropertyHint.Range, "30,1800,1")] public float OpeningCameraSize { get; set; } = 42f;
     public enum BaseTerrainStyle { Industrial, SteelSlate }
     [Export] public BaseTerrainStyle BaseTerrain { get; set; }
-    private MultiMesh industrialRoofs;
+    private MultiMesh industrialWallBatch;
     private ShaderMaterial industrialWallMaterial;
 
     [Export] public AutoBattlerRules AutoBattlerRules { get; set; }
@@ -410,14 +410,11 @@ public partial class CommandSandbox : Node3D
             }
         }
         walls.AddRange(painted);
-        var fills = IndustrialWallLoops.Fill(walls);
-        walls.AddRange(fills);
-        painted.AddRange(fills);
         if (groundForPlay || updateVisuals) UpdateIndustrialWallViews(authored, painted);
         return walls.ToArray();
     }
 
-    private void UpdateIndustrialWallViews(Node3D authored, List<ObstacleRectangle> fills)
+    private void UpdateIndustrialWallViews(Node3D authored, List<ObstacleRectangle> painted)
     {
         industrialWallMaterial ??= new ShaderMaterial
         {
@@ -426,24 +423,24 @@ public partial class CommandSandbox : Node3D
         foreach (Node child in authored?.GetChildren() ?? new Godot.Collections.Array<Node>())
             if (child is MeshInstance3D mesh && mesh.Mesh is BoxMesh) mesh.MaterialOverride = industrialWallMaterial;
 
-        if (industrialRoofs == null)
+        if (industrialWallBatch == null)
         {
-            if (fills.Count == 0) return;
-            industrialRoofs = new MultiMesh { Mesh = new BoxMesh { Size = Vector3.One }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
-            AddChild(new MultiMeshInstance3D { Multimesh = industrialRoofs, MaterialOverride = industrialWallMaterial },
+            if (painted.Count == 0) return;
+            industrialWallBatch = new MultiMesh { Mesh = new BoxMesh { Size = Vector3.One }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+            AddChild(new MultiMeshInstance3D { Multimesh = industrialWallBatch, MaterialOverride = industrialWallMaterial },
                 false, InternalMode.Back);
         }
-        if (industrialRoofs.InstanceCount < fills.Count) industrialRoofs.InstanceCount = fills.Count;
-        for (int i = 0; i < fills.Count; i++)
+        if (industrialWallBatch.InstanceCount < painted.Count) industrialWallBatch.InstanceCount = painted.Count;
+        for (int i = 0; i < painted.Count; i++)
         {
-            var fill = fills[i];
-            var height = fill.AirborneHeightRange.Value;
-            Vector2 size = fill.Max - fill.Min, center = (fill.Min + fill.Max) * 0.5f;
+            var wall = painted[i];
+            var height = wall.AirborneHeightRange.Value;
+            Vector2 size = wall.Max - wall.Min, center = (wall.Min + wall.Max) * 0.5f;
             var dimensions = new Vector3(size.X, height.Y - height.X, size.Y);
-            industrialRoofs.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(dimensions),
+            industrialWallBatch.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(dimensions),
                 ToLocal(new Vector3(center.X, (height.X + height.Y) * 0.5f, center.Y))));
         }
-        industrialRoofs.VisibleInstanceCount = fills.Count;
+        industrialWallBatch.VisibleInstanceCount = painted.Count;
     }
 
     public override void _Process(double delta)
