@@ -578,3 +578,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Moved faction visual authoring to VISUALS/authoring.md and expanded it with faction-dominant mobile unit rules, separate unit/tower material and damage-feedback contracts, and mass-army performance guidance. Updated live documentation links; documentation only.
 
 - 2026-11-25 — Staggered rectangle placement previews outward from the drag origin and reduced placement bounce speed to 75%. Godot .NET visual validation pending.
+
+- 2026-11-25 — Set battlefield lighting defaults and AutoBattler lighting reset to 350% sun and 40% ambient fill.

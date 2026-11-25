@@ -44,5 +44,5 @@ rendering_device/driver.windows="d3d12"
 
 battlefield_ambient_fill={
 "type": "float",
-"value": 1.0
+"value": 0.4
 }

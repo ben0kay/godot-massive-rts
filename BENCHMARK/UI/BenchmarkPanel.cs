@@ -459,8 +459,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		if (AutoBattlerPlaytest)
 		{
 			var lighting = Section(rendering, "Lighting", true, out _, true);
-			var sun = LabeledSlider(lighting, "Sun strength", 400, 100, 1, "%");
-			var fill = LabeledSlider(lighting, "Ambient fill", 200, 100, 1, "%");
+			var sun = LabeledSlider(lighting, "Sun strength", 400, BattlefieldLighting.DefaultSunPercent, 1, "%");
+			var fill = LabeledSlider(lighting, "Ambient fill", 200, BattlefieldLighting.DefaultFillPercent, 1, "%");
 			var direction = LabeledSlider(lighting, "Sun direction", 360, 0, 1, "°");
 			void ApplyLighting(double _) => PlaytestLightingChanged?.Invoke(
 				(float)sun.Value / 100f, (float)fill.Value / 100f, (float)direction.Value);
@@ -469,8 +469,8 @@ public partial class BenchmarkPanel : CanvasLayer
 			direction.ValueChanged += ApplyLighting;
 			AddButton(lighting, "Reset lighting", () =>
 			{
-				sun.Value = 100;
-				fill.Value = 100;
+				sun.Value = BattlefieldLighting.DefaultSunPercent;
+				fill.Value = BattlefieldLighting.DefaultFillPercent;
 				direction.Value = 0;
 			});
 		}

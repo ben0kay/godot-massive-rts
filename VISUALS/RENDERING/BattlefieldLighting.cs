@@ -5,11 +5,19 @@ namespace MassiveRts;
 
 internal static class BattlefieldLighting
 {
+    internal const int DefaultSunPercent = 350;
+    internal const int DefaultFillPercent = 40;
+    private const string AmbientFillParameter = "battlefield_ambient_fill";
+
+    internal static void SetAmbientFill(float fill) =>
+        RenderingServer.GlobalShaderParameterSet(AmbientFillParameter, fill);
+
     internal static DirectionalLight3D AddSun(Node3D battlefield)
     {
         var sun = new DirectionalLight3D
         {
             Name = "BattlefieldSun",
+            LightEnergy = DefaultSunPercent / 100f,
             Basis = Basis.LookingAt(new Vector3(0.48f, -0.70f, -0.53f), Vector3.Up),
             ShadowEnabled = false
         };

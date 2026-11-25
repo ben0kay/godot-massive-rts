@@ -32,14 +32,13 @@ public partial class BenchmarkArena
         var map = autoBattlerPlaytestMap;
         var sun = BattlefieldLighting.AddSun(map);
         var defaultBasis = sun.Basis;
-        const string ambientFill = "battlefield_ambient_fill";
         panel.PlaytestLightingChanged += (strength, fill, direction) =>
         {
             sun.LightEnergy = strength;
             sun.Basis = defaultBasis.Rotated(Vector3.Up, Mathf.DegToRad(direction));
-            RenderingServer.GlobalShaderParameterSet(ambientFill, fill);
+            BattlefieldLighting.SetAmbientFill(fill);
         };
-        TreeExiting += () => RenderingServer.GlobalShaderParameterSet(ambientFill, 1f);
+        TreeExiting += () => BattlefieldLighting.SetAmbientFill(BattlefieldLighting.DefaultFillPercent / 100f);
         litUnitMaterials = BattlefieldLighting.CreateUnitMaterials(catalog, unitVisuals);
         map.UpdateGroundBounds();
         terrain = map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
