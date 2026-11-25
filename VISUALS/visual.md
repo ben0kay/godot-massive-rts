@@ -1,6 +1,6 @@
 # Battlefield visual plan
 
-Aim for a dark industrial battlefield with bright, readable faction colors, satin highlights on upper bevels, and clear silhouettes at battle zoom. Use Level 009 for before-and-after comparisons with the same army, camera and map layout.
+Aim for a dark industrial battlefield with bright, readable faction colors, satin highlights on upper bevels, and clear silhouettes at battle zoom. Apply the art direction through reusable level settings. Any authored level can serve as a before-and-after comparison with the same army, camera and map layout.
 
 ## 1. Lighting and unit finish
 
@@ -16,14 +16,22 @@ Start with one shared directional light and a restrained top-face and bevel high
 
 For the third mode, enable casting on the unit render batches and use a shadow-receiving ground material. Compare the same running battle and camera at 10,000 and 25,000 total soldiers on the GTX 1080. Record GPU frame time, total frame time, battle zoom and shadow distance. Try a shorter shadow distance to see whether it retains useful shadows at normal play zoom. Check that colors, hit flashes and cracks remain legible in all modes before promoting any mode to a default.
 
-## 2. Ground and scenery
+## 2. Base terrain and future painting
 
-Tune the existing [Steel Slate material](../WORLD/TERRAIN/RENDERING/SteelSlate.tres) toward dark blue-grey industrial plating with broader panel seams and quiet surface wear. Test one section of Level 009 at battle zoom before applying the look widely. Give painted rocks darker, varied faceted silhouettes and forests more varied pine shapes over a muted floor. Keep scenery previews batched and preserve the painted navigation footprints.
+Add a **Base Terrain** choice to new-level creation, defaulting to **Industrial**. Save the choice with the level and share it between the Level Editor, its playtest and the actual battle. Use the existing [Steel Slate material](../WORLD/TERRAIN/RENDERING/SteelSlate.tres) as the starting point for dark blue-grey plating with broad panel seams and quiet surface wear.
 
-## 3. Industrial obstacle walls
+Later, allow painting ground materials over the base terrain, such as dirt or grass over industrial plating. Ground paint is a visual layer. Elevation, water and obstacle tools continue to define the terrain geometry and how units traverse it.
 
-Give existing obstacle walls segmented panels, beveled caps and small amber accents. Match their movement and sight-blocking footprints. Reuse the wall style in editor previews and battle views. Painted natural rocks remain available for natural maps.
+## 3. Industrial walls
+
+Rename the solid obstacle authoring tool **Industrial Walls**. Open runs look like segmented barriers with beveled caps and restrained amber accents. A fully closed loop, such as four connected sides of a square, fills with a flat roof and reads as one solid structure. The filled area also blocks movement and line of sight so the roof and gameplay agree. Opening a gap restores an open wall run. Use the same resolved geometry in the editor preview and battle.
+
+## 4. Painted scenery
+
+- **Water:** Give painted shores an engineered edge with a narrow steel retaining lip and a restrained cyan highlight. Keep bridge openings clear and preserve existing water boundaries.
+- **Rocks:** Replace the light pillars with darker, irregular faceted boulders. Use a few broad silhouettes with small rubble around the base and retain the painted obstacle footprints.
+- **Trees:** Use low-poly pines with tapered, layered crowns, subtle green variation and varied heights. Keep trees batched and readable over a muted forest floor at battle zoom.
 
 ## Later
 
-Revisit projectile trails after the ground, scenery and unit finish are settled. Keep material tuning in `.tres`, shader code in `.gdshader`, and introduce a `.gdshaderinc` only when multiple shaders share the same calculation.
+Revisit projectile trails after the ground, scenery and unit finish are settled. Keep material tuning in `.tres`, shader code in `.gdshader`, and introduce a `.gdshaderinc` when multiple shaders share the same calculation.
