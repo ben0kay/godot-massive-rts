@@ -16,6 +16,7 @@ public sealed class ProjectileCatalog
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private readonly List<bool> launchEffects = new();
+    private readonly List<bool> flightSmoke = new();
 
     private Mesh sharedArrowMesh;
     private readonly float movementScale;
@@ -30,6 +31,9 @@ public sealed class ProjectileCatalog
 
     internal bool HasLaunchEffects => launchEffects.Contains(true);
     internal bool UsesLaunchEffects(int index) => launchEffects[index];
+
+    internal bool HasFlightSmoke => flightSmoke.Contains(true);
+    internal bool UsesFlightSmoke(int index) => flightSmoke[index];
 
     public int Register(ProjectileDefinition definition, float scale = 1f, float splash = -1f, float edge = -1f,
         float arcScale = 1f)
@@ -60,6 +64,7 @@ public sealed class ProjectileCatalog
         scales.Add(scale);
         factionTints.Add(definition.TintByFaction);
         launchEffects.Add(definition.UseLaunchEffects);
+        flightSmoke.Add(definition.UseLaunchEffects && definition.UseFlightSmoke);
         return index;
     }
 }

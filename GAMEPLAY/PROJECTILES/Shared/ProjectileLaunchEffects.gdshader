@@ -23,7 +23,7 @@ void vertex() {
         vec3 offset = t * (INSTANCE_CUSTOM.xyz + quadratic * t);
         vec2 tangent = (mat3(MODELVIEW_MATRIX) * (INSTANCE_CUSTOM.xyz + 2.0 * quadratic * t)).xy;
         vec2 across = vec2(-tangent.y, tangent.x) / max(length(tangent), 0.0001);
-        float width = mix(0.18, 0.045, t);
+        float width = mix(0.26, 0.065, t);
         VERTEX = anchor + mat3(MODELVIEW_MATRIX) * offset + vec3(across * width * (UV.y - 0.5), 0.0);
     }
 }
@@ -45,8 +45,9 @@ void fragment() {
         float center = 1.0 - abs(UV.y * 2.0 - 1.0);
         float fade = (1.0 - UV.x) * (1.0 - UV.x);
         float wisp = mix(0.58, 1.0, sin(UV.x * 53.0) * 0.5 + 0.5);
-        vec3 tinted_edge = mix(vec3(1.0, 0.48, 0.15), faction_color, 0.28);
-        ALBEDO = mix(tinted_edge, vec3(1.0, 0.76, 0.40), fade * center * 0.52);
-        ALPHA = center * center * fade * wisp * 0.88;
+        vec3 team_glow = mix(faction_color, vec3(1.0), 0.16);
+        float head = (1.0 - smoothstep(0.0, 0.22, UV.x)) * center * center;
+        ALBEDO = mix(team_glow, vec3(1.0, 0.64, 0.30), head * 0.65);
+        ALPHA = center * fade * wisp * 0.92;
     }
 }

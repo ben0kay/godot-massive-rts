@@ -560,3 +560,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Railgun visual pass: added a two-tone compact armored chassis, vented rotating carriage and emissive split-rail accelerator using the existing batches and muzzle/recoil transforms. Shared Broadside geometry helpers/material and added WORLD/BUILDINGS/authoring.md; Godot visual validation pending.
 
 - 2026-11-25 — Added batched warm flight glare and lightly faction-tinted additive trails to rockets and artillery shells.
+
+- 2026-11-25 — Strengthened team color on rocket and shell trails. Gave Broadside a dedicated faceted warhead and short batched flight smoke, retaining its flight and impact settings.

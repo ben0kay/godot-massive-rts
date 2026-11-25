@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
+[ext_resource type="ArrayMesh" path="res://GAMEPLAY/PROJECTILES/Types/BroadsideWarhead/BroadsideWarhead.obj" id="2"]
+
+[resource]
+script = ExtResource("1")
+ObstacleFire = 1
+BlocksOnObstacles = true
+VisualMesh = ExtResource("2")
+UseFlightSmoke = true
+UseLaunchEffects = true
+Speed = 38.0
+ArcHeight = 12.0
+ArcHeightPerDistance = 0.32
+ExplodesOnImpact = true
+ExplosionRadius = 2.5
+ExplosionEdgeFraction = 0.35
