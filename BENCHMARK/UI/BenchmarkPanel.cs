@@ -65,6 +65,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	public bool WeightedSeparation => weightedSeparation.ButtonPressed;
 	public bool AlliedYield => alliedYield.ButtonPressed;
 	public SeparationMode Separation { get; private set; } = SeparationMode.Normal;
+	private readonly CheckButton enemySeparation = new() { Text = "Strong enemy separation" };
+	internal bool StrongEnemySeparation => Separation != SeparationMode.Hard && enemySeparation.ButtonPressed;
 	public RuntimeBuildingCatalog Buildings { get; set; }
 	internal bool AutoBattlerPlaytest { get; set; }
 	public event Action<int> DefenseSelected;
@@ -255,7 +257,6 @@ public partial class BenchmarkPanel : CanvasLayer
 		var separation = Section(column, "Live separation", false, out _);
 		separationChoice.AddItem("Off", (int)SeparationMode.Off);
 		separationChoice.AddItem("Normal", (int)SeparationMode.Normal);
-		separationChoice.AddItem("Strong", (int)SeparationMode.Strong);
 		separationChoice.AddItem("Hard", (int)SeparationMode.Hard);
 		separationChoice.Select(1);
 		Field(separation, "Separation mode", separationChoice);
@@ -270,7 +271,9 @@ public partial class BenchmarkPanel : CanvasLayer
 		{
 			Separation = (SeparationMode)separationChoice.GetItemId((int)index);
 			overlapRow.Visible = Separation == SeparationMode.Hard;
+			enemySeparation.Disabled = Separation == SeparationMode.Hard;
 		};
+		separation.AddChild(enemySeparation);
 		separation.AddChild(alliedYield);
 		separation.AddChild(meleeSidestep);
 		separation.AddChild(meleeHold);

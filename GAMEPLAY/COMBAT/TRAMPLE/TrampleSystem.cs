@@ -147,7 +147,7 @@ public sealed class TrampleSystem
         }
     }
 
-    public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null, ShockwaveRenderer feedback = null)
+    public float MoveCharges(UnitState units, SpatialGrid grid, float dt, ObstacleField obstacles = null, ShockwaveRenderer feedback = null, bool stopOnSurvivors = false)
     {
         float padding = units.MaximumTravelSpeed * dt;
         var turnSteps = units.TurnSteps(dt);
@@ -155,7 +155,7 @@ public sealed class TrampleSystem
         {
             int id = ids[slot];
             if (units.Health[id] <= 0f || !states[slot].Active) continue;
-            MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles, feedback);
+            MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles, feedback, stopOnSurvivors);
         }
         bool appliedShove = false;
         for (int i = 0; i < shoveCount; i++)
@@ -176,7 +176,7 @@ public sealed class TrampleSystem
         return appliedShove ? MaxCombinedContactShove : 0f;
     }
 
-    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles, ShockwaveRenderer feedback)
+    private void MoveCharge(UnitState units, SpatialGrid grid, int id, int slot, float dt, float padding, Vector2 turnStep, ObstacleField obstacles, ShockwaveRenderer feedback, bool stopOnSurvivors)
     {
         ref Charge charge = ref states[slot];
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
@@ -200,9 +200,9 @@ public sealed class TrampleSystem
         // Each iteration either records a new contact or ends the charge.
         while (true)
         {
-            int defender = FindContact(units, grid, id, slot, origin, charge.Heading, travel, padding, obstacles, out float contact);
+            int defender = FindContact(units, grid, id, slot, origin, charge.Heading, travel, padding, obstacles, stopOnSurvivors, out float contact);
             if (defender < 0) break;
-            if (charge.Hits == type.Trample.MaxHits)
+            if (charge.Hits == type.Trample.MaxHits || (stopOnSurvivors && AlreadyHit(slot, defender, charge.Hits)))
             {
                 blocked = true;
                 travel = Mathf.Max(0f, contact - 0.01f);
@@ -231,7 +231,15 @@ public sealed class TrampleSystem
             hits[slot * HitSlots + charge.Hits++] = defender;
             charge.Momentum -= resistance;
             if (units.Health[defender] > 0f)
+            {
                 QueueShove(defender, charge.Heading * (MaxCombinedContactShove * momentumFraction / (1f + resistance)));
+                if (stopOnSurvivors)
+                {
+                    blocked = true;
+                    travel = Mathf.Max(0f, contact - 0.01f);
+                    break;
+                }
+            }
         }
 
         if (travel > 0f)
@@ -261,7 +269,7 @@ public sealed class TrampleSystem
     }
 
     private int FindContact(UnitState units, SpatialGrid grid, int id, int slot, Vector2 from,
-        Vector2 heading, float length, float padding, ObstacleField obstacles, out float earliest)
+        Vector2 heading, float length, float padding, ObstacleField obstacles, bool stopOnSurvivors, out float earliest)
     {
         float radius = units.Catalog[units.Type[id]].Footprint;
         Vector2 middle = from + heading * (length * 0.5f);
@@ -272,7 +280,7 @@ public sealed class TrampleSystem
         while (candidates.MoveNext())
         {
             int other = candidates.Current;
-            if (units.Health[other] <= 0f || AlreadyHit(slot, other, states[slot].Hits)) continue;
+            if (units.Health[other] <= 0f || (!stopOnSurvivors && AlreadyHit(slot, other, states[slot].Hits))) continue;
             float combined = radius + units.Catalog[units.Type[other]].Footprint;
             Vector2 relative = Xz(units.Position[other]) - from;
             float outside = relative.LengthSquared() - combined * combined;

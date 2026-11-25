@@ -96,14 +96,14 @@ New deployment cells are 2 world units wide and independent of the combat grid. 
 
 ## Soldier separation
 
-Choose **Off**, **Normal** (default), or **Strong** in the live Separation control. Normal runs one correction pass and Strong runs two, with a fresh separation grid between passes. The solver runs in Movement, Melee and Ranged. Compare identical respawns at 1k and 20k soldiers and inspect contact fronts for stacking or jitter.
+Choose **Off**, **Normal** (default), or **Hard** under Live separation. **Strong enemy separation** can be toggled while running with Normal or Off. With Normal, allies keep regular separation and enemies use tighter contact in the same solver pass. With Off, only enemies separate. In either case, a charging cavalry unit can shove an enemy based on momentum and resistance, and stops if that enemy survives.
 
 
-**Separation** is CPU milliseconds per rendered frame in the current reporting window. Compare **Separation per tick** across runs with different numbers of ticks per frame. **Separation pairs / caps** sums overlap pairs that produced a correction and neighbour queries cut short in the latest simulation tick, including both Strong passes. A pair can be counted again on the second pass. Penetration measures only sampled overlaps before correction. Checks per soldier per pass show how much of the candidate budget is used.
+**Separation** is CPU milliseconds per rendered frame in the current reporting window. Compare **Separation per tick** across runs with different numbers of ticks per frame. **Separation pairs / caps** sums overlap pairs that produced a correction and neighbour queries cut short in the latest simulation tick. Penetration measures only sampled overlaps before correction. Checks per soldier per pass show how much of the candidate budget is used.
 
 Compare the instrumentation-only revision and the dense solver with VSync disabled, fixed seed/layout/zoom, and 20,000 soldiers. Test A, B Off/Normal, and C Off/Normal. Compare equivalent battle stages and living counts across three runs. Record FPS, worst simulation tick, separation per tick, render sync, skipped ticks and viewport GPU milliseconds when reported. Upload timings cover the army upload loop, and write counts count staged writes rather than unique instances. Tunables are in the benchmark resource under Separation.
 
-**Allied archer yielding** is a live comparison toggle, enabled by default. It applies only alongside Normal or Strong. SEP2's skip, push, and exit counts report relaxed overlaps accepted, yield corrections applied, and soft-exit corrections capped in the latest tick. Tunables are under **Allied crowd yielding** on the benchmark resource.
+**Allied archer yielding** is a live comparison toggle, enabled by default. It applies only alongside Normal. SEP2's skip, push, and exit counts report relaxed overlaps accepted, yield corrections applied, and soft-exit corrections capped in the latest tick. Tunables are under **Allied crowd yielding** on the benchmark resource.
 
 ## Measurements
 
@@ -138,7 +138,7 @@ For a reproducible obstacle comparison, leave the layout, seed, and soldier coun
 
 ## Live melee comparisons
 
-- **Melee sidestep** checks for room on either side when a pursuing soldier repeatedly loses forward progress. A soldier waits briefly if both sides are crowded. Requires Normal or Strong separation.
+- **Melee sidestep** checks for room on either side when a pursuing soldier repeatedly loses forward progress. A soldier waits briefly if both sides are crowded. Requires separation.
 - **Hold melee contact** gives engaged soldiers a small release margin so they can hold through tiny changes in distance. Separation can still move them.
 - **Footprint-weighted separation** switches ordinary overlap correction between footprint weighting and equal shares. The Allied archer yielding toggle remains separate.
 

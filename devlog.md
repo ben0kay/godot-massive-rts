@@ -616,3 +616,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Restored the Circle gait update omitted during the facing refactor.
 
 - 2026-11-25 — Added a mipmapped forest-floor detail texture, continuous industrial wall tops, occasional loose stones in rock patches and batched amber wall-lamp ground spill. Godot .NET visual validation pending.
+
+- 2026-11-25 — Replaced Strong with a live enemy separation toggle using the same pair scan. Allied contacts keep Normal separation and cavalry stops at surviving enemies after any resistance-based shove while the toggle is on. Godot .NET validation pending.

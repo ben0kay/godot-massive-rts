@@ -4,7 +4,7 @@ using Godot;
 
 namespace MassiveRts;
 
-public enum SeparationMode { Off, Normal, Strong, Hard }
+public enum SeparationMode { Off, Normal, Hard = 3 }
 
 public readonly record struct AlliedYieldSettings(float ClearanceFraction, float PairCap, float MeleeShare, float ExitCap);
 
@@ -28,7 +28,8 @@ public sealed class SeparationSystem
     private readonly float[] slotX, slotZ, slotRadius, slotPushX, slotPushZ;
 
     private int[] cellStart = Array.Empty<int>();
-    private bool weighted;
+    private bool weighted, enemyContact, regularContact;
+    private byte[] factions;
     private float[] footprintByType = Array.Empty<float>();
     private int gridWidth, gridCells;
     private long candidateTotal;
@@ -59,11 +60,14 @@ public sealed class SeparationSystem
     }
 
     // Each pass gets a share of the tick-wide cap. Their combined displacement stays within the cap.
-    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true)
+    public void Step(UnitState units, int passes, float gap, int neighbourBudget, float tickPushCap, int tick, byte[] voluntaryMovement = null, AlliedYieldSettings settings = default, TrampleSystem trample = null, ObstacleField obstacles = null, bool weightedSeparation = true, bool strongEnemyContact = false, bool regularSeparation = true)
     {
         MovedSoldiers = false;
         OverlapPairs = BudgetHits = YieldSkipped = YieldPushed = ExitCapped = 0;
-        yieldEnabled = voluntaryMovement != null;
+        enemyContact = strongEnemyContact;
+        regularContact = regularSeparation;
+        factions = units.Faction;
+        yieldEnabled = regularContact && voluntaryMovement != null;
         weighted = weightedSeparation;
         this.trample = trample;
         MaxPenetration = CandidatesPerSoldier = 0f;
@@ -80,7 +84,7 @@ public sealed class SeparationSystem
         }
         float cellWidth = Mathf.Max(0.1f, units.MaxFootprint * 2f + gap);
         float passCap = tickPushCap / passes;
-        float gapLimit = gap - Slop;
+        float gapLimit = enemyContact ? gap : gap - Slop;
         int aliveTotal = 0;
 
         for (int pass = 0; pass < passes; pass++)
@@ -261,7 +265,16 @@ public sealed class SeparationSystem
 
     private void Resolve(int i, int j, float dx, float dz, float d2, float limit)
     {
-        if (trample?.IgnoreSeparation(slotId[i], slotId[j]) == true) return;
+        bool strong = enemyContact && factions[slotId[i]] != factions[slotId[j]];
+        if (!strong)
+        {
+            if (!regularContact || trample?.IgnoreSeparation(slotId[i], slotId[j]) == true) return;
+            if (enemyContact)
+            {
+                limit -= Slop;
+                if (limit <= 0f || d2 >= limit * limit) return;
+            }
+        }
         if (yieldEnabled)
         {
             byte a = slotFlags[i], b = slotFlags[j];
@@ -289,10 +302,11 @@ public sealed class SeparationSystem
             nz = d.Y;
         }
         float penetration = limit - distance;
+        float correction = strong ? penetration + MathF.Min(penetration * 0.35f, Slop) : penetration;
         float radiusA = slotRadius[i], radiusB = slotRadius[j];
         // The larger body takes a smaller share of the same overlap correction.
-        float pushA = penetration * (!weighted || radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
-        float pushB = penetration - pushA;
+        float pushA = correction * (!weighted || radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
+        float pushB = correction - pushA;
         slotPushX[i] += nx * pushA; slotPushZ[i] += nz * pushA; slotContacts[i]++;
         slotPushX[j] -= nx * pushB; slotPushZ[j] -= nz * pushB; slotContacts[j]++;
 
@@ -319,6 +333,7 @@ public sealed class SeparationSystem
             ? new Vector2(dx / distance, dz / distance)
             : CoincidentDirection(slotId[i], slotId[j]);
         float penetration = limit - distance;
+        float correction = strong ? penetration + MathF.Min(penetration * 0.35f, Slop) : penetration;
         float pairCap = yielding ? yieldSettings.PairCap : yieldSettings.ExitCap;
         float share = yielding ? (firstIsMelee ? yieldSettings.MeleeShare : 1f - yieldSettings.MeleeShare) : 0.5f;
         Vector2 correction = direction * Mathf.Min(penetration, pairCap);
