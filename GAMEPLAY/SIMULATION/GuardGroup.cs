@@ -11,11 +11,12 @@ public sealed class GuardGroup
     public int End { get; }
     private readonly Vector3[] posts;
     private readonly float radius, radiusSquared;
-    private readonly bool returnToPost, counterattack;
+    private readonly bool returnToPost, counterattack, hardGuard;
     private int lastContact = -1;
 
-    public GuardGroup(int start, int end, SoldierPlacement[] placements, float radius, GuardOrder order)
+    public GuardGroup(int start, int end, SoldierPlacement[] placements, float radius, GuardOrder order, bool hardGuard = false)
     {
+        this.hardGuard = hardGuard;
         Start = start;
         End = end;
         this.radius = radius;
@@ -43,7 +44,7 @@ public sealed class GuardGroup
                 units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
                     counterattack && !type.PrismBeam.Enabled ? int.MaxValue : config.QueryCandidateLimit, tick,
                     type.PrismBeam.Enabled ? obstacles : null, minimumRange: type.PrismBeam.Enabled ? type.MinimumFireRange : 0f,
-                    guardPost: post, guardRadius: type.Ranged ? engagementRadius * 0.5f : engagementRadius);
+                    guardPost: post, guardRadius: type.Ranged && !hardGuard ? engagementRadius * 0.5f : engagementRadius);
             }
             if (units.Target[id] >= 0) lastContact = tick;
         }
@@ -79,6 +80,8 @@ public sealed class GuardGroup
                 units.Target[id] = -1;
                 if (!returnToPost) continue;
             }
+            if (hardGuard && type.Ranged && engaging && anchor.DistanceSquaredTo(from) <= 0.04f) continue;
+            if (hardGuard && type.Ranged) engaging = false;
             Vector2 destination = engaging ? ObstacleField.Xz(units.Position[target]) : anchor;
             float stop = 0f;
             if (engaging)

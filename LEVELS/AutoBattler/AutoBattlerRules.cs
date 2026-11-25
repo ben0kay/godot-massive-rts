@@ -57,7 +57,7 @@ public partial class AutoBattlerRules : Resource
             var settings = RedOpeningOrders[i++];
             if (settings.Z < 1 || settings.Z > RedOpeningOrders.Length - i || !float.IsFinite(settings.Z)) break;
             var order = new DeploymentOrderOverlay.Order
-                { Start = start, End = end, Bend = bend, Hold = settings.X, Bent = settings.Y != 0 };
+                { Start = start, End = end, Bend = bend, Hold = settings.X, Bent = ((int)settings.Y & 1) != 0, Mode = (DeploymentOrderOverlay.Behavior)((int)settings.Y >> 1) };
             for (int n = 0; n < (int)settings.Z; n++)
                 orders[RedOrderKey(RedOpeningOrders[i++])] = order;
         }
@@ -79,7 +79,7 @@ public partial class AutoBattlerRules : Resource
             data.Add(order.Start);
             data.Add(order.End);
             data.Add(order.Bend);
-            data.Add(new Vector3(order.Hold, order.Bent ? 1 : 0, members.Count));
+            data.Add(new Vector3(order.Hold, ((int)order.Mode << 1) | (order.Bent ? 1 : 0), members.Count));
             data.AddRange(members);
         }
         return data.ToArray();

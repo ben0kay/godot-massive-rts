@@ -77,7 +77,7 @@ public partial class LevelEditor
         {
             AuthoredSoldiers = AuthoredRedSoldiers().ToArray(), EditorCamera = camera, EditorGround = WorldPoint,
             EditorSurface = point => new Vector3(point.X, Surface(point), point.Z),
-            ZIndex = 10, OrdersChanged = SaveOrders
+            OffenseEditor = mode.CampaignId == "Offense", ZIndex = 10, OrdersChanged = SaveOrders
         };
         redOrderOverlay = overlay;
         interfaceRoot.AddChild(overlay);

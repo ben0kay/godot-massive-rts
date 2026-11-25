@@ -563,14 +563,22 @@ public partial class BenchmarkArena : Node3D
         }
         var openingOverlay = autoBattlerPlaytestMap != null && ReferenceEquals(layout, painter.Layout) ? painter.Orders : null;
         var redOrders = autoBattlerPlaytestMap?.AutoBattlerRules?.ReadRedOrders();
-        DeploymentOrderOverlay.Order OrderFor(SoldierPlacement placement) =>
-            placement.Faction == Factions.Red
-                ? redOrders?.GetValueOrDefault(AutoBattlerRules.RedOrderKey(placement.Position()))
-                : openingOverlay?.For(placement);
+        DeploymentOrderOverlay.Order RedOrder(SoldierPlacement placement) =>
+            redOrders?.GetValueOrDefault(AutoBattlerRules.RedOrderKey(placement.Position()));
+        DeploymentOrderOverlay.Order OrderFor(SoldierPlacement placement)
+        {
+            var order = placement.Faction == Factions.Red ? RedOrder(placement) : openingOverlay?.For(placement);
+            return order?.Mode == DeploymentOrderOverlay.Behavior.OpeningOrder ? order : null;
+        }
+        bool HardGuard(SoldierPlacement placement) => IsOffense && placement.Faction == Factions.Red &&
+            RedOrder(placement)?.Mode == DeploymentOrderOverlay.Behavior.HardGuard;
+        bool AutoAttack(SoldierPlacement placement) =>
+            orders[placement.Faction] == GuardOrder.AutoAttack || OrderFor(placement) != null ||
+            (IsOffense && placement.Faction == Factions.Red && RedOrder(placement)?.Mode == DeploymentOrderOverlay.Behavior.AutoAttack);
         var snapshot = new SoldierPlacement[placements.Count];
         int attackerCount = 0;
         foreach (SoldierPlacement placement in placements)
-            if (orders[placement.Faction] == GuardOrder.AutoAttack || OrderFor(placement) != null)
+            if (AutoAttack(placement))
                 snapshot[attackerCount++] = placement;
 
         Clear();
@@ -582,7 +590,7 @@ public partial class BenchmarkArena : Node3D
         autoAttackCount = attackerCount;
         if (attackerCount < snapshot.Length)
         {
-            guards = new GuardGroup[Factions.Count];
+            guards = new GuardGroup[Factions.Count + (IsOffense ? 1 : 0)];
             int next = attackerCount;
             for (int faction = 0; faction < Factions.Count; faction++)
             {
@@ -590,9 +598,17 @@ public partial class BenchmarkArena : Node3D
                 if (order == GuardOrder.AutoAttack) continue;
                 int start = next;
                 foreach (SoldierPlacement placement in placements)
-                    if (placement.Faction == faction && OrderFor(placement) == null) snapshot[next++] = placement;
+                    if (placement.Faction == faction && !AutoAttack(placement) && !HardGuard(placement)) snapshot[next++] = placement;
                 if (start < next)
                     guards[faction] = new GuardGroup(start, next, snapshot, IsOffense && faction == Factions.Red ? 12f : settings.GuardRadius, order);
+            }
+            if (IsOffense)
+            {
+                int start = next;
+                foreach (var placement in placements)
+                    if (HardGuard(placement)) snapshot[next++] = placement;
+                if (start < next)
+                    guards[Factions.Count] = new GuardGroup(start, next, snapshot, 6f, GuardOrder.Return, hardGuard: true);
             }
         }
         mode = ranged ? BenchmarkMode.Ranged : BenchmarkMode.Melee;

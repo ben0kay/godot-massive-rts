@@ -167,7 +167,8 @@ public partial class LevelEditor
                 Heading(context, "Drag to place a Disruptor Grid line. Right-drag to erase.", 15);
                 break;
             case Tool.RedOrders:
-                Heading(context, "Drag a box around Red units, then assign Move or Wait.", 15);
+                Heading(context, mode.CampaignId == "Offense" ? "Box-select Red units and assign Guard, Hard Guard, or Auto Attack." :
+                    "Drag a box around Red units, then assign Move or Wait.", 15);
                 break;
             case Tool.Select:
             case Tool.Move:

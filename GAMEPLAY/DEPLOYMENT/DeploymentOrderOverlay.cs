@@ -12,6 +12,8 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     internal System.Func<Vector3, Vector3> EditorSurface { get; init; }
     internal delegate bool GroundPicker(Vector2 screen, out Vector3 point);
     internal GroundPicker EditorGround { get; init; }
+    internal bool OffenseEditor { get; init; }
+    internal enum Behavior { OpeningOrder, Guard, HardGuard, AutoAttack }
     internal System.Action OrdersChanged { get; init; }
     private IReadOnlyList<SoldierPlacement> Soldiers => Painter?.Layout.Placements ?? AuthoredSoldiers;
     private byte Faction => Painter == null ? Factions.Red : Factions.Blue;
@@ -25,6 +27,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     {
         internal Vector3 Start, End, Bend;
         internal float Hold;
+        internal Behavior Mode;
         internal bool Bent;
         internal Vector3 Point(float t) => Bent
             ? Start.Lerp(Bend, t).Lerp(Bend.Lerp(End, t), t)
@@ -78,6 +81,24 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         orderPopup.AddChild(actions);
         move = UIButtonFactory.Create("Order move", () => placingRoute = !placingRoute, UIButtonStyle.Compact);
         actions.AddChild(move);
+        if (OffenseEditor)
+        {
+            AddBehavior("Guard", Behavior.Guard);
+            AddBehavior("Hard Guard", Behavior.HardGuard);
+            AddBehavior("Auto Attack", Behavior.AutoAttack);
+        }
+
+        void AddBehavior(string label, Behavior behavior)
+        {
+            actions.AddChild(UIButtonFactory.Create(label, () =>
+            {
+                placingRoute = false;
+                var order = new Order { Mode = behavior };
+                foreach (var soldier in selected) orders[soldier] = order;
+                OrdersChanged?.Invoke();
+                QueueRedraw();
+            }, UIButtonStyle.Compact));
+        }
         var seconds = new SpinBox { MinValue = 1, MaxValue = 299, Value = 5, Suffix = "s" };
         actions.AddChild(seconds);
         actions.AddChild(UIButtonFactory.Create("Wait", () =>
@@ -169,7 +190,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             foreach (var soldier in selected)
             {
                 var order = For(soldier);
-                if (order == null || order.Hold > 0f || !drawn.Add(order)) continue;
+                if (order == null || order.Mode != Behavior.OpeningOrder || order.Hold > 0f || !drawn.Add(order)) continue;
                 for (int i = 0; i < 16; i++)
                 {
                     Vector2 a = Screen(order.Point(i / 16f)), b = Screen(order.Point((i + 1) / 16f));
@@ -249,7 +270,9 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             if (Selecting && selected.Contains(soldier))
                 DrawArc(Screen(soldier.Position()), 6f, 0f, Mathf.Tau, 16, Factions.Color(Faction).Lightened(0.4f), 1.5f, true);
             var order = For(soldier);
-            if (order == null || !drawn.Add(order)) continue;
+            if (OffenseEditor && !EditorCamera.IsPositionBehind(soldier.Position()))
+                DrawBehavior(Screen(soldier.Position()), order?.Mode ?? Behavior.Guard);
+            if (order == null || order.Mode != Behavior.OpeningOrder || !drawn.Add(order)) continue;
             if (order.Hold > 0f)
                 DrawString(ThemeDB.FallbackFont, Screen(soldier.Position()) + new Vector2(8f, -8f), $"Hold {order.Hold:0}s");
             else
@@ -272,5 +295,20 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
                 DrawCircle(Screen(order.End), 3.5f, Colors.White);
             }
         }
+    }
+    private void DrawBehavior(Vector2 center, Behavior behavior)
+    {
+        if (behavior is Behavior.AutoAttack or Behavior.OpeningOrder)
+        {
+            DrawLine(center + new Vector2(-2, 3), center + new Vector2(3, -3), Colors.White, 1.4f, true);
+            DrawLine(center + new Vector2(-3, 0), center + new Vector2(0, 3), Colors.White, 1.25f, true);
+            return;
+        }
+
+        Vector2[] shield = { center + new Vector2(-3, -3), center + new Vector2(3, -3),
+            center + new Vector2(3, 0), center + new Vector2(0, 4), center + new Vector2(-3, 0) };
+        DrawColoredPolygon(shield, behavior == Behavior.HardGuard ? Colors.White : new Color(1f, 1f, 1f, 0.82f));
+        if (behavior == Behavior.HardGuard)
+            DrawLine(center + new Vector2(-1.5f, -0.5f), center + new Vector2(1.5f, -0.5f), Colors.Black, 1f, true);
     }
 }
