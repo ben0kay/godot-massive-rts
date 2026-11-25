@@ -9,6 +9,8 @@ internal sealed class OpeningOrders
     private sealed class Progress
     {
         internal Vector3[] Route;
+        internal Vector3 Offset;
+        internal float CruiseSpeed;
         internal int Waypoint;
         internal float HoldUntil;
     }
@@ -18,9 +20,17 @@ internal sealed class OpeningOrders
     private float elapsed;
     private float halfWidth;
 
-    internal static OpeningOrders Create(SoldierPlacement[] placements, int count, DeploymentOrderOverlay overlay, float half)
+    internal static OpeningOrders Create(SoldierPlacement[] placements, int count, DeploymentOrderOverlay overlay, float half, RuntimeUnitCatalog catalog)
     {
         var result = new OpeningOrders { halfWidth = half };
+        var speeds = new Dictionary<DeploymentOrderOverlay.Order, float>();
+        for (int id = 0; id < count; id++)
+        {
+            var order = overlay.For(placements[id]);
+            if (order == null || order.Hold > 0f) continue;
+            float speed = catalog[placements[id].Type].Speed;
+            speeds[order] = Mathf.Min(speeds.GetValueOrDefault(order, speed), speed);
+        }
         var routes = new Dictionary<DeploymentOrderOverlay.Order, Vector3[]>();
         for (int id = 0; id < count; id++)
         {
@@ -41,7 +51,7 @@ internal sealed class OpeningOrders
                 }
                 routes.Add(order, route);
             }
-            result.active.Add(id, new Progress { Route = route });
+            result.active.Add(id, new Progress { Route = route, Offset = placements[id].Position() - order.Start, CruiseSpeed = speeds[order] });
         }
         return result.active.Count == 0 ? null : result;
     }
@@ -50,10 +60,13 @@ internal sealed class OpeningOrders
     internal bool Holding(int id) => active[id].Route == null;
     internal Vector3 Goal(int id, float footprint)
     {
-        Vector3 point = active[id].Route[active[id].Waypoint];
+        var progress = active[id];
+        Vector3 point = progress.Route[progress.Waypoint] + progress.Offset;
         float bound = Mathf.Max(0f, halfWidth - footprint);
         return new Vector3(Mathf.Clamp(point.X, -bound, bound), 0f, Mathf.Clamp(point.Z, -bound, bound));
     }
+
+    internal float CruiseSpeed(int id) => active[id].CruiseSpeed;
 
     internal void Arrive(int id)
     {

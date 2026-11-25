@@ -137,6 +137,7 @@ public static class MovementSystem
             }
             float remaining = distance - stop;
             float topSpeed = units.TravelSpeed(i, type);
+            if (followRoute) topSpeed = Mathf.Min(topSpeed, opening.CruiseSpeed(i));
             float advanceSpeed = topSpeed;
             float speed = advanceSpeed;
             float rampRate = type.Ranged ? rangedRampRate : meleeRampRate;

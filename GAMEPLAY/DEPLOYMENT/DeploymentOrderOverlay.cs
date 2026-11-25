@@ -23,27 +23,69 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
             : Start.Lerp(End, t);
     }
 
+    private PanelContainer orderPopup;
+    private Button move;
+    private bool placingRoute;
+
     internal void AddControls(VBoxContainer parent)
     {
         var row = new HBoxContainer();
         parent.AddChild(row);
-        var select = new CheckButton { Text = "Select troops" };
-        row.AddChild(select);
-        select.Toggled += on => { Selecting = on; anchor = null; editing = null; Painter.CancelDrag(); QueueRedraw(); };
-        parent.AddChild(new Label { Text = "Box-select · Right-click to route · Drag route to bend" });
-        var hold = new HBoxContainer();
-        parent.AddChild(hold);
-        var seconds = new SpinBox { MinValue = 1, MaxValue = 299, Value = 5, Suffix = "s" };
-        hold.AddChild(seconds);
-        hold.AddChild(UIButtonFactory.Create("Hold", () =>
+        var tools = new ButtonGroup();
+        AddTool("Brush", 0);
+        AddTool("Rectangle", 1);
+        AddTool("Select", 2);
+
+        void AddTool(string label, int mode)
         {
+            var button = UIButtonFactory.Create(label, () =>
+            {
+                Selecting = mode == 2;
+                placingRoute = false;
+                anchor = null;
+                editing = null;
+                if (Selecting) Painter.CancelDrag();
+                else Painter.SetSoldierPaintType(mode);
+                QueueRedraw();
+            }, UIButtonStyle.Compact);
+            button.ToggleMode = true;
+            button.ButtonGroup = tools;
+            button.SetPressedNoSignal(mode == 0);
+            row.AddChild(button);
+        }
+
+        orderPopup = new PanelContainer { Visible = false };
+        orderPopup.AddThemeStyleboxOverride("panel", UIButtonFactory.Box(UIMasterConfig.Current.Panel,
+            UIMasterConfig.Current.Accent, 8));
+        var layer = new CanvasLayer { Layer = 4 };
+        AddChild(layer);
+        layer.AddChild(orderPopup);
+        var actions = new HBoxContainer();
+        orderPopup.AddChild(actions);
+        move = UIButtonFactory.Create("Order move", () => placingRoute = !placingRoute, UIButtonStyle.Compact);
+        actions.AddChild(move);
+        var seconds = new SpinBox { MinValue = 1, MaxValue = 299, Value = 5, Suffix = "s" };
+        actions.AddChild(seconds);
+        actions.AddChild(UIButtonFactory.Create("Wait", () =>
+        {
+            placingRoute = false;
             var order = new Order { Hold = (float)seconds.Value };
             foreach (var soldier in selected) orders[soldier] = order;
         }, UIButtonStyle.Compact));
-        hold.AddChild(UIButtonFactory.Create("Clear orders", () =>
+        actions.AddChild(UIButtonFactory.Create("Clear", () =>
         {
+            placingRoute = false;
             foreach (var soldier in selected) orders.Remove(soldier);
         }, UIButtonStyle.Compact));
+    }
+
+    private void PlaceRoute(Vector3 end)
+    {
+        Vector3 center = Vector3.Zero;
+        foreach (var soldier in selected) center += soldier.Position();
+        var order = new Order { Start = center / selected.Count, End = end };
+        foreach (var soldier in selected) orders[soldier] = order;
+        placingRoute = false;
     }
 
     public override void _Ready() => Painter.Changed += Prune;
@@ -63,7 +105,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     private bool StillPlaced(SoldierPlacement soldier) =>
         Painter.Layout.TryGet(new Vector2I(soldier.X, soldier.Z), out var current) && current == soldier;
 
-    internal void Reset() { selected.Clear(); orders.Clear(); anchor = null; editing = null; }
+    internal void Reset() { placingRoute = false; selected.Clear(); orders.Clear(); anchor = null; editing = null; }
     internal Order For(SoldierPlacement soldier) => orders.GetValueOrDefault(soldier);
 
     internal bool Handle(InputEvent input)
@@ -81,16 +123,16 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         if (input is not InputEventMouseButton mouse) return false;
         if (mouse.ButtonIndex == MouseButton.Right)
         {
-            if (mouse.Pressed && selected.Count > 0 && Painter.TryGround(mouse.Position, out Vector3 end))
-            {
-                Vector3 center = Vector3.Zero;
-                foreach (var soldier in selected) center += soldier.Position();
-                var order = new Order { Start = center / selected.Count, End = end };
-                foreach (var soldier in selected) orders[soldier] = order;
-            }
+            if (mouse.Pressed && placingRoute && selected.Count > 0 && Painter.TryGround(mouse.Position, out Vector3 end))
+                PlaceRoute(end);
             return true;
         }
         if (mouse.ButtonIndex != MouseButton.Left) return false;
+        if (mouse.Pressed && placingRoute && selected.Count > 0)
+        {
+            if (Painter.TryGround(mouse.Position, out Vector3 end)) PlaceRoute(end);
+            return true;
+        }
         if (mouse.Pressed)
         {
             drawn.Clear();
@@ -128,9 +170,30 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     public override void _Process(double delta)
     {
         Visible = Painter.Visible;
+        UpdatePopup();
         if (!Visible || (!Selecting && orders.Count == 0)) return;
         if (!Input.IsMouseButtonPressed(MouseButton.Left)) { anchor = null; editing = null; }
         QueueRedraw();
+    }
+
+    private void UpdatePopup()
+    {
+        if (orderPopup == null) return;
+        orderPopup.Visible = Visible && Selecting && selected.Count > 0 && anchor == null && editing == null;
+        if (!orderPopup.Visible) return;
+        move.Text = placingRoute ? "Click destination" : "Order move";
+        Vector2 bounds = GetViewportRect().Size;
+        float bottom = float.NegativeInfinity, left = float.PositiveInfinity, right = float.NegativeInfinity;
+        foreach (var soldier in selected)
+        {
+            Vector2 point = Screen(soldier.Position());
+            left = Mathf.Min(left, point.X);
+            right = Mathf.Max(right, point.X);
+            bottom = Mathf.Max(bottom, point.Y);
+        }
+        orderPopup.Position = new Vector2(
+            Mathf.Clamp((left + right - orderPopup.Size.X) * 0.5f, 8f, Mathf.Max(8f, bounds.X - orderPopup.Size.X - 8f)),
+            Mathf.Clamp(bottom + 20f, 8f, Mathf.Max(8f, bounds.Y - orderPopup.Size.Y - 175f)));
     }
 
     public override void _Draw()

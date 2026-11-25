@@ -10,7 +10,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     private readonly VBoxContainer body = new();
     private readonly VBoxContainer deployment = new();
     private Control deploymentBar;
-    internal VBoxContainer DeploymentOrderControls => deployment;
+    internal VBoxContainer DeploymentOrderControls { get; private set; }
     private readonly Label status = MenuLayout.Label("", muted: true);
     private readonly Label strength = MenuLayout.Label("");
     private readonly Label arrival = MenuLayout.Label("", muted: true);
@@ -20,7 +20,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     private readonly Dictionary<byte, Label> roster = new();
 
     public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
-        Action<byte> select, Action<int> brush, Action<bool> fill, Action clear, Action start,
+        Action<byte> select, Action<int> brush, Action clear, Action start,
         Action reset, Action retreat, Action leave, Func<byte, int> maxReserve,
         Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged)
     {
@@ -34,7 +34,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         body.AddChild(MenuLayout.Label(title));
         body.AddChild(deployment);
         deployment.AddChild(strength);
-        var help = MenuLayout.Label("Left-click to paint. Right-click to erase.", muted: true);
+        var help = MenuLayout.Label("Paint or select troops using the toolbar.", muted: true);
         deployment.AddChild(help);
 
         if (choices.Length == 0)
@@ -49,6 +49,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             palette.BuildShell(154).AddChild(columns);
             var brushControls = new VBoxContainer { CustomMinimumSize = new Vector2(240, 0) };
             columns.AddChild(brushControls);
+            DeploymentOrderControls = brushControls;
             var cardColumn = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             columns.AddChild(cardColumn);
             cardColumn.AddChild(MenuLayout.Label("UNIT PLACEMENT"));
@@ -60,7 +61,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
                 FollowFocus = true
             };
             cardColumn.AddChild(list);
-            var rows = new GridContainer { Columns = Math.Min(4, choices.Length), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var rows = new GridContainer { Columns = Math.Min(6, choices.Length), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             list.AddChild(rows);
             var group = new ButtonGroup();
             foreach (var choice in choices)
@@ -119,11 +120,6 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
                 if (size == 1) button.SetPressedNoSignal(true);
                 brushRow.AddChild(button);
             }
-            var fillButton = new Button { Text = "Rectangle Fill", ToggleMode = true };
-            UIButtonFactory.Apply(fillButton, UIButtonStyle.Compact);
-            fillButton.Toggled += enabled => fill(enabled);
-            fillButton.TooltipText = "Drag to paint or erase a rectangle.";
-            brushControls.AddChild(fillButton);
             var densityRow = new HBoxContainer();
             brushControls.AddChild(densityRow);
             densityRow.AddChild(MenuLayout.Label("Density"));

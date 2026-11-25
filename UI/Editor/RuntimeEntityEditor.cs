@@ -29,10 +29,10 @@ public partial class RuntimeEntityEditor : Control
     private SubViewportContainer testScreen;
     private SubViewport testViewport;
     private BenchmarkArena arena;
-    private MeshInstance3D model, detectionRing;
+    private MeshInstance3D model, detectionRing, attackRing;
     private Label detectionLabel;
     private bool showDetection;
-    private float detectionRadius;
+    private float detectionRadius, attackRadius;
     private Camera3D previewCamera;
     private Label status;
     private Draft current;
@@ -83,7 +83,7 @@ public partial class RuntimeEntityEditor : Control
         var (preview, world) = CreateViewport();
         previewPanel.AddChild(preview);
         previewPanel.AddChild(MenuLayout.Label("Drag to rotate · Scroll to zoom", muted: true));
-        var detection = new CheckButton { Text = "Local detection radius" };
+        var detection = new CheckButton { Text = "Radii" };
         previewPanel.AddChild(detection);
         detectionLabel = MenuLayout.Label("", muted: true);
         previewPanel.AddChild(detectionLabel);
@@ -97,6 +97,9 @@ public partial class RuntimeEntityEditor : Control
         detectionRing = new MeshInstance3D { Visible = false, Position = Vector3.Up * 0.025f,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         world.AddChild(detectionRing);
+        attackRing = new MeshInstance3D { Visible = false, Position = Vector3.Up * 0.035f,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        world.AddChild(attackRing);
         var scroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         columns.AddChild(scroll);
@@ -251,8 +254,8 @@ public partial class RuntimeEntityEditor : Control
 
     private void RefreshDetection()
     {
-        detectionRadius = 0f;
-        detectionRing.Visible = false;
+        detectionRadius = attackRadius = 0f;
+        detectionRing.Visible = attackRing.Visible = false;
         detectionLabel.Text = "";
         if (showDetection && current != null)
         {
@@ -265,27 +268,12 @@ public partial class RuntimeEntityEditor : Control
                     float cellSize = new BenchmarkConfig().CellSize;
                     detectionRadius = !stats.TargetsUnits ? 0f : stats.Ranged ? stats.Reach :
                         Mathf.Max(cellSize * 2f, stats.MeleeDetectionReach + compiled.MaxFootprint);
-                    detectionLabel.Text = $"Open ground · {detectionRadius:0.##} world units";
-                    if (detectionRadius > 0f)
-                    {
-                        using var lines = new SurfaceTool();
-                        lines.Begin(Mesh.PrimitiveType.Lines);
-                        lines.SetMaterial(new StandardMaterial3D { AlbedoColor = new Color(0.34f, 0.82f, 1f),
-                            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded });
-                        for (int i = 0; i < 64; i++)
-                        {
-                            Point(i);
-                            Point(i + 1);
-                        }
-                        detectionRing.Mesh = lines.Commit();
-                        detectionRing.Visible = true;
-
-                        void Point(int i)
-                        {
-                            float angle = Mathf.Tau * i / 64f;
-                            lines.AddVertex(new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * detectionRadius);
-                        }
-                    }
+                    attackRadius = stats.TargetsUnits && stats.Ranged ? stats.Reach : 0f;
+                    detectionLabel.Text = attackRadius > 0f
+                        ? $"Cyan: detection {detectionRadius:0.##} u · Amber dashes: attack {attackRadius:0.##} u"
+                        : $"Cyan: local detection {detectionRadius:0.##} u";
+                    DrawRadius(detectionRing, detectionRadius, new Color(0.34f, 0.82f, 1f), false);
+                    DrawRadius(attackRing, attackRadius, new Color(1f, 0.67f, 0.24f), true);
                 }
             }
             catch (Exception)
@@ -294,6 +282,30 @@ public partial class RuntimeEntityEditor : Control
             }
         }
         FramePreview();
+    }
+
+    private static void DrawRadius(MeshInstance3D ring, float radius, Color color, bool dashed)
+    {
+        if (radius <= 0f) return;
+        using var lines = new SurfaceTool();
+        lines.Begin(Mesh.PrimitiveType.Lines);
+        lines.SetMaterial(new StandardMaterial3D
+        {
+            AlbedoColor = color, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+        });
+        for (int i = 0; i < 64; i += dashed ? 2 : 1)
+        {
+            Point(i);
+            Point(i + 1);
+        }
+        ring.Mesh = lines.Commit();
+        ring.Visible = true;
+
+        void Point(int i)
+        {
+            float angle = Mathf.Tau * i / 64f;
+            lines.AddVertex(new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius);
+        }
     }
 
     private void OrbitPreview(InputEvent input)
@@ -313,7 +325,7 @@ public partial class RuntimeEntityEditor : Control
 
     private void FramePreview()
     {
-        float extent = Mathf.Max(modelExtent, detectionRadius * 1.6f);
+        float extent = Mathf.Max(modelExtent, Mathf.Max(detectionRadius, attackRadius) * 1.6f);
         previewCamera.Size = extent * 1.4f * zoom;
         previewCamera.Position = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), -Mathf.Sin(pitch),
             Mathf.Cos(yaw) * Mathf.Cos(pitch)) * (extent * 3f);

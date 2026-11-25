@@ -7,7 +7,7 @@
 script = ExtResource("1")
 Id = "long_triangle_marksman"
 BattleRating = 180
-DisplayName = "Long Triangle • Marksman"
+DisplayName = "Marksman"
 Role = "Slow, durable long-range laser infantry"
 Shape = 8
 Height = 0.4125

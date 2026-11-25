@@ -91,7 +91,7 @@ public partial class BenchmarkPanel : CanvasLayer
 	public readonly OptionButton SoldierBrushSizeChoice = new();
 	public event Action<byte> FactionSelected;
 	private VBoxContainer paintControls, paintSection;
-	internal VBoxContainer DeploymentOrderControls => paintControls;
+	internal VBoxContainer DeploymentOrderControls { get; private set; }
 	private Button paintHeader;
 	public bool EditingDeployment
 	{
@@ -324,7 +324,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		SoldierPaintType.AddItem("Brush");
 		SoldierPaintType.AddItem("Filled rectangle");
 		SoldierPaintType.Select(0);
-		Field(soldierControls, "Brush type", SoldierPaintType);
+		if (AutoBattlerPlaytest) DeploymentOrderControls = soldierControls;
+		else Field(soldierControls, "Brush type", SoldierPaintType);
 		foreach (int size in new[] { 1, 3, 5, 10 })
 			SoldierBrushSizeChoice.AddItem($"{size}×{size}", size);
 		SoldierBrushSizeChoice.Select(1); // Preserve the current 3×3 default.

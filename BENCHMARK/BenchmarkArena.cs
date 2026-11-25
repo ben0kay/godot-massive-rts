@@ -586,7 +586,7 @@ public partial class BenchmarkArena : Node3D
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
         if (openingOverlay != null)
-            units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, openingOverlay, autoBattlerPlaytestMap.MapSize * 0.5f);
+            units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, openingOverlay, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = autoBattlerForest;
         if (defenseSystem != null) defenseCombat = new StructureCombat(units, defenseSystem.Structures);

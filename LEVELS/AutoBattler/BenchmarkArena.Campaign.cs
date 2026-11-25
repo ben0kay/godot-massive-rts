@@ -86,12 +86,11 @@ public partial class BenchmarkArena
 
         campaignHud = new AutoBattlerHud(autoBattlerPlaytestMap.LevelSettings.MenuName, choices,
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
-            fill => painter.SetSoldierPaintType(fill ? 1 : 0),
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
             () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
             spread => painter.SoldierBrushSpread = spread);
         AddChild(campaignHud);
-        painter.Orders.AddControls(campaignHud.DeploymentOrderControls);
+        if (campaignHud.DeploymentOrderControls != null) painter.Orders.AddControls(campaignHud.DeploymentOrderControls);
     }
 
     private static Vector2I DeploymentCell(Vector3 position) => new(
