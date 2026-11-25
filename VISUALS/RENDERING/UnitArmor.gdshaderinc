@@ -1,5 +1,5 @@
 // UV.x = 0 legacy, 1 steel, 2 paint, 3 emissive trim; UV.y = baked face brightness.
-// Only enhanced artillery currently writes these UVs. Instance COLOR remains unchanged.
+// Enhanced Light Artillery and Twin Rocket Launcher write these UVs. Instance COLOR remains unchanged.
 vec3 unit_armor_albedo(vec3 tint, vec2 mask) {
     if (mask.x < 0.5) return tint;
     float shade = mask.y;

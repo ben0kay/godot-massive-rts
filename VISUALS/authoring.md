@@ -96,13 +96,14 @@ A dome visual represents the emitter's horizontal range, not a physical force fi
 - Lead with faction-colored hulls, large plates or the original geometric body. Use dark steel as a secondary material for gun tubes, exposed mechanisms, seams, undercarriages and selected armor frames.
 - Keep infantry shapes recognizable at normal gameplay zoom: circle, square, triangle, diamond, etc. Do not add machinery to every small soldier or turn every silhouette into a tank. Detail should increase selectively with size/role, not indiscriminately.
 - Light Artillery is the first two-tone unit experiment and the current reference for compact mobile hardware: faction-painted chevron hull, colored shoulder armor and barrel receiver, dark barrel and mount, restrained emissive strips. The first charcoal-heavy version was intentionally revised to be more faction-colored. Retain its lightweight appearance and raised single gun; do not give it the Broadside's heavy stationary silhouette.
+- Twin Rocket Launcher retains its wide angular fork, deep open center and two fixed prong-mounted launchers. Its faction-colored upper hull, dark underframe, stepped rear deck and recessed muzzle collars distinguish it from Light Artillery. Preserve authored `MountedRocket.LocalPose` and `MountedRocket.Muzzle` for both shots; no crossbar may close the notch.
 - Use broad facets, simple layered plates and readable dark gaps. Prefer a small number of large details over lots of bolts, vents or tiny lights. Limit emissive accents to functional-looking details; no persistent decorative particles, real lights or strong bloom per soldier.
 
 ### Current unit implementation and references
 
 | File (repository-relative) | Responsibility |
 | --- | --- |
-| `VISUALS/RENDERING/FacetedSoldierMeshes.cs` | Shared mesh per unit type; `AppendLightArtilleryArmor`, `UsesArtilleryArmor`, `AppendPrism` and existing geometric unit builders |
+| `VISUALS/RENDERING/FacetedSoldierMeshes.cs` | Shared mesh per unit type; `AppendLightArtilleryArmor`, `AppendTwinRocketArmor`, `UsesTwoToneArmor`, `AppendPrism` and existing geometric unit builders |
 | `VISUALS/RENDERING/UnitArmor.gdshaderinc` | Unit UV armor mask to faction/steel/trim colors |
 | `VISUALS/RENDERING/ArmyRenderer.cs` | Existing faction/type MultiMesh batches, packed pose and color, sparse/dense updates, flashes and fracture state |
 | `VISUALS/RENDERING/BattlefieldLighting.cs` / `BattlefieldUnitLit.gdshader` | Per-type shared lit material selection and directional shading |
@@ -111,7 +112,7 @@ A dome visual represents the emitter's horizontal range, not a physical force fi
 | `GAMEPLAY/UNITS/UnitVisualConfig.cs` / `UnitVisualConfig.tres` | Optional enhanced meshes, independent Hexagon enhancement, fracture, shield shells and other visual settings |
 | `GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs` | Compiled `UnitOutline`, size, footprint, barrel mount/tip; visual geometry follows the authored contracts |
 
-Only the enhanced Light Artillery currently opts into the two-tone unit armor mask. Existing simpler unit meshes continue using baked grayscale vertex colors multiplied by instance faction tint. Do not silently migrate the roster, or use a building shader on a soldier. Use stable unit IDs to scope new experiments; preserve the existing plain fallback and independent visual toggles.
+Enhanced Light Artillery and Twin Rocket Launcher opt into the two-tone unit armor mask. Existing simpler unit meshes continue using baked grayscale vertex colors multiplied by instance faction tint. Do not silently migrate the roster, or use a building shader on a soldier. Use stable unit IDs to scope new experiments; preserve the existing plain fallback and independent visual toggles.
 
 ### Material contracts — different from buildings
 

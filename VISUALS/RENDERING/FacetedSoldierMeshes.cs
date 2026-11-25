@@ -33,12 +33,12 @@ public static class FacetedSoldierMeshes
             ref readonly UnitStats type = ref catalog[i];
             UnitOutline outline = type.Outline;
             Material unitMaterial = material;
-            bool armoredArtillery = UsesArtilleryArmor(type.Id, outline, visuals);
-            if (crackShader != null && (crackMask != null || armoredArtillery))
+            bool twoToneArmor = UsesTwoToneArmor(type.Id, outline, visuals);
+            if (crackShader != null && (crackMask != null || twoToneArmor))
             {
                 var cracked = new ShaderMaterial { Shader = crackShader };
                 cracked.SetShaderParameter("show_fracture", crackMask != null);
-                cracked.SetShaderParameter("use_two_tone_armor", armoredArtillery);
+                cracked.SetShaderParameter("use_two_tone_armor", twoToneArmor);
                 if (crackMask != null) cracked.SetShaderParameter("crack_mask", crackMask);
                 cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
@@ -47,7 +47,7 @@ public static class FacetedSoldierMeshes
             meshes[i] = CreateUnitMesh(outline, type.Height, unitMaterial,
                 enhanced && type.Id == RuntimeUnitCatalog.CircleId,
                 visuals.UseEnhancedHexagonMesh && type.Id == RuntimeUnitCatalog.HexagonId,
-                catalog.Definition(i), includeIndependent: false, armoredArtillery: armoredArtillery);
+                catalog.Definition(i), includeIndependent: false, twoToneArmor: twoToneArmor);
         }
         return meshes;
     }
@@ -60,10 +60,10 @@ public static class FacetedSoldierMeshes
         float size = UnitOutline.EffectiveSize(unit);
         UnitVisualConfig visuals = UnitVisualConfig.Load();
         UnitOutline outline = UnitOutline.FromDefinition(unit, size);
-        bool armoredArtillery = UsesArtilleryArmor(unit.Id, outline, visuals);
+        bool twoToneArmor = UsesTwoToneArmor(unit.Id, outline, visuals);
         Material material = new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
-        if (armoredArtillery)
+        if (twoToneArmor)
         {
             var armor = new ShaderMaterial { Shader = GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") };
             armor.SetShaderParameter("show_fracture", false);
@@ -74,31 +74,41 @@ public static class FacetedSoldierMeshes
         return CreateUnitMesh(outline, Mathf.Max(0.01f, unit.Height) * size, material,
             visuals.UseEnhancedMeshes && unit.Id == RuntimeUnitCatalog.CircleId,
             visuals.UseEnhancedHexagonMesh && unit.Id == RuntimeUnitCatalog.HexagonId,
-            unit, includeIndependent: true, armoredArtillery: armoredArtillery);
+            unit, includeIndependent: true, twoToneArmor: twoToneArmor);
     }
 
-    internal static bool UsesArtilleryArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
-        visuals.UseEnhancedMeshes && id == RuntimeUnitCatalog.ChevronId && outline.IsChevron;
+    internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
+            (id == RuntimeUnitCatalog.TwinRocketLauncherId && outline.IsDeepFork));
 
     private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material,
-        bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent, bool armoredArtillery)
+        bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent, bool twoToneArmor)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
         surface.SetMaterial(material);
 
-        // UV mask is reserved for the enhanced artillery; other meshes remain unchanged.
-        // Optional authored rocket mounts on this unit keep their normal faction coloring.
-        if (armoredArtillery) surface.SetUV(Vector2.Zero);
+        bool enhancedRocket = twoToneArmor && unit.Id == RuntimeUnitCatalog.TwinRocketLauncherId;
+        // Masked surfaces use UVs for material kind/brightness. Optional legacy mounts
+        // are emitted first so their zero UV remains intact on a mixed surface.
+        if (twoToneArmor) surface.SetUV(Vector2.Zero);
         foreach (var mount in unit.RocketMounts ?? new())
         {
             if (mount == null || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
-            AppendRocketBarrel(surface, MountedRocket.LocalPose(mount, UnitOutline.EffectiveSize(unit)));
+            Transform3D pose = MountedRocket.LocalPose(mount, UnitOutline.EffectiveSize(unit));
+            if (enhancedRocket && !mount.IndependentAim && !mount.TwinMinigunModel)
+                AppendEnhancedRocketBarrel(surface, pose);
+            else
+            {
+                if (twoToneArmor) surface.SetUV(Vector2.Zero);
+                AppendRocketBarrel(surface, pose);
+            }
         }
 
-        if (armoredArtillery)
+        if (twoToneArmor)
         {
-            AppendLightArtilleryArmor(surface, outline, height);
+            if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
+            else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
         }
 
@@ -160,6 +170,102 @@ public static class FacetedSoldierMeshes
                 new Color(0.86f, 0.86f, 0.86f), SoldierSideShade, pitch: outline.ChevronBarrelElevation);
         }
         return surface.Commit();
+    }
+
+    // =========================================================
+    // Fast mobile rocket platform: keep the open fork silhouette and unchanged
+    // circular gameplay footprint. All armor is baked into the existing body mesh.
+    private static void AppendTwinRocketArmor(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        // Low gunmetal underframe, with a larger faction-colored upper hull.
+        AppendPrism(surface, outline.Sides, x, z, height * 0.30f, outline.Rotation,
+            Vector3.Down * height * 0.35f, Steel(0.78f), customOutline: outline,
+            sideShade: SoldierSideShade, armorMask: true);
+        AppendPrism(surface, outline.Sides, x, z, height * 0.70f, outline.Rotation,
+            Vector3.Up * height * 0.15f, Paint(0.91f), customOutline: outline,
+            sideShade: SoldierSideShade, armorMask: true);
+
+        void Box(Vector3 center, Vector3 size, Color mask)
+        {
+            const float k = 0.70710678f;
+            AppendPrism(surface, 4, size.X * k, size.Z * k, size.Y, Mathf.Pi * 0.25f,
+                center, mask, 0.16f, sideShade: SoldierSideShade, armorMask: true);
+        }
+
+        // Angular raised rear deck behind the notch; no crossbar over the opening.
+        Box(new Vector3(0f, height * 0.54f, z * 0.61f),
+            new Vector3(x * 1.28f, height * 0.22f, z * 0.62f), Steel(0.87f));
+        Box(new Vector3(0f, height * 0.68f, z * 0.63f),
+            new Vector3(x * 0.85f, height * 0.12f, z * 0.42f), Paint(1f));
+        Box(new Vector3(0f, height * 0.753f, z * 0.65f),
+            new Vector3(x * 0.40f, height * 0.035f, z * 0.11f), Trim(0.85f));
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            // Broad dark chassis rails and colored shoulder armor sit on each prong.
+            Box(new Vector3(side * x * 0.70f, height * 0.47f, z * 0.02f),
+                new Vector3(x * 0.37f, height * 0.18f, z * 1.38f), Steel(0.90f));
+            Box(new Vector3(side * x * 0.72f, height * 0.59f, z * 0.39f),
+                new Vector3(x * 0.36f, height * 0.15f, z * 0.54f), Paint(0.98f));
+            // One readable dark vent per shoulder, rather than many tiny details.
+            Box(new Vector3(side * x * 0.72f, height * 0.674f, z * 0.45f),
+                new Vector3(x * 0.20f, height * 0.025f, z * 0.13f), Steel(0.26f));
+        }
+    }
+
+    // =========================================================
+    // Fixed rocket mount geometry follows the authored pose (including yaw/scale).
+    // The rectangular muzzle collar is open at local -Z; the real shot origin
+    // stays exactly at MountedRocket.Muzzle, not at a new decorative offset.
+    private static void AppendEnhancedRocketBarrel(SurfaceTool surface, Transform3D pose)
+    {
+        const float k = 0.70710678f;
+        Vector3 scale = new(pose.Basis.X.Length(), pose.Basis.Y.Length(), pose.Basis.Z.Length());
+        float yaw = Mathf.Atan2(pose.Basis.X.Z, pose.Basis.X.X);
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Box(Vector3 center, Vector3 size, Color mask)
+        {
+            Vector3 dimensions = size * scale;
+            AppendPrism(surface, 4, dimensions.X * k, dimensions.Z * k,
+                dimensions.Y, Mathf.Pi * 0.25f, pose * center, mask,
+                0.16f, sideShade: SoldierSideShade, yaw: yaw, armorMask: true);
+        }
+
+        Box(new Vector3(0f, 0f, -0.44f), new Vector3(0.83f, 0.90f, 0.88f), Steel(0.90f));
+        Box(new Vector3(0f, 0f, -0.19f), new Vector3(1.12f, 1.16f, 0.38f), Paint(0.96f));
+        Box(new Vector3(0f, 0.49f, -0.57f), new Vector3(0.31f, 0.09f, 0.31f), Trim(0.90f));
+        // Four flat rim faces and inner walls: one small open muzzle, no extra
+        // nodes, and no geometry beyond the original local z = -1 endpoint.
+        Vector3 Point(float x, float y, float z) => pose * new Vector3(x, y, z);
+        Vector3 Normal(Vector3 normal) => (pose.Basis.Inverse().Transposed() * normal).Normalized();
+        void Face(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 n, Color mask) =>
+            AddQuad(surface, a, b, c, d, Normal(n), mask, armorMask: true);
+        const float outerX = 0.55f, outerY = 0.60f, innerX = 0.30f, innerY = 0.33f;
+        // Clockwise as viewed from outside, after AddQuad's winding reversal.
+        Vector2[] outer = { new(-outerX, -outerY), new(-outerX, outerY), new(outerX, outerY), new(outerX, -outerY) };
+        Vector2[] inner = { new(-innerX, -innerY), new(-innerX, innerY), new(innerX, innerY), new(innerX, -innerY) };
+        for (int i = 0; i < 4; i++)
+        {
+            int next = (i + 1) % 4;
+            Vector2 a = outer[i], b = outer[next], c = inner[i], d = inner[next];
+            Vector3 frontA = Point(a.X, a.Y, -1f), frontB = Point(b.X, b.Y, -1f);
+            Vector3 backA = Point(a.X, a.Y, -0.78f), backB = Point(b.X, b.Y, -0.78f);
+            Vector3 holeA = Point(c.X, c.Y, -1f), holeB = Point(d.X, d.Y, -1f);
+            Vector3 deepA = Point(c.X, c.Y, -0.87f), deepB = Point(d.X, d.Y, -0.87f);
+            Vector2 outward = (a + b).Normalized();
+            Vector3 n = new(outward.X, outward.Y, 0f);
+            Face(frontA, frontB, holeB, holeA, Vector3.Forward, Paint(0.91f));
+            Face(backA, backB, frontB, frontA, n, Steel(0.75f));
+            Face(holeA, holeB, deepB, deepA, -n, Steel(0.27f));
+            Face(backB, backA, Point(c.X, c.Y, -0.78f), Point(d.X, d.Y, -0.78f),
+                Vector3.Back, Steel(0.53f));
+        }
     }
 
     // =========================================================
@@ -438,7 +544,7 @@ public static class FacetedSoldierMeshes
             bottom[i] = center + new Vector3(x, -half, z);
         }
 
-        if (concaveFork) AppendForkCaps(surface, top, bottom, tint);
+        if (concaveFork) AppendForkCaps(surface, top, bottom, tint, armorMask);
         for (int i = 0; i < sides; i++)
         {
             int next = (i + 1) % sides;
@@ -467,7 +573,7 @@ public static class FacetedSoldierMeshes
     }
 
     // Triangulate the concave cap once per shared mesh so the notch stays open.
-    private static void AppendForkCaps(SurfaceTool surface, Vector3[] top, Vector3[] bottom, Color tint)
+    private static void AppendForkCaps(SurfaceTool surface, Vector3[] top, Vector3[] bottom, Color tint, bool armorMask)
     {
         var outline = new Vector2[bottom.Length];
         for (int i = 0; i < outline.Length; i++) outline[i] = new Vector2(bottom[i].X, bottom[i].Z);
@@ -476,8 +582,8 @@ public static class FacetedSoldierMeshes
         {
             int a = triangles[i], b = triangles[i + 1], c = triangles[i + 2];
             if ((top[b] - top[a]).Cross(top[c] - top[a]).Y < 0f) (b, c) = (c, b);
-            AddTriangle(surface, top[a], top[b], top[c], Vector3.Up, tint);
-            AddTriangle(surface, bottom[a], bottom[c], bottom[b], Vector3.Down, BottomTint * tint);
+            AddTriangle(surface, top[a], top[b], top[c], Vector3.Up, tint, armorMask);
+            AddTriangle(surface, bottom[a], bottom[c], bottom[b], Vector3.Down, BottomTint * tint, armorMask);
         }
     }
 

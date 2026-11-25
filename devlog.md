@@ -580,3 +580,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Staggered rectangle placement previews outward from the drag origin and reduced placement bounce speed to 75%. Godot .NET visual validation pending.
 
 - 2026-11-25 — Set battlefield lighting defaults and AutoBattler lighting reset to 350% sun and 40% ambient fill.
+
+- 2026-11-25 — Twin Rocket Launcher enhanced visual pass: layered faction-painted deep fork, gunmetal underframe, stepped rear deck and recessed twin launcher collars. Reuses the unit UV armor pipeline, authored mount poses and existing shared batches; gameplay unchanged. Owner validation pending.

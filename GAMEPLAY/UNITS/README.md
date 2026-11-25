@@ -95,6 +95,8 @@ In `UnitVisualConfig.tres`, set **Use Projectile Launch Effects** before launchi
 
 The Dreadnaught's four independent miniguns use `TurretShotInterval` from `DEFINITIONS/Dreadnaught.tres`, currently **0.1128 s** per gun (formerly the `UnitDefinition` default of 0.15 s). This is approximately **33% more shots per second** per gun. Its ordinary `Interval` controls hull contact damage and remains unchanged; bullet speed, damage, range, and targeting are unchanged. This interval is shared by all four guns, each with its own targeting and cooldown.
 
+The optional enhanced Twin Rocket Launcher model (`UseEnhancedMeshes`) retains the original wide, open fork and adds a dark underframe, faction-painted hull, layered prong armor, stepped rear deck and two segmented launcher assemblies with recessed muzzle collars. It uses the shared two-tone unit armor mask in all existing preview/battle paths. Fixed launchers are built from each authored mount pose, with the muzzle endpoint unchanged; the plain mesh remains available. No stats, footprint, cooldown, projectile or recoil changes. Owner visual/performance checks pending.
+
 ### Rocket mounts
 
 Open a unit definition in the Godot Inspector and expand **Rocket Mounts**. Each entry has a hull-local position (relative to the mesh center), yaw, barrel dimensions, damage and projectile. Local forward is −Z. The unit's Size Multiplier also scales the mount. **Projectile Scale** only scales the projectile model. Use the splash radius and edge fraction overrides to tune one mount without editing the shared projectile. Negative override values inherit defaults.
