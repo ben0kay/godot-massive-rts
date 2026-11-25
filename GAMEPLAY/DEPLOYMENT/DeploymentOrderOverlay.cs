@@ -23,7 +23,9 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     private readonly HashSet<SoldierPlacement> selected = new();
     private readonly Dictionary<SoldierPlacement, Order> orders = new();
     private readonly HashSet<Order> drawn = new();
-    private Vector2? anchor;
+    private Vector2I? anchor;
+    private Vector2I selectionEnd;
+    private float SelectionGridSize => Painter?.Layout.GridSize ?? DeploymentLayout.CellSize;
     private Order editing;
     internal sealed class Order
     {
@@ -206,6 +208,7 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
         if (!Selecting) return false;
         if (input is InputEventMouseMotion motion)
         {
+            if (anchor.HasValue && TryGround(motion.Position, out Vector3 hover)) selectionEnd = SelectionCell(hover);
             if (editing != null && TryGround(motion.Position, out Vector3 bend))
             {
                 editing.Bent = true;
@@ -241,22 +244,32 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
                     return true;
                 }
             }
-            anchor = mouse.Position;
+            if (TryGround(mouse.Position, out Vector3 point)) anchor = selectionEnd = SelectionCell(point);
         }
         else
         {
-            if (anchor is Vector2 start)
+            if (anchor is Vector2I start && TryGround(mouse.Position, out Vector3 point))
             {
+                var area = SelectionArea(start, SelectionCell(point));
                 selected.Clear();
-                var box = new Rect2(start, mouse.Position - start).Abs().Grow(4f);
                 foreach (var soldier in Soldiers)
-                    if (soldier.Faction == Faction && box.HasPoint(Screen(soldier.Position()))) selected.Add(soldier);
+                    if (soldier.Faction == Faction && area.HasPoint(SelectionCell(soldier.Position()))) selected.Add(soldier);
             }
             anchor = null;
             if (editing != null) OrdersChanged?.Invoke();
             editing = null;
         }
         return true;
+    }
+
+    private Vector2I SelectionCell(Vector3 point) => new(
+        Mathf.FloorToInt(point.X / SelectionGridSize), Mathf.FloorToInt(point.Z / SelectionGridSize));
+
+    private static Rect2I SelectionArea(Vector2I start, Vector2I end)
+    {
+        var min = new Vector2I(Mathf.Min(start.X, end.X), Mathf.Min(start.Y, end.Y));
+        var max = new Vector2I(Mathf.Max(start.X, end.X), Mathf.Max(start.Y, end.Y));
+        return new Rect2I(min, max - min + Vector2I.One);
     }
 
     private Vector2 Screen(Vector3 point) => Painter != null
@@ -317,11 +330,22 @@ internal sealed partial class DeploymentOrderOverlay : Node2D
     public override void _Draw()
     {
         if (!Visible || (Painter != null && (!Painter.Visible || Painter.Camera == null)) || (!Selecting && orders.Count == 0)) return;
-        if (anchor is Vector2 start)
+        if (anchor is Vector2I start)
         {
-            var box = new Rect2(start, GetGlobalMousePosition() - start).Abs();
-            DrawRect(box, new Color(0.26f, 0.73f, 1f, 0.15f));
-            DrawRect(box, new Color(0.53f, 0.85f, 1f, 0.9f), false, 1f);
+            var area = SelectionArea(start, selectionEnd);
+            Vector2 min = (Vector2)area.Position * SelectionGridSize;
+            Vector2 max = (Vector2)area.End * SelectionGridSize;
+            Vector2[] corners =
+            {
+                Screen(new Vector3(min.X, 0f, min.Y)),
+                Screen(new Vector3(max.X, 0f, min.Y)),
+                Screen(new Vector3(max.X, 0f, max.Y)),
+                Screen(new Vector3(min.X, 0f, max.Y))
+            };
+            Color tint = Factions.Color(Faction).Lightened(0.4f);
+            DrawColoredPolygon(corners, new Color(tint.R, tint.G, tint.B, 0.15f));
+            for (int i = 0; i < corners.Length; i++)
+                DrawLine(corners[i], corners[(i + 1) % corners.Length], tint, 1f, true);
         }
         drawn.Clear();
         foreach (var soldier in Soldiers)
