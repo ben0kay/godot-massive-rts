@@ -181,39 +181,49 @@ public static class FacetedSoldierMeshes
         Color Paint(float shade) => new(0f, shade, 0f);
         Color Trim(float shade) => new(0f, 0f, shade);
         float x = outline.RadiusX, z = outline.RadiusZ;
+        // Render-only outline: slimmer forward tips, swept shoulders and a
+        // deeper central notch. Keep the compiled UnitOutline/collision intact.
+        Vector2[] silhouette =
+        {
+            new(0.46f, -1f), new(0.78f, -1f), new(0.96f, -0.62f), new(1f, 0.40f),
+            new(0.70f, 1f), new(-0.70f, 1f), new(-1f, 0.40f), new(-0.96f, -0.62f),
+            new(-0.78f, -1f), new(-0.46f, -1f), new(-0.31f, 0.28f), new(0.31f, 0.28f)
+        };
         // Low gunmetal underframe, with a larger faction-colored upper hull.
         AppendPrism(surface, outline.Sides, x, z, height * 0.30f, outline.Rotation,
             Vector3.Down * height * 0.35f, Steel(0.78f), customOutline: outline,
-            sideShade: SoldierSideShade, armorMask: true);
+            sideShade: SoldierSideShade, armorMask: true, visualOutline: silhouette);
         AppendPrism(surface, outline.Sides, x, z, height * 0.70f, outline.Rotation,
             Vector3.Up * height * 0.15f, Paint(0.91f), customOutline: outline,
-            sideShade: SoldierSideShade, armorMask: true);
+            sideShade: SoldierSideShade, armorMask: true, visualOutline: silhouette);
 
-        void Box(Vector3 center, Vector3 size, Color mask)
+        void Box(Vector3 center, Vector3 size, Color mask, float yaw = 0f)
         {
             const float k = 0.70710678f;
             AppendPrism(surface, 4, size.X * k, size.Z * k, size.Y, Mathf.Pi * 0.25f,
-                center, mask, 0.16f, sideShade: SoldierSideShade, armorMask: true);
+                center, mask, 0.16f, sideShade: SoldierSideShade, yaw: yaw, armorMask: true);
         }
 
         // Angular raised rear deck behind the notch; no crossbar over the opening.
-        Box(new Vector3(0f, height * 0.54f, z * 0.61f),
-            new Vector3(x * 1.28f, height * 0.22f, z * 0.62f), Steel(0.87f));
-        Box(new Vector3(0f, height * 0.68f, z * 0.63f),
-            new Vector3(x * 0.85f, height * 0.12f, z * 0.42f), Paint(1f));
-        Box(new Vector3(0f, height * 0.753f, z * 0.65f),
+        Box(new Vector3(0f, height * 0.53f, z * 0.65f),
+            new Vector3(x * 1.22f, height * 0.20f, z * 0.54f), Steel(0.87f));
+        Box(new Vector3(0f, height * 0.67f, z * 0.68f),
+            new Vector3(x * 0.76f, height * 0.12f, z * 0.38f), Paint(1f));
+        Box(new Vector3(0f, height * 0.743f, z * 0.68f),
             new Vector3(x * 0.40f, height * 0.035f, z * 0.11f), Trim(0.85f));
 
         for (int side = -1; side <= 1; side += 2)
         {
-            // Broad dark chassis rails and colored shoulder armor sit on each prong.
-            Box(new Vector3(side * x * 0.70f, height * 0.47f, z * 0.02f),
-                new Vector3(x * 0.37f, height * 0.18f, z * 1.38f), Steel(0.90f));
-            Box(new Vector3(side * x * 0.72f, height * 0.59f, z * 0.39f),
-                new Vector3(x * 0.36f, height * 0.15f, z * 0.54f), Paint(0.98f));
+            // Mirrored swept chassis rails echo the tapered outline; actual
+            // launchers remain aligned with their independent authored poses.
+            float sweep = -side * Mathf.DegToRad(7f);
+            Box(new Vector3(side * x * 0.69f, height * 0.47f, z * 0.03f),
+                new Vector3(x * 0.34f, height * 0.18f, z * 1.38f), Steel(0.90f), sweep);
+            Box(new Vector3(side * x * 0.70f, height * 0.59f, z * 0.37f),
+                new Vector3(x * 0.34f, height * 0.15f, z * 0.57f), Paint(0.98f), sweep);
             // One readable dark vent per shoulder, rather than many tiny details.
-            Box(new Vector3(side * x * 0.72f, height * 0.674f, z * 0.45f),
-                new Vector3(x * 0.20f, height * 0.025f, z * 0.13f), Steel(0.26f));
+            Box(new Vector3(side * x * 0.70f, height * 0.674f, z * 0.45f),
+                new Vector3(x * 0.20f, height * 0.025f, z * 0.13f), Steel(0.26f), sweep);
         }
     }
 
@@ -240,7 +250,7 @@ public static class FacetedSoldierMeshes
         Box(new Vector3(0f, 0f, -0.44f), new Vector3(0.83f, 0.90f, 0.88f), Steel(0.90f));
         Box(new Vector3(0f, 0f, -0.19f), new Vector3(1.12f, 1.16f, 0.38f), Paint(0.96f));
         Box(new Vector3(0f, 0.49f, -0.57f), new Vector3(0.31f, 0.09f, 0.31f), Trim(0.90f));
-        // Four flat rim faces and inner walls: one small open muzzle, no extra
+        // Four tapered rim faces and inner walls: one small open muzzle, no extra
         // nodes, and no geometry beyond the original local z = -1 endpoint.
         Vector3 Point(float x, float y, float z) => pose * new Vector3(x, y, z);
         Vector3 Normal(Vector3 normal) => (pose.Basis.Inverse().Transposed() * normal).Normalized();
@@ -254,14 +264,17 @@ public static class FacetedSoldierMeshes
         {
             int next = (i + 1) % 4;
             Vector2 a = outer[i], b = outer[next], c = inner[i], d = inner[next];
-            Vector3 frontA = Point(a.X, a.Y, -1f), frontB = Point(b.X, b.Y, -1f);
+            Vector3 frontA = Point(a.X * 0.89f, a.Y * 0.87f, -1f),
+                frontB = Point(b.X * 0.89f, b.Y * 0.87f, -1f);
             Vector3 backA = Point(a.X, a.Y, -0.78f), backB = Point(b.X, b.Y, -0.78f);
             Vector3 holeA = Point(c.X, c.Y, -1f), holeB = Point(d.X, d.Y, -1f);
             Vector3 deepA = Point(c.X, c.Y, -0.87f), deepB = Point(d.X, d.Y, -0.87f);
             Vector2 outward = (a + b).Normalized();
             Vector3 n = new(outward.X, outward.Y, 0f);
             Face(frontA, frontB, holeB, holeA, Vector3.Forward, Paint(0.91f));
-            Face(backA, backB, frontB, frontA, n, Steel(0.75f));
+            // Derive the sloped outer-wall normal in mount-local space.
+            Vector3 slopedNormal = new(n.X, n.Y, -0.28f);
+            Face(backA, backB, frontB, frontA, slopedNormal.Normalized(), Steel(0.75f));
             Face(holeA, holeB, deepB, deepA, -n, Steel(0.27f));
             Face(backB, backA, Point(c.X, c.Y, -0.78f), Point(d.X, d.Y, -0.78f),
                 Vector3.Back, Steel(0.53f));
@@ -494,7 +507,8 @@ public static class FacetedSoldierMeshes
     private static void AppendPrism(SurfaceTool surface, int sides, float radiusX, float radiusZ,
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
         UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,
-        float yaw = 0f, float topCapBrightness = 1f, float pitch = 0f, bool armorMask = false)
+        float yaw = 0f, float topCapBrightness = 1f, float pitch = 0f, bool armorMask = false,
+        Vector2[] visualOutline = null)
     {
         // The artillery barrel is tilted once during mesh construction, never per soldier.
         Basis tilt = pitch == 0f ? Basis.Identity : new Basis(Vector3.Right, pitch);
@@ -527,7 +541,12 @@ public static class FacetedSoldierMeshes
         {
             float angle = rotation + i * Mathf.Tau / sides;
             float x = Mathf.Cos(angle) * radiusX, z = Mathf.Sin(angle) * radiusZ;
-            if (customOutline.HasValue)
+            if (visualOutline != null)
+            {
+                x = visualOutline[i].X * radiusX;
+                z = visualOutline[i].Y * radiusZ;
+            }
+            else if (customOutline.HasValue)
             {
                 Vector2 vertex = customOutline.Value.Vertex(i);
                 x = vertex.X;

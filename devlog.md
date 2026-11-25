@@ -598,3 +598,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Grouped lighting and fog controls in the left Rendering panel and revised painted water with moving ripple normals, viewing-angle reflections and directional glints. Godot .NET visual validation pending.
 
 - 2026-11-25 — Railgun directed-energy visual refinement: tapered pedestal, narrow cradle, aft capacitor bank, four emissive induction coils and recessed focusing muzzle. Preserved shared armor material, footprint, exact beam origin and recoil transforms; no gameplay or extra batches. Owner visual validation pending.
+
+- 2026-11-25 — Refined the enhanced Twin Rocket Launcher silhouette with tapered fork tips, swept shoulders and prong armor, a deeper visual notch, compact rear deck and tapered muzzle collars. Retained both authored mount poses, original collision outline, material colors, triangle topology and all gameplay. Owner visual validation pending.
