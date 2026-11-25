@@ -14,6 +14,8 @@ global uniform float battlefield_ambient_fill;
 
 void fragment() {
     ALBEDO = tree_color.rgb * COLOR.rgb;
-    EMISSION = ALBEDO * 0.58 * battlefield_ambient_fill;
+    // Keep foliage legible in shade when the battlefield fill is lowered.
+    float foliage_fill = 0.75 * sqrt(battlefield_ambient_fill);
+    EMISSION = ALBEDO * foliage_fill;
     ALPHA = opacity;
 }

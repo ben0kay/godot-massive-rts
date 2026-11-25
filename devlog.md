@@ -550,3 +550,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-24 — Added battlefield sun shading to painted rocks, trees, and industrial walls. Preserved fake shadows, canopy fading, and wall lamps. Godot .NET visual validation pending.
 
 - 2026-11-24 — Added live sun strength, direction and material ambient fill controls to AutoBattler playtests. Fake shadows remain enabled. Godot .NET runtime validation pending.
+
+- 2026-11-24 — Lifted shaded forest foliage and Broadside neutral steel at reduced ambient fill. Godot .NET visual validation pending.
