@@ -570,3 +570,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Shield Generator visual pass: shared two-tone radial reactor model and faint faction-colored coverage dome using compiled radius, a lazy compact batch, existing tower lifecycle and independent Benchmark visibility control. No shield mechanic or balance changes; Godot visual/GPU validation pending.
 
 - 2026-11-25 — Light Artillery color refinement: faction-painted main chevron hull and barrel receiver with neutral-metal mechanical details retained. No geometry, material pipeline, other unit or gameplay changes; owner visual validation pending.
+
+- 2026-11-25 — Reused explosion and shockwave effects for explosive structure hits, added batched armor chips and progressive defense cracks using the unit crack mask, and increased Broadside minimum range from 18 to 27. Light Artillery now uses a smaller version of the same warhead mesh with its own flight and damage settings. Godot .NET visual validation pending.

@@ -6,11 +6,12 @@ namespace MassiveRts;
 public partial class ShockwaveRenderer : MultiMeshInstance3D
 {
     private const int Capacity = 256;
+    private const int ChipsPerHit = 6;
     private const int Segments = 64;
     private const float Duration = 0.35f;
-    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction);
+    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction, bool StructureChips);
     private readonly Ring[] rings = new Ring[Capacity];
-    private MultiMesh bursts;
+    private MultiMesh bursts, chips;
     private int count;
     private bool dirty;
 
@@ -64,6 +65,18 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             Multimesh = bursts, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             ExtraCullMargin = 64f
         });
+        chips = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            Mesh = new BoxMesh { Size = Vector3.One, Material = new StandardMaterial3D
+            {
+                AlbedoColor = new Color(0.49f, 0.45f, 0.39f),
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
+            }},
+            InstanceCount = Capacity * ChipsPerHit,
+            VisibleInstanceCount = 0
+        };
+        AddChild(new MultiMeshInstance3D { Multimesh = chips, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
 
     private static Vector3 Direction(int index)
@@ -72,10 +85,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
-    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null, byte? faction = null)
+    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null, byte? faction = null, bool structureChips = false)
     {
-        if (count == Capacity) return;
-        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin, faction);
+        if (count == Capacity || (radius <= 0f && !structureChips)) return;
+        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin, faction, structureChips);
         dirty = true;
     }
 
@@ -94,18 +107,33 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     public void Sync()
     {
         if (!dirty) return;
-        int flashCount = 0;
+        int ringCount = 0, flashCount = 0, chipCount = 0;
         for (int i = 0; i < count; i++)
         {
             Ring ring = rings[i];
             float progress = ring.Age / Duration;
-            float radius = ring.Radius * Mathf.Lerp(0.08f, 1f, progress);
-            Multimesh.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(radius, 1f, radius)), ring.Origin));
             Color faction = ring.Faction is byte id ? Factions.Color(id) : Colors.White;
-            Color ringColor = Colors.White.Lerp(faction, 0.22f);
-            ringColor.A = 1f - progress * progress;
-            Multimesh.SetInstanceColor(i, ringColor);
-            if (ring.BurstOrigin is Vector3 impact)
+            if (ring.Radius > 0f)
+            {
+                float radius = ring.Radius * Mathf.Lerp(0.08f, 1f, progress);
+                Multimesh.SetInstanceTransform(ringCount, new Transform3D(Basis.Identity.Scaled(new Vector3(radius, 1f, radius)), ring.Origin));
+                Color ringColor = Colors.White.Lerp(faction, 0.22f);
+                ringColor.A = 1f - progress * progress;
+                Multimesh.SetInstanceColor(ringCount++, ringColor);
+            }
+            if (ring.BurstOrigin is not Vector3 impact) continue;
+            if (ring.StructureChips)
+                for (int chip = 0; chip < ChipsPerHit; chip++)
+                {
+                    float angle = impact.X * 0.42f + impact.Z * 0.17f + chip * 2.4f;
+                    Vector3 kick = new(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                    Vector3 point = impact + kick * (0.24f + progress * (0.9f + chip * 0.12f));
+                    point.Y += 0.1f + 2.5f * progress - 2.8f * progress * progress;
+                    float size = (0.08f + chip * 0.014f) * (1f - progress * progress);
+                    var spin = new Basis(new Vector3(1f, 1f, 0.5f).Normalized(), angle + progress * 7f);
+                    chips.SetInstanceTransform(chipCount++, new Transform3D(spin.Scaled(new Vector3(size, size * 0.65f, size)), point));
+                }
+            if (ring.Radius > 0f)
             {
                 float extent = ring.Radius * 0.88f;
                 Vector3 center = impact + Vector3.Up * (extent * 0.16f);
@@ -117,7 +145,8 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
                 bursts.SetInstanceCustomData(flashCount++, new Color(progress, seed, 0f, 0f));
             }
         }
-        Multimesh.VisibleInstanceCount = count;
+        Multimesh.VisibleInstanceCount = ringCount;
+        chips.VisibleInstanceCount = chipCount;
         bursts.VisibleInstanceCount = flashCount;
         dirty = false;
     }

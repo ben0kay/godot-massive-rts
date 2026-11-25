@@ -2,22 +2,14 @@
 
 [ext_resource type="Script" uid="uid://b8s6x4pabd81d" path="res://GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
 
-[sub_resource type="StandardMaterial3D" id="1"]
-shading_mode = 0
-albedo_color = Color(1, 0.76, 0.36, 1)
-
-[sub_resource type="SphereMesh" id="2"]
-material = SubResource("1")
-radius = 0.24
-height = 0.48
-radial_segments = 8
-rings = 4
+[ext_resource type="ArrayMesh" path="res://GAMEPLAY/PROJECTILES/Types/BroadsideWarhead/BroadsideWarhead.obj" id="2"]
 
 [resource]
 script = ExtResource("1")
 ObstacleFire = 1
 UseLaunchEffects = true
-VisualMesh = SubResource("2")
+VisualMesh = ExtResource("2")
+VisualSizeMultiplier = 0.65
 Speed = 34.0
 ArcHeight = 24.0
 ArcHeightPerDistance = 0.55

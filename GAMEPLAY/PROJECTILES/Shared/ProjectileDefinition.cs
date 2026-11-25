@@ -12,6 +12,7 @@ public partial class ProjectileDefinition : Resource
     [Export] public ObstacleFireMode ObstacleFire { get; set; }
     [Export] public bool BlocksOnObstacles { get; set; } = true;
     [Export] public Mesh VisualMesh { get; set; }
+    [Export(PropertyHint.Range, "0.1,4,0.05")] public float VisualSizeMultiplier { get; set; } = 1f;
     // Visual-only opt-in; disabled by default for existing projectiles.
     [Export] public bool TintByFaction { get; set; }
     [Export] public bool UseLaunchEffects { get; set; }

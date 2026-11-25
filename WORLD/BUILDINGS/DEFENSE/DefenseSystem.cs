@@ -118,7 +118,9 @@ internal sealed class DefenseSystem
         {
             ref Tower tower = ref towers[i];
             TowerWeapon weapon = tower.Stats.Weapon;
-            if (weapon == TowerWeapon.None || structures[i]?.Destroyed != false) continue;
+            if (structures[i] is not { Destroyed: false } structure) continue;
+            renderer.SetDamageCracks(i, structure.Health / structure.MaxHealth, tower.Stats.ShieldEmitter.Enabled);
+            if (weapon == TowerWeapon.None) continue;
             bool rocket = weapon == TowerWeapon.Projectile;
             float oldYaw = tower.Yaw, oldSlope = tower.BeamSlope, left = tower.LeftRecoil, right = tower.RightRecoil;
             float returnSpeed = rocket ? 1.25f : 1.8f;

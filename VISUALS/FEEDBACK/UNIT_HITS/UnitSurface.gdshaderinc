@@ -2,7 +2,7 @@
 uniform bool show_fracture = true;
 uniform bool use_two_tone_armor = false;
 uniform vec4 armor_tint : source_color = vec4(1.0);
-uniform sampler2D crack_mask : filter_linear_mipmap, repeat_disable;
+#include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
 uniform vec2 half_extent = vec2(0.5);
 uniform float darkness : hint_range(0.0, 1.0) = 0.84;
 varying vec2 surface_point;
@@ -32,8 +32,7 @@ void fragment() {
         if (mod(variant, 2.0) > 0.0) {
             p.x = -p.x;
         }
-        vec3 lines = texture(crack_mask, p * 0.5 + 0.5).rgb;
-        float mask = max(lines.r, max(lines.g * step(2.0, stage), lines.b * step(3.0, stage)));
+        float mask = surface_crack_mask(p, stage);
         ALBEDO *= 1.0 - mask * darkness * upper_facet * (0.52 + 0.16 * stage);
     }
 #ifdef BATTLEFIELD_LIT

@@ -61,7 +61,8 @@ public sealed class ProjectileCatalog
                 : 0f,
             edge >= 0f ? edge : float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
         meshes.Add(mesh);
-        scales.Add(scale);
+        scales.Add(scale * (float.IsFinite(definition.VisualSizeMultiplier)
+            ? Mathf.Clamp(definition.VisualSizeMultiplier, 0.1f, 4f) : 1f));
         factionTints.Add(definition.TintByFaction);
         launchEffects.Add(definition.UseLaunchEffects);
         flightSmoke.Add(definition.UseLaunchEffects && definition.UseFlightSmoke);

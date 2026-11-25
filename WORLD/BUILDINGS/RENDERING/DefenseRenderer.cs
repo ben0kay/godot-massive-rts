@@ -24,10 +24,18 @@ public partial class DefenseRenderer : Node3D
     private static readonly Mesh HeadMesh = RailgunTowerMeshes.CreateHead();
     private static readonly Mesh BarrelMesh = RailgunTowerMeshes.CreateBarrel(BarrelLength);
     // Shared neutral metal / faction paint / emissive trim for authored two-tone towers.
-    private static readonly ShaderMaterial TwoToneTowerMaterial = new()
+    private static readonly ShaderMaterial TwoToneTowerMaterial = CreateTowerArmor();
+
+    private static ShaderMaterial CreateTowerArmor()
     {
-        Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader")
-    };
+        var material = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader")
+        };
+        material.SetShaderParameter("crack_mask",
+            GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg"));
+        return material;
+    }
     private static readonly Mesh RocketBaseMesh = BroadsideTowerMeshes.CreateBase();
     private static readonly Mesh RocketHeadMesh = BroadsideTowerMeshes.CreateHead();
     private static readonly Mesh RocketBarrelMesh = BroadsideTowerMeshes.CreateBarrel();
@@ -44,6 +52,7 @@ public partial class DefenseRenderer : Node3D
     private readonly float[] flashTime = new float[FlashCapacity];
     private readonly Transform3D[] flashPose = new Transform3D[FlashCapacity];
     private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, flashes;
+    private readonly int[] crackStages = new int[DeploymentLayout.MaxBuildings];
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
@@ -157,6 +166,7 @@ public partial class DefenseRenderer : Node3D
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
         bool rocket = false, bool shield = false, float shieldRadius = 0f)
     {
+        crackStages[index] = 0;
         if (shield)
         {
             HideTower(index);
@@ -199,7 +209,19 @@ public partial class DefenseRenderer : Node3D
     private static void SetArmorTint(MultiMesh batch, int index, Color faction)
     {
         batch.SetInstanceColor(index, Colors.White);
+        faction.A = 0f;
         batch.SetInstanceCustomData(index, faction);
+    }
+
+    internal void SetDamageCracks(int index, float fraction, bool shield)
+    {
+        int stage = fraction <= 0.25f ? 3 : fraction <= 0.50f ? 2 : fraction <= 0.75f ? 1 : 0;
+        if (crackStages[index] == stage) return;
+        crackStages[index] = stage;
+        MultiMesh batch = shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
+        Color data = batch.GetInstanceCustomData(index);
+        data.A = stage / 3f;
+        batch.SetInstanceCustomData(index, data);
     }
 
     // =========================================================

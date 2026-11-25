@@ -138,7 +138,15 @@ public sealed class ProjectileSystem
                     Remove(i);
                     continue;
                 }
-                if (elapsed[i] >= duration[i]) structure.Damage(damage[i], damageTypes[i]);
+                if (elapsed[i] >= duration[i])
+                {
+                    float before = structure.Health;
+                    structure.Damage(damage[i], damageTypes[i]);
+                    Vector3 ground = next;
+                    ground.Y = units.Grounding?.Field?.At(next.X, next.Z) ?? 0f;
+                    rings?.Emit(ground, flight.ExplosionRadius, next, sourceFaction[i],
+                        structureChips: structure.Health < before);
+                }
             }
             else if (flight.ExplosionRadius > 0f)
             {
