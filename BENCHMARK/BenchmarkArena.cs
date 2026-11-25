@@ -969,6 +969,7 @@ public partial class BenchmarkArena : Node3D
             groundSamples += units.Grounding.Apply(units);
             groundingMs += Elapsed(start);
         }
+        shockwaves.SampleCavalry(units, dt);
         float extraMovementPadding = separationPadding + tramplePadding;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
