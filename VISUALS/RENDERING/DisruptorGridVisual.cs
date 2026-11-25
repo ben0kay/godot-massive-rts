@@ -1,4 +1,4 @@
-// Batches faction-tinted plates and animated electrical emitters.
+// Batches faction-tinted holographic fields.
 using System;
 using System.Collections.Generic;
 using Godot;
@@ -7,6 +7,8 @@ namespace MassiveRts;
 
 internal static class DisruptorGridVisual
 {
+    internal static Texture2D PickerIcon => GD.Load<Texture2D>("res://VISUALS/RENDERING/DisruptorGridIcon.png");
+
     internal static void Refresh(MultiMeshInstance3D view, IReadOnlyCollection<Vector2I> cells, byte faction, Func<Vector3, float> height)
     {
         view.Visible = cells.Count > 0;
@@ -19,7 +21,7 @@ internal static class DisruptorGridVisual
             view.Multimesh = new MultiMesh
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                Mesh = new BoxMesh { Size = new Vector3(1.84f, 0.12f, 1.84f), Material = material }
+                Mesh = new PlaneMesh { Size = Vector2.One * DisruptorGrid.Size, Material = material }
             };
         }
         var mesh = view.Multimesh;
@@ -28,7 +30,7 @@ internal static class DisruptorGridVisual
         foreach (var cell in cells)
         {
             var center = DisruptorGrid.Center(cell);
-            center.Y = height(center) + 0.075f;
+            center.Y = height(center) + 0.14f;
             mesh.SetInstanceTransform(index++, new Transform3D(Basis.Identity, center));
         }
     }

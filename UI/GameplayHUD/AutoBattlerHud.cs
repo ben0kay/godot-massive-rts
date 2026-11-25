@@ -148,6 +148,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         var choose = new CheckButton
         {
             Text = DisruptorGrid.Name,
+            Icon = DisruptorGridVisual.PickerIcon,
             TooltipText = "Drag to place. Right-drag to erase. Slows and damages enemies crossing the tiles."
         };
         choose.Toggled += enabled => activate(enabled);

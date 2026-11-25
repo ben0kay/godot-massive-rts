@@ -146,7 +146,8 @@ public partial class LevelEditor
             var traps = new HBoxContainer();
             defenses.AddChild(traps);
             traps.AddChild(MenuLayout.Label("Traps"));
-            AddPaletteAction(traps, DisruptorGrid.Name, Tool.Disruptor);
+            var disruptor = AddPaletteAction(traps, DisruptorGrid.Name, Tool.Disruptor);
+            disruptor.Icon = DisruptorGridVisual.PickerIcon;
             return defenses;
         }
 
