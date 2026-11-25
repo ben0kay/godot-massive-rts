@@ -206,6 +206,7 @@ public partial class DeploymentPainter : Node3D
     public override void _Process(double delta)
     {
         if (dimensions == null || !Visible) return;
+        foreach (var preview in previews) preview.Advance((float)delta);
         ghostRefresh -= delta;
         if (ghostRefresh > 0) return;
         ghostRefresh = 1.0 / 24.0;
@@ -399,7 +400,7 @@ public partial class DeploymentPainter : Node3D
             return false;
         }
         if (existed) previews[previous.Type].Remove(point);
-        previews[placement.Type].Add(placement);
+        previews[placement.Type].Add(placement, animate: true);
         return true;
     }
 

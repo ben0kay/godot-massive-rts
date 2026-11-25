@@ -3,7 +3,7 @@ shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled;
 
 uniform float cell_size = 2.0;
-uniform vec4 line_color : source_color = vec4(0.59, 0.75, 0.86, 0.36);
+uniform vec4 line_color : source_color = vec4(0.59, 0.75, 0.86, 0.095);
 varying vec2 world_xz;
 
 void vertex() {

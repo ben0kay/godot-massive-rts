@@ -98,7 +98,7 @@ public partial class BenchmarkArena
         painter.BrushFaction = Factions.Blue;
         if (campaignRoster == null) painter.PaintRestriction = CanDeployBlue;
         painter.SetPreviewTerrain(terrain);
-        autoBattlerPlaytestPreview = LevelLayoutPreview.Build(map, redOnly: campaignRoster != null);
+        autoBattlerPlaytestPreview = LevelLayoutPreview.Build(map, redOnly: campaignRoster != null, holographicDeployment: true);
         if (campaignRoster != null) PrepareCampaignDeployment();
     }
 

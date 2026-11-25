@@ -564,3 +564,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Strengthened team color on rocket and shell trails. Gave Broadside a dedicated faceted warhead and short batched flight smoke, retaining its flight and impact settings.
 
 - 2026-11-25 — Light Artillery visual experiment: layered neutral-metal chevron hull, faction armor and emissive barrel accents behind the existing enhanced-mesh option. Shared UV mask preserves instance color/fracture buffers, lighting and reinforcement clip; gameplay and muzzle unchanged. Godot validation pending.
+
+- 2026-11-25 — Added a pulsing faction hologram over painted deployment zones, softened the placement grid, and animated freshly painted units from small to a 110% overshoot before settling.

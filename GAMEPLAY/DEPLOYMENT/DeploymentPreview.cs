@@ -10,6 +10,10 @@ internal sealed class DeploymentPreview
     private readonly MultiMesh mesh;
     private readonly float halfHeight;
     internal TerrainHeightField Terrain { get; set; }
+    private const float PopTime = 0.19f, SettleTime = 0.13f;
+    private float animationTime;
+    private readonly Dictionary<Vector2I, float> popping = new();
+    private readonly List<Vector2I> settled = new();
     private readonly List<SoldierPlacement> placements = new();
     private readonly Dictionary<Vector2I, int> slots = new();
 
@@ -20,11 +24,13 @@ internal sealed class DeploymentPreview
         parent.AddChild(new MultiMeshInstance3D { Multimesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
 
-    public void Add(SoldierPlacement placement)
+    public void Add(SoldierPlacement placement, bool animate = false)
     {
         int slot = placements.Count;
         placements.Add(placement);
-        slots.Add(new Vector2I(placement.X, placement.Z), slot);
+        var cell = new Vector2I(placement.X, placement.Z);
+        slots.Add(cell, slot);
+        if (animate) popping.Add(cell, animationTime);
         if (placements.Count > mesh.InstanceCount)
         {
             mesh.InstanceCount = Math.Max(64, mesh.InstanceCount * 2);
@@ -37,6 +43,7 @@ internal sealed class DeploymentPreview
     public void Remove(Vector2I cell)
     {
         if (!slots.Remove(cell, out int slot)) return;
+        popping.Remove(cell);
         int last = placements.Count - 1;
         if (slot != last)
         {
@@ -52,16 +59,48 @@ internal sealed class DeploymentPreview
     public void Clear()
     {
         slots.Clear();
+        popping.Clear();
+        animationTime = 0f;
         placements.Clear();
         mesh.VisibleInstanceCount = 0;
     }
 
+    public void Advance(float delta)
+    {
+        if (popping.Count == 0) { animationTime = 0f; return; }
+        animationTime += delta;
+        settled.Clear();
+        foreach (var (cell, startedAt) in popping)
+        {
+            WriteTransform(slots[cell]);
+            if (animationTime - startedAt >= PopTime + SettleTime) settled.Add(cell);
+        }
+        foreach (var cell in settled) popping.Remove(cell);
+    }
+
     private void Write(int slot)
     {
+        WriteTransform(slot);
+        mesh.SetInstanceColor(slot, ArmyRenderer.FactionColor(placements[slot].Faction));
+    }
+
+    private void WriteTransform(int slot)
+    {
         SoldierPlacement placement = placements[slot];
-        Vector3 position = placement.Position() + Vector3.Up * halfHeight;
-        position.Y += Terrain?.At(position.X, position.Z) ?? 0f;
-        mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
-        mesh.SetInstanceColor(slot, ArmyRenderer.FactionColor(placement.Faction));
+        float scale = 1f;
+        if (popping.TryGetValue(new Vector2I(placement.X, placement.Z), out float startedAt))
+        {
+            float age = animationTime - startedAt;
+            if (age < PopTime)
+            {
+                float remaining = 1f - age / PopTime;
+                scale = Mathf.Lerp(0.10f, 1.10f, 1f - remaining * remaining * remaining);
+            }
+            else
+                scale = Mathf.Lerp(1.10f, 1f, Mathf.SmoothStep(0f, 1f, (age - PopTime) / SettleTime));
+        }
+        Vector3 position = placement.Position();
+        position.Y += halfHeight * scale + (Terrain?.At(position.X, position.Z) ?? 0f);
+        mesh.SetInstanceTransform(slot, new Transform3D(Basis.Identity.Scaled(Vector3.One * scale), position));
     }
 }

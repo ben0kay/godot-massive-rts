@@ -7,7 +7,8 @@ namespace MassiveRts;
 internal static class LevelLayoutPreview
 {
     // =========================================================
-    public static Node3D Build(CommandSandbox level, bool redOnly = false, string formationContainer = "StartingUnits", bool decorationsOnly = false)
+    public static Node3D Build(CommandSandbox level, bool redOnly = false, string formationContainer = "StartingUnits", bool decorationsOnly = false,
+        bool holographicDeployment = false)
     {
         var preview = new Node3D { Name = "LayoutPreview" };
         level.AddChild(preview, false, Node.InternalMode.Back);
@@ -30,31 +31,58 @@ internal static class LevelLayoutPreview
             AddDeploymentLine(preview, terrain, alongZ, offset, half, blue);
         }
         if (level.AutoBattlerRules?.BlueDeploymentCells is not { Count: > 0 } cells) return preview;
-        using var region = new SurfaceTool();
-        bool hasRegion = false;
-        region.Begin(Mesh.PrimitiveType.Triangles);
-        var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            AlbedoColor = new Color(0.23f, 0.62f, 1f, 0.4f) };
-        region.SetMaterial(material);
         float cellSize = DeploymentLayout.CellSize;
+        float mapHalfWidth = level.MapSize * 0.5f;
+        var visibleCells = new HashSet<Vector2I>();
         foreach (var cell in cells)
         {
-            float x = cell.X * cellSize, z = cell.Y * cellSize;
-            if (Mathf.Abs(x + cellSize * 0.5f) > level.MapSize * 0.5f ||
-                Mathf.Abs(z + cellSize * 0.5f) > level.MapSize * 0.5f ||
-                !level.AutoBattlerRules.AllowsSide(new Vector3(x + cellSize * 0.5f, 0, z + cellSize * 0.5f),
-                    cellSize * 0.5f, blue: true)) continue;
-            hasRegion = true;
-            Vector3 At(float vx, float vz) => new(vx, Height(vx, vz) + 0.08f, vz);
-            var a = At(x, z);
-            var b = At(x + cellSize, z);
-            var c = At(x + cellSize, z + cellSize);
-            var d = At(x, z + cellSize);
-            region.AddVertex(a); region.AddVertex(b); region.AddVertex(c);
-            region.AddVertex(a); region.AddVertex(c); region.AddVertex(d);
+            Vector2 center = ((Vector2)cell + Vector2.One * 0.5f) * cellSize;
+            if (Mathf.Abs(center.X) > mapHalfWidth || Mathf.Abs(center.Y) > mapHalfWidth ||
+                !level.AutoBattlerRules.AllowsSide(new Vector3(center.X, 0f, center.Y), cellSize * 0.5f, blue: true))
+                continue;
+            visibleCells.Add(cell);
         }
-        if (hasRegion) preview.AddChild(new MeshInstance3D { Mesh = region.Commit() });
+        if (visibleCells.Count == 0) return preview;
+
+        using var region = new SurfaceTool();
+        region.Begin(Mesh.PrimitiveType.Triangles);
+        if (holographicDeployment)
+        {
+            var hologram = new ShaderMaterial
+            {
+                Shader = GD.Load<Shader>("res://GAMEPLAY/DEPLOYMENT/DeploymentZone.gdshader")
+            };
+            hologram.SetShaderParameter("faction_color", Factions.Color(Factions.Blue));
+            region.SetMaterial(hologram);
+        }
+        else region.SetMaterial(new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            AlbedoColor = new Color(0.23f, 0.62f, 1f, 0.4f) });
+
+        foreach (var cell in visibleCells)
+        {
+            Vector2 origin = (Vector2)cell * cellSize;
+            if (holographicDeployment)
+                region.SetColor(new Color(
+                    visibleCells.Contains(cell + Vector2I.Left) ? 0f : 1f,
+                    visibleCells.Contains(cell + Vector2I.Right) ? 0f : 1f,
+                    visibleCells.Contains(cell + Vector2I.Up) ? 0f : 1f,
+                    visibleCells.Contains(cell + Vector2I.Down) ? 0f : 1f));
+
+            Add(Vector2.Zero); Add(Vector2.Right); Add(Vector2.One);
+            Add(Vector2.Zero); Add(Vector2.One); Add(Vector2.Down);
+
+            void Add(Vector2 uv)
+            {
+                Vector2 point = origin + uv * cellSize;
+                region.SetUV(uv);
+                region.AddVertex(new Vector3(point.X, Height(point.X, point.Y) + 0.08f, point.Y));
+            }
+        }
+        preview.AddChild(new MeshInstance3D
+        {
+            Mesh = region.Commit(), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+        });
         return preview;
     }
     // The editor retains these batches for the lifetime of the loaded map.
