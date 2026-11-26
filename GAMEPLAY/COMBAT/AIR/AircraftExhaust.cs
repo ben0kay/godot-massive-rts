@@ -6,7 +6,7 @@ namespace MassiveRts;
 internal sealed class AircraftExhaust
 {
     private const int SmokeCapacity=1024;
-    private const float SampleInterval=0.085f, Lifetime=1.45f;
+    private const float SampleInterval = 0.06f, Lifetime = 0.28f;
     private readonly record struct Puff(Vector3 Origin,float Born,float Seed);
     private readonly MultiMesh flames, smoke;
     private readonly Puff[] puffs;
@@ -125,7 +125,7 @@ internal sealed class AircraftExhaust
         {
             var puff=puffs[(head-count+slot+SmokeCapacity)%SmokeCapacity];
             float age=Mathf.Max(0f,clock-puff.Born);
-            Vector3 drift=new((puff.Seed-0.5f)*age*0.42f,age*0.38f,0);
+            Vector3 drift=new((puff.Seed-0.5f)*age*0.18f,age*0.14f,0);
             smoke.SetInstanceTransform(slot,new Transform3D(Basis.Identity,puff.Origin+drift));
             smoke.SetInstanceCustomData(slot,new Color(Mathf.Clamp(age/Lifetime,0f,1f),puff.Seed,0f,0f));
         }
