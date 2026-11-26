@@ -63,19 +63,16 @@ internal static class AircraftPaint
         if (!GodotObject.IsInstanceValid(preview) || preview.GetParent() != parent)
         {
             if (blue.Length + red.Length == 0) return null;
+            var visuals = UnitVisualConfig.Load();
             preview = new MultiMeshInstance3D
             {
                 Multimesh = new MultiMesh
                 {
                     TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
-                    Mesh = AirSquadronVisuals.AircraftMesh(unit),
+                    Mesh = AirSquadronVisuals.AircraftMesh(unit, visuals),
                     InstanceCount = AirSquadron.MaxPerFaction * 2
                 },
-                MaterialOverride = new StandardMaterial3D
-                {
-                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
-                    CullMode = BaseMaterial3D.CullModeEnum.Disabled
-                },
+                MaterialOverride = AirSquadronVisuals.AircraftMaterial(unit, visuals),
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
             };
             parent.AddChild(preview, false, Node.InternalMode.Back);

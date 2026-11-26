@@ -43,6 +43,8 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UsePrismLanceMesh { get; set; }
     [Export] public bool AnimatePrismWeapon { get; set; }
     [Export] public bool AnimatePrismWalk { get; set; }
+    [Export] public bool UseEnhancedVWingMesh { get; set; }
+    [Export] public bool UseEnhancedBomberMesh { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
 

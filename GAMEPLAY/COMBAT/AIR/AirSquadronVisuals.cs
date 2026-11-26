@@ -27,8 +27,12 @@ internal sealed partial class AirSquadronVisuals : Node3D
         int capacity = fighters.Length;
         var counts = new Dictionary<UnitDefinition, int>();
         foreach (var fighter in fighters) counts[fighter.Unit] = counts.GetValueOrDefault(fighter.Unit) + 1;
+        var visualConfig = UnitVisualConfig.Load();
         foreach (var (unit, count) in counts)
-            aircraft.Add(unit, new Batch { Mesh = MakeBatch(AircraftMesh(unit), count) });
+            aircraft.Add(unit, new Batch
+            {
+                Mesh = MakeBatch(AircraftMesh(unit, visualConfig), count, material: AircraftMaterial(unit, visualConfig))
+            });
         shadows = MakeBatch(GroundShadowMeshes.Soldier(), capacity, transparent: true);
         trailLeft = new Vector3[capacity * TrailSamples];
         trailRight = new Vector3[trailLeft.Length];
@@ -46,7 +50,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         });
     }
 
-    private MultiMesh MakeBatch(Mesh mesh, int capacity, bool transparent = false)
+    private MultiMesh MakeBatch(Mesh mesh, int capacity, bool transparent = false, Material material = null)
     {
         var batch = new MultiMesh
         {
@@ -56,7 +60,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         AddChild(new MultiMeshInstance3D
         {
             Multimesh = batch,
-            MaterialOverride = new StandardMaterial3D
+            MaterialOverride = material ?? new StandardMaterial3D
             {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
                 Transparency = transparent ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled,
@@ -67,7 +71,27 @@ internal sealed partial class AirSquadronVisuals : Node3D
         return batch;
     }
 
-    internal static Mesh AircraftMesh(UnitDefinition unit) => unit.AircraftMesh ?? MakeWing(unit.CanBombGround);
+    private static Mesh legacyFighter, legacyBomber;
+    private static Material legacyMaterial;
+    private static bool Enhanced(UnitDefinition unit, UnitVisualConfig visuals) =>
+        unit.AircraftMesh == null && (unit.Id == "v_wing" && visuals.UseEnhancedVWingMesh ||
+            unit.Id == "heavy_bomber" && visuals.UseEnhancedBomberMesh);
+
+    // Shared with deployment and editor previews. Explicit authored meshes always win.
+    internal static Mesh AircraftMesh(UnitDefinition unit, UnitVisualConfig visuals)
+    {
+        if (unit.AircraftMesh != null) return unit.AircraftMesh;
+        if (Enhanced(unit, visuals)) return AirframeMeshes.Get(unit.CanBombGround);
+        return unit.CanBombGround ? (legacyBomber ??= MakeWing(true)) : (legacyFighter ??= MakeWing(false));
+    }
+
+    internal static Material AircraftMaterial(UnitDefinition unit, UnitVisualConfig visuals) =>
+        Enhanced(unit, visuals) ? AirframeMeshes.Armor :
+        (legacyMaterial ??= new StandardMaterial3D
+        {
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
+            CullMode = BaseMaterial3D.CullModeEnum.Disabled
+        });
 
     private static Vector3 WingtipFor(UnitDefinition unit) => unit.CanBombGround ? new Vector3(3.1f, 0f, -0.62f) : Wingtip;
 

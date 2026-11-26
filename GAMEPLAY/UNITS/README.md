@@ -196,3 +196,12 @@ Both use one shared masked surface per type, existing packed attack phase and op
 ## Light Artillery visual experiment
 
 With `UseEnhancedMeshes` enabled in `UnitVisualConfig.tres`, Light Artillery (`chevron_artillery`) uses a low layered faction-painted chevron hull, colored shoulder plates and barrel receiver, dark gunmetal mechanical housings and barrel, and restrained emissive strips. Mobile units intentionally use more visible faction paint than neutral-metal buildings. Disabling the existing option restores the plain model. The existing instance color/alpha buffer remains unchanged: enhanced mesh UVs encode steel/paint/trim and baked brightness, while instance RGB/alpha retain faction color, hit flash and fracture state. Lit and unlit battle rendering, 3D previews and reinforcement entry clipping share the mask logic. No new batches or per-unit nodes. Gameplay dimensions, muzzle, elevation, recoil, stats and all other unit meshes are unchanged. Owner visual and performance validation pending.
+
+## Aircraft visual makeover (AIR-VIS1)
+
+**Use Enhanced V Wing Mesh** and **Use Enhanced Bomber Mesh** in [UnitVisualConfig.tres](UnitVisualConfig.tres) are independent and enabled by default. Save and relaunch to compare against the legacy thin wing meshes. Explicit custom AircraftMesh resources override these experiments.
+
+- V-wing: thin swept V, raised faceted cockpit/spine, paired gun housings at the existing tracer origins, twin rear exhausts and bright faction wingtip panels. Original 1.72-unit half-span and +Z nose retained.
+- Heavy Bomber: broad flying wing, thick layered armor, large twin engine nacelles, dark underside payload bay inset and emissive vents. Original 3.1-unit half-span and +Z nose retained. Bay is visual only, with no independent door motion.
+
+The aircraft models use a single cached faceted surface per type, with the shared unit armor UV palette and one unshaded aircraft material. Battle and AircraftPaint (editor/deployment) share mesh/material selection. Existing banking, pitch, shadows, trails, tracers and bomb runs remain untouched; no extra per-aircraft nodes, particles, lights, instance fields or draw calls. Check both mesh toggles, faction colors, tracers and wingtip wisps in motion, underside silhouette and bombing runs in Godot.

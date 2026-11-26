@@ -676,3 +676,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Heavy Bomber commits to a ground position before each pass, uses wider turns, and exposes a Bomb order in Clash authoring and test deployment.
 
 - 2026-11-26 — Clash Level Editor authors Red aircraft only. Blue aircraft placement stays in Test Clash deployment.
+
+- 2026-11-26 — AIR-VIS1 — Added independently toggleable faceted V-wing interceptor and Heavy Bomber airframes with shared faction armor material, cockpit/gun/exhaust detailing and bomber engine nacelles/payload-bay inset. Cached meshes shared by editor/deployment and battle; original wingtip/tracer anchors, flight and combat untouched. Legacy/custom meshes retained. Source review only; owner shader/visual validation pending.
