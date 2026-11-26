@@ -28,6 +28,9 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseHexagonSiegeRobotMesh { get; set; }
     [Export] public bool AnimateHexagonAttack { get; set; }
     [Export] public bool AnimateHexagonWalk { get; set; }
+    [Export] public bool UseHBreacherMesh { get; set; }
+    [Export] public bool AnimateHBreacherAttack { get; set; }
+    [Export] public bool AnimateHBreacherWalk { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
 

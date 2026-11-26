@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -87,14 +87,16 @@ public static class FacetedSoldierMeshes
         bool archer = visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId;
         bool elite = visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId;
         bool cavalry = visuals.UseDiamondCavalryMesh && id == RuntimeUnitCatalog.DiamondId;
+        bool breacher = visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId;
         material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
             (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack) ||
-            (cavalry && visuals.AnimateDiamondAttack));
+            (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
             (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk) ||
             (archer && visuals.AnimateTriangleWalk) || (elite && visuals.AnimatePentagonWalk) ||
-            (cavalry && visuals.AnimateDiamondGallop));
+            (cavalry && visuals.AnimateDiamondGallop) || (breacher && visuals.AnimateHBreacherWalk));
+        material.SetShaderParameter("h_breacher", breacher);
         material.SetShaderParameter("diamond_cavalry", cavalry);
         material.SetShaderParameter("pentagon_elite", elite);
         material.SetShaderParameter("triangle_archer", archer);
@@ -104,6 +106,7 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId) ||
         (visuals.UseDiamondCavalryMesh && id == RuntimeUnitCatalog.DiamondId) ||
         (visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId) ||
         (visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId) ||
@@ -145,6 +148,7 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.PentagonId) AppendPentagonElite(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.DiamondId) AppendDiamondCavalry(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.BreacherId) AppendHBreacher(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
@@ -299,6 +303,57 @@ public static class FacetedSoldierMeshes
         Block(0f, 0f, -0.50f, 0.23f, 0.16f, 0.42f, Paint(0.96f), recoil: true);
         Block(0f, 0f, -0.75f, 0.12f, 0.12f, 0.28f, Steel(1f), recoil: true);
         Block(0f, 0f, -0.86f, 0.10f, 0.10f, 0.06f, Trim(1f), recoil: true);
+    }
+
+    // =========================================================
+    // Compact demolition walker. Keep both ends of the H open: two side
+    // housings connected by a central crossbar, with twin sliding rams (-Z).
+    private static void AppendHBreacher(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool ram = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: ram, walkPart: foot);
+        }
+
+        // Low crossbeam and angular command housing; no bridge across the open ends.
+        Block(0f, -0.07f, 0f, 1.48f, 0.46f, 0.44f, Steel(0.96f));
+        Block(0f, 0.21f, 0f, 0.86f, 0.38f, 0.42f, Paint(0.94f));
+        Block(0f, 0.435f, 0.01f, 0.54f, 0.13f, 0.33f, Paint(1f));
+        Block(0f, 0.28f, -0.205f, 0.48f, 0.075f, 0.025f, Trim(0.96f));
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            float px = side * 0.67f;
+            // Separate armored drive pods and rear power cells.
+            Block(px, -0.09f, 0.09f, 0.64f, 0.48f, 1.46f, Steel(0.93f));
+            Block(px, 0.22f, 0.15f, 0.62f, 0.46f, 1.34f, Paint(0.94f));
+            Block(px, 0.405f, 0.45f, 0.40f, 0.14f, 0.48f, Paint(0.99f));
+            Block(px, 0.18f, 0.815f, 0.38f, 0.12f, 0.03f, Trim(0.83f));
+
+            // Fixed hydraulic casing and moving shaft. The shaft overlaps
+            // the casing even at full extension; ram faces never close the notch.
+            Block(px, 0.08f, -0.42f, 0.52f, 0.43f, 0.50f, Steel(0.97f));
+            Block(px, 0.08f, -0.57f, 0.29f, 0.23f, 0.55f, Steel(1f), ram: true);
+            Block(px, 0.08f, -0.74f, 0.59f, 0.46f, 0.20f, Paint(0.98f), ram: true);
+            Block(px, 0.08f, -0.84f, 0.46f, 0.30f, 0.06f, Steel(1f), ram: true);
+            Block(px, 0.23f, -0.79f, 0.35f, 0.055f, 0.13f, Trim(0.93f), ram: true);
+
+            // Four low ground-contact pads. Fore/hind and side signs select
+            // diagonal pairs in the shared shader without extra mesh attributes.
+            for (int end = -1; end <= 1; end += 2)
+            {
+                Block(px, -0.31f, end * 0.38f, 0.34f, 0.28f, 0.30f, Steel(0.94f), foot: true);
+                Block(px, -0.42f, end * 0.38f, 0.55f, 0.16f, 0.38f, Steel(1f), foot: true);
+            }
+        }
     }
 
     // =========================================================

@@ -8,6 +8,7 @@ uniform bool hexagon_siege = false;
 uniform bool triangle_archer = false;
 uniform bool pentagon_elite = false;
 uniform bool diamond_cavalry = false;
+uniform bool h_breacher = false;
 uniform float infantry_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
@@ -33,6 +34,13 @@ void vertex() {
             float brace = t < 0.18 ? smoothstep(0.0, 0.18, t)
                 : 1.0 - smoothstep(0.18, 1.0, t);
             if (UV.x < 4.5) VERTEX.y -= infantry_height * 0.085 * brace;
+        } else if (h_breacher && swing > 0.0 && UV.x < -0.5) {
+            // Both hydraulic rams extend together on the actual melee hit.
+            // Keep the original body lunge, damage event and attack cooldown.
+            float t = (swing - 1.0) / 14.0;
+            float extension = t < 0.14 ? smoothstep(0.0, 0.14, t)
+                : 1.0 - smoothstep(0.14, 1.0, t);
+            VERTEX.z -= half_extent.y * 0.12 * extension;
         } else if (diamond_cavalry && swing > 0.0 && UV.x < -0.5) {
             // Actual ordinary hit or trample contact: a quick +X lance thrust.
             float t = (swing - 1.0) / 14.0;
@@ -84,7 +92,16 @@ void vertex() {
     if (infantry_walk && !stomping && INSTANCE_CUSTOM.y > 0.0) {
         float phase = INSTANCE_CUSTOM.x * TAU;
         float weight = INSTANCE_CUSTOM.y;
-        if (diamond_cavalry) {
+        if (h_breacher) {
+            // Slow, alternating diagonal pad pairs, with very little hull bounce.
+            if (UV.x > 4.5) {
+                float leg_phase = phase + (VERTEX.x * VERTEX.z > 0.0 ? 0.0 : PI);
+                VERTEX.z -= sin(leg_phase) * half_extent.y * 0.11 * weight;
+                VERTEX.y += max(0.0, cos(leg_phase)) * infantry_height * 0.045 * weight;
+            } else {
+                VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * 0.006 * weight;
+            }
+        } else if (diamond_cavalry) {
             // Four-beat gallop: front/hind and left/right offsets differ.
             // Use +X travel, not the -Z infantry axis; planted feet stay grounded.
             if (UV.x > 4.5) {

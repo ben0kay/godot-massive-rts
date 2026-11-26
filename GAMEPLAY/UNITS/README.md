@@ -99,6 +99,14 @@ The distance-driven, ID-staggered gait has a restrained 2.2% peak torso bounce a
 
 The tier-3 siege robot uses a broad hexagonal faction-painted torso, piston boots, low armored head, power pack, and large centrally mounted rotary energy blade. The existing one-surface armor mask and infantry animation shader are reused. Cleaves sweep through roughly 149 degrees during the initial 0.17s contact effect window, then recover (0.58s total). The actual 180-degree cleave damage cone and original capped contact crescent are unchanged. Each actual radial stomp attack sends the existing attack feedback a cosmetic stomp flag, so the blade stays at rest and the torso braces downward instead; the existing radial ring and damage remain unchanged. The stance has a slower distance-driven staggered gait, 5.5% peak boot lift and 1.8% peak torso bounce. No new per-soldier nodes, draw calls or timers; the existing optional instance data stores gait phase/weight and, on Hexagon only, stomp mode. The 0.16s attack pulse, stats, footprint and cooldown are unchanged. Owner checks: both attack types, legacy toggle, lit/unlit visuals, damage/cracks/shield shells and FPS.
 
+## H Breacher demolition walker trial
+
+**Use H Breacher Mesh**, **Animate H Breacher Attack**, and **Animate H Breacher Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disable the new mesh to restore the original H-frame. Save and relaunch to change settings.
+
+The twin-ram siege walker uses two faction-painted armored side housings, a low crossbeam and central command housing, rear power cells, hydraulic casings and four ground pads. Both ends of the H remain open. Tagged shafts and ram faces extend together along local -Z on the existing attack feedback event (both unit melee and StructureCombat attacks), followed by slow retraction over 0.48 seconds. This is one existing damage event, not two attacks. The existing 0.16s attack pulse and authored whole-body lunge are retained. No change to targeting, structure preference, damage multipliers, reach, cooldown, navigation or collision.
+
+Distance-driven staggered diagonal pad pairs provide a heavy gait with 4.5% peak foot lift and 1.2% peak hull bounce. Reuses the one-surface armor mask, shared infantry shader, packed attack phase and optional walking custom data. No extra per-unit nodes, timers, effects or draw calls. Owner validation: both target kinds (including shelters), ram alignment, H silhouette, grounded motion, lit/unlit, legacy fallback and FPS.
+
 ## Unit fracture
 
 In [UnitVisualConfig.tres](UnitVisualConfig.tres), **Use Unit Fracture** enables health-dependent cracks and crumbling deaths. Save and relaunch the scene after changing it. [Visual feedback](../../VISUALS/FEEDBACK/README.md) describes the crack thresholds and fragment budgets.

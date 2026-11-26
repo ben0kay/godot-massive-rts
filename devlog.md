@@ -644,3 +644,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — VIS-DIAMOND — Added independently toggleable Diamond Cavalry mechanical lancer mesh, +X four-leg distance-driven staggered gallop and 0.22s lance thrust on existing melee/trample feedback. Shared infantry animation/armor pipeline reused; original diamond, charge, separation, dust, contact effects and gameplay stats unchanged. Source review only; owner shader/visual/FPS validation pending.
 
 - 2026-11-25 — Added a polygon Cliff Painter to the Level Editor. Closed outlines create a flat raised rock cap, rounded cliff corners, and height-aware projectile cover along the blocked rim. Undo and right-click removal restore the underlying terrain.
+
+- 2026-11-25 — VIS-H-BREACHER — Added independently toggleable H-frame demolition walker mesh with twin synchronized 0.48s hydraulic ram animation on existing unit/structure attacks and distance-driven staggered four-pad gait. Reused shared armor and animation pipeline. Legacy mesh, body lunge, structure targeting, damage and gameplay footprint unchanged. Source review only; owner shader/visual/FPS validation pending.
