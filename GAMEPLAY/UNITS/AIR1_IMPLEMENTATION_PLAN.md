@@ -42,9 +42,9 @@ At touchdown, transfer the same combatant to the ground V-wing variant and its g
 
 ## Try AIR1-A in Clash
 
-Open a Clash level in the Level Editor, select **Blue V-wing** or **Red V-wing** in the bottom **Units** roster. Left-drag paints starts;
+Open a Clash level in the Level Editor, select **V-wing** in the bottom **Units** roster to author Red aircraft. Left-drag paints starts;
 right-drag erases that faction’s starts. Try eight per side. Press **Test Clash**
-and then **Fight**, with or without ground troops. Save the map to keep the painted
+and paint the Blue flight from the test roster, then press **Fight**, with or without ground troops. Save the map to keep the painted
 starts. Older map-authored flight counts still spawn their original automatic
 formation until the first painted start replaces that faction’s count.
 

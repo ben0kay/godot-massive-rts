@@ -99,20 +99,15 @@ public partial class LevelEditor
         body.RemoveChild(simulation);
         picker.AddChild(simulation);
         Color enemy = Factions.Color(Factions.Red);
-        var airEntries = new List<(UnitDefinition Unit, byte Faction)>();
-        foreach (var unit in aircraft)
-            foreach (byte faction in Factions.DisplayOrder)
-                if (AutoBattlerRules.AllowsAircraftFaction(faction)) airEntries.Add((unit, faction));
-        int unitCardCount = units.Length + airEntries.Count;
+        int unitCardCount = units.Length + aircraft.Length;
         int towers = defenseDefinitions.Length;
         palettePages = new[]
         {
             placementPalette.BuildCards(picker, unitCardCount, (unitCardCount + 1) / 2,
-                i => i < units.Length ? units[i].DisplayName :
-                    $"{Factions.Name(airEntries[i - units.Length].Faction)} {airEntries[i - units.Length].Unit.DisplayName}",
+                i => (i < units.Length ? units[i] : aircraft[i - units.Length]).DisplayName,
                 i =>
                 {
-                    var unit = i < units.Length ? units[i] : airEntries[i - units.Length].Unit;
+                    var unit = i < units.Length ? units[i] : aircraft[i - units.Length];
                     return UnitPlacementBar.Stats(unit.Health, unit.Damage);
                 }, (icon, i) =>
                 {
@@ -122,18 +117,15 @@ public partial class LevelEditor
                         icon.SetColor(enemy);
                         return;
                     }
-                    var entry = airEntries[i - units.Length];
-                    icon.SetAircraft(entry.Unit);
-                    icon.SetColor(Factions.Color(entry.Faction));
+                    icon.SetAircraft(aircraft[i - units.Length]);
+                    icon.SetColor(enemy);
                 }, i =>
                 {
                     if (i >= units.Length)
                     {
                         EndAircraftStroke();
                         if (editingReserve) ToggleReserveGrid();
-                        var entry = airEntries[i - units.Length];
-                        aircraftBrush = entry.Unit;
-                        aircraftFaction = entry.Faction;
+                        aircraftBrush = aircraft[i - units.Length];
                         PickPaletteTool(Tool.Aircraft);
                         return;
                     }

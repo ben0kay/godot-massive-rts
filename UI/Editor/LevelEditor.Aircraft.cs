@@ -7,13 +7,12 @@ namespace MassiveRts;
 public partial class LevelEditor
 {
     private UnitDefinition aircraftBrush;
-    private byte aircraftFaction;
     private Vector2[] aircraftStroke;
     private bool aircraftHadStarts;
     private MouseButton aircraftStrokeButton;
     private Vector2? lastAircraftCell;
     private readonly Dictionary<UnitDefinition, MultiMeshInstance3D> aircraftPreviews = new();
-    private readonly Label3D[] editorBombMarkers = new Label3D[Factions.Count];
+    private Label3D editorBombMarker;
 
     private bool placingEditorBombOrder;
 
@@ -49,8 +48,8 @@ public partial class LevelEditor
             }
             EndAircraftStroke();
             var rules = map.AutoBattlerRules;
-            aircraftStroke = rules.ReadAircraftStarts(aircraftFaction, aircraftBrush.Id);
-            aircraftHadStarts = rules.HasAircraftStarts(aircraftFaction, aircraftBrush.Id);
+            aircraftStroke = rules.ReadAircraftStarts(Factions.Red, aircraftBrush.Id);
+            aircraftHadStarts = rules.HasAircraftStarts(Factions.Red, aircraftBrush.Id);
             aircraftStrokeButton = mouse.ButtonIndex;
             PaintAircraft(point);
             return true;
@@ -67,7 +66,7 @@ public partial class LevelEditor
     private void SetOpeningBombOrder(Vector2? destination)
     {
         var orders = map.AutoBattlerRules.OpeningBombOrders;
-        int faction = aircraftFaction;
+        int faction = Factions.Red;
         Vector2? before = orders.TryGetValue(faction, out var previous) ? previous : null;
         if (before == destination) return;
         if (destination is { } point && Mathf.Max(Mathf.Abs(point.X), Mathf.Abs(point.Y)) >= map.MapSize * 0.5f)
@@ -93,18 +92,18 @@ public partial class LevelEditor
         var from = lastAircraftCell ?? cell;
         lastAircraftCell = cell;
         var rules = map.AutoBattlerRules;
-        var existing = rules.ReadAircraftStarts(aircraftFaction, aircraftBrush.Id);
+        var existing = rules.ReadAircraftStarts(Factions.Red, aircraftBrush.Id);
         int available = AirSquadron.MaxPerFaction;
         foreach (var unit in aircraft)
         {
             if (unit == aircraftBrush) continue;
-            int painted = rules.ReadAircraftStarts(aircraftFaction, unit.Id).Length;
-            available -= painted > 0 ? painted : rules.ReadLegacyFlightCount(aircraftFaction, unit.Id);
+            int painted = rules.ReadAircraftStarts(Factions.Red, unit.Id).Length;
+            available -= painted > 0 ? painted : rules.ReadLegacyFlightCount(Factions.Red, unit.Id);
         }
         var points = AircraftPaint.Edit(existing, from, cell, map.MapSize * 0.5f,
             aircraftStrokeButton == MouseButton.Right, capacity: available);
-        if (points != existing) SetAircraftStarts(aircraftFaction, aircraftBrush.Id, points);
-        SetStatus($"{Factions.Name(aircraftFaction)} {aircraftBrush.DisplayName}: {points.Length} / {AirSquadron.MaxPerFaction}");
+        if (points != existing) SetAircraftStarts(Factions.Red, aircraftBrush.Id, points);
+        SetStatus($"{Factions.Name(Factions.Red)} {aircraftBrush.DisplayName}: {points.Length} / {AirSquadron.MaxPerFaction}");
     }
 
     private void EndAircraftStroke()
@@ -112,7 +111,7 @@ public partial class LevelEditor
         if (aircraftStroke == null) return;
         var before = aircraftStroke;
         bool hadStarts = aircraftHadStarts;
-        byte faction = aircraftFaction;
+        byte faction = Factions.Red;
         string id = aircraftBrush.Id;
         var rules = map.AutoBattlerRules;
         var after = rules.ReadAircraftStarts(faction, id);
@@ -140,19 +139,16 @@ public partial class LevelEditor
     {
         if (!AutoBattlerRules.SupportsAircraft(mode.CampaignId)) return;
         var rules = map.AutoBattlerRules;
-        foreach (byte faction in Factions.DisplayOrder)
-            if (AutoBattlerRules.AllowsAircraftFaction(faction))
-                AircraftPaint.RefreshBombMarker(map, ref editorBombMarkers[faction], faction,
-                    rules.OpeningBombOrders.TryGetValue(faction, out var target) && !editingReserve ? target : null, Surface);
+        AircraftPaint.RefreshBombMarker(map, ref editorBombMarker, Factions.Red,
+            rules.OpeningBombOrders.TryGetValue(Factions.Red, out var target) && !editingReserve ? target : null, Surface);
         foreach (var unit in aircraft)
         {
-            var blue = rules.ReadAircraftStarts(Factions.Blue, unit.Id);
             var red = rules.ReadAircraftStarts(Factions.Red, unit.Id);
             aircraftPreviews.TryGetValue(unit, out var preview);
-            preview = AircraftPaint.RefreshPreview(map, preview, unit, blue, red, Surface);
+            preview = AircraftPaint.RefreshPreview(map, preview, unit, System.Array.Empty<Vector2>(), red, Surface);
             if (preview != null)
             {
-                preview.Visible = !editingReserve && blue.Length + red.Length > 0;
+                preview.Visible = !editingReserve && red.Length > 0;
                 aircraftPreviews[unit] = preview;
             }
         }
