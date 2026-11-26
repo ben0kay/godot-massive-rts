@@ -67,7 +67,7 @@ A 0.40-second hammer swing uses the same attack-feedback phase and shader as Cir
 
 ## Triangle Archer robot trial
 
-**Use Triangle Archer Mesh**, **Animate Triangle Fire**, and **Animate Triangle Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disabling the mesh restores the original beveled triangle; animation toggles apply only to the new model. The long Triangle Marksman is unchanged.
+**Use Triangle Archer Mesh**, **Animate Triangle Fire**, and **Animate Triangle Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disabling the mesh restores the original beveled triangle; animation toggles apply only to the new model. The long Triangle Marksman has its own independent mesh and animation toggles (see below).
 
 A light triangular faction shell, pointed helmet, compact power pack, thin mechanical boots and centerline laser carbine preserve the original triangular silhouette and collision size. The barrel and breech slide back on the existing successful-shot feedback event, then recover over 0.24 seconds. The existing 0.16-second attack pulse and whole-body recoil remain; the muzzle is visually aligned with the original center-height projectile axis, but actual projectiles still launch from their original position (inside the hull). No change to bolt, launch effects, aim spread, forest deflection, damage, reach, cooldown or stats.
 
@@ -106,6 +106,20 @@ The tier-3 siege robot uses a broad hexagonal faction-painted torso, piston boot
 The twin-ram siege walker uses two faction-painted armored side housings, a low crossbeam and central command housing, rear power cells, hydraulic casings and four ground pads. Both ends of the H remain open. Tagged shafts and ram faces extend together along local -Z on the existing attack feedback event (both unit melee and StructureCombat attacks), followed by slow retraction over 0.48 seconds. This is one existing damage event, not two attacks. The existing 0.16s attack pulse and authored whole-body lunge are retained. No change to targeting, structure preference, damage multipliers, reach, cooldown, navigation or collision.
 
 Distance-driven staggered diagonal pad pairs provide a heavy gait with 4.5% peak foot lift and 1.2% peak hull bounce. Reuses the one-surface armor mask, shared infantry shader, packed attack phase and optional walking custom data. No extra per-unit nodes, timers, effects or draw calls. Owner validation: both target kinds (including shelters), ram alignment, H silhouette, grounded motion, lit/unlit, legacy fallback and FPS.
+
+## Long Triangle Marksman precision robot trial
+
+**Use Long Marksman Mesh**, **Animate Long Marksman Fire**, and **Animate Long Marksman Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disable the mesh to restore the original elongated triangle. Save and relaunch after changing settings.
+
+Rear-weighted wedge armor, an optical sight, twin cooling strips, thin mechanical legs and an elongated laser rifle distinguish this unit from the basic carbine Archer. The accepted-shot feedback drives sliding barrel recoil over 0.34 seconds; the original whole-body recoil and 0.16-second pulse remain. The barrel follows the original center-height shot axis; the real bolt still starts at the original center of the unit, not its new visual muzzle. Existing LongLaserBolt resource, targeting, damage, reach, cadence and collision are untouched. Shared ID-staggered walking uses 7% foot lift and 2% peak body bounce.
+
+## Pikeman anti-cavalry robot trial
+
+**Use Pikeman Mesh**, **Animate Pikeman Attack**, and **Animate Pikeman Walk** ship enabled in UnitVisualConfig.tres. Disable the mesh to restore the original T-shaped pike.
+
+Broad rear armor, reinforced shoulders and boots, a compact helmet and an energized central spear preserve the T-shaped silhouette. The tagged spear extends along local -Z on the existing single-target melee event and recovers over 0.30 seconds. A small 3.5% torso dip gives the impact a braced appearance; there is no independent brace mechanic. The standard 0.16-second attack pulse, anti-Diamond 1.5x damage multiplier, charge resistance, targeting, reach and all stats are unchanged. The shared distance-driven, ID-staggered gait uses 8% foot lift and 2.4% peak body bounce.
+
+Both models use one baked masked mesh, the shared infantry shader, packed attack phase and existing optional walking data. No extra nodes, draw calls, timers or emitters. Owner checks: old meshes, firing/bolt exit, spear thrust, cavalry interaction, lit/unlit, shield/crack feedback and FPS.
 
 ## Unit fracture
 

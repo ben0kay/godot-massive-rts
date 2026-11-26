@@ -16,6 +16,10 @@ public sealed class HitFeedbackSystem
     private const float PentagonAttackDuration = 0.46f;
     private const float DiamondAttackDuration = 0.22f;
     private const float BreacherAttackDuration = 0.48f;
+    private const float LongMarksmanFireDuration = 0.34f;
+    private const float PikemanAttackDuration = 0.30f;
+    internal bool ExtendLongMarksmanFire { get; set; }
+    internal bool ExtendPikemanAttack { get; set; }
     internal bool ExtendBreacherAttack { get; set; }
     internal bool ExtendDiamondAttack { get; set; }
     internal bool ExtendPentagonAttack { get; set; }
@@ -109,6 +113,8 @@ public sealed class HitFeedbackSystem
         ExtendPentagonAttack && type == RuntimeUnitCatalog.Pentagon ? PentagonAttackDuration :
         ExtendDiamondAttack && type == RuntimeUnitCatalog.Diamond ? DiamondAttackDuration :
         ExtendBreacherAttack && type == RuntimeUnitCatalog.Breacher ? BreacherAttackDuration :
+        ExtendLongMarksmanFire && type == RuntimeUnitCatalog.LongTriangle ? LongMarksmanFireDuration :
+        ExtendPikemanAttack && type == RuntimeUnitCatalog.Pikeman ? PikemanAttackDuration :
         hexagonStomp != null && type == RuntimeUnitCatalog.Hexagon ? HexagonAttackDuration : AttackDuration;
 
     internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f

@@ -31,6 +31,12 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UseHBreacherMesh { get; set; }
     [Export] public bool AnimateHBreacherAttack { get; set; }
     [Export] public bool AnimateHBreacherWalk { get; set; }
+    [Export] public bool UseLongMarksmanMesh { get; set; }
+    [Export] public bool AnimateLongMarksmanFire { get; set; }
+    [Export] public bool AnimateLongMarksmanWalk { get; set; }
+    [Export] public bool UsePikemanMesh { get; set; }
+    [Export] public bool AnimatePikemanAttack { get; set; }
+    [Export] public bool AnimatePikemanWalk { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
 

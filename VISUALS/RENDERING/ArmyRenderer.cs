@@ -45,6 +45,10 @@ public partial class ArmyRenderer : Node3D
     private bool animateDiamondGallop;
     private bool animateBreacherAttack;
     private bool animateBreacherWalk;
+    private bool animateLongMarksmanFire;
+    private bool animateLongMarksmanWalk;
+    private bool animatePikemanAttack;
+    private bool animatePikemanWalk;
     private bool animateHexagonAttack;
     private bool animateHexagonWalk;
     private int[] batchStrides;
@@ -96,7 +100,12 @@ public partial class ArmyRenderer : Node3D
         animateDiamondGallop = visuals.UseDiamondCavalryMesh && visuals.AnimateDiamondGallop;
         animateBreacherAttack = visuals.UseHBreacherMesh && visuals.AnimateHBreacherAttack;
         animateBreacherWalk = visuals.UseHBreacherMesh && visuals.AnimateHBreacherWalk;
-        bool anyWalk = animateCircleWalk || animateSquareWalk || animateHexagonWalk || animateTriangleWalk || animatePentagonWalk || animateDiamondGallop || animateBreacherWalk;
+        animateLongMarksmanFire = visuals.UseLongMarksmanMesh && visuals.AnimateLongMarksmanFire;
+        animateLongMarksmanWalk = visuals.UseLongMarksmanMesh && visuals.AnimateLongMarksmanWalk;
+        animatePikemanAttack = visuals.UsePikemanMesh && visuals.AnimatePikemanAttack;
+        animatePikemanWalk = visuals.UsePikemanMesh && visuals.AnimatePikemanWalk;
+        bool anyWalk = animateCircleWalk || animateSquareWalk || animateHexagonWalk || animateTriangleWalk ||
+            animatePentagonWalk || animateDiamondGallop || animateBreacherWalk || animateLongMarksmanWalk || animatePikemanWalk;
         infantryWalkPosition = anyWalk ? new Vector2[state.Position.Length] : null;
         infantryWalkPose = anyWalk ? new Vector2[state.Position.Length] : null;
         if (state.HitFeedback != null)
@@ -107,6 +116,8 @@ public partial class ArmyRenderer : Node3D
             state.HitFeedback.ExtendPentagonAttack = animatePentagonAttack;
             state.HitFeedback.ExtendDiamondAttack = animateDiamondAttack;
             state.HitFeedback.ExtendBreacherAttack = animateBreacherAttack;
+            state.HitFeedback.ExtendLongMarksmanFire = animateLongMarksmanFire;
+            state.HitFeedback.ExtendPikemanAttack = animatePikemanAttack;
             state.HitFeedback.EnableHexagonAttack(animateHexagonAttack);
         }
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
@@ -305,6 +316,8 @@ public partial class ArmyRenderer : Node3D
         (animatePentagonWalk && type == RuntimeUnitCatalog.Pentagon) ||
         (animateDiamondGallop && type == RuntimeUnitCatalog.Diamond) ||
         (animateBreacherWalk && type == RuntimeUnitCatalog.Breacher) ||
+        (animateLongMarksmanWalk && type == RuntimeUnitCatalog.LongTriangle) ||
+        (animatePikemanWalk && type == RuntimeUnitCatalog.Pikeman) ||
         (animateHexagonWalk && type == RuntimeUnitCatalog.Hexagon);
 
     private bool AttackEnabled(int type) => (animateCircleSword && type == RuntimeUnitCatalog.Circle) ||
@@ -313,6 +326,8 @@ public partial class ArmyRenderer : Node3D
         (animatePentagonAttack && type == RuntimeUnitCatalog.Pentagon) ||
         (animateDiamondAttack && type == RuntimeUnitCatalog.Diamond) ||
         (animateBreacherAttack && type == RuntimeUnitCatalog.Breacher) ||
+        (animateLongMarksmanFire && type == RuntimeUnitCatalog.LongTriangle) ||
+        (animatePikemanAttack && type == RuntimeUnitCatalog.Pikeman) ||
         (animateHexagonAttack && type == RuntimeUnitCatalog.Hexagon);
 
     private bool UpdateInfantryWalk(int id)
@@ -341,7 +356,9 @@ public partial class ArmyRenderer : Node3D
                 units.Type[id] == RuntimeUnitCatalog.Triangle ? 3.4f :
                 units.Type[id] == RuntimeUnitCatalog.Pentagon ? 4.0f :
                 units.Type[id] == RuntimeUnitCatalog.Diamond ? 4.8f :
-                units.Type[id] == RuntimeUnitCatalog.Breacher ? 3.2f : 3.8f;
+                units.Type[id] == RuntimeUnitCatalog.Breacher ? 3.2f :
+                units.Type[id] == RuntimeUnitCatalog.LongTriangle ? 2.6f :
+                units.Type[id] == RuntimeUnitCatalog.Pikeman ? 3.5f : 3.8f;
             phase += distance / (radius * strideLength);
             phase -= Mathf.Floor(phase);
             targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);

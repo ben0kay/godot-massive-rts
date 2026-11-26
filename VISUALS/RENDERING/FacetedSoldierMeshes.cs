@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh || visuals.UseLongMarksmanMesh || visuals.UsePikemanMesh
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -88,14 +88,20 @@ public static class FacetedSoldierMeshes
         bool elite = visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId;
         bool cavalry = visuals.UseDiamondCavalryMesh && id == RuntimeUnitCatalog.DiamondId;
         bool breacher = visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId;
+        bool marksman = visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId;
+        bool pikeman = visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId;
         material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
             (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack) ||
-            (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack));
+            (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack) ||
+            (marksman && visuals.AnimateLongMarksmanFire) || (pikeman && visuals.AnimatePikemanAttack));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
             (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk) ||
             (archer && visuals.AnimateTriangleWalk) || (elite && visuals.AnimatePentagonWalk) ||
-            (cavalry && visuals.AnimateDiamondGallop) || (breacher && visuals.AnimateHBreacherWalk));
+            (cavalry && visuals.AnimateDiamondGallop) || (breacher && visuals.AnimateHBreacherWalk) ||
+            (marksman && visuals.AnimateLongMarksmanWalk) || (pikeman && visuals.AnimatePikemanWalk));
+        material.SetShaderParameter("long_marksman", marksman);
+        material.SetShaderParameter("pikeman", pikeman);
         material.SetShaderParameter("h_breacher", breacher);
         material.SetShaderParameter("diamond_cavalry", cavalry);
         material.SetShaderParameter("pentagon_elite", elite);
@@ -106,6 +112,8 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
+        (visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId) ||
         (visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId) ||
         (visuals.UseDiamondCavalryMesh && id == RuntimeUnitCatalog.DiamondId) ||
         (visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId) ||
@@ -149,6 +157,8 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.DiamondId) AppendDiamondCavalry(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.BreacherId) AppendHBreacher(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.LongTriangleId) AppendLongMarksman(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.PikemanId) AppendPikeman(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
@@ -303,6 +313,96 @@ public static class FacetedSoldierMeshes
         Block(0f, 0f, -0.50f, 0.23f, 0.16f, 0.42f, Paint(0.96f), recoil: true);
         Block(0f, 0f, -0.75f, 0.12f, 0.12f, 0.28f, Steel(1f), recoil: true);
         Block(0f, 0f, -0.86f, 0.10f, 0.10f, 0.06f, Trim(1f), recoil: true);
+    }
+
+    // =========================================================
+    // Precision infantry: elongated wedge, rear optics pod, and a long
+    // centerline laser rifle. Preserve the existing -Z firing axis and height.
+    private static void AppendLongMarksman(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool recoil = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: recoil, walkPart: foot);
+        }
+        void Wedge(float py, float pz, float rx, float rz, float h, Color mask)
+        {
+            AppendPrism(surface, 3, x * rx, z * rz, h * height, outline.Rotation,
+                new Vector3(0f, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+        }
+
+        // Rear-weighted armor and pointed optical helmet, distinct from the carbine archer.
+        Wedge(-0.13f, 0.10f, 0.71f, 0.62f, 0.32f, Steel(0.96f));
+        Wedge(0.10f, 0.05f, 0.88f, 0.76f, 0.33f, Paint(0.94f));
+        Wedge(0.36f, 0.16f, 0.45f, 0.30f, 0.28f, Paint(1f));
+        Block(0f, 0.36f, -0.13f, 0.15f, 0.08f, 0.045f, Trim(1f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.37f, 0.04f, 0.22f, 0.30f, 0.30f, 0.29f, Paint(0.91f));
+            Block(side * 0.30f, -0.34f, 0.19f, 0.25f, 0.32f, 0.27f, Steel(0.97f), foot: true);
+            Block(side * 0.30f, -0.43f, 0.15f, 0.30f, 0.14f, 0.31f, Paint(0.89f), foot: true);
+        }
+        Block(0f, 0.02f, 0.34f, 0.35f, 0.27f, 0.22f, Steel(0.92f));
+        Block(0f, 0.18f, 0.35f, 0.22f, 0.06f, 0.16f, Trim(0.90f));
+
+        // Fixed receiver, optical scope, twin cooling strips and a sliding
+        // rifle assembly. The actual projectile launch remains at the old origin.
+        Block(0f, 0f, -0.22f, 0.32f, 0.25f, 0.42f, Steel(1f));
+        Block(0f, 0.16f, -0.25f, 0.19f, 0.09f, 0.20f, Steel(0.98f));
+        Block(0f, 0.16f, -0.35f, 0.13f, 0.065f, 0.035f, Trim(1f));
+        Block(0f, 0f, -0.44f, 0.26f, 0.17f, 0.45f, Paint(0.98f), recoil: true);
+        Block(0f, 0f, -0.69f, 0.115f, 0.12f, 0.40f, Steel(1f), recoil: true);
+        for (int side = -1; side <= 1; side += 2)
+            Block(side * 0.079f, 0.015f, -0.53f, 0.035f, 0.10f, 0.24f, Trim(0.88f), recoil: true);
+        Block(0f, 0f, -0.86f, 0.095f, 0.10f, 0.065f, Trim(1f), recoil: true);
+    }
+
+    // =========================================================
+    // Anti-cavalry infantry: wide rear armor and a narrow centerline pike.
+    // Keep the authored T-shaped silhouette and forward -Z axis.
+    private static void AppendPikeman(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool thrust = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: thrust, walkPart: foot);
+        }
+
+        // Broad crossbar cuirass, angular helmet and reinforced shoulders.
+        Block(0f, -0.14f, 0.49f, 1.10f, 0.34f, 0.58f, Steel(0.95f));
+        Block(0f, 0.08f, 0.49f, 1.20f, 0.40f, 0.58f, Paint(0.92f));
+        Block(0f, 0.38f, 0.47f, 0.56f, 0.24f, 0.42f, Paint(1f));
+        Block(0f, 0.34f, 0.253f, 0.40f, 0.07f, 0.03f, Trim(0.98f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.74f, 0.09f, 0.48f, 0.45f, 0.34f, 0.54f, Paint(0.96f));
+            Block(side * 0.34f, -0.32f, 0.51f, 0.36f, 0.36f, 0.30f, Steel(0.95f), foot: true);
+            Block(side * 0.34f, -0.42f, 0.49f, 0.48f, 0.16f, 0.37f, Paint(0.91f), foot: true);
+            Block(side * 0.27f, 0.02f, 0.32f, 0.22f, 0.20f, 0.22f, Steel(0.98f));
+        }
+        // A telescoping central grip and energized spearhead. Moving shaft
+        // overlaps the fixed guide at both ends of its short attack stroke.
+        Block(0f, 0.03f, 0.16f, 0.43f, 0.25f, 0.54f, Steel(0.98f));
+        Block(0f, 0.03f, -0.25f, 0.15f, 0.12f, 0.98f, Steel(1f), thrust: true);
+        Block(0f, 0.03f, -0.33f, 0.27f, 0.18f, 0.18f, Paint(0.97f), thrust: true);
+        AppendPrism(surface, 4, x * 0.15f, z * 0.17f, height * 0.15f, 0f,
+            new Vector3(0f, height * 0.03f, -z * 0.66f), Trim(1f),
+            sideShade: SoldierSideShade, armorMask: true, swingPart: true);
     }
 
     // =========================================================
