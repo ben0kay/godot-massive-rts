@@ -42,6 +42,7 @@ AnimatePrismWalk = true
 UseEnhancedVWingMesh = true
 UseEnhancedBomberMesh = true
 UseEnhancedBomberBombVisuals = true
+UseVWingEngineFlame = true
 UseBomberEngineFlames = true
 UseBomberSmokeTrails = true
 UseProjectileLaunchEffects = true

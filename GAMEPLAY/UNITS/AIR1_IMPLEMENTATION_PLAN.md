@@ -86,3 +86,12 @@ Test Clash orders apply to the test session.
 - Bombs hit the intended ground lane, with readable warning and impact. A lost target, destroyed aircraft, or exhausted projectile pool leaves flight and cooldown state recoverable.
 - Aircraft cross water and walls without blocking ground troops. At normal isometric zoom, fighters, bombers, air tracers and both AA types are distinguishable.
 - Compare the same seeded ground battle with and without a representative air contingent. Check simulation time, air query counts, projectile counts and worst frame times before increasing aircraft density.
+
+### Aircraft exhaust
+
+The default V-Wing has a short centerline plume and the Heavy Bomber has twin
+plumes. Both share one flame MultiMesh with a hot core and a faction-tinted
+outer plume. Heavy Bomber smoke uses a bounded neutral-grey batch. Engine
+flames and new exhaust smoke stop on death, and existing smoke fades in place.
+The default UnitVisualConfig enables these effects independently through
+`UseVWingEngineFlame`, `UseBomberEngineFlames` and `UseBomberSmokeTrails`.
