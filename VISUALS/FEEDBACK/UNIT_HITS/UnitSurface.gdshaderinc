@@ -7,6 +7,7 @@ uniform bool square_heavy = false;
 uniform bool hexagon_siege = false;
 uniform bool triangle_archer = false;
 uniform bool pentagon_elite = false;
+uniform bool diamond_cavalry = false;
 uniform float infantry_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
@@ -32,6 +33,12 @@ void vertex() {
             float brace = t < 0.18 ? smoothstep(0.0, 0.18, t)
                 : 1.0 - smoothstep(0.18, 1.0, t);
             if (UV.x < 4.5) VERTEX.y -= infantry_height * 0.085 * brace;
+        } else if (diamond_cavalry && swing > 0.0 && UV.x < -0.5) {
+            // Actual ordinary hit or trample contact: a quick +X lance thrust.
+            float t = (swing - 1.0) / 14.0;
+            float thrust = t < 0.15 ? smoothstep(0.0, 0.15, t)
+                : 1.0 - smoothstep(0.15, 1.0, t);
+            VERTEX.x += half_extent.x * 0.10 * thrust;
         } else if (triangle_archer && swing > 0.0 && UV.x < -0.5) {
             // The projectile has already launched. Slide the barrel rearward,
             // then return it to its receiver; retain the existing body recoil.
@@ -77,7 +84,18 @@ void vertex() {
     if (infantry_walk && !stomping && INSTANCE_CUSTOM.y > 0.0) {
         float phase = INSTANCE_CUSTOM.x * TAU;
         float weight = INSTANCE_CUSTOM.y;
-        if (UV.x > 4.5) {
+        if (diamond_cavalry) {
+            // Four-beat gallop: front/hind and left/right offsets differ.
+            // Use +X travel, not the -Z infantry axis; planted feet stay grounded.
+            if (UV.x > 4.5) {
+                float leg_phase = phase + (VERTEX.x > 0.0 ? 0.0 : 2.65)
+                    + (VERTEX.z > 0.0 ? 0.75 : 0.0);
+                VERTEX.x += sin(leg_phase) * half_extent.x * 0.16 * weight;
+                VERTEX.y += max(0.0, cos(leg_phase)) * infantry_height * 0.14 * weight;
+            } else {
+                VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * 0.0225 * weight;
+            }
+        } else if (UV.x > 4.5) {
             // Each boot alternates forward travel and lift. The planted boot stays grounded.
             float side = sign(VERTEX.x);
             float travel = hexagon_siege ? 0.12 : pentagon_elite ? 0.15 : square_heavy ? 0.17 : triangle_archer ? 0.20 : 0.24;

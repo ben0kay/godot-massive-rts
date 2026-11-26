@@ -73,6 +73,14 @@ A light triangular faction shell, pointed helmet, compact power pack, thin mecha
 
 The shared distance-driven gait has a shorter cycle, staggered per-unit phase, 9.5% peak foot lift and 3% peak torso bounce. Rest geometry is baked once, using one masked surface; the existing infantry shader, packed attack phase and optional walking custom data are reused. No extra draw calls, timers or per-unit nodes. Check in-game firing, visible bolt exit, gait and old mesh fallback, plus lit/unlit and FPS.
 
+## Diamond Cavalry mechanical lancer trial
+
+**Use Diamond Cavalry Mesh**, **Animate Diamond Attack**, and **Animate Diamond Gallop** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disable the mesh to restore the original elongated diamond; the animation toggles apply only to the new model.
+
+The low four-legged mechanical mount retains Diamond's long +X forward axis, with a faction-painted rhombus hull, pointed rider pod, four piston legs, rear propulsion pack and central energy lance. Tagged lance geometry thrusts forward briefly on the existing successful trample-contact or ordinary melee attack feedback event, then retracts (0.22s total). The standard 0.16s body pulse remains unchanged. No change to charge entry, acceleration, momentum, penetration, resistance, separation, damage, dust or contact effects.
+
+The shared distance-driven, ID-staggered gait drives four offset legs along local +X with 14% peak foot lift and 4.5% peak body bounce. This is a visual gallop at all movement speeds, not an independent charge-state timer. It settles to rest without wall-clock animation. Reuses existing packed attack alpha, optional walking data and masked surface; no extra nodes, draw calls or effects. Owner validation: charge contacts, facing, gait at high and low speed, legacy fallback and FPS.
+
 ## Pentagon Elite robot trial
 
 **Use Pentagon Elite Mesh**, **Animate Pentagon Attack**, and **Animate Pentagon Walk** ship enabled in [UnitVisualConfig.tres](UnitVisualConfig.tres). Disable the mesh to restore the original beveled pentagon; the animation toggles apply only to the new robot.

@@ -14,6 +14,8 @@ public sealed class HitFeedbackSystem
     private const float HexagonAttackDuration = 0.58f;
     private const float TriangleFireDuration = 0.24f;
     private const float PentagonAttackDuration = 0.46f;
+    private const float DiamondAttackDuration = 0.22f;
+    internal bool ExtendDiamondAttack { get; set; }
     internal bool ExtendPentagonAttack { get; set; }
     internal bool ExtendTriangleFire { get; set; }
     private bool[] hexagonStomp;
@@ -103,6 +105,7 @@ public sealed class HitFeedbackSystem
         ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration :
         ExtendTriangleFire && type == RuntimeUnitCatalog.Triangle ? TriangleFireDuration :
         ExtendPentagonAttack && type == RuntimeUnitCatalog.Pentagon ? PentagonAttackDuration :
+        ExtendDiamondAttack && type == RuntimeUnitCatalog.Diamond ? DiamondAttackDuration :
         hexagonStomp != null && type == RuntimeUnitCatalog.Hexagon ? HexagonAttackDuration : AttackDuration;
 
     internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f
