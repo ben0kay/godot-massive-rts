@@ -34,3 +34,7 @@ In Fortress Defense, tap Ctrl and choose **Railgun Tower** to place one for 750 
 ## CARBON2 selection
 
 The shared bottom HUD now describes Carbon Deposits as untapped, assigned, under construction, active (Carbon/s), or depleted. The **Carbon Extractor** entry in the Ctrl build tray lets you choose a deposit or unfinished rig. Placement assigns the nearest available Worker. Selected Extractors display building HP and active income or construction progress in the same existing bottom HUD frame; no second panel was added.
+
+### Offense objective
+
+Offense battles supply the actual Red Citadel `StructureHealth` to the shared army HUD. A separate centered red HP strip below the living-army counts shows current/max HP and empties with **ENEMY CITADEL · DESTROYED** at victory. It reads one objective at the existing HUD refresh cadence and refreshes immediately on a terminal result. Reset/retry clears the reference and hides the objective row; other modes retain their original HUD.

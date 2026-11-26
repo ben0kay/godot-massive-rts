@@ -239,7 +239,7 @@ public partial class BenchmarkArena : Node3D
             painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId((int)index);
         painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId(panel.SoldierBrushSizeChoice.Selected);
         panel.FactionSelected += faction => painter.BrushFaction = faction;
-        panel.PauseRequested += () => { paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
+        panel.PauseRequested += () => { if (offenseBattleEnded) return; paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
         shockwaves = new ShockwaveRenderer();
         AddChild(shockwaves);
         deathFeedback = new DeathFeedbackSystem(unitVisuals);
@@ -285,6 +285,7 @@ public partial class BenchmarkArena : Node3D
         deathRenderer.Sync(deathFeedback);
         defenseSystem = null;
         offenseCitadel = null;
+        offenseBattleEnded = false;
         defenseCombat = null;
         if (defenseRenderer != null)
         {
@@ -642,7 +643,8 @@ public partial class BenchmarkArena : Node3D
             defenseRenderer.Initialize(defenses, buildings, Config.ObstacleHeight, battle: true, terrain: terrain);
             defenseSystem = new DefenseSystem(defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field, terrain);
         }
-        if (IsOffense && offenseCitadelSlot >= 0) offenseCitadel = defenseSystem?.Structures[offenseCitadelSlot];
+        if (IsOffense && defenseSystem != null && offenseCitadelSlot >= 0 && offenseCitadelSlot < defenseSystem.Structures.Count)
+            offenseCitadel = defenseSystem.Structures[offenseCitadelSlot];
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
         if (autoBattlerPlaytestMap != null && (openingOverlay != null || redOrders?.Count > 0))
@@ -668,6 +670,8 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Process(double delta)
     {
+        // Also handles an empty battlefield or a terminal objective left by the preceding frame.
+        if (!spawning && offenseCitadel != null && !offenseBattleEnded) TryFinishOffense();
         if (!paused) weather.Advance((float)delta);
         units?.Forest?.UpdateVisibility(units, (float)delta);
         if (obstacles != null) obstacles.ProfileQueries = panel.ProfileObstacles;
@@ -732,7 +736,7 @@ public partial class BenchmarkArena : Node3D
                     dreadnaughts.SyncVisuals();
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
-                armyBalanceHud.BeginBattle(units);
+                armyBalanceHud.BeginBattle(units, IsOffense ? offenseCitadel : null);
                 ShowAutoBattlerClock(true);
                 if (campaignHud != null)
                 {
@@ -760,7 +764,7 @@ public partial class BenchmarkArena : Node3D
             accumulator += delta;
             timeSinceArmySync += delta;
             int steps = 0;
-            while (accumulator >= Config.TickSeconds && steps < Config.MaxStepsPerFrame)
+            while (!offenseBattleEnded && accumulator >= Config.TickSeconds && steps < Config.MaxStepsPerFrame)
             {
                 if (ReservesPending) ReleaseReserves(Config.TickSeconds);
                 if (smooth)
@@ -772,6 +776,7 @@ public partial class BenchmarkArena : Node3D
                 Step(Config.TickSeconds);
                 accumulator -= Config.TickSeconds;
                 steps++;
+                if (offenseBattleEnded) { accumulator = 0; break; }
             }
             if (accumulator >= Config.TickSeconds)
             { long skipped = (long)(accumulator / Config.TickSeconds); skippedSteps += skipped; accumulator -= skipped * Config.TickSeconds; }
@@ -782,7 +787,7 @@ public partial class BenchmarkArena : Node3D
             if (steps > 0 || intermediate || (!smooth && smoothingWasEnabled))
             {
                 long start = Stamp();
-                float blend = smooth ? (float)Math.Clamp(accumulator / Config.TickSeconds, 0.0, 1.0) : 1f;
+                float blend = smooth && !offenseBattleEnded ? (float)Math.Clamp(accumulator / Config.TickSeconds, 0.0, 1.0) : 1f;
                 armyRenderer.Sync(blend);
                 SyncReserveMarch();
                 dreadnaughts?.SyncVisuals();
@@ -797,14 +802,8 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
             AdvanceAutoBattlerClock(steps);
-            if (steps > 0 && IsOffense && campaignRoster == null && !paused &&
-                (offenseCitadel?.Destroyed == true || (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true)))
-            {
-                paused = true;
-                panel.Status.Text = offenseCitadel?.Destroyed == true ? "Victory · Red Citadel destroyed" : "Defeat · Blue army eliminated";
-            }
             if (campaignHud != null) UpdateCampaignOutcome(steps);
-            else if (ReserveCapacity > 0)
+            else if (!offenseBattleEnded && ReserveCapacity > 0)
             {
                 string countdown = ReserveCountdown();
                 if (panel.Status.Text != countdown) panel.Status.Text = countdown;
@@ -1065,11 +1064,14 @@ public partial class BenchmarkArena : Node3D
             combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged || dreadnaughts != null || projectiles.Count > 0) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, BattleSight, shockwaves); projectileMs += Elapsed(start); }
         }
+        // Commit the objective result before destruction cleanup / navigation rebuilding.
+        // A finished Offense battle needs no new route graph or additional simulation ticks.
+        if (offenseCitadel != null) TryFinishOffense();
         if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
         {
             if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
             else SetBattleObstacles(remainingObstacles, battleWalls.Mesh);
-            navigation = obstacles == null ? null : new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
+            navigation = offenseBattleEnded || obstacles == null ? null : new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
                 Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
         }
         tick++;

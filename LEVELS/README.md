@@ -43,3 +43,7 @@ The inherited scene exposes the opening layout in the 3D viewport:
 ### Carbon deposits
 
 Drag `WORLD/RESOURCES/CARBON/CarbonDeposit.tscn` under **Resources**, move or duplicate it, and set **Initial Carbon** in the Inspector. The deposit reserves its grid footprint when played. Select the Citadel in-game to queue Workers using the shared Carbon balance.
+
+### Offense battle result
+
+Destroy the authored Red Citadel to win, even if defenders remain. The shared arena checks the objective at the simulation tick boundary, before rebuilding navigation for destroyed defenses, and stops further catch-up ticks when victory or defeat occurs. If both conditions occur in the same tick, Citadel destruction takes precedence. The top HUD shows enemy Citadel HP alongside army counts. Retry creates a fresh objective and clears the terminal flag. Source reviewed; owner validation and expanded exception stack trace pending if errors persist.

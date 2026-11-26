@@ -202,8 +202,8 @@ public partial class BenchmarkArena
     {
         if (!campaignBattleRunning || steps == 0) return;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
-        if (IsOffense && offenseCitadel?.Destroyed == true) FinishCampaignBattle("Victory");
-        else if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
+        if (IsOffense && TryFinishOffense()) return;
+        if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
         else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
@@ -216,6 +216,7 @@ public partial class BenchmarkArena
         if (!campaignBattleRunning) return;
         campaignBattleRunning = false;
         paused = true;
+        if (IsOffense) offenseBattleEnded = true;
         // All original Blue IDs precede Red IDs in the all-auto-attack snapshot.
         int survivors = 0;
         for (int id = 0; id < campaignInitialBlue; id++)
@@ -225,6 +226,7 @@ public partial class BenchmarkArena
         string reserveResult = blueWave == null ? "" :
             $"\nBlue reserve survivors {units.FactionAlive[Factions.Blue] - survivors:N0} / {arrived:N0} arrived";
         string survivorLabel = blueWave == null ? "Blue survivors" : "Blue opening survivors";
+        armyBalanceHud?.RefreshCounts();
         campaignHud.ShowResult(result,
             $"{survivorLabel} {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses{reserveResult}");
     }

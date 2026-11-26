@@ -19,6 +19,9 @@ public partial class ArmyBalanceHud : Control
     private readonly float[] shares = new float[Factions.Count];
     private readonly float[] targets = new float[Factions.Count];
     private UnitState source;
+    private StructureHealth objective;
+    private Label objectiveLabel;
+    private float objectiveY, objectiveFraction, previousObjectiveHealth = -1f;
     private float barX, barWidth;
     private bool hasInitialShares;
 
@@ -31,6 +34,11 @@ public partial class ArmyBalanceHud : Control
             labels[faction] = MakeLabel(Factions.Color(faction), HorizontalAlignment.Center);
             AddChild(labels[faction]);
         }
+        objectiveLabel = MakeLabel(Factions.Color(Factions.Red), HorizontalAlignment.Center);
+        objectiveLabel.AddThemeFontSizeOverride("font_size", 14);
+        objectiveLabel.AddThemeColorOverride("font_outline_color", Colors.Black);
+        objectiveLabel.AddThemeConstantOverride("outline_size", 3);
+        AddChild(objectiveLabel);
         Resized += LayoutBar;
         LayoutBar();
         Reset();
@@ -77,15 +85,23 @@ public partial class ArmyBalanceHud : Control
             label.Size = new Vector2(columnWidth, 18f);
             slot++;
         }
+        int rows = Mathf.CeilToInt(visibleCount / (float)columns);
+        objectiveLabel.Position = new Vector2(labelX, TopOffset + BarThickness + 3f + 18f * rows + 8f);
+        objectiveLabel.Size = new Vector2(labelWidth, 20f);
+        objectiveY = objectiveLabel.Position.Y + 22f;
         QueueRedraw();
     }
 
     // =========================================================
-    public void BeginBattle(UnitState state)
+    public void BeginBattle(UnitState state) => BeginBattle(state, null);
+
+    // Only the Offense arena supplies a Citadel; other modes keep the original strip.
+    internal void BeginBattle(UnitState state, StructureHealth citadel)
     {
         Reset();
         source = state;
-        if (source == null || source.Count <= 0) return;
+        objective = citadel;
+        if (source == null || (source.Count <= 0 && objective == null)) return;
         RefreshCounts();
         Visible = true;
     }
@@ -94,6 +110,10 @@ public partial class ArmyBalanceHud : Control
     public void Reset()
     {
         source = null;
+        objective = null;
+        previousObjectiveHealth = -1f;
+        objectiveFraction = 0f;
+        objectiveLabel?.Hide();
         Array.Fill(previousCounts, -1);
         Array.Clear(shares);
         Array.Clear(targets);
@@ -108,6 +128,7 @@ public partial class ArmyBalanceHud : Control
     public void RefreshCounts()
     {
         if (source == null) return;
+        RefreshObjective();
         bool changed = false;
         int alive = 0;
         for (int faction = 0; faction < Factions.Count; faction++)
@@ -132,6 +153,18 @@ public partial class ArmyBalanceHud : Control
             return;
         }
         SetProcess(true);
+    }
+
+    // One direct HP read at the existing HUD cadence; no structure or soldier search.
+    private void RefreshObjective()
+    {
+        if (objective == null || previousObjectiveHealth == objective.Health) return;
+        previousObjectiveHealth = objective.Health;
+        objectiveFraction = Mathf.Clamp(objective.Health / objective.MaxHealth, 0f, 1f);
+        objectiveLabel.Text = objective.Destroyed ? "ENEMY CITADEL · DESTROYED" :
+            $"ENEMY CITADEL  {Mathf.CeilToInt(objective.Health):N0} / {Mathf.CeilToInt(objective.MaxHealth):N0} HP";
+        objectiveLabel.Show();
+        QueueRedraw();
     }
 
     // =========================================================
@@ -168,5 +201,11 @@ public partial class ArmyBalanceHud : Control
             x += width;
         }
         DrawRect(border, Outline, filled: false, width: 1f);
+        if (objective == null) return;
+        var citadelBar = new Rect2(barX, objectiveY, barWidth, BarThickness);
+        DrawRect(citadelBar, Backing);
+        if (objectiveFraction > 0f)
+            DrawRect(new Rect2(barX + 1f, objectiveY + 1f, usable * objectiveFraction, BarThickness - 2f), Factions.Color(Factions.Red));
+        DrawRect(citadelBar, Outline, filled: false, width: 1f);
     }
 }

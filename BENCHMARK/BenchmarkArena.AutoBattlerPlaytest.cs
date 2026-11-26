@@ -23,7 +23,24 @@ public partial class BenchmarkArena
     private bool IsOffense => autoBattlerPlaytestMap?.AutoBattlerRules?.Objective == AutoBattlerRules.ObjectiveType.DestroyCitadel;
     private int offenseCitadelSlot = -1;
     private StructureHealth offenseCitadel;
+    private bool offenseBattleEnded;
     private bool HasDefenseAttackers => units.HasStructureAttackers || IsOffense;
+
+    // Check at the tick boundary, not after rendering or a whole frame of catch-up ticks.
+    private bool TryFinishOffense()
+    {
+        if (!IsOffense || spawning || units == null || offenseCitadel == null) return false;
+        if (offenseBattleEnded) return true;
+        if (campaignRoster != null && !campaignBattleRunning) return false;
+        bool victory = offenseCitadel.Destroyed;
+        if (!victory && (units.FactionAlive[Factions.Blue] > 0 || blueWave?.Pending == true)) return false;
+        offenseBattleEnded = true;
+        paused = true;
+        if (campaignHud != null) FinishCampaignBattle(victory ? "Victory" : "Defeat");
+        else panel.Status.Text = victory ? "Victory · Red Citadel destroyed" : "Defeat · Blue army eliminated";
+        armyBalanceHud?.RefreshCounts();
+        return true;
+    }
 
     private float DisruptorHeight(Vector3 point) =>
         autoBattlerPlaytestMap.GetNodeOrNull<CommandTerrain>("Terrain")?.Field?.At(point.X, point.Z) ?? 0f;
