@@ -704,3 +704,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added subtle faction tint and existing travelling ground glow to shared minigun rounds, enlarged Railgun/Twin Minigun flashes, and added a larger Broadside muzzle starburst plus capped faction-colored ground halo on successful launch. Visual-only; owner Godot validation pending.
 
 - 2026-11-26 — Strengthened Railgun beam faction tint and added a terrain-sampled additive ground streak along the live clipped beam, sharing the existing dense beam lifecycle with a bounded lazy batch. No combat changes; owner Godot validation pending.
+
+- 2026-11-26 — Integrated aircraft crashes with the shared lethal-hit path for dogfights and Interceptor missiles. V-Wings and Heavy Bombers fall with fire and smoke, burst on impact, and deal enemy ground splash damage before battle results resolve.

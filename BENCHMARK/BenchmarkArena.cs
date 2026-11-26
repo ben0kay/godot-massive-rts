@@ -698,9 +698,15 @@ public partial class BenchmarkArena : Node3D
             navigation.ReuseWaypoints = panel.ReuseWaypoints;
         }
         panel.Summary.Sample(delta);
-        if (!paused)
+        bool finishingCrashEffects = airSquadron?.HasCrashAftermath == true &&
+            (offenseBattleEnded || (campaignHud != null && !campaignBattleRunning));
+        if (!paused || finishingCrashEffects)
         {
             shockwaves.Advance((float)delta);
+            airSquadron?.AdvanceCrashEffects((float)delta);
+        }
+        if (!paused)
+        {
             deathFeedback.Advance((float)delta);
             defenseRenderer?.Advance((float)delta);
         }
@@ -794,7 +800,7 @@ public partial class BenchmarkArena : Node3D
                 }
                 if (airSquadron == null || units.Alive > 0 || projectiles.Count > 0 || ReservesPending)
                     Step(Config.TickSeconds);
-                else airSquadron?.Step(Config.TickSeconds, units, grid, projectiles);
+                else airSquadron?.Step(Config.TickSeconds, units, grid, projectiles, shockwaves);
                 accumulator -= Config.TickSeconds;
                 steps++;
                 if (offenseBattleEnded) { accumulator = 0; break; }
@@ -979,7 +985,7 @@ public partial class BenchmarkArena : Node3D
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
-            airSquadron?.Step(dt, units, grid, projectiles);
+            airSquadron?.Step(dt, units, grid, projectiles, shockwaves);
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
             defenseSystem?.Step(units, grid, BattleSight, projectiles, dt, acquisitionStep, targetingStepSeconds);

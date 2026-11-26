@@ -137,7 +137,8 @@ internal sealed partial class AirSquadronVisuals : Node3D
     }
 
     internal static Basis Pose(in AirSquadron.Fighter fighter) =>
-        Basis.LookingAt(fighter.Forward, Vector3.Up, true).Rotated(fighter.Forward, fighter.Bank);
+        Basis.LookingAt(fighter.Forward, Mathf.Abs(fighter.Forward.Y) > 0.99f ? Vector3.Right : Vector3.Up, true)
+            .Rotated(fighter.Forward, fighter.Bank);
 
     internal void RecordTrails(AirSquadron.Fighter[] fighters, float delta)
     {
@@ -167,7 +168,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         for (int id = 0; id < fighters.Length; id++)
         {
             ref readonly var fighter = ref fighters[id];
-            if (fighter.Health <= 0f) continue;
+            if (fighter.Health <= 0f && !fighter.Crashing) continue;
             var basis = Pose(in fighter);
             var position = fighter.Position;
             var batch = aircraft[fighter.Unit];
@@ -183,6 +184,17 @@ internal sealed partial class AirSquadronVisuals : Node3D
             var tip = WingtipFor(fighter.Unit);
             Vector3 left = position + basis * new Vector3(-tip.X, tip.Y, tip.Z);
             Vector3 right = position + basis * tip;
+            if (fighter.Crashing)
+            {
+                float length = fighter.Unit.CanBombGround ? 3.8f : 2.6f;
+                Vector3 fire = position - fighter.Forward * 0.55f;
+                var orange = new Color(1f, 0.31f, 0.035f);
+                Line(fire, fire - fighter.Forward * length, orange, 1f, 0f);
+                Line(fire + basis.X * 0.27f, fire - fighter.Forward * (length * 0.72f), orange, 0.82f, 0f);
+                Line(fire - basis.X * 0.27f, fire - fighter.Forward * (length * 0.72f), orange, 0.82f, 0f);
+                Line(fire, fire - fighter.Forward * (length * 0.45f), new Color(1f, 0.87f, 0.38f), 1f, 0f);
+                continue;
+            }
             for (int age = 0; age < trailCounts[id]; age++)
             {
                 int sample = id * TrailSamples + (trailHeads[id] - 1 - age + TrailSamples) % TrailSamples;

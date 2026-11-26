@@ -201,7 +201,7 @@ public partial class BenchmarkArena
 
     private void UpdateCampaignOutcome(int steps)
     {
-        if (!campaignBattleRunning || steps == 0) return;
+        if (!campaignBattleRunning || steps == 0 || airSquadron?.HasCrashes == true) return;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
         if (HasCitadelObjective && TryFinishOffense()) return;
         if (IsDefense)

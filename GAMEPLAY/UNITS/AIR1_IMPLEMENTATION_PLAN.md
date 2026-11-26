@@ -116,3 +116,11 @@ across simulation ticks. Missile state and visuals are batched across the battle
 with a 512-slot cap. The missile's white exhaust core and broken faction-colored
 trail distinguish it from ground rockets. New Skirmish rosters include four
 Interceptors, and existing preset rosters can be edited in level settings.
+
+### Aircraft crashes
+
+A lethal hit from a V-Wing or an Interceptor removes the aircraft from combat
+immediately. V-Wings and Heavy Bombers then fall with smoke and fire, with
+some airframes rolling during descent. Impact reuses the battlefield blast
+and debris effects and applies radial damage to enemy ground troops. The Heavy
+Bomber has a larger impact. Battle results wait for wrecks still in the air.

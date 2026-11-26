@@ -23,6 +23,9 @@ public partial class AirSquadron : Node3D
         internal Vector2? BombOrder, LockedBombPoint;
         internal Vector2 BombCenter, BombAxis;
         internal int Target, Shots;
+        internal Vector3 CrashVelocity;
+        internal float CrashSpin, CrashSmokeDelay;
+        internal bool Crashing;
         internal Vector3 Position, Forward, TracerEnd;
         internal float Health, Heading, Bank, AltitudeOffset, TurnAway, Reacquire;
         internal float ShotDelay, TracerLife, Evade, EvadeCooldown;
@@ -37,7 +40,11 @@ public partial class AirSquadron : Node3D
     private float boundary, clearance;
     private float elapsed;
     private DamageRules damageRules;
-    private int blueAlive, redAlive;
+    private int blueAlive, redAlive, crashingCount;
+    private MuzzleSmoke crashSmoke;
+    private float crashAftermath;
+    internal bool HasCrashes => crashingCount > 0;
+    internal bool HasCrashAftermath => crashAftermath > 0f;
     internal bool DogfightActive => blueAlive > 0 && redAlive > 0;
     internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : faction == Factions.Red ? redAlive : 0;
 
@@ -99,9 +106,10 @@ public partial class AirSquadron : Node3D
         }
     }
 
-    internal void Step(float delta, UnitState ground, SpatialGrid groundGrid, ProjectileSystem projectiles)
+    internal void Step(float delta, UnitState ground, SpatialGrid groundGrid, ProjectileSystem projectiles, ShockwaveRenderer impacts)
     {
         elapsed += delta;
+        if (HasCrashes) AdvanceCrashes(delta, ground, groundGrid, impacts);
         grid.Rebuild(fighters);
         if (HasInterceptorEffects || (ground?.InterceptorIds != null && blueAlive + redAlive > 0))
         {
@@ -208,6 +216,69 @@ public partial class AirSquadron : Node3D
         visuals.RecordTrails(fighters, delta);
     }
 
+    private void BeginCrash(ref Fighter fighter, int id)
+    {
+        if (fighter.Faction == Factions.Blue) blueAlive--;
+        else redAlive--;
+        fighter.Crashing = true;
+        fighter.CrashVelocity = new Vector3(Mathf.Sin(fighter.Heading) * fighter.Speed * 0.78f,
+            -2.8f, Mathf.Cos(fighter.Heading) * fighter.Speed * 0.78f);
+        fighter.CrashSpin = id % 3 == 0 ? (id % 2 == 0 ? 5f : -5f) : 0f;
+        fighter.TracerLife = 0f;
+        fighter.CrashSmokeDelay = 0f;
+        crashingCount++;
+        crashSmoke ??= new MuzzleSmoke(this, MuzzleSmoke.DefaultWind);
+    }
+
+    private void AdvanceCrashes(float delta, UnitState ground, SpatialGrid groundGrid, ShockwaveRenderer impacts)
+    {
+        for (int i = 0; i < fighters.Length; i++)
+        {
+            ref var fighter = ref fighters[i];
+            if (!fighter.Crashing) continue;
+            fighter.CrashVelocity.Y -= 17f * delta;
+            Vector3 from = fighter.Position;
+            Vector3 next = from + fighter.CrashVelocity * delta;
+            next.X = Mathf.Clamp(next.X, -boundary, boundary);
+            next.Z = Mathf.Clamp(next.Z, -boundary, boundary);
+            Vector3 travel = next - from;
+            float groundY = terrain?.At(next.X, next.Z) ?? 0f;
+            float hit = terrain?.SurfaceHit(from, travel, 1f) ?? float.PositiveInfinity;
+            if (hit <= 1f || next.Y <= groundY)
+            {
+                Vector3 impact = hit <= 1f ? from + travel * Mathf.Clamp(hit, 0f, 1f) : next;
+                impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
+                bool heavy = fighter.Unit.CanBombGround;
+                float radius = heavy ? 5f : 3f;
+                if (groundGrid != null)
+                    AreaDamage.Radial(ground, groundGrid, fighter.Faction, impact, radius,
+                        heavy ? 38f : 22f, 0.35f, ground.MaximumTravelSpeed * delta,
+                        damageType: damageRules.DamageType("Standard"));
+                impacts?.Emit(impact, radius, impact + Vector3.Up * 0.25f, fighter.Faction, structureChips: true);
+                crashSmoke.Emit(impact);
+                crashAftermath = 2.6f;
+                fighter.Crashing = false;
+                crashingCount--;
+                continue;
+            }
+
+            fighter.Position = next;
+            fighter.Forward = travel.Normalized();
+            fighter.Bank = fighter.CrashSpin == 0f ? Mathf.MoveToward(fighter.Bank, 0.2f, delta) :
+                fighter.Bank + fighter.CrashSpin * delta;
+            fighter.CrashSmokeDelay -= delta;
+            if (fighter.CrashSmokeDelay > 0f) continue;
+            crashSmoke.Emit(next - fighter.Forward);
+            fighter.CrashSmokeDelay = 0.075f;
+        }
+    }
+
+    internal void AdvanceCrashEffects(float delta)
+    {
+        crashAftermath = Mathf.Max(0f, crashAftermath - delta);
+        crashSmoke?.Advance(delta);
+    }
+
     // Snapshot the target once per pass. Moving or dying ground units cannot redirect it.
     private static bool TryBombGoal(ref Fighter fighter, int id, UnitState ground, SpatialGrid groundGrid, out Vector3 goal)
     {
@@ -266,9 +337,7 @@ public partial class AirSquadron : Node3D
         ref var enemy = ref fighters[target];
         if (enemy.Health <= 0f) return;
         enemy.Health -= damageRules.Resolve(damage, damageType, enemy.Armour, enemy.DamageTaken);
-        if (enemy.Health > 0f) return;
-        if (enemy.Faction == Factions.Blue) blueAlive--;
-        else redAlive--;
+        if (enemy.Health <= 0f) BeginCrash(ref enemy, target);
     }
 
     internal void SyncVisuals()
