@@ -658,3 +658,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — VIS-OBLITERATOR-RAM — Refined optional Obliterator assault mesh into a narrower upright biped (18% torso width reduction, shallower chest, slimmer shoulders, single spine pack, narrow pointed dagger), tighter gait and shorter cosmetic thrust; same height, attack timing and legacy toggle. Extended Siege Ram chassis/tracks 12% toward the rear, preserving front contact and piston motion. No stats, collision or catalogue changes; source review only, owner visual/clearance validation pending.
 
 - 2026-11-26 — VIS-TRIANGLE-BOLT — Reduced basic Triangle Archer LaserBolt visual mesh from 0.0675 × 0.0675 × 0.51 to 0.045 × 0.045 × 0.44 units (one-third thinner, approximately 14% shorter). Long Marksman bolt, faction tint, flight, hit detection and damage unchanged. Resource/source review only; owner visual check pending.
+
+- 2026-11-26 — AIR1-A: added authored Clash V-wing flights, separate air grid and fixed-step dogfights, variable altitude, and batched wingtip wisps. Source implemented, awaiting Godot playtest.

@@ -84,6 +84,13 @@ public partial class LevelEditor
         var rules = map.AutoBattlerRules;
         Heading(parent, "Objective · Eliminate the enemy", 17);
         var allowance = Number(parent, "Blue unit limit", rules.BlueUnitLimit, 0, 50000);
+        SpinBox blueAir = null, redAir = null;
+        if (campaign.Id == AutoBattlerCampaignStore.CampaignId)
+        {
+            Heading(parent, "Starting V-wing flights", 15);
+            blueAir = Number(parent, "Blue V-wings", rules.BlueVWings, 0, AirSquadron.MaxPerFaction);
+            redAir = Number(parent, "Red V-wings", rules.RedVWings, 0, AirSquadron.MaxPerFaction);
+        }
         Heading(parent, "Allowed Blue unit types", 15);
         var allowed = new HashSet<string>(rules.AllowedBlueUnitIds);
         var checks = new List<(string Id, CheckBox Box)>();
@@ -104,8 +111,12 @@ public partial class LevelEditor
             if (restrict.ButtonPressed && chosen.Length == 0) throw new InvalidOperationException("Select at least one permitted unit type.");
             int oldAllowance = rules.BlueUnitLimit, nextAllowance = (int)allowance.Value;
             string[] oldAllowed = rules.AllowedBlueUnitIds;
-            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; },
-                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen; });
+            var before = (oldAllowance, oldAllowed, rules.BlueVWings, rules.RedVWings);
+            var after = (nextAllowance, chosen, (int)(blueAir?.Value ?? rules.BlueVWings),
+                (int)(redAir?.Value ?? rules.RedVWings));
+            void Apply((int Limit, string[] Allowed, int BlueAir, int RedAir) values) =>
+                (rules.BlueUnitLimit, rules.AllowedBlueUnitIds, rules.BlueVWings, rules.RedVWings) = values;
+            return (() => Apply(before), () => Apply(after));
         };
     }
 

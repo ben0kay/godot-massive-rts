@@ -1,6 +1,6 @@
 # AIR1 — Aircraft and anti-air defenses
 
-**Status:** Planned. This document records the design discussion and proposed implementation phases. Implement each phase when requested.
+**Status:** AIR1-A is source implemented for Clash and awaiting playtest. The remaining phases are planned.
 **Repository:** `ben0kay/godot-massive-rts` · **Target branch:** `main`
 
 ## Goal
@@ -29,7 +29,7 @@ Exact heights, ranges, speeds, turn rates, cooldowns and damage are playtest tun
 
 ## Proposed phases
 
-1. **AIR1-A · Benchmark flight and dogfights.** Add the V-Wing with a fixed-step flight loop, separate air spatial index and air-only bursts. Prove approach, firing, overshoot and re-entry with two small opposing flights. Add readable banks, ground-projected shadows and restrained trails. Check mixed ground/air targeting and verify ground-only runs keep their existing behavior.
+1. **AIR1-A · Clash flight and dogfights.** Add the V-Wing with a fixed-step flight loop, separate air spatial index and air-only bursts. Prove approach, firing, overshoot and re-entry with two small opposing flights. Add readable banks, ground-projected shadows and restrained trails. Check mixed ground/air targeting and verify ground-only runs keep their existing behavior.
 2. **AIR1-B · Bombing runs and gun AA.** Add the Heavy Bomber and AA Minigun. The bomber commits to a short straight run, drops its payload at intervals, then exits before lining up again. Use pooled bomb visuals and the shared ground impact/splash path where appropriate. Check that AA protects a formation while aircraft can still threaten exposed ranks.
 3. **AIR1-C · Missile AA and editor support.** Add the AA Missile Battery as a separate defense role with its own range and cadence. Expose aircraft and AA in the relevant Entity Editor and Level Editor lists, with placement previews, stable save IDs, and editable definitions.
 4. **AIR1-D · Campaign rollout.** In Clash, make fighter cover and bomber composition deployment choices. In Offense, author AA-covered approaches to the Citadel while keeping objective targeting explicit. In Fortress Defense, introduce signaled air waves and buildable AA. Reuse the same combat rules across modes and check each mode's resolution, especially when only aircraft remain or neither side can hit the other.
@@ -39,6 +39,19 @@ Exact heights, ranges, speeds, turn rates, cooldowns and damage are playtest tun
 Consider allowing airborne V-wings to land once their team has no hostile aircraft left to engage. Use the ground directly beneath the aircraft when legal. Otherwise, search a bounded neighborhood for a spot that fits the ground variant’s footprint and respects map bounds, terrain, structures and unit occupancy. If no spot is available, the V-wing stays airborne.
 
 At touchdown, transfer the same combatant to the ground V-wing variant and its ground spatial index. Preserve faction and damage taken, clear incompatible air orders and targets, and update battle counts once. A V-wing occupies one index at a time. Whether the grounded variant can take off again and how pending enemy aircraft reinforcements affect landing remain open design decisions.
+
+## Try AIR1-A in Clash
+
+Open a Clash level in the Level Editor and set **Map Settings → Starting V-wing flights**
+to 8 Blue and 8 Red. Apply the settings, start the Clash playtest, then press **Fight**.
+The flights can fight on their own or above deployed ground forces. Save the level to
+keep the counts for campaign play. Both counts default to zero on existing maps.
+
+V-wings cruise about 12 world units above open ground. A stable aircraft-specific
+offset of up to 1 unit, a gentle oscillation, and the approach and breakaway offsets
+vary their height. The terrain lookahead and a conservative height floor above
+authored obstacles keep the prototype above cover. The prototype uses air-only
+hitscan bursts with visible tracers and two short white wingtip wisps.
 
 ## Playtest checks
 

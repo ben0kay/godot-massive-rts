@@ -269,6 +269,12 @@ public partial class BenchmarkArena : Node3D
         armyBalanceHud?.Reset();
         ShowAutoBattlerClock(false);
         campaignBattleRunning = false;
+        if (airSquadron != null)
+        {
+            RemoveChild(airSquadron);
+            airSquadron.QueueFree();
+            airSquadron = null;
+        }
         ClearReserveMarch(redWave);
         blueWave = redWave = null;
         if (dreadnaughts != null)
@@ -354,6 +360,7 @@ public partial class BenchmarkArena : Node3D
     private UnitState CreateUnitState(uint? seed = null)
     {
         int capacity = targetCount + ReserveCapacity;
+        if (capacity == 0 && BlueVWings + RedVWings > 0) capacity = 1;
         battleSeed = seed ?? (uint)panel.Seed.Value;
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(capacity, Config.HitFeedback ?? new HitFeedbackSettings())
@@ -515,7 +522,8 @@ public partial class BenchmarkArena : Node3D
         ReserveWave plannedBlue = null, plannedRed = null;
         if (autoBattlerPlaytestMap != null)
         {
-            if ((placements.Count == 0 && blueReserve.Count == 0) || (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0))
+            if ((placements.Count == 0 && blueReserve.Count == 0 && BlueVWings == 0) ||
+                (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedVWings == 0))
             {
                 panel.Status.Text = placements.Count == 0 ? "Paint Blue troops in the deployment area." :
                     "Add Red troops or defenses in the Level Editor before testing.";
@@ -550,7 +558,10 @@ public partial class BenchmarkArena : Node3D
         ranged |= plannedBlue?.Soldiers.Any(soldier => catalog[soldier.Type].Ranged || soldier.Type == RuntimeUnitCatalog.Dreadnaught) == true ||
             plannedRed?.Soldiers.Any(soldier => catalog[soldier.Type].Ranged || soldier.Type == RuntimeUnitCatalog.Dreadnaught) == true;
         foreach (var defense in defenses) factionMask |= 1 << defense.Faction;
-        if ((placements.Count == 0 && plannedBlue == null && plannedRed == null) || System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
+        if (BlueVWings > 0) factionMask |= 1 << Factions.Blue;
+        if (RedVWings > 0) factionMask |= 1 << Factions.Red;
+        if ((placements.Count == 0 && plannedBlue == null && plannedRed == null && BlueVWings + RedVWings == 0) ||
+            System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
         {
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
@@ -735,6 +746,7 @@ public partial class BenchmarkArena : Node3D
                     AddChild(dreadnaughts);
                     dreadnaughts.SyncVisuals();
                 }
+                StartAirSquadron();
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units, IsOffense ? offenseCitadel : null);
                 ShowAutoBattlerClock(true);
@@ -747,7 +759,7 @@ public partial class BenchmarkArena : Node3D
                 panel.Summary.ResetSamples();
             }
         }
-        else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0 || ReservesPending))
+        else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0 || ReservesPending || airSquadron != null))
         {
             if (navigation != null)
             {
@@ -773,7 +785,9 @@ public partial class BenchmarkArena : Node3D
                     armyRenderer.CapturePose();
                     renderMs += Elapsed(snapshotStart);
                 }
-                Step(Config.TickSeconds);
+                if (airSquadron == null || units.Alive > 0 || projectiles.Count > 0 || ReservesPending)
+                    Step(Config.TickSeconds);
+                airSquadron?.Step(Config.TickSeconds);
                 accumulator -= Config.TickSeconds;
                 steps++;
                 if (offenseBattleEnded) { accumulator = 0; break; }
@@ -791,7 +805,11 @@ public partial class BenchmarkArena : Node3D
                 armyRenderer.Sync(blend);
                 SyncReserveMarch();
                 dreadnaughts?.SyncVisuals();
-                if (steps > 0) projectileRenderer.Sync(projectiles);
+                if (steps > 0)
+                {
+                    projectileRenderer.Sync(projectiles);
+                    airSquadron?.SyncVisuals();
+                }
                 timeSinceArmySync = 0;
                 renderMs += Elapsed(start);
                 measuredSyncs++;

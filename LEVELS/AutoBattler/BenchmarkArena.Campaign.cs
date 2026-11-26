@@ -167,10 +167,10 @@ public partial class BenchmarkArena
     private string CampaignStartError()
     {
         if (campaignMapError != null) return campaignMapError;
-        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0) return "This level has no authored Red forces.";
+        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedVWings == 0) return "This level has no authored Red forces.";
         if (campaignZoneCells.Count == 0 && autoBattlerPlaytestMap.AutoBattlerRules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled)
             return "This map has no authored Blue deployment area.";
-        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0) return "Deploy or reserve at least one owned soldier to fight.";
+        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0 && BlueVWings == 0) return "Deploy or reserve at least one owned soldier, or author a Blue V-wing flight.";
         if ((long)painter.Layout.Placements.Count + autoBattlerRed.Length + AuthoredRedReserve + blueReserveCount > Config.MaxSoldiers)
             return "Both armies together exceed the simulation's total soldier capacity.";
         return null;
@@ -184,7 +184,8 @@ public partial class BenchmarkArena
             int owned = campaignRoster.Owned(catalog[type].Id), deployed = layout.CountForType(type);
             return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
         }, (IsOffense ? "Destroy the Red Citadel\n" : "") + $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
-            (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : ""),
+            (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : "") +
+            (BlueVWings + RedVWings > 0 ? $"\nV-wings: Blue {BlueVWings} · Red {RedVWings}" : ""),
             CampaignStartError());
     }
 
@@ -203,8 +204,8 @@ public partial class BenchmarkArena
         if (!campaignBattleRunning || steps == 0) return;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
         if (IsOffense && TryFinishOffense()) return;
-        if (units.FactionAlive[Factions.Blue] == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
-        else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
+        if (units.FactionAlive[Factions.Blue] == 0 && (airSquadron?.Alive(Factions.Blue) ?? 0) == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
+        else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && (airSquadron?.Alive(Factions.Red) ?? 0) == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
         else if (AutoBattlerElapsedSeconds >= (redWave?.Lanes != null ?
@@ -227,8 +228,10 @@ public partial class BenchmarkArena
             $"\nBlue reserve survivors {units.FactionAlive[Factions.Blue] - survivors:N0} / {arrived:N0} arrived";
         string survivorLabel = blueWave == null ? "Blue survivors" : "Blue opening survivors";
         armyBalanceHud?.RefreshCounts();
+        string airResult = airSquadron == null ? "" :
+            $"\nV-wings remaining: Blue {airSquadron.Alive(Factions.Blue)} / {BlueVWings} · Red {airSquadron.Alive(Factions.Red)} / {RedVWings}";
         campaignHud.ShowResult(result,
-            $"{survivorLabel} {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses{reserveResult}");
+            $"{survivorLabel} {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses{reserveResult}{airResult}");
     }
 
     private void ReturnFromCampaignBattle()
