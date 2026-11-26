@@ -662,3 +662,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — AIR1-A: added authored Clash V-wing flights, separate air grid and fixed-step dogfights, variable altitude, and batched wingtip wisps. Source implemented, awaiting Godot playtest.
 
 - 2026-11-26 — AIR1-A authoring: moved V-wing placement into the Clash Units roster, with faction selection, painted and erasable starting positions, preview, and undo/redo. Old flight counts remain readable. Awaiting Godot playtest.
+
+- 2026-11-26 — Clash Units roster: added distinct Blue and Red V-wing cards with faction-tinted aircraft icons.

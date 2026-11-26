@@ -212,11 +212,13 @@ internal partial class UnitPlacementBar : PanelContainer
 
         private (bool Projectile, bool Shield)? defense;
         private Texture2D texture;
+        private bool textureUsesFactionColor;
         private bool wall;
 
-        internal void SetTexture(Texture2D value)
+        internal void SetTexture(Texture2D value, bool useFactionColor = false)
         {
             texture = value;
+            textureUsesFactionColor = useFactionColor;
             CustomMinimumSize = new Vector2(28, 0);
             QueueRedraw();
         }
@@ -266,7 +268,7 @@ internal partial class UnitPlacementBar : PanelContainer
             Color edge = tint.Lerp(Colors.White, 0.58f);
             if (texture != null)
             {
-                DrawTextureRect(texture, new Rect2(Size * 0.5f - Vector2.One * 11f, Vector2.One * 22f), false);
+                DrawTextureRect(texture, new Rect2(Size * 0.5f - Vector2.One * 11f, Vector2.One * 22f), false, textureUsesFactionColor ? tint : Colors.White);
                 return;
             }
             if (wall)

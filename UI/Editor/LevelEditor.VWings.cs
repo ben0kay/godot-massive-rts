@@ -16,24 +16,8 @@ public partial class LevelEditor
     private MultiMeshInstance3D vWingPreview;
     private Mesh vWingPreviewMesh;
 
-    private void BuildVWingControls()
-    {
-        Heading(context, "V-wing · Drag to paint. Right-drag to erase.", 15);
-        var factions = new HBoxContainer();
-        context.AddChild(factions);
-        var group = new ButtonGroup();
-        foreach (bool blue in new[] { true, false })
-        {
-            var button = Button(factions, blue ? "Blue" : "Red", () =>
-            {
-                EndVWingStroke();
-                paintBlueVWings = blue;
-            });
-            button.ToggleMode = true;
-            button.ButtonGroup = group;
-            button.SetPressedNoSignal(paintBlueVWings == blue);
-        }
-    }
+    private void BuildVWingControls() =>
+        Heading(context, "Drag to paint. Right-drag to erase.", 15);
 
     private bool HandleVWingPaint(InputEvent input)
     {
