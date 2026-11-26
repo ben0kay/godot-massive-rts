@@ -9,9 +9,6 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
     private const string Template = "res://BENCHMARK/RTS/CommandSandbox.tscn";
     public static readonly LevelEditorMode[] Supported =
     {
-        new("Campaign001", "res://LEVELS/AutoBattler", true),
-        new("CampaignOffense", "res://LEVELS/Campaign/Offense", true),
-        new("CampaignDefense", "res://LEVELS/Campaign/Defense", true),
         new("SkirmishClash", "res://LEVELS/Skirmishes/Clash", true),
         new("SkirmishDefense", "res://LEVELS/Skirmishes/Defense", true),
         new("Offense", "res://LEVELS/Offense", true),

@@ -18,7 +18,7 @@ public partial class LevelEditor : Node
     private GridContainer levelGrid;
     private Button returnToLevel;
     private string selectedCampaignId;
-    private int authoringSection;
+    private bool authoringFortressDefense;
     private BuildingDefinition[] defenseDefinitions;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
@@ -71,8 +71,8 @@ public partial class LevelEditor : Node
         var home = Panel(interfaceRoot, Control.LayoutPreset.Center, -405, -270, 405, 270);
         start = new VBoxContainer { CustomMinimumSize = new Vector2(750, 0) };
         home.AddChild(start);
-        Heading(start, "Campaign Level Editor", 34);
-        Heading(start, "Choose a campaign", 18);
+        Heading(start, "Level Editor", 34);
+        Heading(start, "Choose a mode", 18);
         campaignButtons = new HBoxContainer();
         start.AddChild(campaignButtons);
         Heading(start, "Available levels", 18);
@@ -192,8 +192,7 @@ public partial class LevelEditor : Node
             catalog = CampaignCatalog.Load(fresh: true);
             var supported = catalog.Campaigns.Where(entry =>
                 LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id) &&
-                (authoringSection == 2 ? entry.Id == "OpenRTS" : entry.Id != "OpenRTS" &&
-                 CampaignCatalog.IsSkirmish(entry.Id) == (authoringSection == 1)))
+                (authoringFortressDefense ? entry.Id == "OpenRTS" : CampaignCatalog.IsSkirmish(entry.Id)))
                 .OrderBy(entry => Array.IndexOf(new[] { "Clash", "Offense", "Defense" }, entry.DisplayName)).ToArray();
             if (!supported.Any(entry => entry.Id == selectedCampaignId))
                 selectedCampaignId = supported.FirstOrDefault()?.Id;
@@ -203,11 +202,10 @@ public partial class LevelEditor : Node
                 child.QueueFree();
             }
             var sections = new OptionButton();
-            sections.AddItem("Campaign");
             sections.AddItem("Skirmishes");
             sections.AddItem("Fortress Defense");
-            sections.Select(authoringSection);
-            sections.ItemSelected += index => { authoringSection = (int)index; ShowStart(); };
+            sections.Select(authoringFortressDefense ? 1 : 0);
+            sections.ItemSelected += index => { authoringFortressDefense = index == 1; ShowStart(); };
             campaignButtons.AddChild(sections);
             var tabs = new ButtonGroup();
             foreach (var entry in supported)
@@ -300,7 +298,7 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        authoringSection = mode.CampaignId == "OpenRTS" ? 2 : CampaignCatalog.IsSkirmish(mode.CampaignId) ? 1 : 0;
+        authoringFortressDefense = mode.CampaignId == "OpenRTS";
         testButton.Text = mode.IsAutoBattler ? "Test " + CampaignCatalog.BattleType(mode.CampaignId) : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;

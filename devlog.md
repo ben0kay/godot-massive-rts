@@ -682,3 +682,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Offense Blue attackers now use local defender acquisition so the default movement goal remains the Red Citadel between fights. Opening orders retain priority.
 
 - 2026-11-26 — Added standalone Skirmishes menus and authoring destinations, preset rosters, and short Defense encounters with a Blue Citadel. Campaign retains recruitment and Fortress Defense has its own menu.
+
+- 2026-11-26 — Level Editor now opens to Skirmishes and offers Fortress Defense as its other authoring mode.
