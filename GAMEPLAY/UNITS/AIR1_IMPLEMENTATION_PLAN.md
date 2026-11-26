@@ -69,12 +69,12 @@ hitscan bursts with visible tracers and two short white wingtip wisps.
 ## Heavy Bomber in Clash
 
 Select Heavy Bomber in the bottom roster. It automatically seeks the nearest
-enemy ground soldier and drops three bombs across the target area. Fighters
+enemy ground soldier, snapshots its location, and drops three bombs across that spot. It flies out before acquiring the next spot and turns at 36 degrees per second. Fighters
 can engage it, and its bombs use the shared ground splash and impact effects.
 
 During Level Editor authoring or Test Clash deployment, select the bomber card
-and Shift-click a ground spot to assign that faction’s opening bombing run.
-Shift-right-click clears it. The marked run takes priority once, then the flight
+and choose **Bomb**, then click a ground spot to assign that faction’s opening bombing run.
+Shift-click remains a shortcut, and Shift-right-click clears the order. The marked run takes priority once, then the flight
 resumes auto-fight. Orders authored in the Level Editor save with the map.
 Test Clash orders apply to the test session.
 

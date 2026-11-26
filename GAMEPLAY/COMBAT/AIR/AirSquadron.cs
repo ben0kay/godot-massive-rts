@@ -19,8 +19,8 @@ public partial class AirSquadron : Node3D
         internal UnitDefinition Unit;
         internal float Speed, TurnRate, FireRangeSquared, ShotInterval, Damage, DamageTaken;
         internal int DamageType, Armour;
-        internal int BombType, GroundTarget, BombsRemaining;
-        internal Vector2? BombOrder;
+        internal int BombType, BombsRemaining;
+        internal Vector2? BombOrder, LockedBombPoint;
         internal Vector2 BombCenter, BombAxis;
         internal int Target, Shots;
         internal Vector3 Position, Forward, TracerEnd;
@@ -85,7 +85,7 @@ public partial class AirSquadron : Node3D
                 heading = Mathf.Atan2(-x, -z);
             fighters[id] = new Fighter
             {
-                Unit = unit, Faction = faction, BombType = bombType, GroundTarget = -1, BombOrder = bombOrder, Health = Mathf.Max(1f, unit.Health), Target = -1,
+                Unit = unit, Faction = faction, BombType = bombType, BombOrder = bombOrder, Health = Mathf.Max(1f, unit.Health), Target = -1,
                 Speed = Mathf.Max(2f, unit.Speed), TurnRate = Mathf.DegToRad(Mathf.Max(1f, unit.TurnDegreesPerSecond)),
                 FireRangeSquared = unit.Reach * unit.Reach, ShotInterval = Mathf.Max(0.001f, unit.Interval),
                 Damage = unit.Damage, DamageType = damageRules.DamageType(unit.DamageType),
@@ -127,7 +127,8 @@ public partial class AirSquadron : Node3D
             fighter.TurnAway -= delta;
             Vector3 aim = goal - fighter.Position;
             float wanted = Mathf.Atan2(aim.X, aim.Z);
-            if (nearEdge)
+            if (nearEdge && (fighter.BombType < 0 ||
+                fighter.Position.X * Mathf.Sin(fighter.Heading) + fighter.Position.Z * Mathf.Cos(fighter.Heading) > 0f))
                 wanted = Mathf.Atan2(-fighter.Position.X, -fighter.Position.Z);
             else if (fighter.TurnAway > 0f || fighter.BombsRemaining > 0)
                 wanted = fighter.Heading;
@@ -205,28 +206,19 @@ public partial class AirSquadron : Node3D
         visuals.RecordTrails(fighters, delta);
     }
 
-    // Reacquire only on the bomber's staggered cadence. The pursuit index contains ground units only.
+    // Snapshot the target once per pass. Moving or dying ground units cannot redirect it.
     private static bool TryBombGoal(ref Fighter fighter, int id, UnitState ground, SpatialGrid groundGrid, out Vector3 goal)
     {
-        if (fighter.BombOrder is { } order)
+        var point = fighter.BombOrder ?? fighter.LockedBombPoint;
+        if (!point.HasValue && fighter.TurnAway <= 0f && groundGrid != null && fighter.Reacquire <= 0f)
         {
-            goal = new Vector3(order.X, 0f, order.Y);
-            return true;
-        }
-
-        if (groundGrid != null && fighter.Reacquire <= 0f)
-        {
-            fighter.GroundTarget = groundGrid.FindNearestGroundEnemy(ground, fighter.Position, fighter.Faction);
+            int target = groundGrid.FindNearestGroundEnemy(ground, fighter.Position, fighter.Faction);
             fighter.Reacquire = 0.46f + (id % 9) * 0.021f;
+            if (target >= 0)
+                point = fighter.LockedBombPoint = ObstacleField.Xz(ground.Position[target]);
         }
-        int target = fighter.GroundTarget;
-        if (target >= 0 && ground.Health[target] > 0f)
-        {
-            goal = ground.Position[target];
-            return true;
-        }
-        goal = Vector3.Zero;
-        return false;
+        goal = point is { } destination ? new Vector3(destination.X, 0f, destination.Y) : Vector3.Zero;
+        return point.HasValue;
     }
 
     private void UpdateBombRun(ref Fighter fighter, Vector3 goal, bool valid,
@@ -238,8 +230,13 @@ public partial class AirSquadron : Node3D
             if (!valid || fighter.TurnAway > 0f) return;
             Vector2 route = ObstacleField.Xz(goal - fighter.Position);
             Vector2 heading = ObstacleField.Xz(forward);
-            if (route.LengthSquared() > fighter.FireRangeSquared || route.Dot(heading) < 3f ||
-                route.Normalized().Dot(heading) < 0.94f) return;
+            if (route.LengthSquared() > fighter.FireRangeSquared) return;
+            if (route.Dot(heading) < 3f || route.Normalized().Dot(heading) < 0.94f)
+            {
+                // Extend a missed approach before banking back onto the same spot.
+                if (route.LengthSquared() < 12f * 12f) fighter.TurnAway = 1.8f;
+                return;
+            }
             fighter.BombCenter = ObstacleField.Xz(goal);
             fighter.BombAxis = heading;
             fighter.BombsRemaining = 3;
@@ -254,9 +251,9 @@ public partial class AirSquadron : Node3D
         if (--fighter.BombsRemaining == 0)
         {
             fighter.BombOrder = null;
-            fighter.GroundTarget = -1;
+            fighter.LockedBombPoint = null;
             fighter.Reacquire = 0f;
-            fighter.TurnAway = 1.15f;
+            fighter.TurnAway = 2.4f;
         }
     }
 

@@ -19,7 +19,8 @@ public partial class BenchmarkArena
     private MouseButton testAircraftButton;
     private Vector2? previousAircraftCell;
     private Vector2? testBombOrder;
-    private bool testBombOrderEdited;
+    private bool testBombOrderEdited, placingTestBombOrder;
+    private Button testBombButton;
     private readonly Label3D[] testBombMarkers = new Label3D[Factions.Count];
 
     private Vector2? ReadBombOrder(byte faction)
@@ -66,6 +67,18 @@ public partial class BenchmarkArena
         previousAircraftCell = null;
         testAircraftButton = MouseButton.None;
         testAircraftBrush = unit;
+        placingTestBombOrder = false;
+        if (unit?.CanBombGround == true && testBombButton == null && panel.DeploymentOrderControls != null)
+        {
+            testBombButton = UIButtonFactory.Create("Bomb", () =>
+            {
+                placingTestBombOrder = true;
+                panel.Status.Text = "Click a ground spot for the opening bombing run.";
+            }, UIButtonStyle.Compact);
+            panel.DeploymentOrderControls.AddChild(testBombButton);
+            panel.DeploymentOrderControls.MoveChild(testBombButton, 0);
+        }
+        if (testBombButton != null) testBombButton.Visible = unit?.CanBombGround == true;
         painter.TrapInput = unit != null ? HandleTestAircraftInput : null;
         if (unit?.CanBombGround == true)
             panel.Status.Text = "Paint bombers · Shift-click a bombing target · Shift-right-click to clear";
@@ -83,7 +96,7 @@ public partial class BenchmarkArena
                 return true;
             }
             if (camera.FreeRoam && mouse.ButtonIndex == MouseButton.Right) return false;
-            if (testAircraftBrush.CanBombGround && mouse.ShiftPressed)
+            if (testAircraftBrush.CanBombGround && (placingTestBombOrder || mouse.ShiftPressed))
             {
                 if (mouse.ButtonIndex == MouseButton.Left)
                 {
@@ -93,6 +106,7 @@ public partial class BenchmarkArena
                     testBombOrder = ObstacleField.Xz(point);
                 }
                 else testBombOrder = null;
+                placingTestBombOrder = false;
                 testBombOrderEdited = true;
                 RefreshAircraftFlights();
                 ShowAircraftPreviews(true);

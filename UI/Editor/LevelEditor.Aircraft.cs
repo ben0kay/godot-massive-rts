@@ -15,10 +15,24 @@ public partial class LevelEditor
     private readonly Dictionary<UnitDefinition, MultiMeshInstance3D> aircraftPreviews = new();
     private readonly Label3D[] editorBombMarkers = new Label3D[Factions.Count];
 
-    private void BuildAircraftControls() =>
-        Heading(context, aircraftBrush?.CanBombGround == true
-            ? "Drag to paint. Right-drag to erase. Shift-click to order a bombing run; Shift-right-click clears it."
-            : "Drag to paint. Right-drag to erase.", 15);
+    private bool placingEditorBombOrder;
+
+    private void BuildAircraftControls()
+    {
+        placingEditorBombOrder = false;
+        Heading(context, "Drag to paint. Right-drag to erase.", 15);
+        if (aircraftBrush?.CanBombGround != true) return;
+        Button(context, "Bomb", () =>
+        {
+            placingEditorBombOrder = true;
+            SetStatus("Click a ground spot for the opening bombing run.");
+        });
+        Button(context, "Clear Bomb Order", () =>
+        {
+            placingEditorBombOrder = false;
+            SetOpeningBombOrder(null);
+        });
+    }
 
     private bool HandleAircraftPaint(InputEvent input)
     {
@@ -26,9 +40,10 @@ public partial class LevelEditor
         {
             if (!mouse.Pressed) { EndAircraftStroke(); return true; }
             if (!WorldPoint(mouse.Position, out var point)) return false;
-            if (aircraftBrush.CanBombGround && mouse.ShiftPressed)
+            if (aircraftBrush.CanBombGround && (placingEditorBombOrder || mouse.ShiftPressed))
             {
                 EndAircraftStroke();
+                placingEditorBombOrder = false;
                 SetOpeningBombOrder(mouse.ButtonIndex == MouseButton.Left ? ObstacleField.Xz(point) : null);
                 return true;
             }

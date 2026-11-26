@@ -672,3 +672,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Benchmark now defaults to a tier-weighted mixed roster with a single Dreadnaught and a small aircraft flight per side.
 
 - 2026-11-26 — Added the per-unit Pulse on attack option with Dreadnaught disabled, plus the Clash Heavy Bomber, ground-only auto-fight, and editable opening bombing runs.
+
+- 2026-11-26 — Heavy Bomber commits to a ground position before each pass, uses wider turns, and exposes a Bomb order in Clash authoring and test deployment.
