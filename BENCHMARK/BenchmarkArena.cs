@@ -731,7 +731,8 @@ public partial class BenchmarkArena : Node3D
             {
                 int end = Math.Min(autoAttackCount, preparedTargets + InitialTargetsPerFrame);
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
-                CombatSystem.PrepareTargets(units, grid, preparedTargets, end);
+                CombatSystem.PrepareTargets(units, grid, preparedTargets, end,
+                    localOnlyFaction: IsOffense ? Factions.Blue : -1);
                 preparedTargets = end;
                 panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {autoAttackCount:N0}";
                 if (preparedTargets < autoAttackCount) return;
@@ -917,8 +918,8 @@ public partial class BenchmarkArena : Node3D
             var sight = StructureCombat.Sight(type, units, BattleSight);
             bool siege = offenseCitadel?.Destroyed == false && units.Faction[id] == Factions.Blue &&
                 (type.TargetsUnits || type.TargetsStructures) && type.AgainstStructures(type.Damage) > 0f;
-            if (siege && defenseCombat.TryPrioritize(id, type, offenseCitadel, sight, obstacles, tick, navigation,
-                !opening && (units.Target[id] < 0 || units.Health[units.Target[id]] <= 0f))) continue;
+            if (siege && !opening && defenseCombat.TryPrioritize(id, type, offenseCitadel, sight, obstacles, tick, navigation,
+                (units.Target[id] < 0 || units.Health[units.Target[id]] <= 0f))) continue;
             if (opening || !type.TargetsStructures)
             {
                 if (IsOffense) defenseCombat.SetTarget(id, null);
@@ -971,7 +972,8 @@ public partial class BenchmarkArena : Node3D
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, BattleSight,
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
-                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds);
+                    panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds,
+                    localOnlyFaction: IsOffense ? Factions.Blue : -1);
                 if (guards != null) AcquireGuards(acquisitionStep);
                 AcquireDefenseTargets(acquisitionStep);
                 targetingMs += Elapsed(start);

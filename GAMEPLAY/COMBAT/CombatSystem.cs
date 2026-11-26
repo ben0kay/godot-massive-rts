@@ -13,15 +13,15 @@ public static class CombatSystem
     public static float MeleeContact(float attackerRadius, float defenderRadius, float separationGap) =>
         attackerRadius + defenderRadius + Mathf.Max(0f, separationGap);
 
-    public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
+    public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end, int localOnlyFaction = -1)
     {
         for (int i = start; i < end; i++)
-            units.Target[i] = !units.Catalog[units.Type[i]].TargetsUnits || units.OpeningOrders?.Active(i) == true ? -1 : grid.FindPursuitEnemy(units, i, -1, PursuitReason.Preparation);
+            units.Target[i] = units.Faction[i] == localOnlyFaction || !units.Catalog[units.Type[i]].TargetsUnits || units.OpeningOrders?.Active(i) == true ? -1 : grid.FindPursuitEnemy(units, i, -1, PursuitReason.Preparation);
     }
 
     // =========================================================
     public static void Acquire(UnitState units, SpatialGrid grid, BenchmarkConfig config, int tick, float acquisitionSeconds, ObstacleField obstacles = null, bool rangedVariety = false, uint battleSeed = 0, bool slowPursuitRefresh = false,
-        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false, int end = -1, int[] activeIds = null)
+        bool delayFarMeleeRetarget = false, bool limitPursuitQueries = false, int end = -1, int[] activeIds = null, int localOnlyFaction = -1)
     {
         int localInterval = Mathf.Max(1, Mathf.RoundToInt(config.TargetRefreshTicks * BenchmarkConfig.TargetingStepSeconds / acquisitionSeconds));
         int pursuitInterval = Mathf.Max(localInterval, Mathf.RoundToInt(0.8f / acquisitionSeconds));
@@ -46,6 +46,24 @@ public static class CombatSystem
             if (units.OpeningOrders?.Active(i) == true)
             {
                 if (i % localInterval == localPhase) units.OpeningOrders.Acquire(units, grid, config, obstacles, i, tick);
+                continue;
+            }
+            if (units.Faction[i] == localOnlyFaction)
+            {
+                // Objective attackers fight nearby defenders and leave distant targets to the assault route.
+                ref readonly var attacker = ref units.Catalog[units.Type[i]];
+                float reach = attacker.Ranged ? units.RangedReach(i, attacker) :
+                    Mathf.Max(config.CellSize * 2f, attacker.MeleeDetectionReach + units.MaxFootprint);
+                int current = units.Target[i];
+                var cover = StructureCombat.Sight(attacker, units, obstacles);
+                if (current >= 0 &&
+                    (units.Health[current] <= 0f || units.Position[i].DistanceSquaredTo(units.Position[current]) > reach * reach ||
+                     cover?.BlocksSight(units.Position[i], units.Position[current]) == true))
+                    current = -1;
+                if (current < 0 && i % localInterval == localPhase)
+                    current = grid.FindEnemy(units, i, reach, config.QueryCandidateLimit, tick, cover,
+                        minimumRange: attacker.MinimumFireRange);
+                units.Target[i] = current;
                 continue;
             }
             int previous = units.Target[i];
