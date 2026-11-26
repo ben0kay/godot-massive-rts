@@ -53,3 +53,7 @@ The non-firing, destructible `prefab_shelter` retains its 500 HP, Fortified armo
 ### Defense firing feedback
 
 Railgun ignition and Twin Minigun Tower muzzle flashes now use 1.9× and 1.0× the shared starburst size (formerly 1.0× and 0.45×). Broadside successful launches also emit a 2.6× starburst on the actual firing muzzle in addition to their existing projectile launch effects. All tower starbursts last 0.16 seconds. Broadside additionally creates a faction-tinted 7-unit ground halo below the launch point that expands slightly and fades over 0.32 seconds; it uses one lazy 64-instance batch and the shared projectile ground-glow shader. Local terrain slope is sampled at launch; sharply uneven terrain may clip the flat glow. No real lights or gameplay changes.
+
+### Railgun beam illumination
+
+The beam and endpoint flares now retain a more pronounced faction tint, including the bright core. A 3.6-unit-wide additive ground streak follows the actual cover/terrain-clipped beam for its full firing duration and disappears on beam end, tower destruction or reset. It uses one lazy shared MultiMesh batch with at most 12 strips per live beam (one on flat/no-heightfield maps), samples terrain at strip boundaries, and fades with beam height. Strongly uneven ground can still clip the approximated strips. No real lights or combat changes.

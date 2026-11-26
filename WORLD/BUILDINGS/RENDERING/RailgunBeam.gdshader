@@ -28,7 +28,8 @@ void vertex() {
 }
 
 void fragment() {
-    vec3 tint = mix(team, vec3(0.72, 0.86, 1.0), 0.18);
+    vec3 tint = mix(team, vec3(1.0), 0.08);
+    vec3 hot_core = mix(team, vec3(1.0), 0.58) * 1.3;
     if (effect < 0.5) {
         float edge = abs(UV.x * 2.0 - 1.0);
         float aa = clamp(fwidth(edge), 0.02, 0.40);
@@ -36,8 +37,8 @@ void fragment() {
         float sheath = 1.0 - smoothstep(0.12, 0.54, edge);
         float halo = 1.0 - smoothstep(0.0, 0.98, edge);
         float shimmer = 0.86 + 0.14 * sin(UV.y * beam_length * 4.0 - TIME * 24.0);
-        ALBEDO = mix(tint, vec3(1.4, 1.32, 1.17), core);
-        ALPHA = min(core * 0.93 + sheath * shimmer * 0.38 + halo * halo * 0.24, 1.0);
+        ALBEDO = mix(tint, hot_core, core);
+        ALPHA = min(core * 0.93 + sheath * shimmer * 0.52 + halo * halo * 0.30, 1.0);
     } else {
         vec2 p = UV * 2.0 - 1.0;
         float radius = length(p);
@@ -48,7 +49,7 @@ void fragment() {
         vec2 ray = vec2(cos(spin), sin(spin));
         float streak = 1.0 - smoothstep(0.01, 0.09, abs(dot(p, ray)));
         float sparks = streak * (1.0 - smoothstep(0.28, 0.90, radius)) * (1.0 - phase);
-        ALBEDO = mix(tint, vec3(1.45, 1.30, 1.03), max(core, sparks * 0.55));
+        ALBEDO = mix(tint, hot_core, max(core, sparks * 0.55));
         ALPHA = (core * 0.78 + halo * halo * 0.35 + sparks * 0.35) *
             (effect < 1.5 ? 0.72 : contact * (0.78 + 0.22 * (1.0 - phase)));
     }

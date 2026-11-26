@@ -241,7 +241,7 @@ internal sealed class DefenseSystem
         float reach = flat.Length();
         if (grid == null || reach <= 0.001f)
         {
-            renderer.ShowBeam(index, from, to, tower.Faction, impact);
+            renderer.ShowBeam(index, from, to, tower.Faction, impact, units.Grounding?.Field);
             return;
         }
         const float beamRadius = 0.14f;
@@ -260,7 +260,7 @@ internal sealed class DefenseSystem
             units.Damage(id, damage, tower.Stats.DamageType);
         }
         if (!impact.HasValue && float.IsFinite(nearest)) impact = from + segment * (nearest / reach);
-        renderer.ShowBeam(index, from, to, tower.Faction, impact);
+        renderer.ShowBeam(index, from, to, tower.Faction, impact, units.Grounding?.Field);
     }
 
     private static bool Valid(in Tower tower, UnitState units, int id, ObstacleField obstacles) =>

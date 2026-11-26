@@ -164,3 +164,5 @@ Use a square full-footprint foundation, squat armored rotating carriage, side am
 ### Defense firing effects
 
 Keep muzzle feedback at the actual launch/beam origin and use the existing capped flash pool. Heavy weapons such as Broadside can add a short faction-tinted ground halo (shared projectile glow shader, independent material intensity and a bounded batch), sampled at launch and faded without real lights. Keep low-flying minigun tracers lightly faction-tinted and reuse the existing travelling glow cap; do not add a separate per-shot node or make high-arc rockets cast travelling ground glows.
+
+For sustained Railgun beams, keep the bright core faction-tinted and project a soft additive streak along the clipped beam segment, using a bounded shared batch and terrain samples. Ground illumination is visual-only and follows the live beam slot lifecycle; do not project beyond blocking cover or spawn real lights.
