@@ -46,3 +46,5 @@ AutoBattler authoring uses the bottom placement bar. **Units** and **Defenses** 
 Use **Red staging** in the AutoBattler palette to paint a reserve formation on a separate 256-unit grid. Paint or erase with the standard unit tools. The highlighted south edge is the front of the wave. **Back to battlefield** returns to the map. Use **Red entry preview** and click near an edge to position the entry. Cyan lanes are clear, red lanes overlap a blocker or leave the legal entry area, and the pale line shows the largest unit's handoff depth. The timer is under **Simulation → Reinforcement settings**.
 
 Choose **Base Terrain** beside **+ New Level**. Industrial is the default and Steel Slate provides the earlier look. To switch an existing level, open **Map Size…**, choose a base terrain, and save the level.
+
+During a tactical test battle, click a tower to show its health, kills, and range. Click empty ground to clear the selection.

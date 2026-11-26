@@ -12,6 +12,7 @@ internal class StructureHealth
     public readonly ObstacleRectangle Area;
     public readonly float MaxHealth;
     public float Health { get; private set; }
+    internal int Kills { get; set; }
     internal bool IsTower { get; init; }
     public bool Destroyed => Health <= 0f;
 

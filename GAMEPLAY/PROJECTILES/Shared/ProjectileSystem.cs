@@ -13,7 +13,7 @@ public sealed class ProjectileSystem
     private readonly int[] damageTypes;
     private readonly float[] forestDeflection;
     private uint shotRandom = 0x9E3779B9u;
-    private StructureHealth[] structureTargets;
+    private StructureHealth[] structureTargets, firingTowers;
     // Allocated only when a short-barrel static weapon fires.
     private ObstacleRectangle?[] firingFootprints;
     private readonly ProjectileCatalog catalog;
@@ -106,13 +106,15 @@ public sealed class ProjectileSystem
         return launched;
     }
 
-    internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType, ObstacleRectangle? firingFootprint = null)
+    internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType, ObstacleRectangle? firingFootprint = null, StructureHealth firingTower = null)
     {
         if (Count == Position.Length) { Dropped++; return false; }
         ProjectileFlight flight = catalog.Flight(projectileType);
         int i = Count++;
         if (firingFootprint.HasValue) firingFootprints ??= new ObstacleRectangle?[Position.Length];
         if (firingFootprints != null) firingFootprints[i] = firingFootprint;
+        if (firingTower != null) firingTowers ??= new StructureHealth[Position.Length];
+        if (firingTowers != null) firingTowers[i] = firingTower;
         origin[i] = Position[i] = muzzle;
         Vector3 path = aim - origin[i];
         displacement[i] = path;
@@ -197,7 +199,11 @@ public sealed class ProjectileSystem
                         if (forestDeflection[i] > 0f && forest?.Contains(units.Position[victim]) == true &&
                             NextShotRoll() < forestDeflection[i])
                             forest.DropLeaves(units.Position[victim] + Vector3.Up * units.Catalog[units.Type[victim]].Height * 0.65f);
-                        else units.Damage(victim, damage[i], damageTypes[i]);
+                        else
+                        {
+                            units.Damage(victim, damage[i], damageTypes[i]);
+                            if (units.Health[victim] <= 0f && firingTowers?[i] is { } tower) tower.Kills++;
+                        }
                     }
                     Remove(i);
                     continue;
@@ -233,8 +239,9 @@ public sealed class ProjectileSystem
         // Completing the flight lands at the recorded ground aim point. Expiring in flight does not explode.
         if (hit > 1f && elapsed[index] < duration[index]) return false;
         Vector3 impact = from + segment * Mathf.Min(hit, 1f);
-        AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
+        int kills = AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
             damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index]);
+        if (firingTowers?[index] is { } tower) tower.Kills += kills;
         Vector3 burstOrigin = impact;
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
         rings?.Emit(impact, flight.ExplosionRadius, burstOrigin, sourceFaction[index]);
@@ -261,6 +268,11 @@ public sealed class ProjectileSystem
         {
             firingFootprints[index] = firingFootprints[last];
             firingFootprints[last] = null;
+        }
+        if (firingTowers != null)
+        {
+            firingTowers[index] = firingTowers[last];
+            firingTowers[last] = null;
         }
         if (index == last) return;
         Position[index] = Position[last]; Direction[index] = Direction[last];

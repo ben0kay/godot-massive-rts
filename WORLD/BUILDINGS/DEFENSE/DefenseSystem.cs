@@ -25,6 +25,14 @@ internal sealed class DefenseSystem
     public IReadOnlyList<StructureHealth> Structures => structures;
     public int ActiveCount { get; private set; }
 
+    internal bool TryGetTower(int index, out StructureHealth structure, out BuildingStats stats, out Vector3 pivot)
+    {
+        structure = structures[index];
+        stats = towers[index].Stats;
+        pivot = towers[index].Pivot;
+        return structure is { Destroyed: false };
+    }
+
     // Command mode registers and removes individual towers in bounded, reusable slots.
     public DefenseSystem(DefenseRenderer renderer, int capacity)
     {
@@ -165,7 +173,7 @@ internal sealed class DefenseSystem
                     // The short barrels sit inside the tower footprint. Ignore only
                     // that rectangle; direct rounds still stop at cover and terrain.
                     if (projectiles?.LaunchFrom(muzzle, aim, tower.Faction, tower.Stats.ProjectileType,
-                        tower.Stats.Damage, tower.Stats.DamageType, tower.Footprint) == true)
+                        tower.Stats.Damage, tower.Stats.DamageType, tower.Footprint, structure) == true)
                     {
                         renderer.EmitFlash(muzzle, tower.Yaw, 1.0f);
                         tower.NextRocketMuzzle ^= 1;
@@ -179,7 +187,7 @@ internal sealed class DefenseSystem
                         tower.NextRocketMuzzle, useLeft ? tower.LeftRecoil : tower.RightRecoil);
                     if (projectiles?.LaunchFrom(muzzle,
                         units.Position[tower.Target], tower.Faction, tower.Stats.ProjectileType,
-                        tower.Stats.Damage, tower.Stats.DamageType) == true)
+                        tower.Stats.Damage, tower.Stats.DamageType, firingTower: structure) == true)
                     {
                         renderer.EmitFlash(muzzle, tower.Yaw, 2.6f);
                         renderer.EmitGroundFlash(muzzle, tower.Faction, units.Grounding?.Field);
@@ -258,6 +266,7 @@ internal sealed class DefenseSystem
                 type.Footprint, type.Height, beamRadius, out float entry)) continue;
             nearest = Mathf.Min(nearest, entry);
             units.Damage(id, damage, tower.Stats.DamageType);
+            if (units.Health[id] <= 0f) structures[index].Kills++;
         }
         if (!impact.HasValue && float.IsFinite(nearest)) impact = from + segment * (nearest / reach);
         renderer.ShowBeam(index, from, to, tower.Faction, impact, units.Grounding?.Field);

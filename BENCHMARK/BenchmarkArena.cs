@@ -189,7 +189,15 @@ public partial class BenchmarkArena : Node3D
         // Keep the gameplay bar separate from BENCHMARK's developer panels.
         var gameplayHudLayer = new CanvasLayer { Layer = 2 };
         AddChild(gameplayHudLayer);
-        if (autoBattlerPlaytestMap != null) AddAutoBattlerClock(gameplayHudLayer);
+        if (autoBattlerPlaytestMap != null)
+        {
+            AddAutoBattlerClock(gameplayHudLayer);
+            if (campaignRoster == null)
+            {
+                towerInspection = new TowerInspection { MouseFilter = Control.MouseFilterEnum.Ignore };
+                gameplayHudLayer.AddChild(towerInspection);
+            }
+        }
         armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
         gameplayHudLayer.AddChild(armyBalanceHud);
         deploymentStrengthBar = new DeploymentStrengthBar { Visible = false };
@@ -292,6 +300,7 @@ public partial class BenchmarkArena : Node3D
         shockwaves.Clear();
         deathFeedback.Clear();
         deathRenderer.Sync(deathFeedback);
+        towerInspection?.Clear();
         defenseSystem = null;
         offenseCitadel = null;
         offenseBattleEnded = false;
