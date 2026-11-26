@@ -40,7 +40,7 @@ internal sealed class DefenseSystem
         structures[slot] = structure;
         towers[slot] = CreateTower(structure, stats, height, ground);
         renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled,
-            stats.ShieldEmitter.Radius, stats.Id == PrefabShelterMeshes.Id);
+            stats.ShieldEmitter.Radius, stats.Id == PrefabShelterMeshes.Id, stats.Id == TwinMinigunTowerMeshes.Id);
         ActiveCount++;
     }
 
@@ -121,7 +121,8 @@ internal sealed class DefenseSystem
             if (structures[i] is not { Destroyed: false } structure) continue;
             renderer.SetDamageCracks(i, structure.Health / structure.MaxHealth, tower.Stats.ShieldEmitter.Enabled);
             if (weapon == TowerWeapon.None) continue;
-            bool rocket = weapon == TowerWeapon.Projectile;
+            bool minigun = tower.Stats.Id == TwinMinigunTowerMeshes.Id && weapon == TowerWeapon.Projectile;
+            bool rocket = weapon == TowerWeapon.Projectile && !minigun;
             float oldYaw = tower.Yaw, oldSlope = tower.BeamSlope, left = tower.LeftRecoil, right = tower.RightRecoil;
             float returnSpeed = rocket ? 1.25f : 1.8f;
             tower.LeftRecoil = Mathf.MoveToward(left, 0f, returnSpeed * dt);
@@ -156,7 +157,22 @@ internal sealed class DefenseSystem
 
             if (aligned && tower.Cooldown <= 0f && tower.BeamRemaining <= 0f)
             {
-                if (rocket)
+                if (minigun)
+                {
+                    Vector3 muzzle = DefenseRenderer.MinigunMuzzle(tower.Pivot, tower.Yaw, tower.BeamSlope, tower.NextRocketMuzzle);
+                    Vector3 aim = units.Position[tower.Target] + Vector3.Up *
+                        (units.Catalog[units.Type[tower.Target]].Height * 0.5f);
+                    // The short barrels sit inside the tower footprint. Ignore only
+                    // that rectangle; direct rounds still stop at cover and terrain.
+                    if (projectiles?.LaunchFrom(muzzle, aim, tower.Faction, tower.Stats.ProjectileType,
+                        tower.Stats.Damage, tower.Stats.DamageType, tower.Footprint) == true)
+                    {
+                        renderer.EmitFlash(muzzle, tower.Yaw, 0.45f);
+                        tower.NextRocketMuzzle ^= 1;
+                        tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
+                    }
+                }
+                else if (rocket)
                 {
                     bool useLeft = tower.NextRocketMuzzle == 0;
                     if (projectiles?.LaunchFrom(DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw,

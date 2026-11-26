@@ -147,3 +147,7 @@ Railgun and Rocket share the same staggered acquisition, hostile grid query, ran
 - **Lifecycle.** Destroyed towers stop acquiring and firing, and their beam and model are removed through the existing lifecycle. Already launched rockets finish in the shared pool. Destroyed shield emitters stop refreshing shields and existing shield points decay under the normal rules.
 
 The change adds no obstacle queries to the per-tick combat path and preserves the current weapon timings and save IDs. An authored wall can now intercept a rocket at its actual height, which is the intended gameplay correction. Runtime checks should cover a high and a low wall on elevated ground, a river and bridge, tower destruction during fire, and placement in both modes.
+
+### Twin Minigun Tower extension
+
+The `twin_minigun_tower` definition uses the existing projectile weapon scheduler with the direct-fire variant selected by stable ID. It reuses staggered acquisition, yaw/pitch, alternating muzzle index and projectile pool. A projectile optionally carries its source footprint for direct static weapon shots; cover and terrain clip those segments while the source rectangle is excluded. Renderer variant is distinct from Broadside, with three lazy batches (base, head, paired barrels). Cost is resource-driven. Do not use the Broadside muzzle for this tower. Other tower behavior is unchanged.

@@ -227,7 +227,7 @@ internal partial class UnitPlacementBar : PanelContainer
     {
         private Vector2[] points = Array.Empty<Vector2>();
 
-        private (bool Projectile, bool Shield)? defense;
+        private (bool Projectile, bool Shield, bool Minigun)? defense;
         private Texture2D texture;
         private bool textureUsesFactionColor;
         private bool wall;
@@ -263,12 +263,12 @@ internal partial class UnitPlacementBar : PanelContainer
         internal void SetDefense(BuildingStats stats)
         {
             if (stats.Id == PrefabShelterMeshes.Id) SetWall();
-            else SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled);
+            else SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled, stats.Id == TwinMinigunTowerMeshes.Id);
         }
 
-        internal void SetDefense(bool projectile, bool shield)
+        internal void SetDefense(bool projectile, bool shield, bool minigun = false)
         {
-            defense = (projectile, shield);
+            defense = (projectile, shield, minigun);
             CustomMinimumSize = new Vector2(28, 0);
         }
 
@@ -311,6 +311,11 @@ internal partial class UnitPlacementBar : PanelContainer
                 DrawRect(baseRect, edge, false, 1.6f);
                 if (stats.Shield)
                     DrawArc(center, 12, Mathf.Pi, Mathf.Tau, 16, edge, 2f, true);
+                else if (stats.Minigun)
+                {
+                    DrawLine(center + new Vector2(-5, 3), center + new Vector2(-5, -8), edge, 4);
+                    DrawLine(center + new Vector2(5, 3), center + new Vector2(5, -8), edge, 4);
+                }
                 else if (stats.Projectile)
                 {
                     DrawLine(center + new Vector2(-4, 3), center + new Vector2(-4, -17), edge, 4);

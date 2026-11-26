@@ -58,6 +58,9 @@ public partial class DefenseRenderer : Node3D
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
     private int liveBeams, liveFlashes;
     private MultiMesh shieldTowers;
+    private MultiMesh minigunBase, minigunHead, minigunBarrels;
+    private static Mesh minigunBaseMesh, minigunHeadMesh, minigunBarrelMesh;
+    private readonly bool[] minigunSlots = new bool[DeploymentLayout.MaxBuildings];
     private readonly MultiMesh[] shelterBatches = new MultiMesh[PrefabShelterMeshes.VariantCount];
     private static readonly Mesh[] ShelterMeshes = new Mesh[PrefabShelterMeshes.VariantCount];
     private readonly bool[] shelterSlots = new bool[DeploymentLayout.MaxBuildings];
@@ -131,6 +134,9 @@ public partial class DefenseRenderer : Node3D
     {
         InitializeBatches();
         shieldDomes?.Clear();
+        ResetMinigunBatch(minigunBase);
+        ResetMinigunBatch(minigunHead);
+        ResetMinigunBatch(minigunBarrels);
         foreach (var batch in shelterBatches)
         {
             if (batch == null) continue;
@@ -150,7 +156,8 @@ public partial class DefenseRenderer : Node3D
             var area = placement.Footprint(catalog);
             ShowTower(i, area, placement.Faction, height, terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f,
                 catalog[placement.Type].ProjectileType >= 0, catalog[placement.Type].ShieldEmitter.Enabled,
-                catalog[placement.Type].ShieldEmitter.Radius, catalog[placement.Type].Id == PrefabShelterMeshes.Id);
+                catalog[placement.Type].ShieldEmitter.Radius, catalog[placement.Type].Id == PrefabShelterMeshes.Id,
+                catalog[placement.Type].Id == TwinMinigunTowerMeshes.Id);
         }
         if (battle)
         {
@@ -175,10 +182,18 @@ public partial class DefenseRenderer : Node3D
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
-        bool rocket = false, bool shield = false, float shieldRadius = 0f, bool shelter = false)
+        bool rocket = false, bool shield = false, float shieldRadius = 0f, bool shelter = false, bool minigun = false)
     {
         crackStages[index] = 0;
         shelterSlots[index] = shelter;
+        minigunSlots[index] = minigun;
+        if (minigun)
+        {
+            HideTower(index);
+            ShowMinigun(index, area, faction, height, ground);
+            return;
+        }
+        HideMinigun(index);
         if (shelter)
         {
             HideTower(index);
@@ -237,7 +252,7 @@ public partial class DefenseRenderer : Node3D
         int stage = fraction <= 0.25f ? 3 : fraction <= 0.50f ? 2 : fraction <= 0.75f ? 1 : 0;
         if (crackStages[index] == stage) return;
         crackStages[index] = stage;
-        MultiMesh batch = shelterSlots[index] ? shelterBatches[shelterVariants[index]] : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
+        MultiMesh batch = minigunSlots[index] ? minigunBase : shelterSlots[index] ? shelterBatches[shelterVariants[index]] : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
         Color data = batch.GetInstanceCustomData(index);
         data.A = stage / 3f;
         batch.SetInstanceCustomData(index, data);
@@ -310,10 +325,57 @@ public partial class DefenseRenderer : Node3D
         foreach (var batch in shelterBatches) batch?.SetInstanceTransform(index, Hidden);
     }
 
+    // Three lazy shared batches, with both barrels baked into the pitched assembly.
+    private static void ResetMinigunBatch(MultiMesh batch)
+    {
+        if (batch == null) return;
+        for (int i = 0; i < batch.VisibleInstanceCount; i++) batch.SetInstanceTransform(i, Hidden);
+        batch.VisibleInstanceCount = 0;
+    }
+
+    private MultiMesh CreateMinigunBatch(Mesh mesh)
+    {
+        MultiMesh batch = Batch(mesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        for (int i = 0; i < batch.InstanceCount; i++) batch.SetInstanceTransform(i, Hidden);
+        batch.VisibleInstanceCount = 0;
+        return batch;
+    }
+
+    private void ShowMinigun(int index, ObstacleRectangle area, byte faction, float height, float ground)
+    {
+        minigunBase ??= CreateMinigunBatch(minigunBaseMesh ??= TwinMinigunTowerMeshes.CreateBase());
+        minigunHead ??= CreateMinigunBatch(minigunHeadMesh ??= TwinMinigunTowerMeshes.CreateHead());
+        minigunBarrels ??= CreateMinigunBatch(minigunBarrelMesh ??= TwinMinigunTowerMeshes.CreateBarrels());
+        Vector2 size = area.Max - area.Min;
+        Vector3 pivot = Pivot(area, height) + Vector3.Up * ground;
+        minigunBase.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
+            new Vector3(pivot.X, ground + height * 0.5f, pivot.Z)));
+        Color color = ArmyRenderer.FactionColor(faction);
+        SetArmorTint(minigunBase, index, color);
+        SetArmorTint(minigunHead, index, color);
+        SetArmorTint(minigunBarrels, index, color);
+        Aim(index, pivot, 0f);
+        int count = Mathf.Max(minigunBase.VisibleInstanceCount, index + 1);
+        minigunBase.VisibleInstanceCount = minigunHead.VisibleInstanceCount = minigunBarrels.VisibleInstanceCount = count;
+    }
+
+    private void HideMinigun(int index)
+    {
+        minigunBase?.SetInstanceTransform(index, Hidden);
+        minigunHead?.SetInstanceTransform(index, Hidden);
+        minigunBarrels?.SetInstanceTransform(index, Hidden);
+    }
+
+    internal static Vector3 MinigunMuzzle(Vector3 pivot, float yaw, float slope, int side) =>
+        pivot + RailBarrelBasis(new Basis(Vector3.Up, yaw), slope) *
+            new Vector3(side == 0 ? -TwinMinigunTowerMeshes.BarrelOffset : TwinMinigunTowerMeshes.BarrelOffset,
+                0f, -TwinMinigunTowerMeshes.BarrelLength);
+
     internal void HideTower(int index)
     {
         var hidden = new Transform3D(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
         HideShelter(index);
+        HideMinigun(index);
         bases.SetInstanceTransform(index, hidden);
         heads.SetInstanceTransform(index, hidden);
         barrels.SetInstanceTransform(index, hidden);
@@ -329,7 +391,12 @@ public partial class DefenseRenderer : Node3D
     public void Aim(int index, Vector3 pivot, float yaw, float leftRecoil = 0f, float rightRecoil = 0f, float beamSlope = 0f)
     {
         Basis basis = new Basis(Vector3.Up, yaw);
-        if (rocketSlots[index])
+        if (minigunSlots[index])
+        {
+            minigunHead.SetInstanceTransform(index, new Transform3D(basis, pivot));
+            minigunBarrels.SetInstanceTransform(index, new Transform3D(RailBarrelBasis(basis, beamSlope), pivot));
+        }
+        else if (rocketSlots[index])
         {
             rocketHeads.SetInstanceTransform(index, new Transform3D(basis, pivot));
             rocketBarrels.SetInstanceTransform(index, RocketBarrelTransform(pivot, basis, 0, leftRecoil));
@@ -398,11 +465,11 @@ public partial class DefenseRenderer : Node3D
     }
 
     // =========================================================
-    internal void EmitFlash(Vector3 muzzle, float yaw)
+    internal void EmitFlash(Vector3 muzzle, float yaw, float size = 1f)
     {
         if (flashes == null || liveFlashes >= FlashCapacity) return;
         int i = liveFlashes++;
-        flashPose[i] = new Transform3D(new Basis(Vector3.Up, yaw), muzzle + Vector3.Up * 0.11f);
+        flashPose[i] = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * size), muzzle + Vector3.Up * (0.11f * size));
         flashTime[i] = FlashSeconds;
         WriteFlash(i);
         flashes.VisibleInstanceCount = liveFlashes;

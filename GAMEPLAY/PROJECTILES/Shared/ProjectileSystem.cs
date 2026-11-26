@@ -14,6 +14,8 @@ public sealed class ProjectileSystem
     private readonly float[] forestDeflection;
     private uint shotRandom = 0x9E3779B9u;
     private StructureHealth[] structureTargets;
+    // Allocated only when a short-barrel static weapon fires.
+    private ObstacleRectangle?[] firingFootprints;
     private readonly ProjectileCatalog catalog;
     private readonly float lifetime;
     public int Count { get; private set; }
@@ -104,11 +106,13 @@ public sealed class ProjectileSystem
         return launched;
     }
 
-    internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType)
+    internal bool LaunchFrom(Vector3 muzzle, Vector3 aim, byte faction, int projectileType, float amount, int damageType, ObstacleRectangle? firingFootprint = null)
     {
         if (Count == Position.Length) { Dropped++; return false; }
         ProjectileFlight flight = catalog.Flight(projectileType);
         int i = Count++;
+        if (firingFootprint.HasValue) firingFootprints ??= new ObstacleRectangle?[Position.Length];
+        if (firingFootprints != null) firingFootprints[i] = firingFootprint;
         origin[i] = Position[i] = muzzle;
         Vector3 path = aim - origin[i];
         displacement[i] = path;
@@ -170,8 +174,18 @@ public sealed class ProjectileSystem
             else
             {
                 float wallHit = float.PositiveInfinity;
-                bool blocked = obstacles != null && flight.BlocksOnObstacles &&
-                    obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
+                bool blocked;
+                if (firingFootprints?[i] is ObstacleRectangle own)
+                {
+                    float end = flight.BlocksOnObstacles
+                        ? obstacles?.FirstSightHitExcept(Position[i], segment, own) ?? 1f : 1f;
+                    end = PiercingBeam.ClipTerrain(units.Grounding?.Field, Position[i], segment, end);
+                    blocked = end < 1f;
+                    if (blocked) wallHit = end;
+                }
+                else
+                    blocked = obstacles != null && flight.BlocksOnObstacles &&
+                        obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
                 int victim = wallHit > 0f
                     ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out _, wallHit)
                     : -1;
@@ -242,6 +256,11 @@ public sealed class ProjectileSystem
         {
             structureTargets[index] = structureTargets[last];
             structureTargets[last] = null;
+        }
+        if (firingFootprints != null)
+        {
+            firingFootprints[index] = firingFootprints[last];
+            firingFootprints[last] = null;
         }
         if (index == last) return;
         Position[index] = Position[last]; Direction[index] = Direction[last];

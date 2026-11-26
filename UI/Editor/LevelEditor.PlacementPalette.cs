@@ -163,7 +163,7 @@ public partial class LevelEditor
                     {
                         var defense = defenseDefinitions[i];
                         if (defense.Id == PrefabShelterMeshes.Id) icon.SetWall();
-                        else icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled);
+                        else icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled, defense.Id == TwinMinigunTowerMeshes.Id);
                     }
                 },
                 i =>
