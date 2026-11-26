@@ -11,12 +11,11 @@ internal sealed partial class AirSquadronVisuals : Node3D
     private static readonly Vector3 Wingtip = new(1.72f, 0f, -0.97f);
     private sealed class Batch
     {
-        internal MultiMesh Mesh;
+        internal MultiMesh Mesh, Shadow;
         internal int Visible;
     }
 
     private readonly Dictionary<UnitDefinition, Batch> aircraft = new();
-    private readonly MultiMesh shadows;
     private readonly ImmediateMesh streaks = new();
     private readonly Vector3[] trailLeft, trailRight;
     private readonly int[] trailHeads, trailCounts;
@@ -31,9 +30,9 @@ internal sealed partial class AirSquadronVisuals : Node3D
         foreach (var (unit, count) in counts)
             aircraft.Add(unit, new Batch
             {
-                Mesh = MakeBatch(AircraftMesh(unit, visualConfig), count, material: AircraftMaterial(unit, visualConfig))
+                Mesh = MakeBatch(AircraftMesh(unit, visualConfig), count, material: AircraftMaterial(unit, visualConfig)),
+                Shadow = MakeBatch(MakeWing(unit.CanBombGround, shadow: true), count, transparent: true)
             });
-        shadows = MakeBatch(GroundShadowMeshes.Soldier(), capacity, transparent: true);
         trailLeft = new Vector3[capacity * TrailSamples];
         trailRight = new Vector3[trailLeft.Length];
         trailHeads = new int[capacity];
@@ -95,7 +94,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
 
     private static Vector3 WingtipFor(UnitDefinition unit) => unit.CanBombGround ? new Vector3(3.1f, 0f, -0.62f) : Wingtip;
 
-    private static Mesh MakeWing(bool bomber)
+    private static Mesh MakeWing(bool bomber, bool shadow = false)
     {
         using var mesh = new SurfaceTool();
         mesh.Begin(Mesh.PrimitiveType.Triangles);
@@ -112,13 +111,14 @@ internal sealed partial class AirSquadronVisuals : Node3D
             Triangle(root, notch, spine, 0.82f);
             Triangle(notch, tail, spine, 0.64f);
             Triangle(root, tip, notch, 0.95f);
-            Triangle(tip, tip.Lerp(root, 0.20f), tip.Lerp(notch, 0.26f), 1f, 0.025f);
+            if (!shadow) Triangle(tip, tip.Lerp(root, 0.20f), tip.Lerp(notch, 0.26f), 1f, 0.025f);
         }
         return mesh.Commit();
 
         void Triangle(Vector3 a, Vector3 b, Vector3 c, float light, float lift = 0f)
         {
             mesh.SetColor(new Color(light, light, light));
+            if (shadow) a.Y = b.Y = c.Y = 0f;
             var offset = Vector3.Up * lift;
             mesh.AddVertex(a + offset);
             mesh.AddVertex(b + offset);
@@ -150,7 +150,6 @@ internal sealed partial class AirSquadronVisuals : Node3D
 
     internal void Sync(AirSquadron.Fighter[] fighters, TerrainHeightField terrain)
     {
-        int live = 0;
         foreach (var batch in aircraft.Values) batch.Visible = 0;
         streaks.ClearSurfaces();
         bool drawing = false;
@@ -162,10 +161,13 @@ internal sealed partial class AirSquadronVisuals : Node3D
             var position = fighter.Position;
             var batch = aircraft[fighter.Unit];
             batch.Mesh.SetInstanceTransform(batch.Visible, new Transform3D(basis, position));
-            batch.Mesh.SetInstanceColor(batch.Visible++, ArmyRenderer.FactionColor(fighter.Faction));
-            var shadowPosition = new Vector3(position.X, (terrain?.At(position.X, position.Z) ?? 0f) + 0.06f, position.Z);
-            shadows.SetInstanceTransform(live, new Transform3D(new Basis(Vector3.Up, fighter.Heading).Scaled(new Vector3(1.6f, 1f, 0.9f)), shadowPosition));
-            shadows.SetInstanceColor(live++, new Color(0.03f, 0.05f, 0.08f, 0.22f));
+            batch.Mesh.SetInstanceColor(batch.Visible, ArmyRenderer.FactionColor(fighter.Faction));
+            float groundY = terrain?.At(position.X, position.Z) ?? 0f;
+            var offset = GroundShadowMeshes.SceneryOffset(Mathf.Max(0f, position.Y - groundY));
+            float shadowX = position.X + offset.X, shadowZ = position.Z + offset.Y;
+            var shadowPosition = new Vector3(shadowX, (terrain?.At(shadowX, shadowZ) ?? 0f) + 0.08f, shadowZ);
+            batch.Shadow.SetInstanceTransform(batch.Visible, new Transform3D(new Basis(Vector3.Up, fighter.Heading), shadowPosition));
+            batch.Shadow.SetInstanceColor(batch.Visible++, new Color(0.025f, 0.035f, 0.055f, 0.42f));
 
             var tip = WingtipFor(fighter.Unit);
             Vector3 left = position + basis * new Vector3(-tip.X, tip.Y, tip.Z);
@@ -190,8 +192,8 @@ internal sealed partial class AirSquadronVisuals : Node3D
             }
         }
         if (drawing) streaks.SurfaceEnd();
-        foreach (var batch in aircraft.Values) batch.Mesh.VisibleInstanceCount = batch.Visible;
-        shadows.VisibleInstanceCount = live;
+        foreach (var batch in aircraft.Values)
+            batch.Mesh.VisibleInstanceCount = batch.Shadow.VisibleInstanceCount = batch.Visible;
 
         void Line(Vector3 start, Vector3 end, Color color, float startAlpha, float endAlpha)
         {
