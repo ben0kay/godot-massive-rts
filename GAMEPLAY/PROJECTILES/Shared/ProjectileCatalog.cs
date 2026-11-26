@@ -13,6 +13,7 @@ public sealed class ProjectileCatalog
     private readonly List<Mesh> meshes = new();
     private readonly List<float> scales = new();
     private readonly List<bool> factionTints = new();
+    private readonly List<bool> groundGlows = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private readonly List<bool> launchEffects = new();
@@ -28,6 +29,9 @@ public sealed class ProjectileCatalog
     public Mesh Mesh(int index) => meshes[index];
     internal float VisualScale(int index) => scales[index];
     public bool TintsByFaction(int index) => factionTints[index];
+
+    internal bool HasGroundGlow => groundGlows.Contains(true);
+    internal bool UsesGroundGlow(int index) => groundGlows[index];
 
     internal bool HasLaunchEffects => launchEffects.Contains(true);
     internal bool UsesLaunchEffects(int index) => launchEffects[index];
@@ -64,6 +68,7 @@ public sealed class ProjectileCatalog
         scales.Add(scale * (float.IsFinite(definition.VisualSizeMultiplier)
             ? Mathf.Clamp(definition.VisualSizeMultiplier, 0.1f, 4f) : 1f));
         factionTints.Add(definition.TintByFaction);
+        groundGlows.Add(definition.UseGroundGlow);
         launchEffects.Add(definition.UseLaunchEffects);
         flightSmoke.Add(definition.UseLaunchEffects && definition.UseFlightSmoke);
         return index;

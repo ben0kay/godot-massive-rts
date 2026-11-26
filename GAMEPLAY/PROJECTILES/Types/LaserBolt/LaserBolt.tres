@@ -27,3 +27,4 @@ size = Vector3(0.045, 0.045, 0.44)
 script = ExtResource("1")
 VisualMesh = SubResource("3")
 TintByFaction = true
+UseGroundGlow = true

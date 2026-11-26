@@ -28,3 +28,5 @@ Enable **Use Projectile Launch Effects** in `GAMEPLAY/UNITS/UnitVisualConfig.tre
 Artillery and rockets also leave a brief cloud at the muzzle after a successful launch. It billows, rises, drifts, and fades over about 2.4 seconds, independently of projectile impact. Disable **Use Muzzle Smoke** in `GAMEPLAY/UNITS/UnitVisualConfig.tres` before launch to hide it. Wind defaults to east (+X). To change it for an authored map, edit **Smoke Wind** in its level `.tres`. The components are world X and Z drift in units per second. Use `(0, 0)` for still air.
 
 Rocket and artillery trails, explosive sparks and impact rings take a light tint from the firing faction’s colour in the shared faction catalogue. Explosion cores stay bright. Both scale with the resolved splash radius, including weapon-mount overrides. The shared visual pool remains capped at 256 effects.
+
+Triangle Archer laser bolts opt into a faction-colored ground glow. The shared renderer batches up to 256 in-flight streaks and fades them with height above terrain.

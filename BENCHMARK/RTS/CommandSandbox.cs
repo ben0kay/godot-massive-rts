@@ -231,7 +231,7 @@ public partial class CommandSandbox : Node3D
             EnemiesPerRow, EnemyRowDelay, EnemySpawnRate, impactRings);
         projectileRenderer = new ProjectileRenderer();
         AddChild(projectileRenderer);
-        projectileRenderer.Initialize(2048, catalog.Projectiles, waves.Projectiles, LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
+        projectileRenderer.Initialize(2048, catalog.Projectiles, waves.Projectiles, LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind, terrain);
 
         var hud = new CanvasLayer();
         AddChild(hud);

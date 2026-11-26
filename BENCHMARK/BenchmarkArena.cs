@@ -743,7 +743,7 @@ public partial class BenchmarkArena : Node3D
                 CreateArmyRenderer();
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
-                    autoBattlerPlaytestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind);
+                    autoBattlerPlaytestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind, terrain);
                 dreadnaughts = DreadnaughtCombat.Create(units);
                 if (dreadnaughts != null)
                 {

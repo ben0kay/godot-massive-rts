@@ -666,3 +666,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Clash Units roster: added distinct Blue and Red V-wing cards with faction-tinted aircraft icons.
 
 - 2026-11-26 — AIR1: shared unit definitions now drive aircraft cards, typed map starts and air combat stats. Added Blue aircraft painting to Test Clash deployment with faction colors and test-only placement.
+
+- 2026-11-26 — Added capped, terrain-following ground glow to Triangle Archer laser bolts. Awaiting in-game visual validation.

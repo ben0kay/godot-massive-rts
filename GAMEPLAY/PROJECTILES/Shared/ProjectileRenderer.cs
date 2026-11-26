@@ -11,6 +11,10 @@ public partial class ProjectileRenderer : Node3D
     private bool[] tintByFaction;
     private float[] visualScales;
     private int capacity;
+    private const int GroundGlowLimit = 256;
+    private MultiMesh groundGlow;
+    private ProjectileCatalog groundGlowCatalog;
+    private TerrainHeightField groundGlowTerrain;
     private ProjectileLaunchEffects launchEffects;
     private MuzzleSmoke smoke;
     private ProjectileSystem smokeSource;
@@ -19,9 +23,32 @@ public partial class ProjectileRenderer : Node3D
     private PrismBeamEffects prismBeams;
     private int prismEffectCap = -1;
 
-    public void Initialize(int maximum, ProjectileCatalog catalog, ProjectileSystem projectiles, Vector2 smokeWind)
+    public void Initialize(int maximum, ProjectileCatalog catalog, ProjectileSystem projectiles, Vector2 smokeWind,
+        TerrainHeightField terrain = null)
     {
         capacity = maximum;
+        if (catalog.HasGroundGlow && maximum > 0)
+        {
+            groundGlowCatalog = catalog;
+            groundGlowTerrain = terrain;
+            groundGlow = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = true,
+                Mesh = new PlaneMesh { Size = new Vector2(0.95f, 2.1f) },
+                InstanceCount = Math.Min(maximum, GroundGlowLimit),
+                VisibleInstanceCount = 0
+            };
+            AddChild(new MultiMeshInstance3D
+            {
+                Multimesh = groundGlow,
+                MaterialOverride = new ShaderMaterial
+                {
+                    Shader = GD.Load<Shader>("res://GAMEPLAY/PROJECTILES/Shared/ProjectileGroundGlow.gdshader")
+                },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+            });
+        }
         beamSource = projectiles;
         beamSource.PrismBeamFired += OnPrismBeam;
         var visuals = catalog.HasLaunchEffects ? GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath) : null;
@@ -97,6 +124,7 @@ public partial class ProjectileRenderer : Node3D
             mesh.VisibleInstanceCount = counts[i];
         }
 
+        int glowCount = 0;
         Array.Clear(counts);
         for (int i = 0; i < projectiles.Count; i++)
         {
@@ -111,10 +139,37 @@ public partial class ProjectileRenderer : Node3D
             if (visualScales[type] != 1f) basis = basis.Scaled(Vector3.One * visualScales[type]);
             int slot = counts[type]++;
             batches[type].SetInstanceTransform(slot, new Transform3D(basis, projectiles.Position[i]));
+            if (groundGlow != null && glowCount < groundGlow.InstanceCount && groundGlowCatalog.UsesGroundGlow(type) &&
+                WriteGroundGlow(glowCount, projectiles.Position[i], direction, ArmyRenderer.FactionColor(projectiles.FactionAt(i))))
+                glowCount++;
             if (tintByFaction[type])
                 batches[type].SetInstanceColor(slot, ArmyRenderer.FactionColor(projectiles.FactionAt(i)));
         }
+        if (groundGlow != null) groundGlow.VisibleInstanceCount = glowCount;
         launchEffects?.Sync(projectiles);
         projectiles.Dirty = false;
+    }
+    // Sample the ground below the bolt and align the streak with the local flight path.
+    private bool WriteGroundGlow(int slot, Vector3 position, Vector3 direction, Color tint)
+    {
+        float height = groundGlowTerrain?.At(position.X, position.Z) ?? 0f;
+        float separation = position.Y - height;
+        if (separation < 0f || separation >= 4f) return false;
+
+        var forward = new Vector3(direction.X, 0f, direction.Z).Normalized();
+        if (forward == Vector3.Zero) forward = Vector3.Forward;
+        if (groundGlowTerrain != null)
+        {
+            float ahead = groundGlowTerrain.At(position.X + forward.X * 0.65f, position.Z + forward.Z * 0.65f);
+            float behind = groundGlowTerrain.At(position.X - forward.X * 0.65f, position.Z - forward.Z * 0.65f);
+            if (Mathf.Abs(ahead - behind) > 1f) return false;
+            forward.Y = (ahead - behind) / 1.3f;
+        }
+
+        tint.A = 1f - separation / 4f;
+        groundGlow.SetInstanceColor(slot, tint);
+        groundGlow.SetInstanceTransform(slot, new Transform3D(Basis.LookingAt(forward, Vector3.Up),
+            new Vector3(position.X, height + 0.06f, position.Z)));
+        return true;
     }
 }

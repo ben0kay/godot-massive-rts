@@ -15,6 +15,7 @@ public partial class ProjectileDefinition : Resource
     [Export(PropertyHint.Range, "0.1,4,0.05")] public float VisualSizeMultiplier { get; set; } = 1f;
     // Visual-only opt-in; disabled by default for existing projectiles.
     [Export] public bool TintByFaction { get; set; }
+    [Export] public bool UseGroundGlow { get; set; }
     [Export] public bool UseLaunchEffects { get; set; }
     [Export] public bool UseFlightSmoke { get; set; }
     [Export(PropertyHint.Range, "1,200,0.1,or_greater")] public float Speed { get; set; } = 45f;
