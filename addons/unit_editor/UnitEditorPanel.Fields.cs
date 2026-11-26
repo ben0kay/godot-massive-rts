@@ -107,6 +107,7 @@ public partial class UnitEditorPanel
             v => Unit.StructureDamagePercent = v, -1, 1000, 1, "%", tooltip: "−1 uses the damage matrix. Otherwise this is the percentage of base damage.");
         Number(nameof(Unit.MeleeLungeDistance), "Melee lunge", () => Unit.MeleeLungeDistance,
             v => Unit.MeleeLungeDistance = v, 0, 1, 0.01, " u", () => IsMelee);
+        Flag(nameof(Unit.PulseOnAttack), "Pulse on attack", Unit.PulseOnAttack, value => Unit.PulseOnAttack = value, () => true);
         EnumField(nameof(Unit.Style), "Attack style", Unit.Style, value => Unit.Style = value);
         Number(nameof(Unit.Damage), "Damage", () => Unit.Damage, v => Unit.Damage = v, 0, 1000, 0.001, "", unbounded: true);
         checks.Add(() => Unit.AllowedTargets == TargetCategory.None || Unit.Damage > 0f

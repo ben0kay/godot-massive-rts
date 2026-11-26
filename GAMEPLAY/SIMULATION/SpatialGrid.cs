@@ -263,17 +263,7 @@ public sealed class SpatialGrid
         long start = measure ? Stopwatch.GetTimestamp() : 0;
         if (!pursuitTreesReady)
         {
-            foreach (OccupiedCellTree tree in pursuitTrees) tree.Clear();
-            for (int i = 0; i < occupiedCount; i++)
-            {
-                int index = occupied[i];
-                int cell = index / Factions.Count;
-                pursuitTrees[index % Factions.Count].Add(cell % width - halfWidth, cell / width - halfWidth, heads[index] - 1);
-            }
-            foreach (var entry in overflowHeads)
-                pursuitTrees[entry.Key.Z].Add(entry.Key.X, entry.Key.Y, entry.Value);
-            foreach (OccupiedCellTree tree in pursuitTrees) tree.Build();
-            pursuitTreesReady = true;
+            BuildPursuitTrees();
             if (measure)
             {
                 long built = Stopwatch.GetTimestamp();
@@ -281,13 +271,7 @@ public sealed class SpatialGrid
                 start = built;
             }
         }
-        int best = previous;
-        for (int mask = enemies; mask != 0; mask &= mask - 1)
-        {
-            int faction = BitOperations.TrailingZeroCount(mask);
-            int found = pursuitTrees[faction].FindNearest(units, next, id, best, PrunePursuitCells);
-            if (found >= 0) best = found;
-        }
+        int best = FindNearestEnemy(units, units.Position[id], enemies, previous);
         if (measure)
         {
             long elapsed = Stopwatch.GetTimestamp() - start;
@@ -316,6 +300,41 @@ public sealed class SpatialGrid
                 ref PursuitSample scheduled = ref scheduledPursuitSamples[(int)cause];
                 scheduled = new PursuitSample(scheduled.Queries + 1, scheduled.SearchTicks + elapsed, 0);
             }
+        }
+        return best;
+    }
+
+    internal int FindNearestGroundEnemy(UnitState units, Vector3 position, byte faction)
+    {
+        int enemies = EnemiesOf(faction);
+        if (enemies == 0) return -1;
+        if (!pursuitTreesReady) BuildPursuitTrees();
+        return FindNearestEnemy(units, position, enemies, -1);
+    }
+
+    private void BuildPursuitTrees()
+    {
+        foreach (OccupiedCellTree tree in pursuitTrees) tree.Clear();
+        for (int i = 0; i < occupiedCount; i++)
+        {
+            int index = occupied[i];
+            int cell = index / Factions.Count;
+            pursuitTrees[index % Factions.Count].Add(cell % width - halfWidth, cell / width - halfWidth, heads[index] - 1);
+        }
+        foreach (var entry in overflowHeads)
+            pursuitTrees[entry.Key.Z].Add(entry.Key.X, entry.Key.Y, entry.Value);
+        foreach (OccupiedCellTree tree in pursuitTrees) tree.Build();
+        pursuitTreesReady = true;
+    }
+
+    private int FindNearestEnemy(UnitState units, Vector3 position, int enemies, int previous)
+    {
+        int best = previous;
+        for (int mask = enemies; mask != 0; mask &= mask - 1)
+        {
+            int faction = BitOperations.TrailingZeroCount(mask);
+            int found = pursuitTrees[faction].FindNearest(units, next, position, best, PrunePursuitCells);
+            if (found >= 0) best = found;
         }
         return best;
     }

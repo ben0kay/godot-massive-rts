@@ -28,7 +28,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         var counts = new Dictionary<UnitDefinition, int>();
         foreach (var fighter in fighters) counts[fighter.Unit] = counts.GetValueOrDefault(fighter.Unit) + 1;
         foreach (var (unit, count) in counts)
-            aircraft.Add(unit, new Batch { Mesh = MakeBatch(unit.AircraftMesh ?? MakeWing(), count) });
+            aircraft.Add(unit, new Batch { Mesh = MakeBatch(AircraftMesh(unit), count) });
         shadows = MakeBatch(GroundShadowMeshes.Soldier(), capacity, transparent: true);
         trailLeft = new Vector3[capacity * TrailSamples];
         trailRight = new Vector3[trailLeft.Length];
@@ -67,18 +67,23 @@ internal sealed partial class AirSquadronVisuals : Node3D
         return batch;
     }
 
-    internal static Mesh MakeWing()
+    internal static Mesh AircraftMesh(UnitDefinition unit) => unit.AircraftMesh ?? MakeWing(unit.CanBombGround);
+
+    private static Vector3 WingtipFor(UnitDefinition unit) => unit.CanBombGround ? new Vector3(3.1f, 0f, -0.62f) : Wingtip;
+
+    private static Mesh MakeWing(bool bomber)
     {
         using var mesh = new SurfaceTool();
         mesh.Begin(Mesh.PrimitiveType.Triangles);
-        var nose = new Vector3(0f, 0.04f, 1.48f);
+        var wingtip = bomber ? new Vector3(3.1f, 0f, -0.62f) : Wingtip;
+        var nose = new Vector3(0f, 0.04f, bomber ? 1.70f : 1.48f);
         var spine = new Vector3(0f, 0.32f, 0.29f);
         var tail = new Vector3(0f, 0f, -0.75f);
         for (int side = -1; side <= 1; side += 2)
         {
-            var tip = new Vector3(side * Wingtip.X, Wingtip.Y, Wingtip.Z);
+            var tip = new Vector3(side * wingtip.X, wingtip.Y, wingtip.Z);
             var root = new Vector3(side * 0.38f, 0.06f, 0.43f);
-            var notch = new Vector3(side * 0.50f, 0f, -0.31f);
+            var notch = new Vector3(side * (bomber ? 1.03f : 0.50f), 0f, bomber ? -1.16f : -0.31f);
             Triangle(nose, root, spine, 1f);
             Triangle(root, notch, spine, 0.82f);
             Triangle(notch, tail, spine, 0.64f);
@@ -111,8 +116,9 @@ internal sealed partial class AirSquadronVisuals : Node3D
             if (fighter.Health <= 0f) continue;
             var basis = Pose(in fighter);
             int sample = id * TrailSamples + trailHeads[id];
-            trailLeft[sample] = fighter.Position + basis * new Vector3(-Wingtip.X, Wingtip.Y, Wingtip.Z);
-            trailRight[sample] = fighter.Position + basis * Wingtip;
+            var tip = WingtipFor(fighter.Unit);
+            trailLeft[sample] = fighter.Position + basis * new Vector3(-tip.X, tip.Y, tip.Z);
+            trailRight[sample] = fighter.Position + basis * tip;
             trailHeads[id] = (trailHeads[id] + 1) % TrailSamples;
             trailCounts[id] = Mathf.Min(trailCounts[id] + 1, TrailSamples);
         }
@@ -137,8 +143,9 @@ internal sealed partial class AirSquadronVisuals : Node3D
             shadows.SetInstanceTransform(live, new Transform3D(new Basis(Vector3.Up, fighter.Heading).Scaled(new Vector3(1.6f, 1f, 0.9f)), shadowPosition));
             shadows.SetInstanceColor(live++, new Color(0.03f, 0.05f, 0.08f, 0.22f));
 
-            Vector3 left = position + basis * new Vector3(-Wingtip.X, Wingtip.Y, Wingtip.Z);
-            Vector3 right = position + basis * Wingtip;
+            var tip = WingtipFor(fighter.Unit);
+            Vector3 left = position + basis * new Vector3(-tip.X, tip.Y, tip.Z);
+            Vector3 right = position + basis * tip;
             for (int age = 0; age < trailCounts[id]; age++)
             {
                 int sample = id * TrailSamples + (trailHeads[id] - 1 - age + TrailSamples) % TrailSamples;

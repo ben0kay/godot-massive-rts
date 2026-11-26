@@ -18,6 +18,16 @@ public partial class BenchmarkArena
     private UnitDefinition testAircraftBrush;
     private MouseButton testAircraftButton;
     private Vector2? previousAircraftCell;
+    private Vector2? testBombOrder;
+    private bool testBombOrderEdited;
+    private readonly Label3D[] testBombMarkers = new Label3D[Factions.Count];
+
+    private Vector2? ReadBombOrder(byte faction)
+    {
+        if (faction == Factions.Blue && testBombOrderEdited) return testBombOrder;
+        return autoBattlerPlaytestMap.AutoBattlerRules.OpeningBombOrders.TryGetValue(faction, out var target)
+            ? target : null;
+    }
 
     private Vector2[] Starts(UnitDefinition unit, byte faction) =>
         faction == Factions.Blue && testBlueAircraft.TryGetValue(unit.Id, out var points)
@@ -40,7 +50,7 @@ public partial class BenchmarkArena
                     requestedCount = rules.ReadLegacyFlightCount(faction, unit.Id);
                 int count = Mathf.Clamp(requestedCount, 0, remaining);
                 if (count == 0) continue;
-                flights.Add(new AirSquadron.Flight(unit, faction, count, positions));
+                flights.Add(new AirSquadron.Flight(unit, faction, count, positions, unit.CanBombGround ? ReadBombOrder(faction) : null));
                 remaining -= count;
             }
             if (faction == Factions.Blue) BlueAircraftCount = AirSquadron.MaxPerFaction - remaining;
@@ -57,6 +67,8 @@ public partial class BenchmarkArena
         testAircraftButton = MouseButton.None;
         testAircraftBrush = unit;
         painter.TrapInput = unit != null ? HandleTestAircraftInput : null;
+        if (unit?.CanBombGround == true)
+            panel.Status.Text = "Paint bombers · Shift-click a bombing target · Shift-right-click to clear";
     }
 
     private bool HandleTestAircraftInput(InputEvent input)
@@ -71,6 +83,22 @@ public partial class BenchmarkArena
                 return true;
             }
             if (camera.FreeRoam && mouse.ButtonIndex == MouseButton.Right) return false;
+            if (testAircraftBrush.CanBombGround && mouse.ShiftPressed)
+            {
+                if (mouse.ButtonIndex == MouseButton.Left)
+                {
+                    if (!painter.TryGround(mouse.Position, out var point)) return true;
+                    float half = autoBattlerPlaytestMap.MapSize * 0.5f;
+                    if (Mathf.Max(Mathf.Abs(point.X), Mathf.Abs(point.Z)) >= half) return true;
+                    testBombOrder = ObstacleField.Xz(point);
+                }
+                else testBombOrder = null;
+                testBombOrderEdited = true;
+                RefreshAircraftFlights();
+                ShowAircraftPreviews(true);
+                panel.Status.Text = testBombOrder.HasValue ? "Opening bombing run assigned." : "Opening bombing run cleared.";
+                return true;
+            }
             testAircraftButton = mouse.ButtonIndex;
             previousAircraftCell = null;
             screen = mouse.Position;
@@ -106,7 +134,9 @@ public partial class BenchmarkArena
 
     private void ClearTestAircraft()
     {
-        if (testBlueAircraft.Count == 0) return;
+        if (testBlueAircraft.Count == 0 && !testBombOrderEdited) return;
+        testBombOrderEdited = false;
+        testBombOrder = null;
         testBlueAircraft.Clear();
         RefreshAircraftFlights();
         ShowAircraftPreviews(true);
@@ -115,6 +145,11 @@ public partial class BenchmarkArena
 
     private void ShowAircraftPreviews(bool show)
     {
+        if (aircraftRoster.Length == 0) return;
+        foreach (byte faction in Factions.DisplayOrder)
+            if (AutoBattlerRules.AllowsAircraftFaction(faction))
+                AircraftPaint.RefreshBombMarker(autoBattlerPlaytestMap, ref testBombMarkers[faction], faction,
+                    show ? ReadBombOrder(faction) : null, DisruptorHeight);
         foreach (var unit in aircraftRoster)
         {
             testAircraftPreviews.TryGetValue(unit.Id, out var preview);
@@ -136,8 +171,8 @@ public partial class BenchmarkArena
             foreach (var unit in roster)
             {
                 if (unit == null) continue;
-                flights.Add(new AirSquadron.Flight(unit, Factions.Blue, 4, Array.Empty<Vector2>()));
-                flights.Add(new AirSquadron.Flight(unit, Factions.Red, 4, Array.Empty<Vector2>()));
+                flights.Add(new AirSquadron.Flight(unit, Factions.Blue, unit.CanBombGround ? 2 : 4, Array.Empty<Vector2>()));
+                flights.Add(new AirSquadron.Flight(unit, Factions.Red, unit.CanBombGround ? 2 : 4, Array.Empty<Vector2>()));
             }
             if (flights.Count > 0)
                 CreateAirSquadron(flights.ToArray(), DeploymentLayout.WorldHalfWidth, Config.ObstacleHeight + 3f);
@@ -170,6 +205,6 @@ public partial class BenchmarkArena
         var scene = GD.Load<PackedScene>("res://GAMEPLAY/COMBAT/AIR/AirSquadron.tscn");
         airSquadron = scene.Instantiate<AirSquadron>();
         AddChild(airSquadron);
-        airSquadron.Initialize(flights, halfWidth, terrain, clearance, catalog.DamageRules);
+        airSquadron.Initialize(flights, halfWidth, terrain, clearance, catalog.DamageRules, catalog.Projectiles);
     }
 }

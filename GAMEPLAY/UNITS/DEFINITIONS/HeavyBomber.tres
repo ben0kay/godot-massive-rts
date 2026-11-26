@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Texture2D" path="res://GAMEPLAY/COMBAT/AIR/BomberIcon.svg" id="2"]
+[ext_resource type="Resource" path="res://GAMEPLAY/COMBAT/AIR/BomberPayload.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+Id = "heavy_bomber"
+DisplayName = "Heavy Bomber"
+Role = "Ground-attack aircraft"
+AircraftIcon = ExtResource("2")
+CanBombGround = true
+BombProjectile = ExtResource("3")
+Health = 135.0
+Speed = 14.0
+TurnDegreesPerSecond = 65.0
+Style = 1
+Damage = 24.0
+Reach = 17.0
+Interval = 0.20

@@ -33,6 +33,30 @@ internal static class AircraftPaint
         return changed ? points.ToArray() : existing;
     }
 
+    internal static void RefreshBombMarker(Node3D parent, ref Label3D marker, byte faction,
+        Vector2? target, Func<Vector3, float> surface)
+    {
+        if (!GodotObject.IsInstanceValid(marker) || marker.GetParent() != parent)
+        {
+            if (!target.HasValue) return;
+            marker = new Label3D
+            {
+                Text = "⊕ BOMB",
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+                Modulate = Factions.Color(faction),
+                PixelSize = 0.06f
+            };
+            parent.AddChild(marker, false, Node.InternalMode.Back);
+        }
+        marker.Visible = target.HasValue;
+        if (target is { } point)
+        {
+            var position = new Vector3(point.X, 0f, point.Y);
+            position.Y = surface(position) + 1.5f;
+            marker.Position = position;
+        }
+    }
+
     internal static MultiMeshInstance3D RefreshPreview(Node3D parent, MultiMeshInstance3D preview,
         UnitDefinition unit, Vector2[] blue, Vector2[] red, Func<Vector3, float> surface)
     {
@@ -44,7 +68,7 @@ internal static class AircraftPaint
                 Multimesh = new MultiMesh
                 {
                     TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true,
-                    Mesh = unit.AircraftMesh ?? AirSquadronVisuals.MakeWing(),
+                    Mesh = AirSquadronVisuals.AircraftMesh(unit),
                     InstanceCount = AirSquadron.MaxPerFaction * 2
                 },
                 MaterialOverride = new StandardMaterial3D

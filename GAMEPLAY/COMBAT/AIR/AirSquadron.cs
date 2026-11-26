@@ -11,7 +11,7 @@ public partial class AirSquadron : Node3D
     private const float FiringAlignment = 0.978f;
     private const int BurstShots = 4;
 
-    internal readonly record struct Flight(UnitDefinition Unit, byte Faction, int Count, Vector2[] Starts);
+    internal readonly record struct Flight(UnitDefinition Unit, byte Faction, int Count, Vector2[] Starts, Vector2? BombOrder = null);
 
     internal struct Fighter
     {
@@ -19,6 +19,9 @@ public partial class AirSquadron : Node3D
         internal UnitDefinition Unit;
         internal float Speed, TurnRate, FireRangeSquared, ShotInterval, Damage, DamageTaken;
         internal int DamageType, Armour;
+        internal int BombType, GroundTarget, BombsRemaining;
+        internal Vector2? BombOrder;
+        internal Vector2 BombCenter, BombAxis;
         internal int Target, Shots;
         internal Vector3 Position, Forward, TracerEnd;
         internal float Health, Heading, Bank, AltitudeOffset, TurnAway, Reacquire;
@@ -37,7 +40,7 @@ public partial class AirSquadron : Node3D
     internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : redAlive;
 
     internal void Initialize(Flight[] flights, float mapHalfWidth, TerrainHeightField heightField,
-        float minimumAltitude, DamageRules damage)
+        float minimumAltitude, DamageRules damage, ProjectileCatalog projectiles)
     {
         terrain = heightField;
         boundary = mapHalfWidth - 2f;
@@ -51,7 +54,7 @@ public partial class AirSquadron : Node3D
         int start = 0;
         foreach (var flight in flights)
         {
-            SpawnFlight(start, flight);
+            SpawnFlight(start, flight, projectiles);
             start += flight.Count;
         }
         visuals = new AirSquadronVisuals(fighters);
@@ -59,9 +62,10 @@ public partial class AirSquadron : Node3D
         visuals.Sync(fighters, terrain);
     }
 
-    private void SpawnFlight(int start, Flight flight)
+    private void SpawnFlight(int start, Flight flight, ProjectileCatalog projectiles)
     {
-        var (unit, faction, count, starts) = flight;
+        var (unit, faction, count, starts, bombOrder) = flight;
+        int bombType = unit.CanBombGround && unit.BombProjectile != null ? projectiles.Register(unit.BombProjectile) : -1;
         float direction = faction == Factions.Blue ? 1f : -1f;
         int columns = Mathf.Min(8, count);
         float spacing = Mathf.Min(3.6f, boundary / 10f);
@@ -81,7 +85,7 @@ public partial class AirSquadron : Node3D
                 heading = Mathf.Atan2(-x, -z);
             fighters[id] = new Fighter
             {
-                Unit = unit, Faction = faction, Health = Mathf.Max(1f, unit.Health), Target = -1,
+                Unit = unit, Faction = faction, BombType = bombType, GroundTarget = -1, BombOrder = bombOrder, Health = Mathf.Max(1f, unit.Health), Target = -1,
                 Speed = Mathf.Max(2f, unit.Speed), TurnRate = Mathf.DegToRad(Mathf.Max(1f, unit.TurnDegreesPerSecond)),
                 FireRangeSquared = unit.Reach * unit.Reach, ShotInterval = Mathf.Max(0.001f, unit.Interval),
                 Damage = unit.Damage, DamageType = damageRules.DamageType(unit.DamageType),
@@ -93,7 +97,7 @@ public partial class AirSquadron : Node3D
         }
     }
 
-    internal void Step(float delta)
+    internal void Step(float delta, UnitState ground, SpatialGrid groundGrid, ProjectileSystem projectiles)
     {
         elapsed += delta;
         grid.Rebuild(fighters);
@@ -116,6 +120,8 @@ public partial class AirSquadron : Node3D
             }
 
             Vector3 goal = valid ? fighters[target].Position + fighters[target].Forward * 5f : Vector3.Zero;
+            if (fighter.BombType >= 0)
+                valid = TryBombGoal(ref fighter, id, ground, groundGrid, out goal);
             float distanceToEdge = boundary - Mathf.Max(Mathf.Abs(fighter.Position.X), Mathf.Abs(fighter.Position.Z));
             bool nearEdge = distanceToEdge < 18f;
             fighter.TurnAway -= delta;
@@ -123,7 +129,7 @@ public partial class AirSquadron : Node3D
             float wanted = Mathf.Atan2(aim.X, aim.Z);
             if (nearEdge)
                 wanted = Mathf.Atan2(-fighter.Position.X, -fighter.Position.Z);
-            else if (fighter.TurnAway > 0f)
+            else if (fighter.TurnAway > 0f || fighter.BombsRemaining > 0)
                 wanted = fighter.Heading;
             else if (!valid)
                 wanted += 0.9f;
@@ -150,6 +156,11 @@ public partial class AirSquadron : Node3D
             fighter.Position = next;
 
             fighter.ShotDelay -= delta;
+            if (fighter.BombType >= 0)
+            {
+                UpdateBombRun(ref fighter, goal, valid, forward, projectiles);
+                continue;
+            }
             if (!valid || nearEdge || fighter.TurnAway > 0f)
             {
                 fighter.Shots = 0;
@@ -192,6 +203,61 @@ public partial class AirSquadron : Node3D
             }
         }
         visuals.RecordTrails(fighters, delta);
+    }
+
+    // Reacquire only on the bomber's staggered cadence. The pursuit index contains ground units only.
+    private static bool TryBombGoal(ref Fighter fighter, int id, UnitState ground, SpatialGrid groundGrid, out Vector3 goal)
+    {
+        if (fighter.BombOrder is { } order)
+        {
+            goal = new Vector3(order.X, 0f, order.Y);
+            return true;
+        }
+
+        if (groundGrid != null && fighter.Reacquire <= 0f)
+        {
+            fighter.GroundTarget = groundGrid.FindNearestGroundEnemy(ground, fighter.Position, fighter.Faction);
+            fighter.Reacquire = 0.46f + (id % 9) * 0.021f;
+        }
+        int target = fighter.GroundTarget;
+        if (target >= 0 && ground.Health[target] > 0f)
+        {
+            goal = ground.Position[target];
+            return true;
+        }
+        goal = Vector3.Zero;
+        return false;
+    }
+
+    private void UpdateBombRun(ref Fighter fighter, Vector3 goal, bool valid,
+        Vector3 forward, ProjectileSystem projectiles)
+    {
+        if (fighter.ShotDelay > 0f) return;
+        if (fighter.BombsRemaining == 0)
+        {
+            if (!valid || fighter.TurnAway > 0f) return;
+            Vector2 route = ObstacleField.Xz(goal - fighter.Position);
+            Vector2 heading = ObstacleField.Xz(forward);
+            if (route.LengthSquared() > fighter.FireRangeSquared || route.Dot(heading) < 3f ||
+                route.Normalized().Dot(heading) < 0.94f) return;
+            fighter.BombCenter = ObstacleField.Xz(goal);
+            fighter.BombAxis = heading;
+            fighter.BombsRemaining = 3;
+        }
+
+        Vector2 point = fighter.BombCenter + fighter.BombAxis * ((2 - fighter.BombsRemaining) * 3.2f);
+        point = point.Clamp(Vector2.One * -boundary, Vector2.One * boundary);
+        float groundY = terrain?.At(point.X, point.Y) ?? 0f;
+        if (!projectiles.LaunchFrom(fighter.Position - Vector3.Up * 0.35f, new Vector3(point.X, groundY, point.Y),
+            fighter.Faction, fighter.BombType, fighter.Damage, fighter.DamageType)) return;
+        fighter.ShotDelay = fighter.ShotInterval;
+        if (--fighter.BombsRemaining == 0)
+        {
+            fighter.BombOrder = null;
+            fighter.GroundTarget = -1;
+            fighter.Reacquire = 0f;
+            fighter.TurnAway = 1.15f;
+        }
     }
 
     private float CruiseHeight(float x, float z) => Mathf.Max(clearance, (terrain?.At(x, z) ?? 0f) + CruiseAltitude);

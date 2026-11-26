@@ -670,3 +670,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added capped, terrain-following ground glow to Triangle Archer laser bolts. Awaiting in-game visual validation.
 
 - 2026-11-26 — Benchmark now defaults to a tier-weighted mixed roster with a single Dreadnaught and a small aircraft flight per side.
+
+- 2026-11-26 — Added the per-unit Pulse on attack option with Dreadnaught disabled, plus the Clash Heavy Bomber, ground-only auto-fight, and editable opening bombing runs.

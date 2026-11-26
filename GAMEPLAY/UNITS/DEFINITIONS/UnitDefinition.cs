@@ -21,6 +21,7 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "0,1000000,1")] public int BattleRating { get; set; } = 100;
 
     [ExportGroup("Appearance and size")]
+    [Export] public bool PulseOnAttack { get; set; } = true;
     [Export] public UnitShape Shape { get; set; }
     [Export] public float Width { get; set; } = 0.8f;
     [Export] public float Height { get; set; } = 1.1f;
@@ -63,6 +64,8 @@ public partial class UnitDefinition : Resource
     [Export] public Texture2D AircraftIcon { get; set; }
     [Export] public Mesh AircraftMesh { get; set; }
     [Export] public bool CanTargetAircraft { get; set; }
+    [Export] public bool CanBombGround { get; set; }
+    [Export] public ProjectileDefinition BombProjectile { get; set; }
 
     [ExportGroup("Movement")]
     [Export] public float Speed { get; set; } = 5f;

@@ -127,10 +127,10 @@ public sealed class HitFeedbackSystem
     internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f
         ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type), 0f, 1f) : -1f;
 
-    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue)
+    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue, bool pulseOnAttack = true)
     {
         float attackAge = (AttackDurationFor(type) - attackRemaining[id]) / AttackDuration;
-        float attackScale = attackRemaining[id] > 0f && attackAge >= 0f && attackAge < 1f ? 0.15f * (attackAge < 0.28f
+        float attackScale = pulseOnAttack && attackRemaining[id] > 0f && attackAge >= 0f && attackAge < 1f ? 0.15f * (attackAge < 0.28f
             ? Smooth(attackAge / 0.28f) : Smooth((1f - attackAge) / 0.72f)) : 0f;
         if (remaining[id] <= 0f) return (0f, 1f + attackScale);
         float age = duration - remaining[id];

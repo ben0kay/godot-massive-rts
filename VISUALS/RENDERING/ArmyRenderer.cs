@@ -406,7 +406,7 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * stride;
         float[] buffer = buffers[batch];
         byte type = units.Type[id];
-        var (flash, scale) = units.HitFeedback?.Evaluate(id, type) ?? (0f, 1f);
+        var (flash, scale) = units.HitFeedback?.Evaluate(id, type, units.Catalog.Definition(type).PulseOnAttack) ?? (0f, 1f);
         bool white = flash > 0f;
         if (stride == InfantryWalkStride)
         {

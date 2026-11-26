@@ -50,6 +50,7 @@ DisplayName = "Dreadnaught"
 Role = "Super-heavy melee hull with four miniguns and a deck rocket cannon"
 Shape = 11
 Width = 8.0
+PulseOnAttack = false
 HullLength = 14.0
 UseLegacyMiniguns = false
 TurretShotInterval = 0.1128

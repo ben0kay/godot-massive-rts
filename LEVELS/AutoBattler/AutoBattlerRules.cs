@@ -42,6 +42,7 @@ public partial class AutoBattlerRules : Resource
     [Export] public Vector2[] RedVWingStarts { get; set; } = System.Array.Empty<Vector2>();
     [Export] public Godot.Collections.Dictionary<string, Vector2[]> BlueAircraftStarts { get; set; } = new();
     [Export] public Godot.Collections.Dictionary<string, Vector2[]> RedAircraftStarts { get; set; } = new();
+    [Export] public Godot.Collections.Dictionary<int, Vector2> OpeningBombOrders { get; set; } = new();
     [Export] public int BlueUnitLimit { get; set; } = 200;
     [Export] public string[] AllowedBlueUnitIds { get; set; } = System.Array.Empty<string>();
     [Export] public Godot.Collections.Array<Vector2I> BlueDeploymentCells { get; set; } = new();

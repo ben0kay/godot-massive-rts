@@ -743,6 +743,7 @@ public partial class BenchmarkArena : Node3D
                     navigation = new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
                         Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
                 CreateArmyRenderer();
+                StartAirSquadron();
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
                 projectileRenderer.Initialize(Config.MaxProjectiles, catalog.Projectiles, projectiles,
                     autoBattlerPlaytestMap?.LevelSettings?.SmokeWind ?? MuzzleSmoke.DefaultWind, terrain);
@@ -752,7 +753,6 @@ public partial class BenchmarkArena : Node3D
                     AddChild(dreadnaughts);
                     dreadnaughts.SyncVisuals();
                 }
-                StartAirSquadron();
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
                 armyBalanceHud.BeginBattle(units, IsOffense ? offenseCitadel : null);
                 ShowAutoBattlerClock(true);
@@ -793,7 +793,7 @@ public partial class BenchmarkArena : Node3D
                 }
                 if (airSquadron == null || units.Alive > 0 || projectiles.Count > 0 || ReservesPending)
                     Step(Config.TickSeconds);
-                airSquadron?.Step(Config.TickSeconds);
+                else airSquadron?.Step(Config.TickSeconds, units, grid, projectiles);
                 accumulator -= Config.TickSeconds;
                 steps++;
                 if (offenseBattleEnded) { accumulator = 0; break; }
@@ -977,6 +977,7 @@ public partial class BenchmarkArena : Node3D
                 targetingMs += Elapsed(start);
             }
             start = Stamp();
+            airSquadron?.Step(dt, units, grid, projectiles);
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
             defenseSystem?.Step(units, grid, BattleSight, projectiles, dt, acquisitionStep, targetingStepSeconds);

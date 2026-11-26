@@ -66,6 +66,18 @@ vary their height. The terrain lookahead and a conservative height floor above
 authored obstacles keep the prototype above cover. The prototype uses air-only
 hitscan bursts with visible tracers and two short white wingtip wisps.
 
+## Heavy Bomber in Clash
+
+Select Heavy Bomber in the bottom roster. It automatically seeks the nearest
+enemy ground soldier and drops three bombs across the target area. Fighters
+can engage it, and its bombs use the shared ground splash and impact effects.
+
+During Level Editor authoring or Test Clash deployment, select the bomber card
+and Shift-click a ground spot to assign that faction’s opening bombing run.
+Shift-right-click clears it. The marked run takes priority once, then the flight
+resumes auto-fight. Orders authored in the Level Editor save with the map.
+Test Clash orders apply to the test session.
+
 ## Playtest checks
 
 - A fighter can miss a pass, bank away, reacquire and return without orbiting forever or snapping its heading.

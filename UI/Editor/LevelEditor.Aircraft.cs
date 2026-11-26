@@ -13,9 +13,12 @@ public partial class LevelEditor
     private MouseButton aircraftStrokeButton;
     private Vector2? lastAircraftCell;
     private readonly Dictionary<UnitDefinition, MultiMeshInstance3D> aircraftPreviews = new();
+    private readonly Label3D[] editorBombMarkers = new Label3D[Factions.Count];
 
     private void BuildAircraftControls() =>
-        Heading(context, "Drag to paint. Right-drag to erase.", 15);
+        Heading(context, aircraftBrush?.CanBombGround == true
+            ? "Drag to paint. Right-drag to erase. Shift-click to order a bombing run; Shift-right-click clears it."
+            : "Drag to paint. Right-drag to erase.", 15);
 
     private bool HandleAircraftPaint(InputEvent input)
     {
@@ -23,6 +26,12 @@ public partial class LevelEditor
         {
             if (!mouse.Pressed) { EndAircraftStroke(); return true; }
             if (!WorldPoint(mouse.Position, out var point)) return false;
+            if (aircraftBrush.CanBombGround && mouse.ShiftPressed)
+            {
+                EndAircraftStroke();
+                SetOpeningBombOrder(mouse.ButtonIndex == MouseButton.Left ? ObstacleField.Xz(point) : null);
+                return true;
+            }
             EndAircraftStroke();
             var rules = map.AutoBattlerRules;
             aircraftStroke = rules.ReadAircraftStarts(aircraftFaction, aircraftBrush.Id);
@@ -38,6 +47,29 @@ public partial class LevelEditor
             return true;
         }
         return false;
+    }
+
+    private void SetOpeningBombOrder(Vector2? destination)
+    {
+        var orders = map.AutoBattlerRules.OpeningBombOrders;
+        int faction = aircraftFaction;
+        Vector2? before = orders.TryGetValue(faction, out var previous) ? previous : null;
+        if (before == destination) return;
+        if (destination is { } point && Mathf.Max(Mathf.Abs(point.X), Mathf.Abs(point.Y)) >= map.MapSize * 0.5f)
+        {
+            SetStatus("Choose a bombing target inside the battlefield.");
+            return;
+        }
+
+        void Apply(Vector2? target)
+        {
+            if (target.HasValue) orders[faction] = target.Value;
+            else orders.Remove(faction);
+            RefreshAircraftPreview();
+        }
+        Apply(destination);
+        Remember(() => Apply(before), () => Apply(destination));
+        SetStatus(destination.HasValue ? "Opening bombing run assigned." : "Opening bombing run cleared.");
     }
 
     private void PaintAircraft(Vector3 world)
@@ -93,6 +125,10 @@ public partial class LevelEditor
     {
         if (!AutoBattlerRules.SupportsAircraft(mode.CampaignId)) return;
         var rules = map.AutoBattlerRules;
+        foreach (byte faction in Factions.DisplayOrder)
+            if (AutoBattlerRules.AllowsAircraftFaction(faction))
+                AircraftPaint.RefreshBombMarker(map, ref editorBombMarkers[faction], faction,
+                    rules.OpeningBombOrders.TryGetValue(faction, out var target) && !editingReserve ? target : null, Surface);
         foreach (var unit in aircraft)
         {
             var blue = rules.ReadAircraftStarts(Factions.Blue, unit.Id);
