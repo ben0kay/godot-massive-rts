@@ -334,7 +334,8 @@ public static class FacetedSoldierMeshes
     // Preserve the raised keel language, -Z facing and original gameplay dimensions.
     private static void AppendObliteratorAssault(SurfaceTool surface, UnitOutline outline, float height)
     {
-        float x = outline.RadiusX, z = outline.RadiusZ;
+        // Narrow visual X only; the catalog footprint and height are unchanged.
+        float x = outline.RadiusX * 0.82f, z = outline.RadiusZ;
         const float diagonal = 0.70710678f;
         Color Steel(float shade) => new(shade, 0f, 0f);
         Color Paint(float shade) => new(0f, shade, 0f);
@@ -352,25 +353,30 @@ public static class FacetedSoldierMeshes
                 new Vector3(px * x, py * height, pz * z), mask,
                 sideShade: SoldierSideShade, armorMask: true);
         }
-        Hull(0f, -0.15f, 0.08f, 0.70f, 0.67f, 0.30f, Steel(0.96f));
-        Hull(0f, 0.06f, 0.03f, 0.85f, 0.82f, 0.36f, Paint(0.94f));
-        Hull(0f, 0.28f, 0.04f, 0.44f, 0.52f, 0.15f, Paint(0.98f));
-        Hull(0f, 0.40f, 0.13f, 0.29f, 0.30f, 0.20f, Paint(1f));
-        Block(0f, 0.38f, -0.17f, 0.23f, 0.07f, 0.035f, Trim(1f));
+        // Compact waist, upright chest and high helmet: a biped, not a long cavalry hull.
+        Hull(0f, -0.13f, 0.08f, 0.60f, 0.39f, 0.26f, Steel(0.96f));
+        Hull(0f, 0.10f, 0.03f, 0.85f, 0.59f, 0.44f, Paint(0.94f));
+        Hull(0f, 0.29f, 0.02f, 0.43f, 0.34f, 0.12f, Paint(0.98f));
+        Hull(0f, 0.38f, 0.03f, 0.29f, 0.23f, 0.24f, Paint(1f));
+        Block(0f, 0.38f, -0.20f, 0.23f, 0.07f, 0.035f, Trim(1f));
         for (int side = -1; side <= 1; side += 2)
         {
-            Hull(side * 0.52f, 0.12f, 0.10f, 0.30f, 0.37f, 0.32f, Paint(0.96f));
-            Block(side * 0.32f, -0.31f, 0.12f, 0.30f, 0.38f, 0.38f, Steel(0.95f), foot: true);
-            Block(side * 0.32f, -0.42f, 0.07f, 0.40f, 0.16f, 0.45f, Paint(0.91f), foot: true);
-            Block(side * 0.43f, -0.02f, 0.45f, 0.22f, 0.25f, 0.23f, Steel(0.94f));
-            Block(side * 0.43f, 0.12f, 0.48f, 0.14f, 0.05f, 0.12f, Trim(0.88f));
+            Hull(side * 0.49f, 0.17f, 0.06f, 0.27f, 0.22f, 0.32f, Paint(0.96f));
+            Block(side * 0.29f, -0.29f, 0.09f, 0.27f, 0.42f, 0.27f, Steel(0.95f), foot: true);
+            Block(side * 0.29f, -0.42f, 0.035f, 0.36f, 0.16f, 0.36f, Paint(0.91f), foot: true);
         }
-        // Fixed central guide and sliding blade, with overlapping mechanical parts.
-        Block(0f, 0.12f, -0.24f, 0.37f, 0.24f, 0.46f, Steel(1f));
-        Block(0f, 0.12f, -0.42f, 0.22f, 0.15f, 0.54f, Paint(0.98f), thrust: true);
-        AppendPrism(surface, 4, x * 0.18f, z * 0.30f, height * 0.14f, -Mathf.Pi * 0.5f,
-            new Vector3(0f, height * 0.12f, -z * 0.59f), Trim(1f),
-            sideShade: SoldierSideShade, armorMask: true, swingPart: true);
+        // A single vertical spine pack replaces the wide paired rear pods.
+        Block(0f, 0.09f, 0.46f, 0.34f, 0.37f, 0.25f, Steel(0.94f));
+        Block(0f, 0.20f, 0.585f, 0.14f, 0.16f, 0.035f, Trim(0.88f));
+        // Narrow powered dagger with a squared heel and pointed nose, not a diamond lance.
+        // Guide and tagged blade remain overlapped through the short strike.
+        Block(0f, 0.12f, -0.23f, 0.34f, 0.24f, 0.42f, Steel(1f));
+        Block(0f, 0.12f, -0.39f, 0.20f, 0.16f, 0.52f, Paint(0.98f), thrust: true);
+        Vector2[] dagger = { new(0f, -1f), new(1f, -0.24f), new(0.66f, 1f),
+            new(-0.66f, 1f), new(-1f, -0.24f) };
+        AppendPrism(surface, dagger.Length, x * 0.15f, z * 0.34f, height * 0.23f, 0f,
+            new Vector3(0f, height * 0.12f, -z * 0.56f), Trim(1f),
+            sideShade: SoldierSideShade, armorMask: true, visualOutline: dagger, swingPart: true);
     }
 
     // =========================================================
@@ -522,19 +528,26 @@ public static class FacetedSoldierMeshes
         Color Steel(float shade) => new(shade, 0f, 0f);
         Color Paint(float shade) => new(0f, shade, 0f);
         Color Trim(float shade) => new(0f, 0f, shade);
-        void Block(float px, float py, float pz, float width, float thickness, float depth, Color material, bool piston = false)
+        void Block(float px, float py, float pz, float width, float thickness, float depth, Color material, bool piston = false, bool lengthenRear = false)
         {
+            // Stretch the chassis/tracks toward +Z only. The front edge, hydraulic
+            // guide, piston, contact face and their attack alignment stay unchanged.
+            if (lengthenRear)
+            {
+                pz += depth * 0.06f;
+                depth *= 1.12f;
+            }
             AppendPrism(surface, 4, width * x * corner, depth * z * corner, thickness * height,
                 Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), material,
                 sideShade: SoldierSideShade, armorMask: true, swingPart: piston);
         }
-        Block(0f, -0.18f, 0.08f, 1.75f, 0.42f, 1.62f, Steel(0.8f));
-        Block(0f, 0.18f, 0.22f, 1.34f, 0.54f, 1.20f, Steel(0.96f));
-        Block(0f, 0.46f, 0.25f, 0.76f, 0.08f, 0.52f, Paint(0.92f));
+        Block(0f, -0.18f, 0.08f, 1.75f, 0.42f, 1.62f, Steel(0.8f), lengthenRear: true);
+        Block(0f, 0.18f, 0.22f, 1.34f, 0.54f, 1.20f, Steel(0.96f), lengthenRear: true);
+        Block(0f, 0.46f, 0.25f, 0.76f, 0.08f, 0.52f, Paint(0.92f), lengthenRear: true);
         for (int side = -1; side <= 1; side += 2)
         {
-            Block(side * 0.76f, -0.33f, 0.07f, 0.45f, 0.34f, 1.8f, Steel(0.36f));
-            Block(side * 0.77f, -0.04f, 0.15f, 0.42f, 0.22f, 1.58f, Paint(0.9f));
+            Block(side * 0.76f, -0.33f, 0.07f, 0.45f, 0.34f, 1.8f, Steel(0.36f), lengthenRear: true);
+            Block(side * 0.77f, -0.04f, 0.15f, 0.42f, 0.22f, 1.58f, Paint(0.9f), lengthenRear: true);
             Block(side * 0.30f, 0.04f, -0.48f, 0.18f, 0.25f, 0.62f, Steel(0.85f));
         }
         Block(0f, 0.04f, -0.48f, 0.29f, 0.17f, 0.86f, Steel(1f), piston: true);

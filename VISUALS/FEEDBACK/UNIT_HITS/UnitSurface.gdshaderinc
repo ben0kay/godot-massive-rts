@@ -58,7 +58,7 @@ void vertex() {
             float t = (swing - 1.0) / 14.0;
             float thrust = t < 0.15 ? smoothstep(0.0, 0.15, t)
                 : 1.0 - smoothstep(0.15, 1.0, t);
-            VERTEX.z -= half_extent.y * 0.15 * thrust;
+            VERTEX.z -= half_extent.y * 0.12 * thrust;
         } else if (pikeman && swing > 0.0) {
             // Sharp -Z thrust from the existing single-target melee event.
             // No extra damage, collision, or independently triggered brace attack.
@@ -156,7 +156,7 @@ void vertex() {
             // Each boot alternates forward travel and lift. The planted boot stays grounded.
             float side = sign(VERTEX.x);
             float travel = hexagon_siege ? 0.12 : pentagon_elite ? 0.15 : square_heavy ? 0.17 :
-                obliterator_assault ? 0.19 : long_marksman ? 0.10 : pikeman ? 0.14 : triangle_archer ? 0.20 : 0.24;
+                obliterator_assault ? 0.16 : long_marksman ? 0.10 : pikeman ? 0.14 : triangle_archer ? 0.20 : 0.24;
             float lift = hexagon_siege ? 0.055 : pentagon_elite ? 0.065 : square_heavy ? 0.075 :
                 obliterator_assault ? 0.085 : long_marksman ? 0.07 : pikeman ? 0.08 : triangle_archer ? 0.095 : 0.10;
             VERTEX.z -= sin(phase) * side * half_extent.y * travel * weight;
@@ -164,7 +164,7 @@ void vertex() {
         } else {
             // Two small body rises per stride; do not lift the planted feet or the shadow.
             float bounce = hexagon_siege ? 0.009 : pentagon_elite ? 0.011 : square_heavy ? 0.0125 :
-                obliterator_assault ? 0.015 : long_marksman ? 0.010 : pikeman ? 0.012 : triangle_archer ? 0.015 : 0.0225;
+                obliterator_assault ? 0.013 : long_marksman ? 0.010 : pikeman ? 0.012 : triangle_archer ? 0.015 : 0.0225;
             VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * bounce * weight;
         }
     }
