@@ -52,6 +52,10 @@ public sealed class ProjectileCatalog
         if (indices.TryGetValue(key, out int index)) return index;
 
         Mesh mesh = definition.VisualMesh ?? (sharedArrowMesh ??= BasicArrowMesh.Create());
+        // Select presentation only; keep the original definition and flight parameters.
+        if (definition.ResourcePath == BomberPayloadMesh.DefinitionPath &&
+            UnitVisualConfig.Load().UseEnhancedBomberBombVisuals)
+            mesh = BomberPayloadMesh.Get();
 
         index = flights.Count;
         indices.Add(key, index);

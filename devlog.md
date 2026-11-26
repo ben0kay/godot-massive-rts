@@ -690,3 +690,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Army balance HUD now includes living aircraft in faction counts and bar shares, including air-only battles.
 
 - 2026-11-26 — Aircraft cast offset ground silhouettes whose separation grows with flight height.
+
+- 2026-11-26 — AIR-VIS2 — Upgraded default Heavy Bomber payload to a dark faceted finned model; added independently toggleable twin emissive flames and capped 1024-puff world-space dark smoke batches aligned with the existing nacelles. Preserved latest aircraft shadows, original payload, flight, targeting and blast settings. Source review only; owner Godot visual/shader/FPS validation pending.

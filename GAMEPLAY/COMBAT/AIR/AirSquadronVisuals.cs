@@ -17,6 +17,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
 
     private readonly Dictionary<UnitDefinition, Batch> aircraft = new();
     private readonly ImmediateMesh streaks = new();
+    private readonly BomberExhaust exhaust;
     private readonly Vector3[] trailLeft, trailRight;
     private readonly int[] trailHeads, trailCounts;
     private float trailTimer;
@@ -33,6 +34,11 @@ internal sealed partial class AirSquadronVisuals : Node3D
                 Mesh = MakeBatch(AircraftMesh(unit, visualConfig), count, material: AircraftMaterial(unit, visualConfig)),
                 Shadow = MakeBatch(MakeWing(unit.CanBombGround, shadow: true), count, transparent: true)
             });
+        int bomberCount = 0;
+        foreach (var fighter in fighters)
+            if (BomberExhaust.Supports(fighter.Unit)) bomberCount++;
+        if (bomberCount > 0 && (visualConfig.UseBomberEngineFlames || visualConfig.UseBomberSmokeTrails))
+            exhaust = new BomberExhaust(this, bomberCount, visualConfig);
         trailLeft = new Vector3[capacity * TrailSamples];
         trailRight = new Vector3[trailLeft.Length];
         trailHeads = new int[capacity];
@@ -126,11 +132,12 @@ internal sealed partial class AirSquadronVisuals : Node3D
         }
     }
 
-    private static Basis Pose(in AirSquadron.Fighter fighter) =>
+    internal static Basis Pose(in AirSquadron.Fighter fighter) =>
         Basis.LookingAt(fighter.Forward, Vector3.Up, true).Rotated(fighter.Forward, fighter.Bank);
 
     internal void RecordTrails(AirSquadron.Fighter[] fighters, float delta)
     {
+        exhaust?.Advance(fighters, delta);
         trailTimer += delta;
         if (trailTimer < TrailInterval) return;
         trailTimer %= TrailInterval;
@@ -194,6 +201,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         if (drawing) streaks.SurfaceEnd();
         foreach (var batch in aircraft.Values)
             batch.Mesh.VisibleInstanceCount = batch.Shadow.VisibleInstanceCount = batch.Visible;
+        exhaust?.Sync(fighters);
 
         void Line(Vector3 start, Vector3 end, Color color, float startAlpha, float endAlpha)
         {

@@ -30,3 +30,7 @@ Artillery and rockets also leave a brief cloud at the muzzle after a successful 
 Rocket and artillery trails, explosive sparks and impact rings take a light tint from the firing faction’s colour in the shared faction catalogue. Explosion cores stay bright. Both scale with the resolved splash radius, including weapon-mount overrides. The shared visual pool remains capped at 256 effects.
 
 Triangle Archer laser bolts opt into a faction-colored ground glow. The shared renderer batches up to 256 in-flight streaks and fades them with height above terrain.
+
+## AIR-VIS2 — Heavy Bomber payload
+
+The default `GAMEPLAY/COMBAT/AIR/BomberPayload.tres` retains all flight and splash settings and its original orange box fallback. **Use Enhanced Bomber Bomb Visuals** selects a cached dark-metal faceted render mesh with a tapered nose, contrasting collar and four swept fins, approximately 0.48 × 0.48 × 1.04 units including fins. Local -Z follows the existing flight tangent. Speed, collision, splash, damage, rocket and artillery models remain unchanged.
