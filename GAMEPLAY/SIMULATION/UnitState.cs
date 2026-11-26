@@ -61,7 +61,7 @@ public sealed class UnitState
     internal DisruptorGrid Disruptors { get; set; }
 
     internal float TravelSpeed(int id, in UnitStats stats) =>
-        stats.Speed * (stats.SizeTier == 2f && Forest?.Contains(Position[id]) == true ? 0.75f : 1f) *
+        stats.Speed * (Forest?.Contains(Position[id]) == true ? 0.65f : 1f) *
         (Disruptors?.SpeedScale(Position[id], Faction[id]) ?? 1f);
 
     private const float DownhillBonus = 0.10f;
