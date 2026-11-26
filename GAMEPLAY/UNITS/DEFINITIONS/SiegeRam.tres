@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "siege_ram"
+DisplayName = "Siege Ram"
+Role = "Heavy anti-structure siege"
+BattleRating = 550
+Shape = 15
+Width = 1.5
+Height = 0.95
+SizeTier = 3.0
+Speed = 1.4
+AccelerationSecondsOverride = 1.0
+TurnDegreesPerSecond = 85.0
+Health = 900.0
+ArmourClass = "Heavy"
+ChargeResistance = 0.95
+Damage = 120.0
+DamageType = "Impact"
+UnitDamagePercent = 0.0
+StructureDamagePercent = 100.0
+Interval = 3.0
+Reach = 1.6
+AllowedTargets = 2
+PreferredTarget = 1
+StructureDetectionRange = 24.0

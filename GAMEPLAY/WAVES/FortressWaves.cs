@@ -223,7 +223,7 @@ internal sealed class FortressWaves
             int id = enemies[i];
             if (units.Health[id] <= 0 || units.Target[id] >= 0) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
-            if (type.TargetsStructures) structures.Attack(id, Projectiles, delta, Sight(type, field));
+            if (type.TargetsStructures) structures.Attack(id, Projectiles, delta, Sight(type, field), impactRings);
             else if (type.TargetsUnits) AttackCitadel(id, field, delta);
         }
         Projectiles.Step(units, grid, combat, delta, SeparationPadding, field, impactRings);
@@ -323,7 +323,7 @@ internal sealed class FortressWaves
         for (int id = 0; id < units.Count; id++)
         {
             if (units.Faction[id] != faction || structures.Target(id) == null) continue;
-            structureVisualChanged |= structures.Attack(id, Projectiles, delta, Sight(units.Catalog[units.Type[id]], field));
+            structureVisualChanged |= structures.Attack(id, Projectiles, delta, Sight(units.Catalog[units.Type[id]], field), impactRings);
         }
     }
 
@@ -422,6 +422,7 @@ internal sealed class FortressWaves
                 target = grid.FindEnemy(units, id, detect, combat.QueryCandidateLimit, tick, Sight(type, field), minimumRange: type.PrismBeam.Enabled ? type.MinimumFireRange : 0f);
         }
 
+        if (!type.TargetsUnits) target = -1;
         if (type.TargetsStructures)
         {
             var sight = Sight(type, field);

@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh || visuals.UseLongMarksmanMesh || visuals.UsePikemanMesh
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh || visuals.UseLongMarksmanMesh || visuals.UsePikemanMesh || catalog.Count > RuntimeUnitCatalog.SiegeRam
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -90,7 +90,9 @@ public static class FacetedSoldierMeshes
         bool breacher = visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId;
         bool marksman = visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId;
         bool pikeman = visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId;
-        material.SetShaderParameter("infantry_attack", (circle && visuals.AnimateCircleSword) ||
+        bool ram = id == RuntimeUnitCatalog.SiegeRamId;
+        material.SetShaderParameter("siege_ram", ram);
+        material.SetShaderParameter("infantry_attack", ram || (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
             (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack) ||
             (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack) ||
@@ -112,6 +114,7 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
+        id == RuntimeUnitCatalog.SiegeRamId ||
         (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
         (visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId) ||
         (visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId) ||
@@ -159,6 +162,7 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.BreacherId) AppendHBreacher(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.LongTriangleId) AppendLongMarksman(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PikemanId) AppendPikeman(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
             return surface.Commit();
@@ -408,6 +412,33 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // Compact demolition walker. Keep both ends of the H open: two side
     // housings connected by a central crossbar, with twin sliding rams (-Z).
+    private static void AppendSiegeRam(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        const float corner = 0.70710678f;
+        float x = outline.RadiusX * corner, z = outline.RadiusZ * corner;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float width, float thickness, float depth, Color material, bool piston = false)
+        {
+            AppendPrism(surface, 4, width * x * corner, depth * z * corner, thickness * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), material,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: piston);
+        }
+        Block(0f, -0.18f, 0.08f, 1.75f, 0.42f, 1.62f, Steel(0.8f));
+        Block(0f, 0.18f, 0.22f, 1.34f, 0.54f, 1.20f, Steel(0.96f));
+        Block(0f, 0.46f, 0.25f, 0.76f, 0.08f, 0.52f, Paint(0.92f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * 0.76f, -0.33f, 0.07f, 0.45f, 0.34f, 1.8f, Steel(0.36f));
+            Block(side * 0.77f, -0.04f, 0.15f, 0.42f, 0.22f, 1.58f, Paint(0.9f));
+            Block(side * 0.30f, 0.04f, -0.48f, 0.18f, 0.25f, 0.62f, Steel(0.85f));
+        }
+        Block(0f, 0.04f, -0.48f, 0.29f, 0.17f, 0.86f, Steel(1f), piston: true);
+        Block(0f, 0.04f, -0.89f, 0.94f, 0.38f, 0.22f, Steel(0.84f), piston: true);
+        Block(0f, 0.15f, -0.99f, 0.67f, 0.065f, 0.024f, Trim(0.9f), piston: true);
+    }
+
     private static void AppendHBreacher(SurfaceTool surface, UnitOutline outline, float height)
     {
         float x = outline.RadiusX, z = outline.RadiusZ;

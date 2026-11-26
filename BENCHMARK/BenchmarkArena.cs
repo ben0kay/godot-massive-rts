@@ -922,7 +922,7 @@ public partial class BenchmarkArena : Node3D
         {
             int id = autoAttackIds == null ? slot : autoAttackIds[slot];
             if (defenseCombat.Target(id)?.Destroyed != false || trample?.OverridesAttack(id) == true) continue;
-            defenseCombat.Attack(id, projectiles, dt, StructureCombat.Sight(catalog[units.Type[id]], units, BattleSight));
+            defenseCombat.Attack(id, projectiles, dt, StructureCombat.Sight(catalog[units.Type[id]], units, BattleSight), shockwaves);
         }
     }
 

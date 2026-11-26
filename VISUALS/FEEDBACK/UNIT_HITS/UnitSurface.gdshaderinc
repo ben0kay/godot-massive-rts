@@ -9,6 +9,7 @@ uniform bool triangle_archer = false;
 uniform bool pentagon_elite = false;
 uniform bool diamond_cavalry = false;
 uniform bool h_breacher = false;
+uniform bool siege_ram = false;
 uniform bool long_marksman = false;
 uniform bool pikeman = false;
 uniform float infantry_height = 0.4125;
@@ -45,6 +46,12 @@ void vertex() {
             if (UV.x < -0.5) VERTEX.z -= half_extent.y * 0.16 * thrust;
             // Lower the torso slightly at contact, keeping both foot meshes grounded.
             if (UV.x < 4.5) VERTEX.y -= infantry_height * 0.035 * thrust;
+        } else if (siege_ram && swing > 0.0 && UV.x < -0.5) {
+            float age = (swing - 1.0) / 14.0;
+            float piston = age < 0.25 ? -0.14 * smoothstep(0.0, 0.25, age)
+                : age < 0.40 ? mix(-0.14, 0.25, smoothstep(0.25, 0.40, age))
+                : 0.25 * (1.0 - smoothstep(0.40, 1.0, age));
+            VERTEX.z -= half_extent.y * piston;
         } else if (h_breacher && swing > 0.0 && UV.x < -0.5) {
             // Both hydraulic rams extend together on the actual melee hit.
             // Keep the original body lunge, damage event and attack cooldown.

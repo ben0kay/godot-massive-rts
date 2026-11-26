@@ -16,7 +16,7 @@ public static class CombatSystem
     public static void PrepareTargets(UnitState units, SpatialGrid grid, int start, int end)
     {
         for (int i = start; i < end; i++)
-            units.Target[i] = units.OpeningOrders?.Active(i) == true ? -1 : grid.FindPursuitEnemy(units, i, -1, PursuitReason.Preparation);
+            units.Target[i] = !units.Catalog[units.Type[i]].TargetsUnits || units.OpeningOrders?.Active(i) == true ? -1 : grid.FindPursuitEnemy(units, i, -1, PursuitReason.Preparation);
     }
 
     // =========================================================
@@ -42,6 +42,7 @@ public static class CombatSystem
         {
             int i = activeIds == null ? slot : activeIds[slot];
             if (units.Health[i] <= 0) continue;
+            if (!units.Catalog[units.Type[i]].TargetsUnits) { units.Target[i] = -1; continue; }
             if (units.OpeningOrders?.Active(i) == true)
             {
                 if (i % localInterval == localPhase) units.OpeningOrders.Acquire(units, grid, config, obstacles, i, tick);

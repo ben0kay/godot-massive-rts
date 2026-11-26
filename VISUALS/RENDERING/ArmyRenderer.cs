@@ -325,6 +325,7 @@ public partial class ArmyRenderer : Node3D
         (animateTriangleFire && type == RuntimeUnitCatalog.Triangle) ||
         (animatePentagonAttack && type == RuntimeUnitCatalog.Pentagon) ||
         (animateDiamondAttack && type == RuntimeUnitCatalog.Diamond) ||
+        type == RuntimeUnitCatalog.SiegeRam ||
         (animateBreacherAttack && type == RuntimeUnitCatalog.Breacher) ||
         (animateLongMarksmanFire && type == RuntimeUnitCatalog.LongTriangle) ||
         (animatePikemanAttack && type == RuntimeUnitCatalog.Pikeman) ||

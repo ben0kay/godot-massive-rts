@@ -11,6 +11,7 @@ internal sealed class StructureCombat
     private readonly IReadOnlyList<StructureHealth> structures;
     private readonly StructureHealth[] targets;
     private readonly Vector3[] approachGoals;
+    private Dictionary<int, (StructureHealth Target, float Remaining)> ramStrikes;
     private readonly float mapHalfWidth;
     private const int TowerRetryTicks = 120;
     private const float RecheckDistanceSquared = 0.25f;
@@ -52,7 +53,8 @@ internal sealed class StructureCombat
                 target = candidate;
             }
         }
-        return targets[id] = target;
+        SetTarget(id, target);
+        return target;
     }
 
     internal bool TryPrioritize(int id, in UnitStats type, StructureHealth objective, ObstacleField sight,
@@ -63,11 +65,15 @@ internal sealed class StructureCombat
             (!approach || !TryApproach(id, type, objective, field, sight, tick, navigation, null, out goal)))
             return false;
         approachGoals[id] = goal;
-        targets[id] = objective;
+        SetTarget(id, objective);
         return true;
     }
 
-    public void SetTarget(int id, StructureHealth target) => targets[id] = target;
+    public void SetTarget(int id, StructureHealth target)
+    {
+        if (targets[id] != target) ramStrikes?.Remove(id);
+        targets[id] = target;
+    }
     public StructureHealth Target(int id) => targets[id];
     public Vector3 ApproachGoal(int id) => approachGoals[id];
 
@@ -203,9 +209,11 @@ internal sealed class StructureCombat
         return count;
     }
 
-    public bool Attack(int id, ProjectileSystem projectiles, float dt, ObstacleField sight)
+    public bool Attack(int id, ProjectileSystem projectiles, float dt, ObstacleField sight, ShockwaveRenderer effects = null)
     {
         StructureHealth target = targets[id];
+        bool ram = units.Type[id] == RuntimeUnitCatalog.SiegeRam;
+        if (ram) return AttackWithRam(id, target, dt, sight, effects);
         if (target?.Destroyed != false || units.Health[id] <= 0f || units.Cooldown[id] > 0f) return false;
         ref readonly var type = ref units.Catalog[units.Type[id]];
         if (!CanHit(id, type, target, sight)) return false;
@@ -221,6 +229,47 @@ internal sealed class StructureCombat
         else target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
         units.HitFeedback?.OnAttack(units, id);
         units.Cooldown[id] = type.Interval;
+        return units.Dirty[id] = true;
+    }
+
+    private bool AttackWithRam(int id, StructureHealth target, float dt, ObstacleField sight, ShockwaveRenderer effects)
+    {
+        ref readonly var type = ref units.Catalog[units.Type[id]];
+        if (target?.Destroyed != false || units.Health[id] <= 0f || !CanHit(id, type, target, sight))
+        {
+            ramStrikes?.Remove(id);
+            return false;
+        }
+
+        Vector2 from = ObstacleField.Xz(units.Position[id]);
+        Vector2 contact = Edge(target.Area, from);
+        if (ramStrikes != null && ramStrikes.TryGetValue(id, out var strike))
+        {
+            if (strike.Target != target) { ramStrikes.Remove(id); return false; }
+            if (strike.Remaining > dt)
+            {
+                ramStrikes[id] = (target, strike.Remaining - dt);
+                return false;
+            }
+            ramStrikes.Remove(id);
+            if (!SoldierFacing.Aim(units, id, contact - from, dt, 0.97f)) return false;
+            float before = target.Health;
+            target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
+            if (target.Health < before)
+            {
+                var ground = units.OnTerrain(Ground(contact));
+                effects?.Emit(ground, 0f, ground + Vector3.Up * (type.Height * 0.55f),
+                    units.Faction[id], structureChips: true);
+            }
+            return units.Dirty[id] = true;
+        }
+
+        if (units.Cooldown[id] > 0f) return false;
+        if (!SoldierFacing.Aim(units, id, contact - from, dt, 0.97f)) return true;
+        ramStrikes ??= new();
+        ramStrikes[id] = (target, 0.32f);
+        units.Cooldown[id] = type.Interval;
+        units.HitFeedback?.OnAttack(units, id);
         return units.Dirty[id] = true;
     }
 

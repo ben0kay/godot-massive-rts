@@ -38,6 +38,7 @@ public sealed class GuardGroup
             if (units.Health[id] <= 0f) continue;
             Vector3 post = posts[id - Start];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            if (!type.TargetsUnits) { units.Target[id] = -1; continue; }
             float engagementRadius = type.Ranged ? units.RangedReach(id, type) : radius;
             int target = units.Target[id];
             if (type.PrismBeam.Enabled || !IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
