@@ -49,6 +49,10 @@ public partial class ArmyRenderer : Node3D
     private bool animateLongMarksmanWalk;
     private bool animatePikemanAttack;
     private bool animatePikemanWalk;
+    private bool animateObliteratorAttack;
+    private bool animateObliteratorWalk;
+    private bool animatePrismWeapon;
+    private bool animatePrismWalk;
     private bool animateHexagonAttack;
     private bool animateHexagonWalk;
     private int[] batchStrides;
@@ -104,8 +108,13 @@ public partial class ArmyRenderer : Node3D
         animateLongMarksmanWalk = visuals.UseLongMarksmanMesh && visuals.AnimateLongMarksmanWalk;
         animatePikemanAttack = visuals.UsePikemanMesh && visuals.AnimatePikemanAttack;
         animatePikemanWalk = visuals.UsePikemanMesh && visuals.AnimatePikemanWalk;
+        animateObliteratorAttack = visuals.UseObliteratorAssaultMesh && visuals.AnimateObliteratorAttack;
+        animateObliteratorWalk = visuals.UseObliteratorAssaultMesh && visuals.AnimateObliteratorWalk;
+        animatePrismWeapon = visuals.UsePrismLanceMesh && visuals.AnimatePrismWeapon;
+        animatePrismWalk = visuals.UsePrismLanceMesh && visuals.AnimatePrismWalk;
         bool anyWalk = animateCircleWalk || animateSquareWalk || animateHexagonWalk || animateTriangleWalk ||
-            animatePentagonWalk || animateDiamondGallop || animateBreacherWalk || animateLongMarksmanWalk || animatePikemanWalk;
+            animatePentagonWalk || animateDiamondGallop || animateBreacherWalk || animateLongMarksmanWalk || animatePikemanWalk ||
+            animateObliteratorWalk || animatePrismWalk;
         infantryWalkPosition = anyWalk ? new Vector2[state.Position.Length] : null;
         infantryWalkPose = anyWalk ? new Vector2[state.Position.Length] : null;
         if (state.HitFeedback != null)
@@ -118,6 +127,8 @@ public partial class ArmyRenderer : Node3D
             state.HitFeedback.ExtendBreacherAttack = animateBreacherAttack;
             state.HitFeedback.ExtendLongMarksmanFire = animateLongMarksmanFire;
             state.HitFeedback.ExtendPikemanAttack = animatePikemanAttack;
+            state.HitFeedback.ExtendObliteratorAttack = animateObliteratorAttack;
+            state.HitFeedback.ExtendPrismFire = animatePrismWeapon;
             state.HitFeedback.EnableHexagonAttack(animateHexagonAttack);
         }
         firstCrackHealth = Mathf.Clamp(visuals.FirstCrackHealth, 0f, 1f);
@@ -128,7 +139,8 @@ public partial class ArmyRenderer : Node3D
         int batchCount = typeCount * Factions.Count;
         batchStrides = new int[batchCount];
         for (int b = 0; b < batchCount; b++)
-            batchStrides[b] = WalkEnabled(b % typeCount) || (animateHexagonAttack && b % typeCount == RuntimeUnitCatalog.Hexagon)
+            batchStrides[b] = WalkEnabled(b % typeCount) || (animateHexagonAttack && b % typeCount == RuntimeUnitCatalog.Hexagon) ||
+                (animatePrismWeapon && b % typeCount == RuntimeUnitCatalog.PrismLance)
                 ? InfantryWalkStride : InstanceStride;
         members = new int[batchCount][];
         buffers = new float[batchCount][];
@@ -318,6 +330,8 @@ public partial class ArmyRenderer : Node3D
         (animateBreacherWalk && type == RuntimeUnitCatalog.Breacher) ||
         (animateLongMarksmanWalk && type == RuntimeUnitCatalog.LongTriangle) ||
         (animatePikemanWalk && type == RuntimeUnitCatalog.Pikeman) ||
+        (animateObliteratorWalk && type == RuntimeUnitCatalog.Obliterator) ||
+        (animatePrismWalk && type == RuntimeUnitCatalog.PrismLance) ||
         (animateHexagonWalk && type == RuntimeUnitCatalog.Hexagon);
 
     private bool AttackEnabled(int type) => (animateCircleSword && type == RuntimeUnitCatalog.Circle) ||
@@ -329,6 +343,8 @@ public partial class ArmyRenderer : Node3D
         (animateBreacherAttack && type == RuntimeUnitCatalog.Breacher) ||
         (animateLongMarksmanFire && type == RuntimeUnitCatalog.LongTriangle) ||
         (animatePikemanAttack && type == RuntimeUnitCatalog.Pikeman) ||
+        (animateObliteratorAttack && type == RuntimeUnitCatalog.Obliterator) ||
+        (animatePrismWeapon && type == RuntimeUnitCatalog.PrismLance) ||
         (animateHexagonAttack && type == RuntimeUnitCatalog.Hexagon);
 
     private bool UpdateInfantryWalk(int id)
@@ -359,7 +375,9 @@ public partial class ArmyRenderer : Node3D
                 units.Type[id] == RuntimeUnitCatalog.Diamond ? 4.8f :
                 units.Type[id] == RuntimeUnitCatalog.Breacher ? 3.2f :
                 units.Type[id] == RuntimeUnitCatalog.LongTriangle ? 2.6f :
-                units.Type[id] == RuntimeUnitCatalog.Pikeman ? 3.5f : 3.8f;
+                units.Type[id] == RuntimeUnitCatalog.Pikeman ? 3.5f :
+                units.Type[id] == RuntimeUnitCatalog.Obliterator ? 3.2f :
+                units.Type[id] == RuntimeUnitCatalog.PrismLance ? 2.6f : 3.8f;
             phase += distance / (radius * strideLength);
             phase -= Mathf.Floor(phase);
             targetWeight = Mathf.Clamp(distance / (radius * 0.10f), 0f, 1f);
@@ -395,8 +413,11 @@ public partial class ArmyRenderer : Node3D
             Vector2 walk = WalkEnabled(type) ? infantryWalkPose[id] : Vector2.Zero;
             buffer[offset + 16] = walk.X;
             buffer[offset + 17] = walk.Y;
-            buffer[offset + 18] = animateHexagonAttack && type == RuntimeUnitCatalog.Hexagon &&
-                units.HitFeedback?.IsHexagonStomp(id) == true ? 1f : 0f;
+            // Custom Z is type-local: Hexagon stomp or Prism's real charge fraction.
+            buffer[offset + 18] = animatePrismWeapon && type == RuntimeUnitCatalog.PrismLance
+                ? Mathf.Clamp(units.PrismCharge(id) / Mathf.Max(0.001f, units.Catalog[type].PrismBeam.ChargeSeconds), 0f, 1f)
+                : animateHexagonAttack && type == RuntimeUnitCatalog.Hexagon &&
+                    units.HitFeedback?.IsHexagonStomp(id) == true ? 1f : 0f;
         }
         // Visual mesh only; the authoritative position and projectile spawn stay unchanged.
         if (units.RangedRecoil != null && units.Catalog[type].RangedRecoil.Distance > 0f)

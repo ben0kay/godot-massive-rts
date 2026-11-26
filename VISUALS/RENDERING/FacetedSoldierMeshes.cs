@@ -23,7 +23,7 @@ public static class FacetedSoldierMeshes
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
         bool enhanced = visuals.UseEnhancedMeshes;
-        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh || visuals.UseLongMarksmanMesh || visuals.UsePikemanMesh || catalog.Count > RuntimeUnitCatalog.SiegeRam
+        var crackShader = visuals.UseUnitFracture || enhanced || visuals.UseCircleRobotMesh || visuals.UseSquareHeavyMesh || visuals.UseHexagonSiegeRobotMesh || visuals.UseTriangleArcherMesh || visuals.UsePentagonEliteMesh || visuals.UseDiamondCavalryMesh || visuals.UseHBreacherMesh || visuals.UseLongMarksmanMesh || visuals.UsePikemanMesh || visuals.UseObliteratorAssaultMesh || visuals.UsePrismLanceMesh || catalog.Count > RuntimeUnitCatalog.SiegeRam
             ? GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") : null;
         var crackMask = visuals.UseUnitFracture
             ? GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg") : null;
@@ -90,18 +90,24 @@ public static class FacetedSoldierMeshes
         bool breacher = visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId;
         bool marksman = visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId;
         bool pikeman = visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId;
+        bool assault = visuals.UseObliteratorAssaultMesh && id == RuntimeUnitCatalog.ObliteratorId;
+        bool prism = visuals.UsePrismLanceMesh && id == RuntimeUnitCatalog.PrismLanceId;
         bool ram = id == RuntimeUnitCatalog.SiegeRamId;
+        material.SetShaderParameter("obliterator_assault", assault);
+        material.SetShaderParameter("prism_lance", prism);
         material.SetShaderParameter("siege_ram", ram);
         material.SetShaderParameter("infantry_attack", ram || (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
             (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack) ||
             (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack) ||
-            (marksman && visuals.AnimateLongMarksmanFire) || (pikeman && visuals.AnimatePikemanAttack));
+            (marksman && visuals.AnimateLongMarksmanFire) || (pikeman && visuals.AnimatePikemanAttack) ||
+            (assault && visuals.AnimateObliteratorAttack) || (prism && visuals.AnimatePrismWeapon));
         material.SetShaderParameter("infantry_walk", (circle && visuals.AnimateCircleWalk) ||
             (square && visuals.AnimateSquareWalk) || (siege && visuals.AnimateHexagonWalk) ||
             (archer && visuals.AnimateTriangleWalk) || (elite && visuals.AnimatePentagonWalk) ||
             (cavalry && visuals.AnimateDiamondGallop) || (breacher && visuals.AnimateHBreacherWalk) ||
-            (marksman && visuals.AnimateLongMarksmanWalk) || (pikeman && visuals.AnimatePikemanWalk));
+            (marksman && visuals.AnimateLongMarksmanWalk) || (pikeman && visuals.AnimatePikemanWalk) ||
+            (assault && visuals.AnimateObliteratorWalk) || (prism && visuals.AnimatePrismWalk));
         material.SetShaderParameter("long_marksman", marksman);
         material.SetShaderParameter("pikeman", pikeman);
         material.SetShaderParameter("h_breacher", breacher);
@@ -115,6 +121,8 @@ public static class FacetedSoldierMeshes
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
         id == RuntimeUnitCatalog.SiegeRamId ||
+        (visuals.UseObliteratorAssaultMesh && id == RuntimeUnitCatalog.ObliteratorId) ||
+        (visuals.UsePrismLanceMesh && id == RuntimeUnitCatalog.PrismLanceId) ||
         (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
         (visuals.UsePikemanMesh && id == RuntimeUnitCatalog.PikemanId) ||
         (visuals.UseHBreacherMesh && id == RuntimeUnitCatalog.BreacherId) ||
@@ -162,6 +170,8 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.BreacherId) AppendHBreacher(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.LongTriangleId) AppendLongMarksman(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PikemanId) AppendPikeman(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.ObliteratorId) AppendObliteratorAssault(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.PrismLanceId) AppendPrismLance(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -317,6 +327,99 @@ public static class FacetedSoldierMeshes
         Block(0f, 0f, -0.50f, 0.23f, 0.16f, 0.42f, Paint(0.96f), recoil: true);
         Block(0f, 0f, -0.75f, 0.12f, 0.12f, 0.28f, Steel(1f), recoil: true);
         Block(0f, 0f, -0.86f, 0.10f, 0.10f, 0.06f, Trim(1f), recoil: true);
+    }
+
+    // =========================================================
+    // Fast elite assault: tapered five-sided armor and a centerline powered blade.
+    // Preserve the raised keel language, -Z facing and original gameplay dimensions.
+    private static void AppendObliteratorAssault(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool thrust = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: thrust, walkPart: foot);
+        }
+        void Hull(float px, float py, float pz, float rx, float rz, float h, Color mask)
+        {
+            AppendPrism(surface, 5, x * rx, z * rz, height * h, outline.Rotation,
+                new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+        }
+        Hull(0f, -0.15f, 0.08f, 0.70f, 0.67f, 0.30f, Steel(0.96f));
+        Hull(0f, 0.06f, 0.03f, 0.85f, 0.82f, 0.36f, Paint(0.94f));
+        Hull(0f, 0.28f, 0.04f, 0.44f, 0.52f, 0.15f, Paint(0.98f));
+        Hull(0f, 0.40f, 0.13f, 0.29f, 0.30f, 0.20f, Paint(1f));
+        Block(0f, 0.38f, -0.17f, 0.23f, 0.07f, 0.035f, Trim(1f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Hull(side * 0.52f, 0.12f, 0.10f, 0.30f, 0.37f, 0.32f, Paint(0.96f));
+            Block(side * 0.32f, -0.31f, 0.12f, 0.30f, 0.38f, 0.38f, Steel(0.95f), foot: true);
+            Block(side * 0.32f, -0.42f, 0.07f, 0.40f, 0.16f, 0.45f, Paint(0.91f), foot: true);
+            Block(side * 0.43f, -0.02f, 0.45f, 0.22f, 0.25f, 0.23f, Steel(0.94f));
+            Block(side * 0.43f, 0.12f, 0.48f, 0.14f, 0.05f, 0.12f, Trim(0.88f));
+        }
+        // Fixed central guide and sliding blade, with overlapping mechanical parts.
+        Block(0f, 0.12f, -0.24f, 0.37f, 0.24f, 0.46f, Steel(1f));
+        Block(0f, 0.12f, -0.42f, 0.22f, 0.15f, 0.54f, Paint(0.98f), thrust: true);
+        AppendPrism(surface, 4, x * 0.18f, z * 0.30f, height * 0.14f, -Mathf.Pi * 0.5f,
+            new Vector3(0f, height * 0.12f, -z * 0.59f), Trim(1f),
+            sideShade: SoldierSideShade, armorMask: true, swingPart: true);
+    }
+
+    // =========================================================
+    // Precision beam walker: six-sided chassis, four stabilization pads,
+    // paired accelerator rails and a fixed lens on the original beam axis.
+    private static void AppendPrismLance(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        const float diagonal = 0.70710678f;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask,
+            bool rail = false, bool foot = false)
+        {
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: rail, walkPart: foot);
+        }
+        void Hull(float py, float pz, float rx, float rz, float h, Color mask)
+        {
+            AppendPrism(surface, 6, x * rx, z * rz, height * h, outline.Rotation,
+                new Vector3(0f, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+        }
+        Hull(-0.13f, 0.04f, 0.76f, 0.83f, 0.36f, Steel(0.95f));
+        Hull(0.10f, 0.04f, 0.92f, 0.89f, 0.36f, Paint(0.92f));
+        Hull(0.35f, 0.26f, 0.48f, 0.41f, 0.28f, Paint(0.99f));
+        Block(0f, 0.35f, 0.51f, 0.33f, 0.10f, 0.12f, Trim(0.91f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            float px = side * 0.43f;
+            Block(px, 0.16f, 0.07f, 0.34f, 0.22f, 0.92f, Steel(0.96f));
+            // Rail travel is lateral on charge and axial on fire. All tagged
+            // vertices remain on their own side of the centerline.
+            Block(px, 0.34f, -0.14f, 0.22f, 0.24f, 1.18f, Paint(0.97f), rail: true);
+            Block(px, 0.47f, -0.16f, 0.095f, 0.045f, 1.06f, Trim(0.98f), rail: true);
+            Block(px, 0.33f, -0.72f, 0.17f, 0.20f, 0.10f, Steel(1f), rail: true);
+            for (int end = -1; end <= 1; end += 2)
+            {
+                Block(side * 0.48f, -0.31f, end * 0.32f, 0.25f, 0.28f, 0.26f, Steel(0.94f), foot: true);
+                Block(side * 0.48f, -0.42f, end * 0.32f, 0.33f, 0.16f, 0.34f, Paint(0.90f), foot: true);
+            }
+        }
+        // Fixed emitter: combat muzzle is z=-0.92*RadiusZ, ground y=0.85*height.
+        // The rest-pose lens face is exactly on that axis; charge orb stays at its old position.
+        Block(0f, 0.35f, -0.62f, 0.35f, 0.28f, 0.36f, Steel(0.98f));
+        Block(0f, 0.35f, -0.82f, 0.34f, 0.25f, 0.16f, Paint(0.97f));
+        Block(0f, 0.35f, -0.90f, 0.23f, 0.18f, 0.04f, Trim(1f));
     }
 
     // =========================================================

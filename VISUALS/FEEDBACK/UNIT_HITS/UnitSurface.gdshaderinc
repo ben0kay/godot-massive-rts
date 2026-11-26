@@ -12,6 +12,8 @@ uniform bool h_breacher = false;
 uniform bool siege_ram = false;
 uniform bool long_marksman = false;
 uniform bool pikeman = false;
+uniform bool obliterator_assault = false;
+uniform bool prism_lance = false;
 uniform float infantry_height = 0.4125;
 uniform vec4 armor_tint : source_color = vec4(1.0);
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
@@ -37,6 +39,26 @@ void vertex() {
             float brace = t < 0.18 ? smoothstep(0.0, 0.18, t)
                 : 1.0 - smoothstep(0.18, 1.0, t);
             if (UV.x < 4.5) VERTEX.y -= infantry_height * 0.085 * brace;
+        } else if (prism_lance) {
+            // Charge follows the simulation's real charge progress, including interruption.
+            // Only tagged rails move; the central beam lens is fixed to the chassis.
+            if (UV.x < -0.5) {
+                float charge = clamp(INSTANCE_CUSTOM.z, 0.0, 1.0);
+                VERTEX.x -= sign(VERTEX.x) * half_extent.x * 0.075 * charge;
+                if (swing > 0.0) {
+                    float t = (swing - 1.0) / 14.0;
+                    float kick = t < 0.14 ? smoothstep(0.0, 0.14, t)
+                        : 1.0 - smoothstep(0.14, 1.0, t);
+                    VERTEX.z += half_extent.y * 0.08 * kick;
+                }
+            }
+        } else if (obliterator_assault && swing > 0.0 && UV.x < -0.5) {
+            // A powered forward thrust on actual melee feedback. The authored
+            // body lunge and first-hit bonus are unchanged.
+            float t = (swing - 1.0) / 14.0;
+            float thrust = t < 0.15 ? smoothstep(0.0, 0.15, t)
+                : 1.0 - smoothstep(0.15, 1.0, t);
+            VERTEX.z -= half_extent.y * 0.15 * thrust;
         } else if (pikeman && swing > 0.0) {
             // Sharp -Z thrust from the existing single-target melee event.
             // No extra damage, collision, or independently triggered brace attack.
@@ -110,14 +132,14 @@ void vertex() {
     if (infantry_walk && !stomping && INSTANCE_CUSTOM.y > 0.0) {
         float phase = INSTANCE_CUSTOM.x * TAU;
         float weight = INSTANCE_CUSTOM.y;
-        if (h_breacher) {
+        if (h_breacher || prism_lance) {
             // Slow, alternating diagonal pad pairs, with very little hull bounce.
             if (UV.x > 4.5) {
                 float leg_phase = phase + (VERTEX.x * VERTEX.z > 0.0 ? 0.0 : PI);
-                VERTEX.z -= sin(leg_phase) * half_extent.y * 0.11 * weight;
-                VERTEX.y += max(0.0, cos(leg_phase)) * infantry_height * 0.045 * weight;
+                VERTEX.z -= sin(leg_phase) * half_extent.y * (prism_lance ? 0.085 : 0.11) * weight;
+                VERTEX.y += max(0.0, cos(leg_phase)) * infantry_height * (prism_lance ? 0.04 : 0.045) * weight;
             } else {
-                VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * 0.006 * weight;
+                VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * (prism_lance ? 0.004 : 0.006) * weight;
             }
         } else if (diamond_cavalry) {
             // Four-beat gallop: front/hind and left/right offsets differ.
@@ -134,15 +156,15 @@ void vertex() {
             // Each boot alternates forward travel and lift. The planted boot stays grounded.
             float side = sign(VERTEX.x);
             float travel = hexagon_siege ? 0.12 : pentagon_elite ? 0.15 : square_heavy ? 0.17 :
-                long_marksman ? 0.10 : pikeman ? 0.14 : triangle_archer ? 0.20 : 0.24;
+                obliterator_assault ? 0.19 : long_marksman ? 0.10 : pikeman ? 0.14 : triangle_archer ? 0.20 : 0.24;
             float lift = hexagon_siege ? 0.055 : pentagon_elite ? 0.065 : square_heavy ? 0.075 :
-                long_marksman ? 0.07 : pikeman ? 0.08 : triangle_archer ? 0.095 : 0.10;
+                obliterator_assault ? 0.085 : long_marksman ? 0.07 : pikeman ? 0.08 : triangle_archer ? 0.095 : 0.10;
             VERTEX.z -= sin(phase) * side * half_extent.y * travel * weight;
             VERTEX.y += max(0.0, cos(phase) * side) * infantry_height * lift * weight;
         } else {
             // Two small body rises per stride; do not lift the planted feet or the shadow.
             float bounce = hexagon_siege ? 0.009 : pentagon_elite ? 0.011 : square_heavy ? 0.0125 :
-                long_marksman ? 0.010 : pikeman ? 0.012 : triangle_archer ? 0.015 : 0.0225;
+                obliterator_assault ? 0.015 : long_marksman ? 0.010 : pikeman ? 0.012 : triangle_archer ? 0.015 : 0.0225;
             VERTEX.y += (1.0 - cos(phase * 2.0)) * infantry_height * bounce * weight;
         }
     }

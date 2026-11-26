@@ -37,6 +37,12 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool UsePikemanMesh { get; set; }
     [Export] public bool AnimatePikemanAttack { get; set; }
     [Export] public bool AnimatePikemanWalk { get; set; }
+    [Export] public bool UseObliteratorAssaultMesh { get; set; }
+    [Export] public bool AnimateObliteratorAttack { get; set; }
+    [Export] public bool AnimateObliteratorWalk { get; set; }
+    [Export] public bool UsePrismLanceMesh { get; set; }
+    [Export] public bool AnimatePrismWeapon { get; set; }
+    [Export] public bool AnimatePrismWalk { get; set; }
     [Export] public bool UseProjectileLaunchEffects { get; set; }
     [Export] public bool UseMuzzleSmoke { get; set; }
 
