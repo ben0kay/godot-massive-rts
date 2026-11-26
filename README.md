@@ -10,6 +10,18 @@ The distinguishing goal is **very large battles using simple geometric units** r
 
 This is a **separate project** from the owner's sci-fi base-building / tower-defense projects. Do not merge their gameplay, folder structure or architecture into this game by default. Ideas and proven patterns can be adapted selectively.
 
+## Game modes and roadmap
+
+The following describes the intended player-facing structure. See [endgoal.md](endgoal.md) for the full design.
+
+| Mode | Experience |
+| --- | --- |
+| **Campaign** | Move army stacks across a territory map, capture land, build fortresses, recruit units, and research upgrades. Opposing armies trigger encounters that the player can auto-resolve or fight live after painting their deployment. |
+| **Skirmishes** | Play standalone battles with preset armies and base stats. Placement and opening orders are the focus. |
+| **Fortress Defense** | Build and defend a base through a longer series of progressive waves. |
+
+Campaign encounters and Skirmishes share three short battle types: **Clash** in open territory, **Offense** against an enemy fortress, and **Defense** when holding a friendly fortress. Campaign and Skirmishes share the unit catalogue and tactical simulation. Campaign adds strategic ownership, recruitment, and research.
+
 ## Visual and gameplay direction
 
 See [Faction Visual Authoring Guide](VISUALS/authoring.md) for the shared art language: metal-dominant buildings and faction-color-dominant units, with separate rendering contracts.
@@ -116,7 +128,7 @@ Edit **Movement Speed Multiplier** in [DefaultSimulationSettings.tres](GAMEPLAY/
 
 ## FRONT0 — Profiles, main menu and campaign levels
 
-**Source implemented. Awaiting owner validation.** Run Project (F5) opens the local profile picker, main menu, campaign selector, and display options. Campaign opens a catalogue-driven mode picker with Fortress Defense and AutoBattler. Each has its own blank [Level 001 scene](LEVELS/README.md). Open `BENCHMARK/BenchmarkArena.tscn` and use Run Current Scene (F6) to test the Auto-Battle Benchmark. Open `BENCHMARK/RTS/CommandSandbox.tscn` with F6 to test Fortress Defense squad movement and formation commands. See the [UI guide](UI/README.md) for menu settings and save ownership.
+**Current implementation.** Run Project (F5) to open the local profile picker and current campaign menus. The strategic territory map and the standalone Skirmishes menu are planned. Open `BENCHMARK/BenchmarkArena.tscn` and press F6 for the battle benchmark, or open `BENCHMARK/RTS/CommandSandbox.tscn` and press F6 for the Fortress Defense command test. See the [level guide](LEVELS/README.md) and [UI guide](UI/README.md).
 
 ## Development order (proposed, not completed)
 

@@ -1,136 +1,49 @@
 # End Goal — Godot Massive RTS
 
-> **Document type:** Long-term game vision and design guardrails, **not** authorization to implement features.
->
-> **Status:** Proposed game modes; simulation/benchmark development remains the active priority.
->
-> **Last refined:** 2026-11-19 · **Repository:** `ben0kay/godot-massive-rts` · **Branch:** `main`
+**Design direction updated 2026-11-26.** The strategic Campaign and standalone Skirmishes describe the intended direction. Existing playable scenes and menus are the starting point for that work.
 
-## 1. The game in one sentence
+## Vision
 
-**Ultimate Epic Battle Simulator 2-style massive, mostly autonomous battles, combined with a *lightweight* set of Age of Empires-style RTS mechanics, built around simple 3D shapes, modest maps and extreme unit counts.**
+Build a 3D isometric Godot .NET strategy game where players compose and paint large armies, issue opening orders, and watch thousands of autonomous units fight. Readable silhouettes, clear faction colors, and smooth battles at scale are central to the experience.
 
-The goal is not to reproduce either game. The appeal is watching enormous armies collide while still having satisfying, accessible decisions about deployment, composition, base growth, defense and occasional group movement orders.
+## Play modes
 
-### Design priorities
+| Mode | Core loop | Army and progression |
+| --- | --- | --- |
+| **Campaign** | Move armies on a strategic map, capture territories, build fortresses, and resolve encounters. | Shared unit catalogue, persistent faction forces, recruitment, Credits, and research. |
+| **Skirmishes** | Pick a standalone Clash, Offense, or Defense scenario, place the supplied army, and fight. | Authored quantities and base stats. Replay to try a different deployment or opening order. |
+| **Fortress Defense** | Build and hold a base through a longer session of progressive enemy waves. | Its own scenario pacing, build and production rules, and in-match economy. Carbon is the established resource direction. |
 
-1. **Massive battles first:** thousands to tens of thousands of soldiers must remain practical; larger counts are experimental, not promised.
-2. **One scalable simulation:** rendering, movement, separation, targeting, damage and projectiles should work across both modes without separate engines.
-3. **Autonomous individual behavior:** troops can find, pursue and fight enemies without constant player input.
-4. **Player strategy, not heavy micromanagement:** deployment in one mode; base building and occasional group orders in the other.
-5. **Simple visual scope:** primitive shapes for soldiers and buildings, readable blue/red (and optional other) factions, white/light damage feedback, clear isometric camera, basic battlefield geometry and restrained effects.
-6. **Measure before adding complexity:** gameplay additions must justify their idle, per-tick and worst-case costs.
+## Strategic Campaign
 
-Use a true **3D isometric/orthographic Godot 4 C#** world. Begin with simple, mostly flat maps. Terrain elevation, varied levels, elaborate art, animation, sophisticated formations and detailed economies are **possible later**, not prerequisites. The emphasis is on the simulation, not realistic graphics or enormous maps.
+1. Move army stacks between connected territories. Territories track ownership and fortress state. A fortress can hold a garrison.
+2. Opposing forces meeting on a territory create a battle. The territory and who controls its fortress determine the objective from the player's perspective.
+3. Choose **Auto-resolve** for a quick result or **Fight Battle** to deploy the army and watch the tactical simulation.
+4. Return the result to the strategic map. Apply territory control, surviving forces and changes to the fortress once, then continue the campaign.
 
-## 2. Current focus — benchmark the simulation, not build the full game
+| Battle type | Encounter | Player objective |
+| --- | --- | --- |
+| **Clash** | Opposing armies meet on open territory. | Defeat the opposing field army. |
+| **Offense** | The player's army attacks an enemy fortress. | Advance on and destroy the enemy Citadel, engaging defenders along the way. |
+| **Defense** | An enemy army attacks the player's fortress. | Hold the player's Citadel against the assault in a short battle. |
 
-The existing `BENCHMARK/` arena is the proving ground. Continue refining the compact unit-state, batched rendering and shared combat/movement architecture before committing to full game loops. The existing painter is a useful deployment **prototype**, not yet the complete first game mode.
+**Auto-resolve** should compare the participating forces using unit strengths and relevant modifiers, such as research and a fortress advantage. A bounded amount of variation can keep results from feeling mechanical. Showing the likely outcome and casualty range before committing is a proposed UI.
 
-**Immediate planned experiment:** place a **large, simple rectangular/blob-like static obstacle** in the battlefield and test the performance and behavior of large armies moving and fighting around it.
+**Fight Battle** uses the units brought to the encounter, with legal deployment areas and optional opening orders. Campaign research modifies the faction's eligible units across Clash, Offense, and Defense. Both resolution paths should produce the same result format so the map can handle them consistently.
 
-Questions this experiment should help answer:
+Recruitment adds units to the faction's forces for assignment to armies or garrisons. The campaign tracks ownership, locations, and research using stable unit IDs from the shared catalogue. Carrying casualties forward into the army stack is proposed. The final casualty, replenishment, and retreat rules remain open.
 
-- Do units route around an obstruction rather than attempt to walk through it or become stuck?
-- What happens when thousands of allies converge near the same obstacle edges or chokepoint?
-- Does local separation create bottlenecks, jitter, excessive detours or needless CPU work?
-- How much do obstacle-aware movement/navigation, targeting, separation and rendering each cost compared with the equivalent unobstructed scenario?
-- Can any expensive route work be shared and/or staggered instead of recalculated for every soldier?
+## Standalone Skirmishes
 
-Start with one deliberately simple obstacle and controlled benchmark scenarios, not a complex terrain editor or a full navigation system by assumption. Compare like-for-like counts, unit compositions, seeds and camera settings, including dense moving/combat crowds. Measure simulation tick time, frame time/spikes, separation/navigation costs, skipped ticks and living unit counts where available.
+Skirmishes reuse the short battle types and battlefield tools. Each authored scenario supplies preset unit quantities and base stats, with its own terrain, defenses, legal deployment area and objective. Players can replay the same setup to learn what changes when they paint a different formation or give a different opening order. Campaign recruitment, Credits and research stay in Campaign.
 
-Owner observations suggest some 20k–25k-unit scenarios have run well, while larger/heavier scenarios can deteriorate sharply. These are **scenario-dependent observations, not guaranteed targets or validated benchmark results**. Preserve useful 1k/10k/25k/50k+ stress presets and the independent benchmark scene.
+## Fortress Defense
 
-**Nothing in this document requests immediate code changes.**
+Fortress Defense is the longer progressive-wave mode. The player defends a Citadel, builds defenses and production, and manages the in-match economy as waves escalate. The map can be hand authored with terrain, Carbon deposits, enemy approaches and starting structures. Short **Defense** battles share combat systems with Fortress Defense and use their own short encounter rules.
 
-## 3. Game mode A — Army Painter / tactical battle levels
+## Fortress Defense group orders
 
-### Core loop
-
-1. Load a **finite, authored battlefield/level** with an enemy army already positioned.
-2. Receive a **limited troop supply or budget**.
-3. Choose from available unit types and **paint/place the friendly army** in permitted deployment areas.
-4. Press **Start Battle**.
-5. Watch the armies **move, acquire targets and fight automatically**. Outcome depends primarily on composition, placement and the shared simulation.
-6. Resolve victory/defeat; replay or try a different deployment.
-
-This is the more focused, simulation-forward mode. It can be enjoyable without production buildings or micromanagement.
-
-**Intentionally absent in the initial Army Painter design:**
-- RTS-style box selection and right-click orders.
-- Barracks, workers, resource gathering, a build menu or a recurring economy.
-- RTS-specific command processing running silently in the background.
-
-**AutoBattler campaign direction (2026-11-19):** An authored sequence of increasingly difficult maps is now intended. Red troops begin predeployed and visible; the player deploys a limited Blue army, presses Fight and watches the autonomous outcome. Victories should award campaign credits for recruitment and upgrades, with a possible bonus for preserving more troops. Persistent roster rules, exact reward economics and future hidden enemy/fog mechanics remain design decisions. See the dedicated [AutoBattler campaign design](LEVELS/AutoBattler/AUTOBATTLER_CAMPAIGN_DESIGN.md) for the current proposed loop, milestones and open questions.
-
-**Existing foundation:** the BENCH0 painted deployment editor already supports placing basic soldier types and starting a battle. It should be reused/adapted rather than mistaken for a fully finished game mode.
-
-## 4. Game mode B — Open RTS / autonomous base-and-army warfare
-
-### Intended match flow
-
-1. Start with a **small base**, possibly a few walls, and a central **Citadel**.
-2. Place a **Barracks** that produces basic soldiers (a simple first example is continuous **Circle Infantry** production).
-3. Build or recruit basic **workers/miners**, potentially represented by a shape with a **pickaxe icon**.
-4. Workers harvest **Carbon** from simple geometric deposits, supporting unit production and construction.
-5. Expand defenses with **walls and stationary towers**.
-6. Armies grow and **fight automatically**, while the player can optionally select large groups and issue simple tactical movement orders.
-7. A central strategic objective is to **destroy the opposing faction's Citadel**.
-
-Think **Age of Empires mechanics at their simplest useful level**, overlaid on a UEBS2-like mass simulation. The world and buildings may be made almost entirely of basic shapes; the map does not need to be sprawling or visually detailed.
-
-### Specific propositions
-
-- **Citadel:** each team owns a central structure; destroying the enemy Citadel is the proposed principal win condition.
-- **Barracks:** a placeable production building that emits units over time; Circle Infantry is the initial illustrative output. Additional unit types/buildings are optional future additions.
-- **Workers/collectors:** lightweight geometric drones; a small glyph, triangular silhouette or simple attachment communicates gathering. Harvest Carbon from discrete deposits and return it to a core or collection structure.
-- **Walls:** simple defensive obstacles, meaningful for both units and performance testing.
-- **Defensive towers:** stationary structures that attack enemies and help guard a base.
-- **Autonomous military units:** default behavior remains automatic fighting, even without player orders.
-- **Optional intervention:** players can reposition large selected groups when they want to change the battle.
-
-The starting economy should be deliberately small and easy to understand: **Carbon is the one proposed initial resource**. Specific costs, harvesting/delivery rates, production pacing, construction rules, tower variants, AI opponents and upgrades are still **open design decisions**. Additional resources such as Charge (energy) or Data (research) are possible later, not approved for the initial loop. Do not build a conventional multi-resource RTS economy merely because Age of Empires is an inspiration.
-
-At huge unit counts, production should eventually have sensible pacing/limits and measurable simulation impact; a theoretically unbounded soldier faucet is not an implementation requirement.
-
-### Open RTS visual identity — futuristic vector-virus / machine-swarm world
-
-**Preferred direction (2026-11-12):** Replace the earlier tentative medieval/woodland framing with a restrained **futuristic vector / self-replicating machine-virus** aesthetic. The geometric soldiers are abstract autonomous machine organisms or digital-like swarms; blue and red factions resemble competing infections consuming matter and replicating. This is an art/lore direction, **not a requirement to simulate a literal computer, biological virus, or molecular chemistry**.
-
-- Preserve the existing clean, readable **polygon soldiers** and simple 3D isometric world. Ranged units share sharp, arrow/chevron silhouettes (triangle archers, chevron artillery with a barrel); melee units use their existing geometric shapes.
-- The ground can be dark and relatively minimal, with optional subtle grid/vector lines, angular obstacles, sparse colored connections or faint faction accents. No elaborate textures, forests, medieval trees, castles, or photorealistic terrain are required.
-- **Carbon** is the first and only planned gathered resource. Represent deposits with dark graphite-like **faceted crystal clusters / geometric nodes**; use finite quantities that lightweight collector units can harvest and return to a faction core/depot. Carbon supports unit fabrication and basic construction.
-- A **fabrication core / Citadel**, a simple **unit fabricator / Barracks**, and collector drones should look like machine geometry rather than villages. Names can evolve; continue to reuse the established Citadel/walls/towers concepts.
-- Resource visuals should remain legible at mass-army zoom, batch or pool where useful, and never create per-soldier trees of scene nodes. Salvage from destroyed enemies, a secondary **Charge** resource, and **Data** for upgrades are **ideas for later**, not v1 requirements.
-- Start with a simple loop: **collect Carbon → deposit it → spend it on units and structures → defend/attack the enemy core**. Costs, deposit depletion, worker assignment and victory conditions remain tunable proposals.
-
-### Open RTS Level 001 — owner-authored map
-
-**The owner's preference is to design the map by hand.** Open RTS **Level 001** must be a **separate Godot scene** that can be opened and edited directly in the editor. It should be safe to place/arrange terrain, obstacles, Carbon deposit nodes, Citadels, starting positions and future structures by editing scene data. These objects are planned content, not items to spawn or lock into a hard-coded layout today.
-
-- **Do not fill Level 001 with a random map**, a mandatory procedural seed, generic trees, or a copied benchmark arena. The scene can start intentionally empty.
-- AutoBattler keeps `LEVELS/AutoBattler/Level001/Level001.tscn`. Open RTS has its own editable `LEVELS/FortressDefense/Level001/Level001.tscn`.
-- Gameplay controllers can be composed when those systems are authorized; future map props should preferably be normal editable Godot scenes/resources with exposed settings, not procedural coordinates buried in code.
-- Terrain/heightfield, obstacles, rendering, pathfinding and soldier combat should remain **shared** with AutoBattler rather than duplicate a second engine.
-- **Important:** Recording this direction does not mean workers, Carbon extraction, buildings or actual RTS battle gameplay are implemented.
-
-### Campaign menu hierarchy (two game modes to start)
-
-```text
-Profile -> Main Menu -> Campaign
-                          ├── Open RTS
-                          │     └── Level 001   (owner-authored Open RTS map)
-                          └── AutoBattler
-                                └── Level 001   (authored tactical / Army Painter challenge)
-```
-
-**Campaign** is an umbrella that can hold additional modes later. **AutoBattler** is the player-facing name for the existing Army Painter / tactical-battle concept, not a third game mode. Each mode has its **own level list, scene paths and per-profile progression**, sharing the established campaign catalog, menu widgets, launch/session plumbing and common soldier simulation. The two `Level001` IDs may be equal *within different campaign IDs* because progress keys are `CampaignId -> LevelId`; their **scene paths must be distinct**. Add future modes through the catalog, not by hard-coding new menus.
-
-Implementation scope and compatibility mapping are specified in [UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md](UI/CAMPAIGN_MODE_STRUCTURE_PLAN.md). FRONT1 implements the menu hierarchy and blank scenes for future level authoring.
-
-## 5. Group selection and right-click orders — the player's performance tradeoff
-
-**This control system is proposed for Open RTS, not Army Painter.**
+These tactical controls apply to Fortress Defense. Campaign map movement operates on whole army stacks.
 
 ### Example: select 3,000 soldiers
 
@@ -165,89 +78,16 @@ The owner's illustration was **10 soldiers processed in one frame, then 10 more 
 
 **User experience target:** thousands of soldiers feel collectively responsive without a single giant CPU spike when the player issues an order. Not every soldier needs to turn on exactly the same frame.
 
-## 6. Pathing, crowding and combat must remain shared
+## Shared simulation and performance
 
-The main scaling challenge is likely not the selection rectangle itself; it is **large groups navigating obstacles and one another while still acquiring enemies and fighting**.
+- Share the unit catalogue, fixed-step battle simulation, damage rules, projectiles, terrain and obstacle queries, placement UI and batched rendering across applicable modes. Keep the strategic map, skirmish setup, and progressive wave systems scoped to their own modes.
+- Represent soldiers and aircraft with compact data and batched visuals. Use separate air and ground spatial indexes and explicit target eligibility.
+- Budget targeting, pathfinding, and separation. Route around obstacles with shared or staggered work where practical. Keep terrain height authoritative for movement and combat.
+- Maintain Benchmark as an independent stress-test harness. Measure like-for-like battles with consistent counts, rosters, seeds, and camera settings before making performance claims.
+- Preserve authored levels and stable save IDs when evolving the menu and campaign structure.
 
-- Treat static obstacles, walls and future buildings through a reusable terrain/obstruction representation where possible.
-- Keep local soldier separation distinct from high-level **route planning**: separation alone is not a reliable way to lead 3,000 soldiers around a giant rectangle.
-- Investigate **shared/group waypoints, cached routes or flow fields** if profiling shows they are appropriate; avoid thousands of independent global searches.
-- Route updates can be staggered, but avoid persistent stale routes into newly blocked terrain.
-- Reuse unit-specific motion and combat behavior, including different melee/ranged reach, acceleration, cavalry momentum/trample and projectiles.
-- Budget dense targeting and local-neighbor work; avoid all-to-all checks or wide map searches every tick.
-- Simple, readable outcomes matter more than perfect military formation fidelity or ideal path optimality.
-- Keep authoritative health, movement, collisions/obstacle rules and damage independent of visual meshes.
+## Suggested first campaign prototype
 
-These are architectural constraints and experiments, **not a request to implement a particular pathfinding algorithm now**.
+Use a small connected territory map with a player army, an opposing army, and one fortress. Prove that the player can enter an open-territory Clash, assault the fortress, and later defend it in a short Defense battle. Verify that both Auto-resolve and Fight Battle update the map correctly. Expand recruitment, research, map size, and AI as the loop earns them.
 
-### Terrain source choices for the two modes
-
-Both modes share the same authoritative compiled heightfield, per [TERR1](WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md), rather than separate terrain engines. AutoBattler (Army Painter) emphasizes manually painted battle terrain with deliberately flat regions, long smooth slopes, and flat-topped elevated plateaus. **Open RTS Level 001 should also begin with a manually authored Godot scene**, using that same terrain/obstacle infrastructure; a seeded procedural Open RTS map is an optional future mode, not the default for the owner's first map. A later hybrid may overlay authored changes on procedural terrain. Shared simulation uses the same ground height, renderer, route slope costs and high-ground combat rule regardless of map source. This remains a design preference, not a claim that the Open RTS map/economy already exists.
-
-## 7. One simulation, separate optional mode systems
-
-Both games should use the same core:
-- Compact living-unit state and unit definitions.
-- Fixed-step/batched movement and combat.
-- Shared spatial index, targeting, projectiles and separation.
-- Batched geometric rendering and damage feedback.
-- Terrain/obstacle queries and diagnostics.
-
-**Army Painter** adds authored levels, finite army allocation, painting/deployment, battle start/retry and level outcomes.
-
-**Open RTS** adds selection/orders, production, resource workers, buildings, walls, defense, Citadels and match victory.
-
-**Benchmark** remains an independent stress-test harness.
-
-Mode-only systems should be **uninitialized, disabled or otherwise genuinely dormant** when a mode does not use them—especially order queues, selection scans, economy ticks, production schedulers and UI refreshes. Do not scatter mode checks throughout every soldier's hot loop if a higher-level configuration can keep the common update path clean.
-
-Keep major systems in **UPPERCASE top-level folders** per `NOTES/CodePreferences.md`. `GAMEPLAY/SIMULATION/`, `GAMEPLAY/COMBAT/`, `VISUALS/RENDERING/`, `BENCHMARK/`, `GAMEPLAY/DEPLOYMENT/` and `GAMEPLAY/UNITS/` already provide relevant ownership. Future `FORMATIONS/`, `WORLD/BUILDINGS/`, `ECONOMY/`, `GAME_MODES/` or selection-specific folders are only **possibilities**; create them when code actually belongs there, not to satisfy this document. Reuse established systems instead of duplicating them.
-
-Small-count buildings may have scene nodes if appropriate; the prohibition is on **one full Godot object graph per soldier** at enormous scale.
-
-## 8. Boundaries — what this project is *not* trying to be
-
-- Not a feature-complete Age of Empires clone.
-- Not a visually realistic UEBS2 clone.
-- Not a Total War-scale command/formation simulator by default.
-- Not a deeply simulated economy with elaborate villagers, tech trees and diplomacy at the outset.
-- Not a giant procedural world required before battles can be fun.
-- Not a new engine/framework designed in advance of measured problems.
-- Not two games with separate, competing soldier simulations.
-
-**Keep the gameplay meaningful but the implementation intentionally plain.** It should be possible to recognize every type of soldier/building from a silhouette or icon and still enjoy the scale of the battle.
-
-## 9. Illustrative future experiences
-
-**Army Painter example:** a level gives the player a limited set of Circle Infantry, archers and cavalry. The enemy is already assembled behind a simple obstacle. The player paints their formation, starts the battle and watches it unfold without issuing live movement orders.
-
-**Open RTS example:** the player starts beside a Citadel and a few walls. A Barracks starts producing Circle Infantry. Pickaxe workers gather resources; a tower helps defend the approach. Later, the player drag-selects 3,000 soldiers and right-clicks a route toward the rival base. The command is received immediately, unit-level responses are budgeted over time, the troops fight en route, and the opposing Citadel remains the strategic target.
-
-These examples illustrate the **intended feel**, not locked specifications for unit counts, pacing, economy or AI.
-
-## 10. Suggested progression — planning only
-
-1. **Now: simple obstacle benchmark.** Measure how armies move, crowd and fight around one large rectangular obstruction; identify actual navigation bottlenecks.
-2. **Continue shared simulation optimization.** Address measured movement, separation, targeting and rendering hot spots while preserving current benchmarking.
-3. **Prototype lightweight selected-group orders** when authorized: screen-space drag selection, terrain right-click, shared goals and staggered expensive processing. Measure it at 3k selected units and in much larger total battles.
-4. **Formalize mode boundaries** without duplicating the soldier simulation; ensure unused RTS systems cost nothing in Army Painter.
-5. **Build the minimal Army Painter loop** around existing deployment: budget, authored level, start/retry, outcome.
-6. **Build a tiny Open RTS vertical slice:** Citadels, one Barracks producing Circle Infantry, walls and automatic attacking.
-7. **Add the smallest useful economy/defense loop:** pickaxe workers, gathering/mining or trees, construction costs and static defensive towers.
-8. **Only then consider refinement:** more unit/building types, formation behaviors, sophisticated routes, elevation, progression and polish, based on measured performance and fun.
-
-Order beyond the immediate benchmark is illustrative; priorities can change after testing. Do **not** implement these milestones without a separate user request.
-
-## 11. Unsettled design questions
-
-Leave these open until prototypes reveal what feels good:
-
-- Is ordinary right-click **Move** closer to move-and-defend, or should it aggressively pursue threats like **Attack Move**?
-- Are selected soldiers simply a temporary box-selected set, or should persistent battalion groups exist?
-- Carbon is the initial resource. Should workers be assigned manually to deposits or harvest automatically? If/when would a second resource add meaningful gameplay?
-- How fast should Barracks produce, and what caps/resources prevent uncontrollable unit growth?
-- What are the Army Painter objective types and deployment restrictions?
-- How big should maps become, and when is elevation worth its simulation cost?
-- What order/route response budget feels best once the actual 3,000-soldier case is profiled?
-
-**Guiding rule:** build the lightest thing that creates convincing mass battles and meaningful RTS choices, and preserve the ability to measure where the time goes.
+Open decisions include turn-based versus timed map movement, casualty persistence and replenishment, fortress construction costs, and the amount of variation in auto-resolve. See [CodePreferences.md](CodePreferences.md) for implementation and validation conventions.
