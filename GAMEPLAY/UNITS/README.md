@@ -8,6 +8,7 @@ This **UPPERCASE major folder** owns the roster, unit definitions and catalogue 
 
 - **[UNIT0 implementation plan](UNIT0_IMPLEMENTATION_PLAN.md)** — direct Codex instructions, architecture, migration, checks and performance requirements.
 - **[UNIT1 size scaling plan](UNIT1_SIZE_SCALING_PLAN.md)** — per-type size tuning and owner checks.
+- **[AIR1 aircraft and anti-air plan](AIR1_IMPLEMENTATION_PLAN.md)** — planned flight, dogfights, bombing runs, AA defenses and campaign rollout.
 - **[SKIRM1 Skirmisher implementation plan](SKIRM1_IMPLEMENTATION_PLAN.md)** — **planned only**: closest-enemy ranged targeting, bounded all-direction retreat AI, and shared benchmark/Command Sandbox integration.
 - **[ROCKET1 Wide Deep-Fork Twin-Rocket Launcher plan](ROCKET1_IMPLEMENTATION_PLAN.md)** — **source implemented**: wide fork silhouette, two prong-mounted launchers firing alternating arcing rockets, small splash via existing artillery code.
 - **[DREAD1 Dreadnaught implementation plan](DREAD1_IMPLEMENTATION_PLAN.md)** — **planned only**: Tier 5 super-heavy hull with 4 independent miniguns, nearest-target pursuit and front-only crush damage; includes large-footprint separation safeguards.
