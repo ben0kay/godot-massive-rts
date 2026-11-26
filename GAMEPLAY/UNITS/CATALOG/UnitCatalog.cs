@@ -119,7 +119,10 @@ public readonly record struct UnitOutline(int Sides, float RadiusX, float Radius
             UnitShape.Diamond => new(4, Mathf.Max(halfWidth, diamondLongRadius), halfWidth, 0f),
             UnitShape.Pentagon => new(5, pentagonRadius, pentagonRadius, -Mathf.Pi * 0.5f),
             UnitShape.Chevron => new(6, halfWidth, width * 0.60f, 0f, IsChevron: true),
-            UnitShape.SiegeRam => new(4, halfWidth * 1.41421356f, width * 1.12f, Mathf.Pi * 0.25f),
+            // Siege Ram: 1.5x authored size plus a 17/15 length proportion factor.
+            // Together these give 1.7x the previous longitudinal dimensions;
+            // the same outline drives placement, rendering and circular clearance.
+            UnitShape.SiegeRam => new(4, halfWidth * 1.41421356f, width * 1.12f * (17f / 15f), Mathf.Pi * 0.25f),
             UnitShape.Obliterator => new(5, halfWidth, width * 0.78f, -Mathf.Pi * 0.5f),
             UnitShape.Prism => new(6, halfWidth, width * 0.88f, -Mathf.Pi * 0.5f),
             UnitShape.DeepFork => new(DeepForkVertices.Length, halfWidth, width * 0.38f, 0f, IsDeepFork: true),

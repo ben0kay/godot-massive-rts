@@ -684,3 +684,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added standalone Skirmishes menus and authoring destinations, preset rosters, and short Defense encounters with a Blue Citadel. Campaign retains recruitment and Fortress Defense has its own menu.
 
 - 2026-11-26 — Level Editor now opens to Skirmishes and offers Fortress Defense as its other authoring mode.
+
+- 2026-11-26 — SIEGE-RAM-SIZE — Owner-requested Tier-3 Ram enlargement: SizeMultiplier 1.5 and SiegeRam outline length proportion ×17/15, yielding +50% width/height and +70% total length versus the previous model, including existing rear extension. Compiled circular footprint radius 1.68 → 2.856. No change to tier, health, damage, raw reach, speed or attack timing; footprint-aware reach and navigation now follow the larger outline. Source review only; owner placement/bridge/structure-contact validation pending.

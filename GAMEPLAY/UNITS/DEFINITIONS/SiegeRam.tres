@@ -11,6 +11,7 @@ BattleRating = 550
 Shape = 15
 Width = 1.5
 Height = 0.95
+SizeMultiplier = 1.5
 SizeTier = 3.0
 Speed = 1.4
 AccelerationSecondsOverride = 1.0
