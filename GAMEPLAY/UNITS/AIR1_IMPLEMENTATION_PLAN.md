@@ -66,6 +66,12 @@ vary their height. The terrain lookahead and a conservative height floor above
 authored obstacles keep the prototype above cover. The prototype uses air-only
 hitscan bursts with visible tracers and two short white wingtip wisps.
 
+## Skirmish aircraft placement
+
+In the Skirmish Level Editor, open **Units** in the bottom palette and scroll
+right to the aircraft cards. Paint Red aircraft there. In Test Clash, use the
+Blue cards in the deployment roster to paint the player's aircraft.
+
 ## Heavy Bomber in Clash
 
 Select Heavy Bomber in the bottom roster. It automatically seeks the nearest

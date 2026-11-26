@@ -9,7 +9,7 @@ public partial class AutoBattlerRules
 {
     internal const string LegacyVWingId = "v_wing";
 
-    internal static bool SupportsAircraft(string campaignId) => campaignId == AutoBattlerCampaignStore.CampaignId;
+    internal static bool SupportsAircraft(string campaignId) => CampaignCatalog.IsTactical(campaignId);
     internal static bool AllowsAircraftFaction(byte faction) => faction is Factions.Blue or Factions.Red;
 
     private StartsByUnit AircraftStarts(byte faction) => faction == Factions.Blue ? BlueAircraftStarts : RedAircraftStarts;

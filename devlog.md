@@ -696,3 +696,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added Twin Minigun Tower: compact two-tone twin rotary clusters, shared direct-fire targeting and pooled alternating minigun rounds, source-footprint exclusion and terrain clipping, catalogue/editor/Fortress Defense registration. Provisional balance; owner Godot validation pending.
 
 - 2026-11-26 — Added one short V-Wing engine flame to the shared aircraft exhaust batch. Both aircraft types now have hot cores and faction-tinted outer plumes. Engine emission ends on death and existing neutral bomber smoke fades in place.
+
+- 2026-11-26 — Restored Red aircraft cards and placement previews in the Skirmish Level Editor by recognizing the tactical campaign IDs used by Skirmishes.
