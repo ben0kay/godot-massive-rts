@@ -664,3 +664,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — AIR1-A authoring: moved V-wing placement into the Clash Units roster, with faction selection, painted and erasable starting positions, preview, and undo/redo. Old flight counts remain readable. Awaiting Godot playtest.
 
 - 2026-11-26 — Clash Units roster: added distinct Blue and Red V-wing cards with faction-tinted aircraft icons.
+
+- 2026-11-26 — AIR1: shared unit definitions now drive aircraft cards, typed map starts and air combat stats. Added Blue aircraft painting to Test Clash deployment with faction colors and test-only placement.

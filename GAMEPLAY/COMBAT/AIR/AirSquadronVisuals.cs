@@ -1,4 +1,5 @@
 // Batches V-wing models, projected shadows, wingtip wisps and gun tracers.
+using System.Collections.Generic;
 using Godot;
 
 namespace MassiveRts;
@@ -8,15 +9,26 @@ internal sealed partial class AirSquadronVisuals : Node3D
     private const int TrailSamples = 14;
     private const float TrailInterval = 0.042f;
     private static readonly Vector3 Wingtip = new(1.72f, 0f, -0.97f);
-    private readonly MultiMesh aircraft, shadows;
+    private sealed class Batch
+    {
+        internal MultiMesh Mesh;
+        internal int Visible;
+    }
+
+    private readonly Dictionary<UnitDefinition, Batch> aircraft = new();
+    private readonly MultiMesh shadows;
     private readonly ImmediateMesh streaks = new();
     private readonly Vector3[] trailLeft, trailRight;
     private readonly int[] trailHeads, trailCounts;
     private float trailTimer;
 
-    internal AirSquadronVisuals(int capacity)
+    internal AirSquadronVisuals(AirSquadron.Fighter[] fighters)
     {
-        aircraft = MakeBatch(MakeWing(), capacity);
+        int capacity = fighters.Length;
+        var counts = new Dictionary<UnitDefinition, int>();
+        foreach (var fighter in fighters) counts[fighter.Unit] = counts.GetValueOrDefault(fighter.Unit) + 1;
+        foreach (var (unit, count) in counts)
+            aircraft.Add(unit, new Batch { Mesh = MakeBatch(unit.AircraftMesh ?? MakeWing(), count) });
         shadows = MakeBatch(GroundShadowMeshes.Soldier(), capacity, transparent: true);
         trailLeft = new Vector3[capacity * TrailSamples];
         trailRight = new Vector3[trailLeft.Length];
@@ -109,6 +121,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
     internal void Sync(AirSquadron.Fighter[] fighters, TerrainHeightField terrain)
     {
         int live = 0;
+        foreach (var batch in aircraft.Values) batch.Visible = 0;
         streaks.ClearSurfaces();
         bool drawing = false;
         for (int id = 0; id < fighters.Length; id++)
@@ -117,8 +130,9 @@ internal sealed partial class AirSquadronVisuals : Node3D
             if (fighter.Health <= 0f) continue;
             var basis = Pose(in fighter);
             var position = fighter.Position;
-            aircraft.SetInstanceTransform(live, new Transform3D(basis, position));
-            aircraft.SetInstanceColor(live, ArmyRenderer.FactionColor(fighter.Faction));
+            var batch = aircraft[fighter.Unit];
+            batch.Mesh.SetInstanceTransform(batch.Visible, new Transform3D(basis, position));
+            batch.Mesh.SetInstanceColor(batch.Visible++, ArmyRenderer.FactionColor(fighter.Faction));
             var shadowPosition = new Vector3(position.X, (terrain?.At(position.X, position.Z) ?? 0f) + 0.06f, position.Z);
             shadows.SetInstanceTransform(live, new Transform3D(new Basis(Vector3.Up, fighter.Heading).Scaled(new Vector3(1.6f, 1f, 0.9f)), shadowPosition));
             shadows.SetInstanceColor(live++, new Color(0.03f, 0.05f, 0.08f, 0.22f));
@@ -145,7 +159,8 @@ internal sealed partial class AirSquadronVisuals : Node3D
             }
         }
         if (drawing) streaks.SurfaceEnd();
-        aircraft.VisibleInstanceCount = shadows.VisibleInstanceCount = live;
+        foreach (var batch in aircraft.Values) batch.Mesh.VisibleInstanceCount = batch.Visible;
+        shadows.VisibleInstanceCount = live;
 
         void Line(Vector3 start, Vector3 end, Color color, float startAlpha, float endAlpha)
         {

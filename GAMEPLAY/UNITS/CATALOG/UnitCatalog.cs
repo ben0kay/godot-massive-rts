@@ -161,6 +161,8 @@ public partial class UnitCatalog : Resource
 {
     [Export] public Godot.Collections.Array<UnitDefinition> Definitions { get; set; } = new();
 
+    [Export] public Godot.Collections.Array<UnitDefinition> Aircraft { get; set; } = new();
+
     public RuntimeUnitCatalog Compile(float movementScale) => new(Definitions, movementScale);
 }
 

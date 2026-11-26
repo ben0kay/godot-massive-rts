@@ -59,6 +59,11 @@ public partial class UnitDefinition : Resource
     [ExportGroup("Weapon mounts")]
     [Export] public Godot.Collections.Array<RocketMount> RocketMounts { get; set; } = new();
 
+    [ExportGroup("Aircraft")]
+    [Export] public Texture2D AircraftIcon { get; set; }
+    [Export] public Mesh AircraftMesh { get; set; }
+    [Export] public bool CanTargetAircraft { get; set; }
+
     [ExportGroup("Movement")]
     [Export] public float Speed { get; set; } = 5f;
     [Export(PropertyHint.Range, "0,5,0.05,suffix:s")] public float AccelerationSecondsOverride { get; set; }

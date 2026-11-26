@@ -164,7 +164,8 @@ public partial class BenchmarkArena : Node3D
         panel = new BenchmarkPanel
         {
             Catalog = catalog, Buildings = buildings, AutoBattlerPlaytest = autoBattlerPlaytestMap != null,
-            CircleMeshToggle = CreateCircleMeshToggle()
+            CircleMeshToggle = CreateCircleMeshToggle(),
+            DeploymentAircraft = campaignRoster == null ? aircraftRoster : null
         };
         AddChild(panel);
         if (campaignRoster != null)
@@ -210,7 +211,7 @@ public partial class BenchmarkArena : Node3D
             if (campaignHud != null) campaignHud.Report(message);
             else panel.Status.Text = message + "\n" + DeploymentCount();
         };
-        panel.PaintToolSelected += painter.SetPaintTool;
+        panel.PaintToolSelected += tool => { if (tool != 0) SelectTestAircraft(null); painter.SetPaintTool(tool); };
         panel.DefenseSelected += type => painter.DefenseType = type;
         battleWalls = new MeshInstance3D { CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(battleWalls);
@@ -225,7 +226,7 @@ public partial class BenchmarkArena : Node3D
         panel.SavePresetRequested += SaveBattlePreset;
         panel.ClearRequested += () =>
         {
-            if (painter.Visible) painter.Clear();
+            if (painter.Visible) { painter.Clear(); ClearTestAircraft(); }
             else if (autoBattlerPlaytestMap != null) EnterDeployment();
             else Clear();
         };
@@ -233,7 +234,8 @@ public partial class BenchmarkArena : Node3D
         panel.BattleRequested += StartPaintedBattle;
         panel.SaveRequested += () => panel.Status.Text = painter.Save();
         panel.LoadRequested += () => panel.Status.Text = painter.Load() + "\n" + DeploymentCount();
-        panel.BrushSelected += type => painter.BrushType = type;
+        panel.AircraftSelected += SelectTestAircraft;
+        panel.BrushSelected += type => { SelectTestAircraft(null); painter.BrushType = type; };
         panel.SoldierPaintType.ItemSelected += painter.SetSoldierPaintType;
         panel.SoldierBrushSizeChoice.ItemSelected += index =>
             painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId((int)index);
@@ -360,7 +362,7 @@ public partial class BenchmarkArena : Node3D
     private UnitState CreateUnitState(uint? seed = null)
     {
         int capacity = targetCount + ReserveCapacity;
-        if (capacity == 0 && BlueVWings + RedVWings > 0) capacity = 1;
+        if (capacity == 0 && BlueAircraftCount + RedAircraftCount > 0) capacity = 1;
         battleSeed = seed ?? (uint)panel.Seed.Value;
         var feedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged
             ? new HitFeedbackSystem(capacity, Config.HitFeedback ?? new HitFeedbackSettings())
@@ -412,6 +414,7 @@ public partial class BenchmarkArena : Node3D
         {
             autoBattlerForest?.ResetVisibility();
             autoBattlerPlaytestPreview.Show();
+            ShowAircraftPreviews(true);
             autoBattlerPlaytestMap.FrameOpening(camera);
         }
         else camera.Frame(100);
@@ -522,8 +525,8 @@ public partial class BenchmarkArena : Node3D
         ReserveWave plannedBlue = null, plannedRed = null;
         if (autoBattlerPlaytestMap != null)
         {
-            if ((placements.Count == 0 && blueReserve.Count == 0 && BlueVWings == 0) ||
-                (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedVWings == 0))
+            if ((placements.Count == 0 && blueReserve.Count == 0 && BlueAircraftCount == 0) ||
+                (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedAircraftCount == 0))
             {
                 panel.Status.Text = placements.Count == 0 ? "Paint Blue troops in the deployment area." :
                     "Add Red troops or defenses in the Level Editor before testing.";
@@ -558,9 +561,9 @@ public partial class BenchmarkArena : Node3D
         ranged |= plannedBlue?.Soldiers.Any(soldier => catalog[soldier.Type].Ranged || soldier.Type == RuntimeUnitCatalog.Dreadnaught) == true ||
             plannedRed?.Soldiers.Any(soldier => catalog[soldier.Type].Ranged || soldier.Type == RuntimeUnitCatalog.Dreadnaught) == true;
         foreach (var defense in defenses) factionMask |= 1 << defense.Faction;
-        if (BlueVWings > 0) factionMask |= 1 << Factions.Blue;
-        if (RedVWings > 0) factionMask |= 1 << Factions.Red;
-        if ((placements.Count == 0 && plannedBlue == null && plannedRed == null && BlueVWings + RedVWings == 0) ||
+        if (BlueAircraftCount > 0) factionMask |= 1 << Factions.Blue;
+        if (RedAircraftCount > 0) factionMask |= 1 << Factions.Red;
+        if ((placements.Count == 0 && plannedBlue == null && plannedRed == null && BlueAircraftCount + RedAircraftCount == 0) ||
             System.Numerics.BitOperations.PopCount((uint)factionMask) < 2)
         {
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
@@ -644,6 +647,7 @@ public partial class BenchmarkArena : Node3D
         else
         {
             autoBattlerPlaytestPreview.Hide();
+            ShowAircraftPreviews(false);
             terrain = autoBattlerPlaytestMap.GetNodeOrNull<CommandTerrain>("Terrain")?.Field;
         }
         if (defenses.Count > 0)

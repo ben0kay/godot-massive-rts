@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+[ext_resource type="Texture2D" path="res://GAMEPLAY/COMBAT/AIR/VWingIcon.svg" id="2"]
+
+[resource]
+script = ExtResource("1")
+Id = "v_wing"
+DisplayName = "V-wing"
+Role = "Air interceptor"
+AircraftIcon = ExtResource("2")
+CanTargetAircraft = true
+Health = 75.0
+Speed = 19.0
+TurnDegreesPerSecond = 88.8
+Style = 1
+Damage = 9.0
+Reach = 27.0
+Interval = 0.085

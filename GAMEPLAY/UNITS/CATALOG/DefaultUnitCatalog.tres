@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitCatalog" load_steps=20 format=3]
+[gd_resource type="Resource" script_class="UnitCatalog" load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/CATALOG/UnitCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="2"]
@@ -32,6 +32,9 @@
 
 [ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/SiegeRam.tres" id="19"]
 
+[ext_resource type="Resource" path="res://GAMEPLAY/UNITS/DEFINITIONS/VWing.tres" id="20"]
+
 [resource]
 script = ExtResource("1")
+Aircraft = Array[ExtResource("2")]([ExtResource("20")])
 Definitions = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19")])

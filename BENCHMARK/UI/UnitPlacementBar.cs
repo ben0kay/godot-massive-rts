@@ -11,6 +11,7 @@ internal partial class UnitPlacementBar : PanelContainer
     internal event Action<byte> UnitSelected, FactionSelected;
     private readonly List<UnitSilhouette> silhouettes = new();
     internal event Action<int> DefenseSelected;
+    internal event Action<UnitDefinition> AircraftSelected;
     private Label heading;
     private Control unitCards, defenseCards;
 
@@ -21,7 +22,7 @@ internal partial class UnitPlacementBar : PanelContainer
         defenseCards.Visible = enabled;
     }
 
-    internal void Build(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, bool compact, Control brushControls)
+    internal void Build(RuntimeUnitCatalog catalog, RuntimeBuildingCatalog buildings, bool compact, Control brushControls, UnitDefinition[] aircraft = null)
     {
         var shell = BuildShell(compact ? 148 : 154, compact);
         var columns = new HBoxContainer();
@@ -64,9 +65,25 @@ internal partial class UnitPlacementBar : PanelContainer
             }
         }
         body.AddChild(header);
-        unitCards = BuildCards(body, catalog.Count, (catalog.Count + 1) / 2, i => catalog[i].Name,
-            i => Stats(catalog[i].Health, catalog[i].Damage),
-            (icon, i) => icon.SetOutline(catalog[i].Outline), i => UnitSelected?.Invoke((byte)i));
+        aircraft ??= Array.Empty<UnitDefinition>();
+        int count = catalog.Count + aircraft.Length;
+        unitCards = BuildCards(body, count, (count + 1) / 2,
+            i => i < catalog.Count ? catalog[i].Name : aircraft[i - catalog.Count].DisplayName,
+            i => i < catalog.Count ? Stats(catalog[i].Health, catalog[i].Damage) :
+                Stats(aircraft[i - catalog.Count].Health, aircraft[i - catalog.Count].Damage),
+            (icon, i) =>
+            {
+                if (i < catalog.Count) icon.SetOutline(catalog[i].Outline);
+                else
+                {
+                    var unit = aircraft[i - catalog.Count];
+                    icon.SetAircraft(unit);
+                }
+            }, i =>
+            {
+                if (i < catalog.Count) UnitSelected?.Invoke((byte)i);
+                else AircraftSelected?.Invoke(aircraft[i - catalog.Count]);
+            });
         int defenseCount = buildings?.Count ?? 0;
         defenseCards = BuildCards(body, defenseCount, defenseCount, i => buildings[i].Name,
             i => Stats(buildings[i].Health, buildings[i].AttacksSoldiers ? buildings[i].Damage : 0f),
@@ -221,6 +238,12 @@ internal partial class UnitPlacementBar : PanelContainer
             textureUsesFactionColor = useFactionColor;
             CustomMinimumSize = new Vector2(28, 0);
             QueueRedraw();
+        }
+
+        internal void SetAircraft(UnitDefinition unit)
+        {
+            if (unit.AircraftIcon != null) SetTexture(unit.AircraftIcon, useFactionColor: true);
+            else SetOutline(UnitOutline.FromDefinition(unit, UnitOutline.EffectiveSize(unit)));
         }
 
         internal void SetWall()

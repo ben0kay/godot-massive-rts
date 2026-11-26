@@ -1,4 +1,6 @@
 // Starts authored Clash flights on the shared battle clock, outside the ground roster.
+using System;
+using System.Collections.Generic;
 using Godot;
 
 namespace MassiveRts;
@@ -7,16 +9,126 @@ public partial class BenchmarkArena
 {
     private AirSquadron airSquadron;
 
-    private int BlueVWings => !IsOffense && autoBattlerPlaytestMap?.AutoBattlerRules is { } rules
-        ? Mathf.Clamp(rules.BlueVWingStarts.Length > 0 ? rules.BlueVWingStarts.Length : rules.BlueVWings, 0, AirSquadron.MaxPerFaction) : 0;
+    private UnitDefinition[] aircraftRoster = Array.Empty<UnitDefinition>();
+    private AirSquadron.Flight[] aircraftFlights = Array.Empty<AirSquadron.Flight>();
+    private int BlueAircraftCount, RedAircraftCount;
+    private readonly Dictionary<string, Vector2[]> testBlueAircraft = new();
+    private readonly Dictionary<string, MultiMeshInstance3D> testAircraftPreviews = new();
+    private UnitDefinition testAircraftBrush;
+    private MouseButton testAircraftButton;
+    private Vector2? previousAircraftCell;
 
-    private int RedVWings => !IsOffense && autoBattlerPlaytestMap?.AutoBattlerRules is { } rules
-        ? Mathf.Clamp(rules.RedVWingStarts.Length > 0 ? rules.RedVWingStarts.Length : rules.RedVWings, 0, AirSquadron.MaxPerFaction) : 0;
+    private Vector2[] Starts(UnitDefinition unit, byte faction) =>
+        faction == Factions.Blue && testBlueAircraft.TryGetValue(unit.Id, out var points)
+            ? points : autoBattlerPlaytestMap.AutoBattlerRules.ReadAircraftStarts(faction, unit.Id);
+
+    private void RefreshAircraftFlights()
+    {
+        var rules = autoBattlerPlaytestMap.AutoBattlerRules;
+        var flights = new List<AirSquadron.Flight>();
+        BlueAircraftCount = RedAircraftCount = 0;
+        foreach (byte faction in Factions.DisplayOrder)
+        {
+            if (!AutoBattlerRules.AllowsAircraftFaction(faction)) continue;
+            int remaining = AirSquadron.MaxPerFaction;
+            foreach (var unit in aircraftRoster)
+            {
+                var positions = Starts(unit, faction);
+                int requestedCount = positions.Length;
+                if (requestedCount == 0 && !(faction == Factions.Blue && testBlueAircraft.ContainsKey(unit.Id)))
+                    requestedCount = rules.ReadLegacyFlightCount(faction, unit.Id);
+                int count = Mathf.Clamp(requestedCount, 0, remaining);
+                if (count == 0) continue;
+                flights.Add(new AirSquadron.Flight(unit, faction, count, positions));
+                remaining -= count;
+            }
+            if (faction == Factions.Blue) BlueAircraftCount = AirSquadron.MaxPerFaction - remaining;
+            else RedAircraftCount = AirSquadron.MaxPerFaction - remaining;
+        }
+        aircraftFlights = flights.ToArray();
+    }
+
+    private void SelectTestAircraft(UnitDefinition unit)
+    {
+        if (testAircraftBrush == null && unit == null) return;
+        painter.CancelDrag();
+        previousAircraftCell = null;
+        testAircraftButton = MouseButton.None;
+        testAircraftBrush = unit;
+        painter.TrapInput = unit != null ? HandleTestAircraftInput : null;
+    }
+
+    private bool HandleTestAircraftInput(InputEvent input)
+    {
+        Vector2 screen;
+        if (input is InputEventMouseButton mouse && mouse.ButtonIndex is MouseButton.Left or MouseButton.Right)
+        {
+            if (!mouse.Pressed)
+            {
+                testAircraftButton = MouseButton.None;
+                previousAircraftCell = null;
+                return true;
+            }
+            if (camera.FreeRoam && mouse.ButtonIndex == MouseButton.Right) return false;
+            testAircraftButton = mouse.ButtonIndex;
+            previousAircraftCell = null;
+            screen = mouse.Position;
+        }
+        else if (input is InputEventMouseMotion motion && testAircraftButton != MouseButton.None &&
+                 Input.IsMouseButtonPressed(testAircraftButton))
+            screen = motion.Position;
+        else return false;
+
+        if (!painter.TryGround(screen, out var ground))
+        {
+            previousAircraftCell = null;
+            return true;
+        }
+        Vector2 cell = AircraftPaint.Cell(ground);
+        var unit = testAircraftBrush;
+        Vector2[] existing = Starts(unit, Factions.Blue);
+        int otherCount = 0;
+        foreach (var flight in aircraftFlights)
+            if (flight.Faction == Factions.Blue && flight.Unit != unit) otherCount += flight.Count;
+        var updated = AircraftPaint.Edit(existing, previousAircraftCell ?? cell, cell,
+            autoBattlerPlaytestMap.MapSize * 0.5f, testAircraftButton == MouseButton.Right,
+            point => autoBattlerPlaytestMap.AutoBattlerRules.AllowsSide(new Vector3(point.X, 0f, point.Y), 1.7f, blue: true),
+            AirSquadron.MaxPerFaction - otherCount);
+        previousAircraftCell = cell;
+        if (updated == existing) return true;
+        testBlueAircraft[unit.Id] = updated;
+        RefreshAircraftFlights();
+        ShowAircraftPreviews(true);
+        UpdateDeploymentStatus();
+        return true;
+    }
+
+    private void ClearTestAircraft()
+    {
+        if (testBlueAircraft.Count == 0) return;
+        testBlueAircraft.Clear();
+        RefreshAircraftFlights();
+        ShowAircraftPreviews(true);
+        UpdateDeploymentStatus();
+    }
+
+    private void ShowAircraftPreviews(bool show)
+    {
+        foreach (var unit in aircraftRoster)
+        {
+            testAircraftPreviews.TryGetValue(unit.Id, out var preview);
+            if (show)
+                preview = AircraftPaint.RefreshPreview(autoBattlerPlaytestMap, preview, unit,
+                    Starts(unit, Factions.Blue), Starts(unit, Factions.Red), DisruptorHeight);
+            if (preview == null) continue;
+            preview.Visible = show;
+            testAircraftPreviews[unit.Id] = preview;
+        }
+    }
 
     private void StartAirSquadron()
     {
-        int blue = BlueVWings, red = RedVWings;
-        if (blue + red == 0) return;
+        if (aircraftFlights.Length == 0) return;
 
         // Bound vertical clearance once for authored cover and defense footprints.
         float clearance = 0f;
@@ -37,7 +149,6 @@ public partial class BenchmarkArena
         var scene = GD.Load<PackedScene>("res://GAMEPLAY/COMBAT/AIR/AirSquadron.tscn");
         airSquadron = scene.Instantiate<AirSquadron>();
         AddChild(airSquadron);
-        airSquadron.Initialize(blue, red, autoBattlerPlaytestMap.MapSize * 0.5f, terrain, clearance, catalog.DamageRules,
-            autoBattlerPlaytestMap.AutoBattlerRules.BlueVWingStarts, autoBattlerPlaytestMap.AutoBattlerRules.RedVWingStarts);
+        airSquadron.Initialize(aircraftFlights, autoBattlerPlaytestMap.MapSize * 0.5f, terrain, clearance, catalog.DamageRules);
     }
 }

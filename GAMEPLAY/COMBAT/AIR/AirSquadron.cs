@@ -7,17 +7,18 @@ public partial class AirSquadron : Node3D
 {
     internal const int MaxPerFaction = 64;
     private const float CruiseAltitude = 12f;
-    private const float Speed = 19f;
-    private const float TurnRate = 1.55f;
     private const float AcquireRange = 96f;
-    private const float FireRange = 27f;
     private const float FiringAlignment = 0.978f;
-    private const float ShotInterval = 0.085f;
     private const int BurstShots = 4;
+
+    internal readonly record struct Flight(UnitDefinition Unit, byte Faction, int Count, Vector2[] Starts);
 
     internal struct Fighter
     {
         internal byte Faction;
+        internal UnitDefinition Unit;
+        internal float Speed, TurnRate, FireRangeSquared, ShotInterval, Damage, DamageTaken;
+        internal int DamageType, Armour;
         internal int Target, Shots;
         internal Vector3 Position, Forward, TracerEnd;
         internal float Health, Heading, Bank, AltitudeOffset, TurnAway, Reacquire;
@@ -29,31 +30,39 @@ public partial class AirSquadron : Node3D
     private AirSquadronVisuals visuals;
     private TerrainHeightField terrain;
     private float boundary, clearance;
-    private float burstDamage, elapsed;
+    private float elapsed;
+    private DamageRules damageRules;
     private int blueAlive, redAlive;
     internal bool DogfightActive => blueAlive > 0 && redAlive > 0;
     internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : redAlive;
 
-    internal void Initialize(int blue, int red, float mapHalfWidth, TerrainHeightField heightField,
-        float minimumAltitude, DamageRules damage, Vector2[] blueStarts, Vector2[] redStarts)
+    internal void Initialize(Flight[] flights, float mapHalfWidth, TerrainHeightField heightField,
+        float minimumAltitude, DamageRules damage)
     {
-        blueAlive = blue;
-        redAlive = red;
         terrain = heightField;
         boundary = mapHalfWidth - 2f;
         clearance = minimumAltitude;
-        burstDamage = damage.Resolve(9f, damage.DamageType("Standard"), damage.ArmourClass("Light"), 1f);
-        fighters = new Fighter[blue + red];
+        damageRules = damage;
+        foreach (var flight in flights)
+            if (flight.Faction == Factions.Blue) blueAlive += flight.Count;
+            else redAlive += flight.Count;
+        fighters = new Fighter[blueAlive + redAlive];
         grid = new AirSpatialGrid(fighters.Length);
-        SpawnFlight(0, blue, Factions.Blue, 1f, blueStarts);
-        SpawnFlight(blue, red, Factions.Red, -1f, redStarts);
-        visuals = new AirSquadronVisuals(fighters.Length);
+        int start = 0;
+        foreach (var flight in flights)
+        {
+            SpawnFlight(start, flight);
+            start += flight.Count;
+        }
+        visuals = new AirSquadronVisuals(fighters);
         AddChild(visuals);
         visuals.Sync(fighters, terrain);
     }
 
-    private void SpawnFlight(int start, int count, byte faction, float direction, Vector2[] starts)
+    private void SpawnFlight(int start, Flight flight)
     {
+        var (unit, faction, count, starts) = flight;
+        float direction = faction == Factions.Blue ? 1f : -1f;
         int columns = Mathf.Min(8, count);
         float spacing = Mathf.Min(3.6f, boundary / 10f);
         for (int i = 0; i < count; i++)
@@ -72,7 +81,11 @@ public partial class AirSquadron : Node3D
                 heading = Mathf.Atan2(-x, -z);
             fighters[id] = new Fighter
             {
-                Faction = faction, Health = 75f, Target = -1,
+                Unit = unit, Faction = faction, Health = Mathf.Max(1f, unit.Health), Target = -1,
+                Speed = Mathf.Max(2f, unit.Speed), TurnRate = Mathf.DegToRad(Mathf.Max(1f, unit.TurnDegreesPerSecond)),
+                FireRangeSquared = unit.Reach * unit.Reach, ShotInterval = Mathf.Max(0.001f, unit.Interval),
+                Damage = unit.Damage, DamageType = damageRules.DamageType(unit.DamageType),
+                Armour = damageRules.ArmourClass(unit.ArmourClass), DamageTaken = 1f - Mathf.Clamp(unit.Armour, 0f, 1f),
                 Position = new Vector3(x, CruiseHeight(x, z) + offset, z),
                 Heading = heading, Forward = new Vector3(Mathf.Sin(heading), 0f, Mathf.Cos(heading)),
                 AltitudeOffset = offset, Reacquire = (id % 12) * 0.015f
@@ -95,7 +108,7 @@ public partial class AirSquadron : Node3D
             int target = fighter.Target;
             bool valid = target >= 0 && fighters[target].Health > 0f &&
                 fighter.Position.DistanceSquaredTo(fighters[target].Position) <= AcquireRange * AcquireRange * 1.5f;
-            if (!valid && fighter.Reacquire <= 0f && DogfightActive)
+            if (!valid && fighter.Reacquire <= 0f && DogfightActive && fighter.Unit.CanTargetAircraft)
             {
                 target = fighter.Target = grid.FindEnemy(fighters, id, AcquireRange);
                 fighter.Reacquire = 0.21f + (id % 7) * 0.013f;
@@ -118,14 +131,14 @@ public partial class AirSquadron : Node3D
                 wanted += id % 2 == 0 ? 0.65f : -0.65f;
 
             float difference = Mathf.Wrap(wanted - fighter.Heading, -Mathf.Pi, Mathf.Pi);
-            float turn = Mathf.Clamp(difference, -TurnRate * delta, TurnRate * delta);
+            float turn = Mathf.Clamp(difference, -fighter.TurnRate * delta, fighter.TurnRate * delta);
             fighter.Heading = Mathf.Wrap(fighter.Heading + turn, -Mathf.Pi, Mathf.Pi);
-            fighter.Bank = Mathf.MoveToward(fighter.Bank, -turn / (TurnRate * delta) * 0.52f, delta * 2.4f);
+            fighter.Bank = Mathf.MoveToward(fighter.Bank, -turn / (fighter.TurnRate * delta) * 0.52f, delta * 2.4f);
             Vector3 forward = new Vector3(Mathf.Sin(fighter.Heading), 0f, Mathf.Cos(fighter.Heading));
 
             float dip = fighter.TurnAway > 0f ? 0.8f : valid ? -0.55f : 0f;
             float wave = Mathf.Sin(elapsed * 1.2f + id * 1.9f) * 0.4f;
-            Vector3 next = fighter.Position + forward * ((Speed + (id % 5 - 2) * 0.45f) * delta);
+            Vector3 next = fighter.Position + forward * ((fighter.Speed + (id % 5 - 2) * 0.45f) * delta);
             next.X = Mathf.Clamp(next.X, -boundary, boundary);
             next.Z = Mathf.Clamp(next.Z, -boundary, boundary);
             float height = CruiseHeight(next.X, next.Z);
@@ -151,7 +164,7 @@ public partial class AirSquadron : Node3D
                 fighter.Shots = 0;
                 continue;
             }
-            if (distance > FireRange * FireRange || fighter.Forward.Dot(toEnemy.Normalized()) < FiringAlignment)
+            if (distance > fighter.FireRangeSquared || fighter.Forward.Dot(toEnemy.Normalized()) < FiringAlignment)
             {
                 fighter.Shots = 0;
                 continue;
@@ -160,7 +173,7 @@ public partial class AirSquadron : Node3D
 
             fighter.TracerEnd = enemy.Position;
             fighter.TracerLife = 0.075f;
-            enemy.Health -= burstDamage;
+            enemy.Health -= damageRules.Resolve(fighter.Damage, fighter.DamageType, enemy.Armour, enemy.DamageTaken);
             if (enemy.Health <= 0f)
             {
                 if (enemy.Faction == Factions.Blue) blueAlive--;
@@ -171,7 +184,7 @@ public partial class AirSquadron : Node3D
                 enemy.Evade = 0.22f;
                 enemy.EvadeCooldown = 2.8f;
             }
-            fighter.ShotDelay = ShotInterval;
+            fighter.ShotDelay = fighter.ShotInterval;
             if (++fighter.Shots >= BurstShots || enemy.Health <= 0f)
             {
                 fighter.Shots = 0;

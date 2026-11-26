@@ -167,10 +167,10 @@ public partial class BenchmarkArena
     private string CampaignStartError()
     {
         if (campaignMapError != null) return campaignMapError;
-        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedVWings == 0) return "This level has no authored Red forces.";
+        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedAircraftCount == 0) return "This level has no authored Red forces.";
         if (campaignZoneCells.Count == 0 && autoBattlerPlaytestMap.AutoBattlerRules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled)
             return "This map has no authored Blue deployment area.";
-        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0 && BlueVWings == 0) return "Deploy or reserve at least one owned soldier, or author a Blue V-wing flight.";
+        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0 && BlueAircraftCount == 0) return "Deploy or reserve at least one owned soldier, or author a Blue aircraft flight.";
         if ((long)painter.Layout.Placements.Count + autoBattlerRed.Length + AuthoredRedReserve + blueReserveCount > Config.MaxSoldiers)
             return "Both armies together exceed the simulation's total soldier capacity.";
         return null;
@@ -185,7 +185,7 @@ public partial class BenchmarkArena
             return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
         }, (IsOffense ? "Destroy the Red Citadel\n" : "") + $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
             (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : "") +
-            (BlueVWings + RedVWings > 0 ? $"\nV-wings: Blue {BlueVWings} · Red {RedVWings}" : ""),
+            (BlueAircraftCount + RedAircraftCount > 0 ? $"\nAircraft: Blue {BlueAircraftCount} · Red {RedAircraftCount}" : ""),
             CampaignStartError());
     }
 
@@ -229,7 +229,7 @@ public partial class BenchmarkArena
         string survivorLabel = blueWave == null ? "Blue survivors" : "Blue opening survivors";
         armyBalanceHud?.RefreshCounts();
         string airResult = airSquadron == null ? "" :
-            $"\nV-wings remaining: Blue {airSquadron.Alive(Factions.Blue)} / {BlueVWings} · Red {airSquadron.Alive(Factions.Red)} / {RedVWings}";
+            $"\nAircraft remaining: Blue {airSquadron.Alive(Factions.Blue)} / {BlueAircraftCount} · Red {airSquadron.Alive(Factions.Red)} / {RedAircraftCount}";
         campaignHud.ShowResult(result,
             $"{survivorLabel} {survivors:N0} / {campaignInitialBlue:N0}  ·  Red remaining {units.FactionAlive[Factions.Red]:N0} + {defenses} defenses{reserveResult}{airResult}");
     }

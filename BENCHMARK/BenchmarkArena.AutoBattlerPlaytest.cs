@@ -74,6 +74,11 @@ public partial class BenchmarkArena
         autoBattlerPlaytestMap = map;
         openInDeployment = true;
         map.AuthoringPreview = true;
+        if (!IsOffense)
+        {
+            aircraftRoster = GD.Load<UnitCatalog>(UnitCatalogPath).Aircraft.Where(unit => unit != null).ToArray();
+            RefreshAircraftFlights();
+        }
         AddChild(map);
     }
 

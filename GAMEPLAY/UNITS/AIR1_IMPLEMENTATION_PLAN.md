@@ -48,6 +48,18 @@ and then **Fight**, with or without ground troops. Save the map to keep the pain
 starts. Older map-authored flight counts still spawn their original automatic
 formation until the first painted start replaces that faction’s count.
 
+Aircraft use normal UnitDefinition resources listed under Aircraft in the shared
+UnitCatalog. Both placement bars build cards from those entries, using the
+active faction color, authored icon, health and damage. In Test Clash, choose
+V-wing in the Blue deployment bar and paint or erase test-only starts before
+Fight. Returning from the test discards those edits. Map starts are saved by unit
+ID and faction, with legacy V-wing starts still readable.
+
+Aircraft use an independent spatial index. The V-wing opts into air targeting
+through CanTargetAircraft. Ordinary ground weapons never query the air index.
+Future AA weapons need their own explicit air target capability and targeting
+path. Future bombers need a ground-attack flight behavior.
+
 V-wings cruise about 12 world units above open ground. A stable aircraft-specific
 offset of up to 1 unit, a gentle oscillation, and the approach and breakaway offsets
 vary their height. The terrain lookahead and a conservative height floor above

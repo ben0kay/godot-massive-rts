@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, VWing }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -36,7 +36,7 @@ public partial class LevelEditor
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
-            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry or Tool.FactionWall or Tool.VWing) continue;
+            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry or Tool.FactionWall or Tool.Aircraft) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
             if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders or Tool.Disruptor) continue;
             toolPicker.AddItem(entry switch
@@ -121,7 +121,7 @@ public partial class LevelEditor
             layout.QueueFree();
         }
         RefreshPlacementBatches();
-        RefreshVWingPreview();
+        RefreshAircraftPreview();
         layout = LevelLayoutPreview.Build(map, formationContainer: UnitContainerName, decorationsOnly: true);
         if (editingReserve) DrawReserveGrid(layout);
         else if (previewReserveEntry) DrawReserveEntry(layout);
@@ -158,14 +158,14 @@ public partial class LevelEditor
             }
         context = tool switch
         {
-            Tool.Soldiers or Tool.VWing => unitContext,
+            Tool.Soldiers or Tool.Aircraft => unitContext,
             Tool.Defense => defenseContext,
             _ => mapToolsContext
         };
         switch (tool)
         {
-            case Tool.VWing:
-                BuildVWingControls();
+            case Tool.Aircraft:
+                BuildAircraftControls();
                 break;
             case Tool.Disruptor:
                 Heading(context, "Drag to place a Disruptor Grid line. Right-drag to erase.", 15);
@@ -374,7 +374,7 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
         }
         if (previewing) return;
-        if (tool == Tool.VWing && !editingReserve && HandleVWingPaint(input))
+        if (tool == Tool.Aircraft && !editingReserve && HandleAircraftPaint(input))
         {
             GetViewport().SetInputAsHandled();
             return;
@@ -470,7 +470,7 @@ public partial class LevelEditor
     public override void _Process(double delta)
     {
         UpdateElevation(delta);
-        if (vWingStroke != null && !Input.IsMouseButtonPressed(vWingStrokeButton)) EndVWingStroke();
+        if (aircraftStroke != null && !Input.IsMouseButtonPressed(aircraftStrokeButton)) EndAircraftStroke();
         if (bridgeStart.HasValue && !Input.IsMouseButtonPressed(MouseButton.Left)) CancelBridge();
         if (wallStrokeStart.HasValue && !Input.IsMouseButtonPressed(wallStrokeButton)) CancelWallStroke();
         if (paintPreviewCooldown > 0) paintPreviewCooldown -= delta;
@@ -599,7 +599,7 @@ public partial class LevelEditor
 
     private void EndPaint()
     {
-        EndVWingStroke();
+        EndAircraftStroke();
         EndElevation();
         PublishPaintPreview();
         if (beforePaint is not { } previous) return;

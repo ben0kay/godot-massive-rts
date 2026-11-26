@@ -36,7 +36,7 @@ public partial class LevelEditor : Node
     private LevelDefinition metadata;
     private string activeId;
     private bool dirty, previewing;
-    private UnitDefinition[] units;
+    private UnitDefinition[] units, aircraft;
     private readonly Stack<(Action Undo, Action Redo)> undo = new(), redo = new();
     private readonly List<Node3D> detached = new();
 
@@ -49,8 +49,9 @@ public partial class LevelEditor : Node
             AddChild(message);
             return;
         }
-        units = ResourceLoader.Load<UnitCatalog>(BenchmarkArena.UnitCatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep).Definitions
-            .Where(unit => unit != null).ToArray();
+        var roster = ResourceLoader.Load<UnitCatalog>(BenchmarkArena.UnitCatalogPath, cacheMode: ResourceLoader.CacheMode.IgnoreDeep);
+        units = roster.Definitions.Where(unit => unit != null).ToArray();
+        aircraft = roster.Aircraft.Where(unit => unit != null).ToArray();
         defenseDefinitions = GD.Load<BuildingCatalog>("res://WORLD/BUILDINGS/CATALOG/DefaultBuildingCatalog.tres")
             .Definitions.Where(definition => definition != null).ToArray();
         BuildInterface();

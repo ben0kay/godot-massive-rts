@@ -22,6 +22,8 @@ public partial class BenchmarkPanel : CanvasLayer
 	public event Action<bool> PlacementGridChanged;
 	public event Action<long> PaintToolSelected;
 	public event Action<byte> BrushSelected;
+	internal event Action<UnitDefinition> AircraftSelected;
+	internal UnitDefinition[] DeploymentAircraft { get; set; }
 	private readonly CheckButton placementGridToggle = new()
 	{
 		Text = "Show placement grid", ButtonPressed = true
@@ -485,7 +487,8 @@ public partial class BenchmarkPanel : CanvasLayer
 		rendering.AddChild(EngineMetrics);
 		unitBar = new UnitPlacementBar { Visible = false };
 		AddChild(unitBar);
-		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest, brushControls: soldierControls);
+		unitBar.Build(Catalog, Buildings, compact: AutoBattlerPlaytest, brushControls: soldierControls, aircraft: DeploymentAircraft);
+		unitBar.AircraftSelected += unit => AircraftSelected?.Invoke(unit);
 		unitBar.UnitSelected += type => BrushSelected?.Invoke(type);
 		unitBar.FactionSelected += faction => FactionSelected?.Invoke(faction);
 		unitBar.DefenseSelected += type => DefenseSelected?.Invoke(type);
