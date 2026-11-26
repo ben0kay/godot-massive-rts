@@ -650,3 +650,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — VIS-MARKSMAN-PIKE — Added independently toggleable Long Triangle precision rifle robot and T-shaped Pikeman spear robot, 0.34s firing recoil and 0.30s melee thrust/bracing animation, with individual distance-driven staggered gaits. Shared infantry armor/animation pipeline reused; legacy meshes, original shot origin, recoil, anti-cavalry multiplier, stats and gameplay footprints retained. Source review only; owner shader/visual/FPS validation pending.
 
 - 2026-11-25 — VIS-OBLITERATOR-PRISM — Added independently toggleable Obliterator shock infantry and Prism beam walker models, 0.36s powered blade thrust and 0.42s rail recoil, actual Prism charge-driven rail convergence, shared staggered gait. Preserved original meshes, size, first-hit/lunge, beam origin, charge, flash, damage and gameplay. Siege Ram untouched. Source review only; owner shader/visual/FPS validation pending.
+
+- 2026-11-25 — Entity Editor: narrowed the unit picker and added temporary mesh previews on hover or keyboard focus. Source implemented, awaiting Godot .NET validation.

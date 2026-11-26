@@ -24,7 +24,11 @@ public partial class RuntimeEntityEditor : Control
             && field.Name != nameof(UnitDefinition.Projectile)).ToArray();
 
     private readonly List<Draft> drafts = new();
-    private OptionButton unitChoice;
+    private readonly List<Button> unitOptions = new();
+    private Button unitChoice;
+    private PopupPanel unitPopup;
+    private VBoxContainer unitList;
+    private Mesh selectedMesh;
     private VBoxContainer editScreen, fields;
     private SubViewportContainer testScreen;
     private SubViewport testViewport;
@@ -37,7 +41,7 @@ public partial class RuntimeEntityEditor : Control
     private Label status;
     private Draft current;
     private Button saveButton;
-    private float yaw = 0.6f, pitch = -0.45f, zoom = 1f, modelExtent = 1f;
+    private float yaw = 0.6f, pitch = -0.45f, zoom = 1f;
 
     public override void _Ready()
     {
@@ -72,9 +76,7 @@ public partial class RuntimeEntityEditor : Control
         editScreen = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         body.AddChild(editScreen);
         editScreen.AddChild(MenuLayout.Label("Entity Editor"));
-        unitChoice = new OptionButton();
-        editScreen.AddChild(unitChoice);
-        unitChoice.ItemSelected += index => SelectUnit((int)index);
+        BuildUnitPicker();
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         columns.AddThemeConstantOverride("separation", 16);
         editScreen.AddChild(columns);
@@ -117,8 +119,8 @@ public partial class RuntimeEntityEditor : Control
                 var draft = new Draft((UnitDefinition)source.Duplicate(), source.ResourcePath,
                     File.ReadAllBytes(ProjectSettings.GlobalizePath(source.ResourcePath)));
                 foreach (var field in EditableFields) draft.Saved.Add(field, field.GetValue(draft.Unit));
+                AddUnitOption(draft);
                 drafts.Add(draft);
-                unitChoice.AddItem(source.DisplayName);
             }
             if (drafts.Count > 0) SelectUnit(0);
             else status.Text = "The unit catalogue is empty.";
@@ -126,9 +128,75 @@ public partial class RuntimeEntityEditor : Control
         catch (Exception error)
         {
             drafts.Clear();
-            unitChoice.Clear();
+            unitChoice.Disabled = true;
             status.Text = error.Message;
         }
+    }
+
+    private void BuildUnitPicker()
+    {
+        unitChoice = new Button
+        {
+            Text = "Choose unit ▾", Alignment = HorizontalAlignment.Left, ClipText = true,
+            CustomMinimumSize = new Vector2(240f, 0f), SizeFlagsHorizontal = SizeFlags.ShrinkBegin, Disabled = true
+        };
+        editScreen.AddChild(unitChoice);
+        unitPopup = new PopupPanel();
+        unitChoice.AddChild(unitPopup);
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        unitPopup.AddChild(scroll);
+        unitList = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        scroll.AddChild(unitList);
+        unitChoice.Pressed += () =>
+        {
+            var position = (Vector2I)(unitChoice.GetScreenPosition() + new Vector2(0f, unitChoice.Size.Y));
+            int height = Math.Min(400, Mathf.CeilToInt(unitList.GetCombinedMinimumSize().Y) + 12);
+            unitPopup.Popup(new Rect2I(position, new Vector2I((int)unitChoice.Size.X, height)));
+            unitOptions[drafts.IndexOf(current)].GrabFocus();
+        };
+        unitPopup.MouseExited += RestoreSelectedMesh;
+        unitPopup.PopupHide += RestoreSelectedMesh;
+    }
+
+    private void AddUnitOption(Draft draft)
+    {
+        int index = drafts.Count;
+        var option = new Button { Text = draft.Unit.DisplayName, Alignment = HorizontalAlignment.Left, ClipText = true };
+        unitList.AddChild(option);
+        unitOptions.Add(option);
+        option.MouseEntered += () => PreviewUnit(index);
+        option.FocusEntered += () => PreviewUnit(index);
+        option.Pressed += () =>
+        {
+            unitPopup.Hide();
+            SelectUnit(index);
+        };
+    }
+
+    private void PreviewUnit(int index)
+    {
+        var draft = drafts[index];
+        if (draft == current)
+        {
+            RestoreSelectedMesh();
+            return;
+        }
+
+        model.Mesh = FacetedSoldierMeshes.CreatePlacementPreview(draft.Unit, ArmyRenderer.FactionColor(Factions.Blue));
+        detectionRing.Hide();
+        attackRing.Hide();
+        detectionLabel.Hide();
+        FramePreview();
+    }
+
+    private void RestoreSelectedMesh()
+    {
+        if (selectedMesh == null || model.Mesh == selectedMesh) return;
+        model.Mesh = selectedMesh;
+        detectionRing.Visible = detectionRadius > 0f;
+        attackRing.Visible = attackRadius > 0f;
+        detectionLabel.Show();
+        FramePreview();
     }
 
     private static (SubViewportContainer Container, SubViewport World) CreateViewport()
@@ -145,6 +213,8 @@ public partial class RuntimeEntityEditor : Control
     {
         if (index < 0 || index >= drafts.Count) return;
         current = drafts[index];
+        unitChoice.Text = current.Unit.DisplayName + " ▾";
+        unitChoice.Disabled = false;
         foreach (var child in fields.GetChildren())
         {
             fields.RemoveChild(child);
@@ -247,8 +317,8 @@ public partial class RuntimeEntityEditor : Control
 
     private void RefreshPreview()
     {
-        model.Mesh = FacetedSoldierMeshes.CreatePlacementPreview(current.Unit, ArmyRenderer.FactionColor(Factions.Blue));
-        modelExtent = Mathf.Max(0.1f, model.Mesh.GetAabb().Size.Length());
+        selectedMesh = FacetedSoldierMeshes.CreatePlacementPreview(current.Unit, ArmyRenderer.FactionColor(Factions.Blue));
+        model.Mesh = selectedMesh;
         RefreshDetection();
     }
 
@@ -325,7 +395,9 @@ public partial class RuntimeEntityEditor : Control
 
     private void FramePreview()
     {
-        float extent = Mathf.Max(modelExtent, Mathf.Max(detectionRadius, attackRadius) * 1.6f);
+        float extent = Mathf.Max(0.1f, model.Mesh.GetAabb().Size.Length());
+        if (model.Mesh == selectedMesh)
+            extent = Mathf.Max(extent, Mathf.Max(detectionRadius, attackRadius) * 1.6f);
         previewCamera.Size = extent * 1.4f * zoom;
         previewCamera.Position = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), -Mathf.Sin(pitch),
             Mathf.Cos(yaw) * Mathf.Cos(pitch)) * (extent * 3f);
@@ -440,8 +512,12 @@ public partial class RuntimeEntityEditor : Control
             foreach (var field in EditableFields) updated.Saved[field] = field.GetValue(draft.Unit);
             int index = drafts.IndexOf(draft);
             drafts[index] = updated;
-            unitChoice.SetItemText(index, draft.Unit.DisplayName);
-            if (current == draft) current = updated;
+            unitOptions[index].Text = draft.Unit.DisplayName;
+            if (current == draft)
+            {
+                current = updated;
+                unitChoice.Text = draft.Unit.DisplayName + " ▾";
+            }
             UpdateStatus();
             status.Text = $"Saved {draft.Path}";
         }
