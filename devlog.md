@@ -710,3 +710,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Shortened normal Heavy Bomber exhaust to a compact, translucent haze near the engine flames. Crash smoke remains separate.
 
 - 2026-11-26 — Added click-to-inspect towers in tactical editor tests. Selection shows a footprint highlight, health bar, kills, and a lightly filled range circle. Kill credit follows tower beams and pooled projectiles, including splash.
+
+- 2026-11-26 — Increased Twin Minigun Tower maximum range from 26 to 39 (1.5×) and Railgun Tower maximum range from 36 to 50.4 (1.4×). Minimum ranges and all other authored stats unchanged. Configuration-only source review; gameplay validation pending.

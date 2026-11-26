@@ -10,7 +10,7 @@ The default beam lasts **3 seconds**, deals **50 damage per second** to each hos
 
 The Railgun uses a tapered octagonal gunmetal pedestal, narrow trunnion cradle, aft capacitor bank and one long directed-energy accelerator barrel. Four faceted emissive induction coils surround the central spine, leading to a recessed circular focusing aperture. Faction armor and restrained lighting distinguish the beam turret from the Broadside's bulky twin artillery launchers. The meshes live in `RENDERING/RailgunTowerMeshes.cs` and reuse the Broadside mask shader and shared `TowerArmorGeometry` helpers. The existing yaw, pitch, recoil, 3.8-unit barrel length and beam/muzzle alignment are preserved. Visual validation pending.
 
-Use **Entity Editor → Defenses** to tune minimum and maximum targeting range, damage per second, turn speed and beam duration. The recovery rate is stored as `ShotsPerSecond`, and its inverse is the delay after the beam ends.
+The default targeting range is **6–50.4 world units**. Use **Entity Editor → Defenses** to tune minimum and maximum targeting range, damage per second, turn speed and beam duration. The recovery rate is stored as `ShotsPerSecond`, and its inverse is the delay after the beam ends.
 
 ## FAB1 command structures
 
@@ -48,7 +48,7 @@ The non-firing, destructible `prefab_shelter` retains its 500 HP, Fortified armo
 
 ## Twin Minigun Tower
 
-`DEFINITIONS/TwinMinigunTower.tres` adds a compact anti-infantry defense with 2×2 cells, 1,000 HP, 3–26 range, 4 damage per round, 12 total rounds/s alternating between two short rotary-style barrels (6 per side), 180°/s turn rate and 650 Carbon cost. These are provisional balance defaults. Uses the existing MinigunRound projectile, no splash or arc, shared acquisition and pooled projectile hit logic. Direct bullets ignore only their firing footprint and stop on other cover or terrain. Three lazy MultiMesh batches reuse the two-tone armor shader; paired barrels pitch together and small flashes reuse the existing pool. No spinning animation or per-tower processing nodes. Registered in the default catalogue, Benchmark/Level Editor previews and Fortress Defense build menu. Owner Godot validation pending.
+`DEFINITIONS/TwinMinigunTower.tres` adds a compact anti-infantry defense with 2×2 cells, 1,000 HP, 3–39 range, 4 damage per round, 12 total rounds/s alternating between two short rotary-style barrels (6 per side), 180°/s turn rate and 650 Carbon cost. These are provisional balance defaults. Uses the existing MinigunRound projectile, no splash or arc, shared acquisition and pooled projectile hit logic. Direct bullets ignore only their firing footprint and stop on other cover or terrain. Three lazy MultiMesh batches reuse the two-tone armor shader; paired barrels pitch together and small flashes reuse the existing pool. No spinning animation or per-tower processing nodes. Registered in the default catalogue, Benchmark/Level Editor previews and Fortress Defense build menu. Owner Godot validation pending.
 
 ### Defense firing feedback
 
