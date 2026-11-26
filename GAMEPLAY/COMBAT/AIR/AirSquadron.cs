@@ -31,6 +31,8 @@ public partial class AirSquadron : Node3D
     private Fighter[] fighters;
     private AirSpatialGrid grid;
     private AirSquadronVisuals visuals;
+    private InterceptorLauncher interceptors;
+    internal bool HasInterceptorEffects => interceptors?.HasEffects == true;
     private TerrainHeightField terrain;
     private float boundary, clearance;
     private float elapsed;
@@ -101,6 +103,11 @@ public partial class AirSquadron : Node3D
     {
         elapsed += delta;
         grid.Rebuild(fighters);
+        if (HasInterceptorEffects || (ground?.InterceptorIds != null && blueAlive + redAlive > 0))
+        {
+            interceptors ??= new InterceptorLauncher(this);
+            interceptors.Step(delta, ground, fighters, grid, damageRules, terrain);
+        }
         for (int id = 0; id < fighters.Length; id++)
         {
             ref Fighter fighter = ref fighters[id];
@@ -185,13 +192,8 @@ public partial class AirSquadron : Node3D
 
             fighter.TracerEnd = enemy.Position;
             fighter.TracerLife = 0.075f;
-            enemy.Health -= damageRules.Resolve(fighter.Damage, fighter.DamageType, enemy.Armour, enemy.DamageTaken);
-            if (enemy.Health <= 0f)
-            {
-                if (enemy.Faction == Factions.Blue) blueAlive--;
-                else redAlive--;
-            }
-            else if (enemy.EvadeCooldown <= 0f)
+            ApplyDamage(target, fighter.Damage, fighter.DamageType);
+            if (enemy.Health > 0f && enemy.EvadeCooldown <= 0f)
             {
                 enemy.Evade = 0.22f;
                 enemy.EvadeCooldown = 2.8f;
@@ -259,5 +261,19 @@ public partial class AirSquadron : Node3D
 
     private float CruiseHeight(float x, float z) => Mathf.Max(clearance, (terrain?.At(x, z) ?? 0f) + CruiseAltitude);
 
-    internal void SyncVisuals() => visuals.Sync(fighters, terrain);
+    internal void ApplyDamage(int target, float damage, int damageType)
+    {
+        ref var enemy = ref fighters[target];
+        if (enemy.Health <= 0f) return;
+        enemy.Health -= damageRules.Resolve(damage, damageType, enemy.Armour, enemy.DamageTaken);
+        if (enemy.Health > 0f) return;
+        if (enemy.Faction == Factions.Blue) blueAlive--;
+        else redAlive--;
+    }
+
+    internal void SyncVisuals()
+    {
+        visuals.Sync(fighters, terrain);
+        interceptors?.Sync();
+    }
 }

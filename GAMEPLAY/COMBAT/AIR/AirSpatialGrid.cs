@@ -34,9 +34,11 @@ internal sealed class AirSpatialGrid
     }
 
     internal int FindEnemy(AirSquadron.Fighter[] fighters, int seeker, float radius)
+        => FindEnemy(fighters, fighters[seeker].Position, fighters[seeker].Faction, radius);
+
+    internal int FindEnemy(AirSquadron.Fighter[] fighters, Vector3 position, byte faction, float radius)
     {
-        ref var fighter = ref fighters[seeker];
-        Vector2I center = Cell(fighter.Position);
+        Vector2I center = Cell(position);
         int extent = Mathf.CeilToInt(radius / CellSize);
         int remaining = CandidateLimit;
         int best = -1;
@@ -49,8 +51,8 @@ internal sealed class AirSpatialGrid
             for (int id = heads.GetValueOrDefault(center + new Vector2I(x, z), -1); id >= 0; id = next[id])
             {
                 ref var candidate = ref fighters[id];
-                if (candidate.Faction == fighter.Faction || candidate.Health <= 0f) continue;
-                float distance = fighter.Position.DistanceSquaredTo(candidate.Position);
+                if (candidate.Faction == faction || candidate.Health <= 0f) continue;
+                float distance = position.DistanceSquaredTo(candidate.Position);
                 if (distance < closest)
                 {
                     best = id;

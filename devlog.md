@@ -698,3 +698,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added one short V-Wing engine flame to the shared aircraft exhaust batch. Both aircraft types now have hot cores and faction-tinted outer plumes. Engine emission ends on death and existing neutral bomber smoke fades in place.
 
 - 2026-11-26 — Restored Red aircraft cards and placement previews in the Skirmish Level Editor by recognizing the tactical campaign IDs used by Skirmishes.
+
+- 2026-11-26 — Added Tier 2 Interceptor Infantry with Strong Infantry melee, a rear AA launcher, and pooled guided missiles with faction-tinted exhaust and a six-second airburst fuse.

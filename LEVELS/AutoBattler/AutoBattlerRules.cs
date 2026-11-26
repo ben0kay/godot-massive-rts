@@ -50,6 +50,7 @@ public partial class AutoBattlerRules : Resource
         SkirmishArmy[RuntimeUnitCatalog.SquareId] = 16;
         SkirmishArmy[RuntimeUnitCatalog.TriangleId] = 12;
         SkirmishArmy[RuntimeUnitCatalog.SiegeRamId] = 2;
+        SkirmishArmy[RuntimeUnitCatalog.InterceptorId] = 4;
     }
 
     [Export] public int BlueUnitLimit { get; set; } = 200;

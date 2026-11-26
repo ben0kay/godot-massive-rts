@@ -209,8 +209,9 @@ public partial class BenchmarkArena
             if (AutoBattlerElapsedSeconds >= CampaignBattleTimeLimit) FinishCampaignBattle("Stalemate");
             return;
         }
-        if (units.FactionAlive[Factions.Blue] == 0 && (airSquadron?.Alive(Factions.Blue) ?? 0) == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
-        else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && (airSquadron?.Alive(Factions.Red) ?? 0) == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
+        bool missilesPending = airSquadron?.HasInterceptorEffects == true;
+        if (!missilesPending && units.FactionAlive[Factions.Blue] == 0 && (airSquadron?.Alive(Factions.Blue) ?? 0) == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
+        else if (!missilesPending && !IsOffense && units.FactionAlive[Factions.Red] == 0 && (airSquadron?.Alive(Factions.Red) ?? 0) == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
             FinishCampaignBattle("Victory");
         else if (AutoBattlerElapsedSeconds >= (redWave?.Lanes != null ?

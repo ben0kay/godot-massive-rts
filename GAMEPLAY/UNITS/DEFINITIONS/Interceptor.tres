@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://dipj55khi2drw" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "interceptor_infantry"
+BattleRating = 240
+DisplayName = "Interceptor"
+Role = "Armoured melee with a guided anti-air launcher"
+Shape = 1
+Height = 0.4125
+SizeTier = 2.0
+Speed = 4.0
+TurnDegreesPerSecond = 270.0
+ArmourClass = "Medium"
+Health = 85.0
+ChargeResistance = 0.45
+Damage = 12.0
+Interval = 1.1
+Reach = 1.8

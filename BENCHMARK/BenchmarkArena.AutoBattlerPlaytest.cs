@@ -34,6 +34,7 @@ public partial class BenchmarkArena
     {
         if (!HasCitadelObjective || spawning || units == null || offenseCitadel == null) return false;
         if (offenseBattleEnded) return true;
+        if (!offenseCitadel.Destroyed && airSquadron?.HasInterceptorEffects == true) return false;
         if (campaignRoster != null && !campaignBattleRunning) return false;
         bool attackersRemain = units.FactionAlive[AssaultFaction] > 0 ||
             (airSquadron?.Alive(AssaultFaction) ?? 0) > 0 ||

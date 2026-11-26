@@ -130,6 +130,7 @@ public static class FacetedSoldierMeshes
         (visuals.UsePentagonEliteMesh && id == RuntimeUnitCatalog.PentagonId) ||
         (visuals.UseTriangleArcherMesh && id == RuntimeUnitCatalog.TriangleId) ||
         (visuals.UseHexagonSiegeRobotMesh && id == RuntimeUnitCatalog.HexagonId) ||
+        id == RuntimeUnitCatalog.InterceptorId ||
         (visuals.UseSquareHeavyMesh && id == RuntimeUnitCatalog.SquareId) ||
         (visuals.UseCircleRobotMesh && id == RuntimeUnitCatalog.CircleId) ||
         (visuals.UseEnhancedMeshes && ((id == RuntimeUnitCatalog.ChevronId && outline.IsChevron) ||
@@ -163,6 +164,11 @@ public static class FacetedSoldierMeshes
         {
             if (unit.Id == RuntimeUnitCatalog.CircleId) AppendCircleRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SquareId) AppendSquareHeavy(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.InterceptorId)
+            {
+                AppendSquareHeavy(surface, outline, height);
+                AppendInterceptorLauncher(surface, height);
+            }
             else if (unit.Id == RuntimeUnitCatalog.TriangleId) AppendTriangleArcher(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PentagonId) AppendPentagonElite(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.DiamondId) AppendDiamondCavalry(surface, outline, height);
@@ -717,6 +723,33 @@ public static class FacetedSoldierMeshes
     // Strong infantry: broad squared armor, a shield and a short impact hammer.
     // The outline stores the square's corner radius, not its half-width.
     // All rest-pose detail fits inside the original square and height.
+    private static void AppendInterceptorLauncher(SurfaceTool surface, float height)
+    {
+        var pose = InterceptorLauncher.LocalPose(height);
+        const int sides = 8;
+        Vector3 Ring(int side, float radius, float z)
+        {
+            float angle = side * Mathf.Tau / sides;
+            return pose * new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, z);
+        }
+        void Band(float start, float end, float inner, float outer, Color mask)
+        {
+            for (int i = 0; i < sides; i++)
+            {
+                Vector3 a = Ring(i, inner, start), b = Ring(i + 1, inner, start);
+                Vector3 c = Ring(i + 1, outer, end), d = Ring(i, outer, end);
+                AddQuad(surface, a, d, c, b, (d - a).Cross(b - a).Normalized(), mask, armorMask: true);
+            }
+        }
+        Band(0f, -0.28f * height, 0.39f * height, 0.39f * height, new Color(0f, 0.93f, 0f));
+        Band(-0.28f * height, -0.28f * height, 0.39f * height, 0.31f * height, new Color(0f, 0.76f, 0f));
+        Band(-0.28f * height, -0.87f * height, 0.31f * height, 0.27f * height, new Color(0.91f, 0f, 0f));
+        Band(-0.87f * height, -0.87f * height, 0.27f * height, 0.33f * height, new Color(0.74f, 0f, 0f));
+        Band(-0.87f * height, -height, 0.33f * height, 0.31f * height, new Color(0.93f, 0f, 0f));
+        Band(-height, -height, 0.31f * height, 0.19f * height, new Color(0f, 0f, 0.9f));
+        Band(-height, -0.84f * height, 0.19f * height, 0f, new Color(0.45f, 0f, 0f));
+    }
+
     private static void AppendSquareHeavy(SurfaceTool surface, UnitOutline outline, float height)
     {
         const float diagonal = 0.70710678f;

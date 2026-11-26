@@ -16,6 +16,7 @@ public sealed class UnitState
     private byte[] completedAttacks;
     private Dictionary<int, HashSet<int>> firstHitTargets;
     private int[] nextRocketMount;
+    internal List<int> InterceptorIds { get; private set; }
 
     internal int RocketMountIndex(int id) => nextRocketMount?[id] ?? 0;
 
@@ -152,6 +153,7 @@ public sealed class UnitState
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
         if (stats.PrismBeam.Enabled) prismAlive++;
+        if (type == RuntimeUnitCatalog.Interceptor) (InterceptorIds ??= new List<int>()).Add(id);
         if (stats.ShieldEmitter.Enabled)
         {
             Shields ??= new ShieldSystem(Health.Length);

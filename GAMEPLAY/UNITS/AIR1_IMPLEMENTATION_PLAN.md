@@ -101,3 +101,18 @@ outer plume. Heavy Bomber smoke uses a bounded neutral-grey batch. Engine
 flames and new exhaust smoke stop on death, and existing smoke fades in place.
 The default UnitVisualConfig enables these effects independently through
 `UseVWingEngineFlame`, `UseBomberEngineFlames` and `UseBomberSmokeTrails`.
+
+### Ground Interceptor
+
+This Tier 2 infantry uses Strong Infantry melee and independently launches one
+guided anti-air missile from its rear tube. The launcher acquires targets within
+65 world units, reloads in 3.5 seconds, and deals 26 direct-hit damage. The
+six-second fuse bursts at the missile's current position without splash damage.
+If its target dies first, the missile coasts on its last heading and can still hit
+an aircraft in its path. Terrain contact also bursts it.
+
+Only registered Interceptors check the aircraft grid, and checks are staggered
+across simulation ticks. Missile state and visuals are batched across the battle
+with a 512-slot cap. The missile's white exhaust core and broken faction-colored
+trail distinguish it from ground rockets. New Skirmish rosters include four
+Interceptors, and existing preset rosters can be edited in level settings.
