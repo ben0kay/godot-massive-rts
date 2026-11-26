@@ -10,7 +10,9 @@ public partial class DefenseRenderer : Node3D
     // Preserve the existing extended barrel and its laser/muzzle endpoint.
     private const float BarrelLength = 3.8f;
     private const float BarrelCenterForward = BarrelLength * 0.5f;
-    private const float FlashSeconds = 0.11f;
+    private const float FlashSeconds = 0.16f;
+    private const float GroundFlashSeconds = 0.32f;
+    private const int GroundFlashCapacity = 64;
     private static readonly ShaderMaterial LitTowerMaterial = new()
     {
         Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/TowerArmor.gdshader")
@@ -51,6 +53,11 @@ public partial class DefenseRenderer : Node3D
     private const int FlashCapacity = 256;
     private readonly float[] flashTime = new float[FlashCapacity];
     private readonly Transform3D[] flashPose = new Transform3D[FlashCapacity];
+    private MultiMesh groundFlashes;
+    private int liveGroundFlashes;
+    private readonly float[] groundFlashTime = new float[GroundFlashCapacity];
+    private readonly Transform3D[] groundFlashPose = new Transform3D[GroundFlashCapacity];
+    private readonly Color[] groundFlashTint = new Color[GroundFlashCapacity];
     private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, beamGlows, flashes;
     private readonly int[] crackStages = new int[DeploymentLayout.MaxBuildings];
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
@@ -133,6 +140,8 @@ public partial class DefenseRenderer : Node3D
     public void Initialize(IReadOnlyList<BuildingPlacement> placements, RuntimeBuildingCatalog catalog, float height, bool battle, TerrainHeightField terrain = null)
     {
         InitializeBatches();
+        liveGroundFlashes = 0;
+        if (groundFlashes != null) groundFlashes.VisibleInstanceCount = 0;
         shieldDomes?.Clear();
         ResetMinigunBatch(minigunBase);
         ResetMinigunBatch(minigunHead);
@@ -469,14 +478,85 @@ public partial class DefenseRenderer : Node3D
     {
         if (flashes == null || liveFlashes >= FlashCapacity) return;
         int i = liveFlashes++;
-        flashPose[i] = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * size), muzzle + Vector3.Up * (0.11f * size));
+        flashPose[i] = new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * size), muzzle + Vector3.Up * 0.11f);
         flashTime[i] = FlashSeconds;
         WriteFlash(i);
         flashes.VisibleInstanceCount = liveFlashes;
     }
 
+    // Brief broad glow at the actual firing muzzle's XZ position. Reuse the
+    // projectile glow shader with an independent stronger intensity, not a light.
+    internal void EmitGroundFlash(Vector3 muzzle, byte faction, TerrainHeightField terrain)
+    {
+        if (liveGroundFlashes >= GroundFlashCapacity) return;
+        if (groundFlashes == null)
+        {
+            var material = new ShaderMaterial
+            {
+                Shader = GD.Load<Shader>("res://GAMEPLAY/PROJECTILES/Shared/ProjectileGroundGlow.gdshader")
+            };
+            material.SetShaderParameter("intensity", 0.72f);
+            groundFlashes = Batch(new PlaneMesh { Size = new Vector2(7f, 7f) },
+                GroundFlashCapacity, material);
+            groundFlashes.VisibleInstanceCount = 0;
+        }
+
+        float height = terrain?.At(muzzle.X, muzzle.Z) ?? 0f;
+        // Sample the local slope only at launch; the flash remains stationary.
+        float dx = 0f, dz = 0f;
+        if (terrain != null)
+        {
+            dx = (terrain.At(muzzle.X + 1f, muzzle.Z) - terrain.At(muzzle.X - 1f, muzzle.Z)) * 0.5f;
+            dz = (terrain.At(muzzle.X, muzzle.Z + 1f) - terrain.At(muzzle.X, muzzle.Z - 1f)) * 0.5f;
+        }
+        Vector3 normal = new Vector3(-dx, 1f, -dz).Normalized();
+        Basis basis = Basis.LookingAt(new Vector3(0f, -dz, -1f), normal);
+        int slot = liveGroundFlashes++;
+        groundFlashPose[slot] = new Transform3D(basis,
+            new Vector3(muzzle.X, height + 0.09f, muzzle.Z));
+        groundFlashTint[slot] = Factions.Color(faction).Lerp(Colors.White, 0.12f);
+        groundFlashTime[slot] = GroundFlashSeconds;
+        WriteGroundFlash(slot);
+        groundFlashes.VisibleInstanceCount = liveGroundFlashes;
+    }
+
+    private void WriteGroundFlash(int slot)
+    {
+        float remaining = Mathf.Clamp(groundFlashTime[slot] / GroundFlashSeconds, 0f, 1f);
+        float scale = 1.12f - 0.20f * remaining;
+        Transform3D pose = groundFlashPose[slot];
+        groundFlashes.SetInstanceTransform(slot, new Transform3D(
+            pose.Basis.Scaled(Vector3.One * scale), pose.Origin));
+        Color tint = groundFlashTint[slot];
+        tint.A = remaining * remaining;
+        groundFlashes.SetInstanceColor(slot, tint);
+    }
+
+    private void AdvanceGroundFlashes(float dt)
+    {
+        if (liveGroundFlashes == 0) return;
+        int before = liveGroundFlashes;
+        for (int i = liveGroundFlashes - 1; i >= 0; i--)
+        {
+            groundFlashTime[i] -= dt;
+            if (groundFlashTime[i] > 0f)
+            {
+                WriteGroundFlash(i);
+                continue;
+            }
+            liveGroundFlashes--;
+            if (i == liveGroundFlashes) continue;
+            groundFlashTime[i] = groundFlashTime[liveGroundFlashes];
+            groundFlashPose[i] = groundFlashPose[liveGroundFlashes];
+            groundFlashTint[i] = groundFlashTint[liveGroundFlashes];
+            WriteGroundFlash(i);
+        }
+        if (before != liveGroundFlashes) groundFlashes.VisibleInstanceCount = liveGroundFlashes;
+    }
+
     public void Advance(float dt)
     {
+        AdvanceGroundFlashes(dt);
         int before = liveFlashes;
         for (int i = liveFlashes - 1; i >= 0; i--)
         {
@@ -495,7 +575,7 @@ public partial class DefenseRenderer : Node3D
         if (liveFlashes != before) flashes.VisibleInstanceCount = liveFlashes;
     }
 
-    // Only live flashes are updated; scale and opacity fall off over 0.11 seconds.
+    // Only live flashes are updated; scale and opacity fall off over FlashSeconds.
     private void WriteFlash(int i)
     {
         float remaining = Mathf.Clamp(flashTime[i] / FlashSeconds, 0f, 1f);

@@ -167,7 +167,7 @@ internal sealed class DefenseSystem
                     if (projectiles?.LaunchFrom(muzzle, aim, tower.Faction, tower.Stats.ProjectileType,
                         tower.Stats.Damage, tower.Stats.DamageType, tower.Footprint) == true)
                     {
-                        renderer.EmitFlash(muzzle, tower.Yaw, 0.45f);
+                        renderer.EmitFlash(muzzle, tower.Yaw, 1.0f);
                         tower.NextRocketMuzzle ^= 1;
                         tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
                     }
@@ -175,11 +175,14 @@ internal sealed class DefenseSystem
                 else if (rocket)
                 {
                     bool useLeft = tower.NextRocketMuzzle == 0;
-                    if (projectiles?.LaunchFrom(DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw,
-                        tower.NextRocketMuzzle, useLeft ? tower.LeftRecoil : tower.RightRecoil),
+                    Vector3 muzzle = DefenseRenderer.RocketMuzzle(tower.Pivot, tower.Yaw,
+                        tower.NextRocketMuzzle, useLeft ? tower.LeftRecoil : tower.RightRecoil);
+                    if (projectiles?.LaunchFrom(muzzle,
                         units.Position[tower.Target], tower.Faction, tower.Stats.ProjectileType,
                         tower.Stats.Damage, tower.Stats.DamageType) == true)
                     {
+                        renderer.EmitFlash(muzzle, tower.Yaw, 2.6f);
+                        renderer.EmitGroundFlash(muzzle, tower.Faction, units.Grounding?.Field);
                         if (useLeft) tower.LeftRecoil = 0.30f;
                         else tower.RightRecoil = 0.30f;
                         tower.NextRocketMuzzle ^= 1;
@@ -191,7 +194,7 @@ internal sealed class DefenseSystem
                     tower.LeftRecoil = 0.64f;
                     tower.BeamRemaining = tower.Stats.BeamSeconds;
                     tower.Cooldown = tower.Stats.Interval;
-                    renderer.EmitFlash(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.BeamSlope), tower.Yaw);
+                    renderer.EmitFlash(DefenseRenderer.Muzzle(tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.BeamSlope), tower.Yaw, 1.9f);
                 }
             }
 

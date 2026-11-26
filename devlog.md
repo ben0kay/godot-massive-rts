@@ -700,3 +700,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Restored Red aircraft cards and placement previews in the Skirmish Level Editor by recognizing the tactical campaign IDs used by Skirmishes.
 
 - 2026-11-26 — Added Tier 2 Interceptor Infantry with Strong Infantry melee, a rear AA launcher, and pooled guided missiles with faction-tinted exhaust and a six-second airburst fuse.
+
+- 2026-11-26 — Added subtle faction tint and existing travelling ground glow to shared minigun rounds, enlarged Railgun/Twin Minigun flashes, and added a larger Broadside muzzle starburst plus capped faction-colored ground halo on successful launch. Visual-only; owner Godot validation pending.

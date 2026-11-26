@@ -1,10 +1,21 @@
-[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="ProjectileDefinition" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/PROJECTILES/Shared/ProjectileDefinition.cs" id="1"]
 
-[sub_resource type="StandardMaterial3D" id="Material"]
-shading_mode = 0
-albedo_color = Color(1, 0.83, 0.43, 1)
+[sub_resource type="Shader" id="TintShader"]
+code = "shader_type spatial;
+render_mode unshaded, cull_disabled;
+varying vec3 faction_tint;
+void vertex() { faction_tint = COLOR.rgb; }
+void fragment() {
+    vec3 round_color = mix(vec3(1.0, 0.88, 0.65), faction_tint, 0.28);
+    ALBEDO = round_color;
+    EMISSION = round_color * 0.20;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="Material"]
+shader = SubResource("TintShader")
 
 [sub_resource type="BoxMesh" id="Mesh"]
 material = SubResource("Material")
@@ -16,3 +27,5 @@ Speed = 140.0
 ArcHeight = 0.0
 ArcHeightPerDistance = 0.0
 VisualMesh = SubResource("Mesh")
+TintByFaction = true
+UseGroundGlow = true

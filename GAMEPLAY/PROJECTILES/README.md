@@ -34,3 +34,7 @@ Triangle Archer laser bolts opt into a faction-colored ground glow. The shared r
 ## AIR-VIS2 — Heavy Bomber payload
 
 The default `GAMEPLAY/COMBAT/AIR/BomberPayload.tres` retains all flight and splash settings and its original orange box fallback. **Use Enhanced Bomber Bomb Visuals** selects a cached dark-metal faceted render mesh with a tapered nose, contrasting collar and four swept fins, approximately 0.48 × 0.48 × 1.04 units including fins. Local -Z follows the existing flight tangent. Speed, collision, splash, damage, rocket and artillery models remain unchanged.
+
+### Minigun rounds and defense firing feedback
+
+The shared `MinigunRound.tres` now blends 28% of the source faction color into its pale warm tracer and opts into the same height-faded, capped 256-instance travelling ground glow as Triangle Archer bolts. This affects both Dreadnaught and Twin Minigun Tower shots. The shared glow shader retains its default 0.20 intensity; Broadside ground flashes reuse it with an independent material at 0.72 intensity. Neither effect changes projectile behavior.

@@ -160,3 +160,7 @@ Heavy Bomber exhaust (AIR-VIS2) uses a shared cached flame mesh and capped billb
 ### Twin Minigun Tower
 
 Use a square full-footprint foundation, squat armored rotating carriage, side ammunition housings and two short rotary-style clusters rather than long artillery tubes. Keep both muzzle positions aligned to `DefenseRenderer.MinigunMuzzle` (local X ±0.48, Z −1.65); both barrels share the same pitch transform and one mesh. Shared gunmetal/faction mask and pooled flash effects, no decorative spinning nodes or lights.
+
+### Defense firing effects
+
+Keep muzzle feedback at the actual launch/beam origin and use the existing capped flash pool. Heavy weapons such as Broadside can add a short faction-tinted ground halo (shared projectile glow shader, independent material intensity and a bounded batch), sampled at launch and faded without real lights. Keep low-flying minigun tracers lightly faction-tinted and reuse the existing travelling glow cap; do not add a separate per-shot node or make high-arc rockets cast travelling ground glows.
