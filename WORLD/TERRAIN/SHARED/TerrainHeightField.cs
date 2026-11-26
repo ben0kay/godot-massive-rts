@@ -12,6 +12,55 @@ public sealed class TerrainHeightField
     private const int Stride = ChunkCells + 1;
     private const float ChunkSize = ChunkCells * Spacing;
 
+    internal readonly record struct Plateau(Vector2[] Outline, Rect2 Bounds, float Height);
+    private Plateau[] plateaus = Array.Empty<Plateau>();
+
+    internal void SetPlateaus(Plateau[] value) => plateaus = value;
+
+    private bool TryPlateau(Vector2 point, out float height)
+    {
+        foreach (var plateau in plateaus)
+            if (plateau.Bounds.HasPoint(point) && InsideOutline(point, plateau.Outline))
+            {
+                height = plateau.Height;
+                return true;
+            }
+        height = 0f;
+        return false;
+    }
+
+    internal bool TryPlateauRay(Vector3 origin, Vector3 direction, out Vector3 hit)
+    {
+        hit = default;
+        if (direction.Y >= -0.0001f) return false;
+        float nearest = float.PositiveInfinity;
+        foreach (var plateau in plateaus)
+        {
+            float distance = (plateau.Height - origin.Y) / direction.Y;
+            if (distance < 0f || distance >= nearest) continue;
+            var point = origin + direction * distance;
+            var xz = ObstacleField.Xz(point);
+            if (!plateau.Bounds.HasPoint(xz) || !InsideOutline(xz, plateau.Outline)) continue;
+            nearest = distance;
+            hit = point;
+        }
+        return float.IsFinite(nearest);
+    }
+
+    private static bool InsideOutline(Vector2 point, Vector2[] outline)
+    {
+        bool inside = false;
+        Vector2 previous = outline[^1];
+        foreach (var current in outline)
+        {
+            if ((current.Y > point.Y) != (previous.Y > point.Y) &&
+                point.X < (previous.X - current.X) * (point.Y - current.Y) / (previous.Y - current.Y) + current.X)
+                inside = !inside;
+            previous = current;
+        }
+        return inside;
+    }
+
     private readonly Dictionary<Vector2I, float[]> chunks = new();
     public Vector2I FirstChunk { get; }
     public Vector2I LastChunk { get; }
@@ -66,18 +115,24 @@ public sealed class TerrainHeightField
     // Along a segment the terrain is linear until a cell edge or triangle diagonal.
     public float SurfaceHit(Vector3 from, Vector3 delta, float limit)
     {
+        float capHit = TryPlateauRay(from, delta, out var plateauHit)
+            ? (plateauHit.Y - from.Y) / delta.Y : float.PositiveInfinity;
+        limit = Mathf.Min(limit, capHit);
         float x = NextBoundary(from.X, delta.X, out float xStep);
         float z = NextBoundary(from.Z, delta.Z, out float zStep);
         float diagonal = NextBoundary(from.X + from.Z, delta.X + delta.Z, out float diagonalStep);
         float previous = 0f;
-        float above = from.Y - At(from.X, from.Z);
+        // The rim uses obstacle collision. Avoid interpolating across the height jump at its edge.
+        if (plateaus.Length != 0 && TryPlateau(ObstacleField.Xz(from), out float startHeight) && from.Y <= startHeight)
+            return 0f;
+        float above = from.Y - BaseHeight(from.X, from.Z);
         if (above <= 0f) return 0f;
 
         while (previous < limit)
         {
             float next = Mathf.Min(limit, Mathf.Min(diagonal, Mathf.Min(x, z)));
             Vector3 point = from + delta * next;
-            float nextAbove = point.Y - At(point.X, point.Z);
+            float nextAbove = point.Y - BaseHeight(point.X, point.Z);
             if (nextAbove <= 0f) return Mathf.Lerp(previous, next, above / (above - nextAbove));
             if (x <= next) x += xStep;
             if (z <= next) z += zStep;
@@ -86,7 +141,7 @@ public sealed class TerrainHeightField
             above = nextAbove;
         }
 
-        return float.PositiveInfinity;
+        return capHit <= limit ? capHit : float.PositiveInfinity;
     }
 
     private static float NextBoundary(float position, float delta, out float step)
@@ -118,6 +173,7 @@ public sealed class TerrainHeightField
     // Use the gradient of the same terrain triangle used for grounding.
     internal float Grade(Vector3 position, Vector2 direction)
     {
+        if (plateaus.Length != 0 && TryPlateau(ObstacleField.Xz(position), out _)) return 0f;
         if (!TryCell(position.X, position.Z, out var heights, out int a, out float u, out float v)) return 0f;
         float near = heights[a], east = heights[a + 1], south = heights[a + Stride];
         if (u + v <= 1f)
@@ -127,6 +183,12 @@ public sealed class TerrainHeightField
     }
 
     public float At(float x, float z)
+    {
+        if (plateaus.Length != 0 && TryPlateau(new Vector2(x, z), out float plateauHeight)) return plateauHeight;
+        return BaseHeight(x, z);
+    }
+
+    private float BaseHeight(float x, float z)
     {
         if (!TryCell(x, z, out var heights, out int a, out float u, out float v)) return 0f;
         float near = heights[a], east = heights[a + 1], south = heights[a + Stride];

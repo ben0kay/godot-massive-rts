@@ -326,6 +326,8 @@ public partial class DeploymentPainter : Node3D
         if (previewTerrain != null)
             for (int i = 0; i < 4; i++)
                 ground = origin + direction * ((previewTerrain.At(ground.X, ground.Z) - origin.Y) / direction.Y);
+        if (previewTerrain != null && previewTerrain.TryPlateauRay(origin, direction, out var cap) && cap.Y > ground.Y)
+            ground = cap;
         return true;
     }
 

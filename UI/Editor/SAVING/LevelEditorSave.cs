@@ -179,6 +179,10 @@ internal static class LevelEditorSave
     // =========================================================
     internal static void ValidateContent(LevelEditorMode mode, CommandSandbox map)
     {
+        var cliffs = map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<TerrainCliff>().ToArray()
+            ?? Array.Empty<TerrainCliff>();
+        if (cliffs.Length > TerrainCliff.MaxCliffs || cliffs.Any(cliff => !cliff.TryCompile(map.MapSize * 0.5f, out _, out _)))
+            throw new InvalidOperationException("Cliffs must have valid closed outlines within the map and fit the terrain budget.");
         var paint = map.GetNodeOrNull<WorldPaint>("WorldPaint");
         if (paint?.Data is WorldPaintData data && !paint.TryMerge(new(data.RockCells), new(data.WaterCells), out _, out _))
             throw new InvalidOperationException("The rock, water and bridge layout exceeds the navigation budget. Simplify the painted banks or bridge layout.");

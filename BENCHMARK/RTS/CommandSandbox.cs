@@ -419,6 +419,8 @@ public partial class CommandSandbox : Node3D
             UpdateFactionWallViews(blue, Factions.Blue, ref blueWallBatch, ref blueWallSpill, walls, field, toLocal);
             UpdateFactionWallViews(red, Factions.Red, ref redWallBatch, ref redWallSpill, walls, field, toLocal);
         }
+        if (GetNodeOrNull<CommandTerrain>("Terrain") is { } commandTerrain)
+            walls.AddRange(commandTerrain.CliffObstacles);
         return walls.ToArray();
 
         List<ObstacleRectangle> CompileWalls(IEnumerable<Vector2I> source, float height)

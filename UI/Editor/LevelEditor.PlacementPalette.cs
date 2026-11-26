@@ -111,8 +111,8 @@ public partial class LevelEditor
                     PickPaletteTool(Tool.Soldiers);
                 }, paletteTools, selectFirst: false),
             BuildDefenses(),
-            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls" },
-                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall }),
+            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls", "Cliff Painter" },
+                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall, Tool.Cliff }),
             ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
                 new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
             simulation

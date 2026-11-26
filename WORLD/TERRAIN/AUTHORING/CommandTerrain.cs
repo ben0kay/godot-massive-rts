@@ -9,7 +9,9 @@ namespace MassiveRts;
 public partial class CommandTerrain : Node3D
 {
     private readonly record struct Hill(Vector2 Center, float Radius, float Rise);
-    private Node3D preview;
+    private Node3D preview, cliffPreview;
+    private ShaderMaterial cliffRock;
+    internal ObstacleRectangle[] CliffObstacles { get; private set; } = Array.Empty<ObstacleRectangle>();
     private int elevationRevision;
     private Godot.Collections.Dictionary<Vector2I, float> elevation = new();
 
@@ -56,8 +58,18 @@ public partial class CommandTerrain : Node3D
     {
         var hills = new List<Hill>();
         var hash = new HashCode();
+        var cliffs = new List<TerrainCliff>();
+        float half = GetParent() is CommandSandbox map ? map.MapSize * 0.5f : DeploymentLayout.WorldHalfWidth;
+        hash.Add(half);
         foreach (Node child in GetChildren())
         {
+            if (child is TerrainCliff cliff)
+            {
+                cliffs.Add(cliff);
+                hash.Add(cliff.Rise);
+                hash.Add(cliff.Points?.Length ?? 0);
+                if (cliff.Points != null) foreach (var point in cliff.Points) hash.Add(point);
+            }
             if (child is not TerrainHill marker || marker.Rise <= 0f) continue;
             var hill = new Hill(ObstacleField.Xz(marker.GlobalPosition),
                 Mathf.Clamp(marker.Radius, 8f, 256f), Mathf.Clamp(marker.Rise, 0f, 80f));
@@ -75,10 +87,18 @@ public partial class CommandTerrain : Node3D
             preview.QueueFree();
             preview = null;
         }
+        if (cliffPreview != null)
+        {
+            RemoveChild(cliffPreview);
+            cliffPreview.QueueFree();
+            cliffPreview = null;
+        }
+        CliffObstacles = Array.Empty<ObstacleRectangle>();
         Field = null;
         if (hills.Count == 0 && elevation.Count == 0)
         {
             Ground?.SetInstanceShaderParameter("terrain_replaces_ground", false);
+            BuildCliffs(cliffs, half);
             SurfaceChanged?.Invoke();
             return;
         }
@@ -134,7 +154,41 @@ public partial class CommandTerrain : Node3D
         // Chunks are stored in world coordinates, independent of the authoring node.
         preview.TopLevel = true;
         preview.GlobalTransform = Transform3D.Identity;
+        BuildCliffs(cliffs, half);
         SurfaceChanged?.Invoke();
+    }
+
+    private void BuildCliffs(List<TerrainCliff> cliffs, float half)
+    {
+        if (cliffs.Count == 0) return;
+        var plateaus = new List<TerrainHeightField.Plateau>();
+        var obstacles = new List<ObstacleRectangle>();
+        foreach (var cliff in cliffs)
+        {
+            if (plateaus.Count >= TerrainCliff.MaxCliffs || !cliff.TryCompile(half, out var outline, out var rim)) continue;
+            var bounds = new Rect2(outline[0], Vector2.Zero);
+            foreach (var point in outline) bounds = bounds.Expand(point);
+            float top = (Field?.FootprintHeight(bounds.Position, bounds.End, out _) ?? 0f) + cliff.Rise;
+            var plateau = new TerrainHeightField.Plateau(outline, bounds, top);
+            if (cliffPreview == null)
+            {
+                cliffPreview = new Node3D { TopLevel = true };
+                AddChild(cliffPreview, false, InternalMode.Back);
+                cliffPreview.GlobalTransform = Transform3D.Identity;
+            }
+            cliffRock ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://WORLD/TERRAIN/RENDERING/CliffRock.gdshader") };
+            cliff.AddMesh(cliffPreview, plateau, Field, cliffRock);
+            plateaus.Add(plateau);
+            foreach (var edge in rim)
+            {
+                float bottom = Field?.At(edge.Min.X, edge.Min.Y) ?? 0f;
+                obstacles.Add(edge with { AirborneHeightRange = new Vector2(bottom - 1f, top) });
+            }
+        }
+        if (plateaus.Count == 0) return;
+        Field ??= new TerrainHeightField(Vector2.Zero, Vector2.Zero, _ => 0f);
+        Field.SetPlateaus(plateaus.ToArray());
+        CliffObstacles = obstacles.ToArray();
     }
 
     internal void UpdateGroundMaterial(ShaderMaterial material)

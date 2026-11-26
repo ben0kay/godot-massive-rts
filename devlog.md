@@ -642,3 +642,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-25 — Redesigned Prefab Shelters into three compact 2×2 habitation variants with taller walls, airlocks, windows and distinct roofs. Stable grid-based variant selection, lazy per-design batches and preserved damage/erase lifecycle. Existing placements use the smaller footprint; no save schema or combat changes. Owner validation pending.
 
 - 2026-11-25 — VIS-DIAMOND — Added independently toggleable Diamond Cavalry mechanical lancer mesh, +X four-leg distance-driven staggered gallop and 0.22s lance thrust on existing melee/trample feedback. Shared infantry animation/armor pipeline reused; original diamond, charge, separation, dust, contact effects and gameplay stats unchanged. Source review only; owner shader/visual/FPS validation pending.
+
+- 2026-11-25 — Added a polygon Cliff Painter to the Level Editor. Closed outlines create a flat raised rock cap, rounded cliff corners, and height-aware projectile cover along the blocked rim. Undo and right-click removal restore the underlying terrain.

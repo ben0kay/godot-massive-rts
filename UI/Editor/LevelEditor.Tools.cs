@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -45,7 +45,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Elevation => "Paint elevation",
-                Tool.Wall => "Industrial Walls",
+                Tool.Wall => "Industrial Walls", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -98,7 +98,7 @@ public partial class LevelEditor
             RefreshPlacementBatches();
             RefreshStrength();
         }
-        else RefreshMap(node is TerrainHill);
+        else RefreshMap(node is TerrainHill or TerrainCliff);
     }
 
     private void RefreshPlacementBatches()
@@ -190,6 +190,10 @@ public partial class LevelEditor
             case Tool.Erase:
                 Number(context, "Brush radius (cells)", brushRadius, 1, 14).ValueChanged += value => brushRadius = (int)value;
                 Heading(context, tool == Tool.Erase ? "Click object to remove it.\nDrag over paint to erase it." : "Drag to paint. Right-drag to erase.", 15);
+                break;
+            case Tool.Cliff:
+                Number(context, "Cliff height", cliffRise, 1, 80, 0.5).ValueChanged += value => cliffRise = (float)value;
+                Heading(context, "Click points around the plateau. Click the first point to close. Right-click to cancel or remove a cliff.", 15);
                 break;
             case Tool.Elevation:
                 var elevationMode = new OptionButton();
@@ -287,6 +291,7 @@ public partial class LevelEditor
         EndPaint();
         CancelBridge();
         CancelWallStroke();
+        CancelCliffStroke();
         if (cursor?.Mesh is BoxMesh box && squareCursor != box)
         {
             squareCursor = box;
@@ -397,6 +402,11 @@ public partial class LevelEditor
         if ((tool is Tool.Wall or Tool.FactionWall) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
+        if (tool == Tool.Cliff && HandleCliffPaint(input))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (tool == Tool.Soldiers)
         {
             bool handled = mode.IsAutoBattler && soldierPaintMode == SoldierPaintMode.Brush
@@ -473,6 +483,8 @@ public partial class LevelEditor
             height = Surface(point);
         }
         point.Y = height;
+        if (!editingReserve && map.GetNodeOrNull<CommandTerrain>("Terrain")?.Field is { } terrain &&
+            terrain.TryPlateauRay(origin, direction, out var cap) && cap.Y > point.Y) point = cap;
         Vector3 local = point - PaintOrigin;
         return Mathf.Abs(local.X) < PaintHalfWidth && Mathf.Abs(local.Z) < PaintHalfWidth;
     }
@@ -846,6 +858,7 @@ public partial class LevelEditor
         EndPaint();
         CancelBridge();
         CancelWallStroke();
+        CancelCliffStroke();
         if (!from.TryPop(out var edit)) return;
         if (back) edit.Undo(); else edit.Redo();
         if (tool == Tool.RedOrders) { CloseRedOrders(); OpenRedOrders(); }

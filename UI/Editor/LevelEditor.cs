@@ -267,6 +267,7 @@ public partial class LevelEditor : Node
         EndElevation();
         CancelBridge();
         CancelWallStroke();
+        CancelCliffStroke();
         CloseRedOrders();
         if (map != null)
         {
@@ -406,6 +407,7 @@ public partial class LevelEditor : Node
         if (map == null || runningTest != null) return;
         CancelBridge();
         CancelWallStroke();
+        CancelCliffStroke();
         EndElevation();
         previewing = !previewing;
         if (previewing)
@@ -426,6 +428,7 @@ public partial class LevelEditor : Node
         if (map == null || runningTest != null) return;
         CancelBridge();
         CancelWallStroke();
+        CancelCliffStroke();
         EndPaint();
         try { LevelEditorSave.ValidateContent(mode, map); }
         catch (Exception error) { SetStatus(error.Message); return; }

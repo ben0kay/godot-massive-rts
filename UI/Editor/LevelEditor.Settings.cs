@@ -65,7 +65,7 @@ public partial class LevelEditor
                     cameraMarker.Transform = values.Camera;
                     map.BaseTerrain = values.Terrain;
                     rulesAction();
-                    RefreshMap();
+                    RefreshMap(terrainChanged: before.Item3 != after.Item3);
                     FrameEditor();
                 }
                 Apply(after, rules.Redo);
