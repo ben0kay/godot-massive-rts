@@ -151,7 +151,7 @@ public partial class LevelEditor
             int citadel = towers + 2;
             return placementPalette.BuildCards(picker, towers + 3, (towers + 4) / 2,
                 i => i < towers ? defenseDefinitions[i].DisplayName :
-                    i == wall ? "Faction Wall" : i == disruptor ? DisruptorGrid.Name : "Red Citadel",
+                    i == wall ? "Faction Wall" : i == disruptor ? DisruptorGrid.Name : "Citadel",
                 i => i < towers ? UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f) : null,
                 (icon, i) =>
@@ -223,7 +223,8 @@ public partial class LevelEditor
     {
         bool legacy = !mode.IsAutoBattler;
         foreach (var card in aircraftCards) card.Visible = AutoBattlerRules.SupportsAircraft(mode.CampaignId);
-        offenseCitadel.Visible = mode.CampaignId == "Offense";
+        offenseCitadel.Visible = CampaignCatalog.IsOffense(mode.CampaignId) || CampaignCatalog.IsDefense(mode.CampaignId);
+
         if (!offenseCitadel.Visible && paletteDefenseIndex == defenseDefinitions.Length) paletteDefenseIndex = 0;
         toolsHeading.Text = legacy ? "Map tools" : "Tool settings";
         toolPicker.Visible = legacyUnitPicker.Visible = legacyDefenseHeading.Visible = defensePicker.Visible =

@@ -18,6 +18,7 @@ public partial class LevelEditor : Node
     private GridContainer levelGrid;
     private Button returnToLevel;
     private string selectedCampaignId;
+    private int authoringSection;
     private BuildingDefinition[] defenseDefinitions;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
@@ -190,7 +191,10 @@ public partial class LevelEditor : Node
         {
             catalog = CampaignCatalog.Load(fresh: true);
             var supported = catalog.Campaigns.Where(entry =>
-                LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id)).ToArray();
+                LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id) &&
+                (authoringSection == 2 ? entry.Id == "OpenRTS" : entry.Id != "OpenRTS" &&
+                 CampaignCatalog.IsSkirmish(entry.Id) == (authoringSection == 1)))
+                .OrderBy(entry => Array.IndexOf(new[] { "Clash", "Offense", "Defense" }, entry.DisplayName)).ToArray();
             if (!supported.Any(entry => entry.Id == selectedCampaignId))
                 selectedCampaignId = supported.FirstOrDefault()?.Id;
             foreach (Node child in campaignButtons.GetChildren())
@@ -198,6 +202,13 @@ public partial class LevelEditor : Node
                 campaignButtons.RemoveChild(child);
                 child.QueueFree();
             }
+            var sections = new OptionButton();
+            sections.AddItem("Campaign");
+            sections.AddItem("Skirmishes");
+            sections.AddItem("Fortress Defense");
+            sections.Select(authoringSection);
+            sections.ItemSelected += index => { authoringSection = (int)index; ShowStart(); };
+            campaignButtons.AddChild(sections);
             var tabs = new ButtonGroup();
             foreach (var entry in supported)
             {
@@ -289,7 +300,8 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        testButton.Text = mode.CampaignId == "Offense" ? "Test Offense" : mode.IsAutoBattler ? "Test Clash" : "Test Fortress";
+        authoringSection = mode.CampaignId == "OpenRTS" ? 2 : CampaignCatalog.IsSkirmish(mode.CampaignId) ? 1 : 0;
+        testButton.Text = mode.IsAutoBattler ? "Test " + CampaignCatalog.BattleType(mode.CampaignId) : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
         map = next;

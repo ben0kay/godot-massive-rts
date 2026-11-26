@@ -14,6 +14,7 @@
 script = ExtResource("2")
 LineAxis = 2
 Objective = 1
+SkirmishArmy = Dictionary[String, int]({"circle_infantry": 40, "square_infantry": 16, "triangle_archer": 12, "siege_ram": 2})
 
 [node name="Level001" type="Node3D"]
 script = ExtResource("1")

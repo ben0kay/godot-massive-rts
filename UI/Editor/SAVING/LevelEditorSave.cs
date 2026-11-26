@@ -212,9 +212,18 @@ internal static class LevelEditorSave
         if (mode.IsAutoBattler)
         {
             var rules = map.AutoBattlerRules;
+            if (CampaignCatalog.IsSkirmish(mode.CampaignId) &&
+                (!rules.SkirmishArmy.Any(entry => entry.Value > 0 &&
+                    (rules.AllowedBlueUnitIds.Length == 0 || rules.AllowedBlueUnitIds.Contains(entry.Key))) ||
+                 rules.SkirmishArmy.Any(entry => !roster.Contains(entry.Key) || entry.Value <= 0) ||
+                 rules.SkirmishArmy.Sum(entry => (long)entry.Value) > 100000))
+                throw new InvalidOperationException("Set a valid preset Blue army in Map Settings (up to 100,000 soldiers).");
             if (rules.Objective == AutoBattlerRules.ObjectiveType.DestroyCitadel &&
                 towers.Count(tower => tower.Red && tower.EffectiveDefinition?.Id == "citadel") != 1)
                 throw new InvalidOperationException("Offense requires exactly one Red Citadel.");
+            if (rules.Objective == AutoBattlerRules.ObjectiveType.ProtectCitadel &&
+                towers.Count(tower => !tower.Red && tower.EffectiveDefinition?.Id == "citadel") != 1)
+                throw new InvalidOperationException("Defense requires exactly one Blue Citadel.");
             if (rules.RedDisruptorCells.Count > DisruptorGrid.MaxTiles ||
                 rules.RedDisruptorCells.Any(cell => !DisruptorGrid.Inside(cell, map.MapSize) ||
                     !rules.AllowsSide(DisruptorGrid.Center(cell), DisruptorGrid.Size * 0.5f, blue: false)))
@@ -223,8 +232,8 @@ internal static class LevelEditorSave
                 Mathf.Abs(rules.LineOffset) >= map.MapSize * 0.5f)
                 throw new InvalidOperationException("Move the deployment line inside the map boundary.");
             if (groups.Any(group => !group.FitsSide(rules, group.GlobalPosition)) ||
-                towers.Any(tower => !tower.Red || !tower.FitsSide(rules, tower.GlobalPosition)))
-                throw new InvalidOperationException("Move preplaced formations and defense towers onto the Red side of the line.");
+                towers.Any(tower => tower.Red == CampaignCatalog.IsDefense(mode.CampaignId) || !tower.FitsSide(rules, tower.GlobalPosition)))
+                throw new InvalidOperationException("Keep preplaced units on the Red side and structures on their faction’s side.");
             if (rules.RedReserveCount < 0 || (rules.RedReserveCount > 0 &&
                 (!roster.Contains(rules.RedReserveUnitId) || !float.IsFinite(rules.RedReserveSeconds) ||
                  rules.RedReserveSeconds < 0f || rules.RedReserveSeconds >= 300f ||

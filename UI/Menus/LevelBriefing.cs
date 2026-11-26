@@ -59,10 +59,11 @@ public partial class LevelBriefing : Control
         }
         if (!string.IsNullOrWhiteSpace(Level.Description)) AddLabel(details, Level.Description, 16);
 
-        if ((Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense"))
+        if (CampaignCatalog.IsTactical(Campaign.Id) && !CampaignCatalog.IsSkirmish(Campaign.Id))
             details.AddChild(UIButtonFactory.Create("Headquarters Recruitment",
-                () => Navigate(() => MenuNavigation.OpenHeadquarters(this, Campaign, recruitment: true))));
-        else
+                () => Navigate(() => MenuNavigation.OpenHeadquarters(this, CampaignCatalog.Load().Campaigns.First(
+                    entry => entry.Id == AutoBattlerCampaignStore.CampaignId), recruitment: true))));
+        else if (!CampaignCatalog.IsSkirmish(Campaign.Id))
         {
             var upgrades = UIButtonFactory.Create("Upgrades / Recruit", () => { }, UIButtonStyle.Secondary);
             upgrades.Disabled = true;
@@ -97,7 +98,7 @@ public partial class LevelBriefing : Control
         map.UpdateGroundBounds();
         try { map.GetNodeOrNull<WorldPaint>("WorldPaint")?.Compile(); }
         catch (InvalidOperationException error) { GD.PushWarning(error.Message); }
-        LevelLayoutPreview.Build(map, redOnly: (Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense"));
+        LevelLayoutPreview.Build(map, redOnly: CampaignCatalog.IsTactical(Campaign.Id));
 
         var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal,
             Size = map.MapSize * 1.08f, Far = 18000f };
@@ -128,15 +129,20 @@ public partial class LevelBriefing : Control
             AddLabel(details, $"Incoming waves: {map.WaveDefinitions.Count:N0} · {reinforcements:N0} units", 16);
         }
 
-        if ((Campaign.Id == AutoBattlerCampaignStore.CampaignId || Campaign.Id == "Offense") && map.AutoBattlerRules is AutoBattlerRules rules)
+        if (CampaignCatalog.IsTactical(Campaign.Id) && map.AutoBattlerRules is AutoBattlerRules rules)
         {
             foreach (var enemy in groups.Where(group => group.Faction == CommandUnitPlacement.Team.Red)
                          .GroupBy(group => group.Unit.DisplayName))
                 AddLabel(details, $"{enemy.Key} × {enemy.Sum(group => (long)group.SoldierCount):N0}", 16);
             AddLabel(details, "Objective", 22);
-            AddLabel(details, "Eliminate Red soldiers and defenses.", 16);
+            AddLabel(details, CampaignCatalog.BattleType(Campaign.Id) switch
+            {
+                "Offense" => "Destroy the Red Citadel.",
+                "Defense" => "Protect the Blue Citadel and repel the Red assault.",
+                _ => "Eliminate Red soldiers and defenses."
+            }, 16);
             if (redDefenses > 0) AddLabel(details, "Deploy units that can attack structures to destroy Red defenses.", 16);
-            AddLabel(details, "Owned army", 22);
+            AddLabel(details, CampaignCatalog.IsSkirmish(Campaign.Id) ? "Preset army" : "Owned army", 22);
             var allowed = rules.AllowedBlueUnitIds ?? Array.Empty<string>();
             var catalog = GD.Load<UnitCatalog>("res://GAMEPLAY/UNITS/CATALOG/DefaultUnitCatalog.tres");
             if (allowed.Length > 0)
@@ -146,6 +152,13 @@ public partial class LevelBriefing : Control
             }
             try
             {
+                if (CampaignCatalog.IsSkirmish(Campaign.Id))
+                {
+                    foreach (var unit in catalog.Definitions)
+                        if (unit != null && rules.SkirmishArmy.TryGetValue(unit.Id, out int count) && count > 0)
+                            AddLabel(details, $"{unit.DisplayName} × {count:N0}", 16);
+                    return;
+                }
                 var owned = AutoBattlerCampaignStore.Open(ProfileStore.Selected.Id, out _);
                 bool any = false;
                 foreach (var unit in catalog.Definitions)

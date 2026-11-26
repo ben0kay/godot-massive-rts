@@ -7,7 +7,7 @@ namespace MassiveRts;
 [GlobalClass]
 public partial class AutoBattlerRules : Resource
 {
-    public enum ObjectiveType { EliminateEnemy, DestroyCitadel }
+    public enum ObjectiveType { EliminateEnemy, DestroyCitadel, ProtectCitadel }
     [Export] public Godot.Collections.Array<Vector2I> RedDisruptorCells { get; set; } = new();
     public enum DeploymentAxis { Disabled, X, Z }
     [Export] public DeploymentAxis LineAxis { get; set; }
@@ -43,6 +43,15 @@ public partial class AutoBattlerRules : Resource
     [Export] public Godot.Collections.Dictionary<string, Vector2[]> BlueAircraftStarts { get; set; } = new();
     [Export] public Godot.Collections.Dictionary<string, Vector2[]> RedAircraftStarts { get; set; } = new();
     [Export] public Godot.Collections.Dictionary<int, Vector2> OpeningBombOrders { get; set; } = new();
+    [Export] public Godot.Collections.Dictionary<string, int> SkirmishArmy { get; set; } = new();
+    internal void SetDefaultSkirmishArmy()
+    {
+        SkirmishArmy[RuntimeUnitCatalog.CircleId] = 40;
+        SkirmishArmy[RuntimeUnitCatalog.SquareId] = 16;
+        SkirmishArmy[RuntimeUnitCatalog.TriangleId] = 12;
+        SkirmishArmy[RuntimeUnitCatalog.SiegeRamId] = 2;
+    }
+
     [Export] public int BlueUnitLimit { get; set; } = 200;
     [Export] public string[] AllowedBlueUnitIds { get; set; } = System.Array.Empty<string>();
     [Export] public Godot.Collections.Array<Vector2I> BlueDeploymentCells { get; set; } = new();

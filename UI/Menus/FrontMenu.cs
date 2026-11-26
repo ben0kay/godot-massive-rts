@@ -1,5 +1,6 @@
 // Owns front-end screen actions, campaign mode selection and shared back/error handling.
 using System;
+using System.Linq;
 using System.IO;
 using Godot;
 
@@ -7,7 +8,7 @@ namespace MassiveRts;
 
 public partial class FrontMenu : Control
 {
-    public enum MenuScreen { Boot, Main, Campaign, Options }
+    public enum MenuScreen { Boot, Main, Campaign, Options, Skirmishes, FortressDefense, About }
     [Export] public MenuScreen Screen { get; set; }
     internal string ReturnCampaignId { get; set; }
     private VBoxContainer campaignModes;
@@ -34,9 +35,12 @@ public partial class FrontMenu : Control
             MenuScreen.Boot => "Select Profile",
             MenuScreen.Main => "Godot Massive RTS",
             MenuScreen.Campaign => "Campaign",
+            MenuScreen.Skirmishes => "Skirmishes",
+            MenuScreen.FortressDefense => "Fortress Defense",
+            MenuScreen.About => "About",
             _ => "Options"
         };
-        content = MenuLayout.Create(this, title, Screen == MenuScreen.Main ? ProfileStore.Selected?.Name ?? "" : "");
+        content = MenuLayout.Create(this, title, Screen == MenuScreen.Main ? ProfileStore.Selected?.Name ?? "" : "", wide: Screen == MenuScreen.Skirmishes);
         status = MenuLayout.Label("", muted: true);
         status.Hide();
         if (Screen != MenuScreen.Boot && ProfileStore.Selected == null)
@@ -50,6 +54,12 @@ public partial class FrontMenu : Control
             case MenuScreen.Boot: BuildBoot(); break;
             case MenuScreen.Main: BuildMain(); break;
             case MenuScreen.Campaign: BuildCampaign(); break;
+            case MenuScreen.FortressDefense: BuildCampaign(); break;
+            case MenuScreen.Skirmishes: BuildSkirmishes(); break;
+            case MenuScreen.About:
+                content.AddChild(MenuLayout.Label("Godot Massive RTS · A large-scale tactical strategy game built with Godot and C#."));
+                AddButton("Back", Back).GrabFocus();
+                break;
             case MenuScreen.Options: BuildOptions(); break;
         }
         content.AddChild(status);
@@ -141,9 +151,43 @@ public partial class FrontMenu : Control
     private void BuildMain()
     {
         AddButton("Campaign", () => MenuNavigation.Open(this, MenuNavigation.Campaign), UIButtonStyle.Primary).GrabFocus();
-        AddButton("Change Profile", Back);
+        AddButton("Skirmishes", () => MenuNavigation.OpenMode(this, MenuScreen.Skirmishes));
+        AddButton("Fortress Defense", () => MenuNavigation.OpenMode(this, MenuScreen.FortressDefense));
         AddButton("Options", () => MenuNavigation.Open(this, MenuNavigation.Options));
+        AddButton("Switch Profile", Back);
+        AddButton("About", () => MenuNavigation.OpenMode(this, MenuScreen.About));
         AddButton("Exit Game", () => GetTree().Quit(), UIButtonStyle.Danger);
+    }
+
+    private void BuildSkirmishes()
+    {
+        var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        columns.AddThemeConstantOverride("separation", UIMasterConfig.Current.Spacing);
+        content.AddChild(columns);
+        AddButton("Back", Back).GrabFocus();
+        Run(() =>
+        {
+            var catalog = CampaignCatalog.Load();
+            foreach (string id in CampaignCatalog.SkirmishIds)
+            {
+                var campaign = catalog.Campaigns.First(entry => entry.Id == id);
+                var panel = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+                panel.AddThemeStyleboxOverride("panel", MenuLayout.PanelStyle);
+                columns.AddChild(panel);
+                var column = new VBoxContainer();
+                panel.AddChild(column);
+                column.AddChild(MenuLayout.Label(campaign.DisplayName));
+                var list = MenuLayout.ScrollList(column, expand: true);
+                if (campaign.Levels.Count == 0) list.AddChild(MenuLayout.Label("No levels yet", muted: true));
+                foreach (var level in CampaignCatalog.OrderedLevels(campaign))
+                {
+                    var button = UIButtonFactory.Create(level.CustomName.Length == 0 ? level.Id : $"{level.Id} · {level.MenuName}",
+                        () => Run(() => LevelLauncher.Brief(this, id, level.Id)), UIButtonStyle.Primary);
+                    button.Disabled = !level.Enabled || !MenuNavigation.SceneExists(level.ScenePath);
+                    list.AddChild(button);
+                }
+            }
+        });
     }
 
     // =========================================================
@@ -165,9 +209,12 @@ public partial class FrontMenu : Control
         {
             Button first = null;
             CampaignDefinition returning = null;
-            foreach (var campaign in CampaignCatalog.Load().Campaigns)
+            foreach (var campaign in CampaignCatalog.Load().Campaigns.Where(entry =>
+                Screen == MenuScreen.FortressDefense ? entry.Id == "OpenRTS" :
+                entry.Id != "OpenRTS" && !CampaignCatalog.IsSkirmish(entry.Id)))
             {
-                var button = new Button { Text = campaign.DisplayName };
+                var button = new Button { Text = campaign.Id == AutoBattlerCampaignStore.CampaignId
+                    ? "Clash · Headquarters" : campaign.DisplayName };
                 UIButtonFactory.Apply(button, UIButtonStyle.Primary);
                 button.Pressed += () => Run(() =>
                 {
@@ -184,6 +231,8 @@ public partial class FrontMenu : Control
                 }
             }
 
+            if (Screen == MenuScreen.FortressDefense && returning == null)
+                returning = CampaignCatalog.Load().Campaigns.First(entry => entry.Id == "OpenRTS");
             if (returning != null) ShowCampaignLevels(returning, back);
             else first?.GrabFocus();
         });

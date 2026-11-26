@@ -95,7 +95,7 @@ public partial class ArmyBalanceHud : Control
     // =========================================================
     public void BeginBattle(UnitState state) => BeginBattle(state, null);
 
-    // Only the Offense arena supplies a Citadel; other modes keep the original strip.
+    // Citadel encounters add the objective’s health to the army strip.
     internal void BeginBattle(UnitState state, StructureHealth citadel)
     {
         Reset();
@@ -161,8 +161,10 @@ public partial class ArmyBalanceHud : Control
         if (objective == null || previousObjectiveHealth == objective.Health) return;
         previousObjectiveHealth = objective.Health;
         objectiveFraction = Mathf.Clamp(objective.Health / objective.MaxHealth, 0f, 1f);
-        objectiveLabel.Text = objective.Destroyed ? "ENEMY CITADEL · DESTROYED" :
-            $"ENEMY CITADEL  {Mathf.CeilToInt(objective.Health):N0} / {Mathf.CeilToInt(objective.MaxHealth):N0} HP";
+        string name = objective.Faction == Factions.Blue ? "BLUE CITADEL" : "ENEMY CITADEL";
+        objectiveLabel.AddThemeColorOverride("font_color", Factions.Color(objective.Faction));
+        objectiveLabel.Text = objective.Destroyed ? $"{name} · DESTROYED" :
+            $"{name}  {Mathf.CeilToInt(objective.Health):N0} / {Mathf.CeilToInt(objective.MaxHealth):N0} HP";
         objectiveLabel.Show();
         QueueRedraw();
     }
@@ -205,7 +207,7 @@ public partial class ArmyBalanceHud : Control
         var citadelBar = new Rect2(barX, objectiveY, barWidth, BarThickness);
         DrawRect(citadelBar, Backing);
         if (objectiveFraction > 0f)
-            DrawRect(new Rect2(barX + 1f, objectiveY + 1f, usable * objectiveFraction, BarThickness - 2f), Factions.Color(Factions.Red));
+            DrawRect(new Rect2(barX + 1f, objectiveY + 1f, usable * objectiveFraction, BarThickness - 2f), Factions.Color(objective.Faction));
         DrawRect(citadelBar, Outline, filled: false, width: 1f);
     }
 }

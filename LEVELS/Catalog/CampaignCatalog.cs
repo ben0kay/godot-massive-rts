@@ -68,6 +68,13 @@ public partial class CampaignCatalog : Resource
     public static LevelDefinition[] OrderedLevels(CampaignDefinition campaign) =>
         campaign.Levels.OrderBy(level => NumberedLevelOrder(level.Id)).ThenBy(level => level.Order).ToArray();
 
+    internal static readonly string[] SkirmishIds = { "SkirmishClash", "Offense", "SkirmishDefense" };
+    internal static bool IsSkirmish(string id) => Array.IndexOf(SkirmishIds, id) >= 0;
+    internal static bool IsOffense(string id) => id is "Offense" or "CampaignOffense";
+    internal static bool IsDefense(string id) => id is "SkirmishDefense" or "CampaignDefense";
+    internal static bool IsTactical(string id) => id == AutoBattlerCampaignStore.CampaignId || IsSkirmish(id) || IsOffense(id) || IsDefense(id);
+    internal static string BattleType(string id) => IsOffense(id) ? "Offense" : IsDefense(id) ? "Defense" : "Clash";
+
     internal static bool IsUnlocked(LevelDefinition level, PlayerProfile profile) =>
         profile != null && (string.Equals(profile.Name, "debug", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(level.Id, NumberedLevelId(1), StringComparison.OrdinalIgnoreCase));

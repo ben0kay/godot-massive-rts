@@ -17,6 +17,9 @@ internal static class MenuNavigation
         if (source.IsInsideTree()) Change(source, LoadScene(path).Instantiate());
     }
 
+    internal static void OpenMode(Node source, FrontMenu.MenuScreen screen, string returnId = null) =>
+        Change(source, new FrontMenu { Screen = screen, ReturnCampaignId = returnId });
+
     // =========================================================
     // Restore the mode from the level session rather than a global last selection.
     public static void ReturnToCampaign(Node source, string campaignId)
@@ -30,6 +33,16 @@ internal static class MenuNavigation
             return;
         }
 
+        if (CampaignCatalog.IsSkirmish(campaignId))
+        {
+            OpenMode(source, FrontMenu.MenuScreen.Skirmishes);
+            return;
+        }
+        if (campaignId == "OpenRTS")
+        {
+            OpenMode(source, FrontMenu.MenuScreen.FortressDefense, campaignId);
+            return;
+        }
         var menu = LoadScene(Campaign).Instantiate<FrontMenu>();
         menu.ReturnCampaignId = campaignId;
         Change(source, menu);

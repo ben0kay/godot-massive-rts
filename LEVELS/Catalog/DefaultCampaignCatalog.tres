@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CampaignCatalog" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="CampaignCatalog" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://LEVELS/Catalog/CampaignCatalog.cs" id="1"]
 [ext_resource type="Script" path="res://LEVELS/Catalog/CampaignDefinition.cs" id="2"]
@@ -8,7 +8,15 @@
 
 [ext_resource type="Resource" path="res://LEVELS/Offense/Offense.tres" id="5"]
 
+[ext_resource type="Resource" path="res://LEVELS/Skirmishes/Clash/SkirmishClash.tres" id="6"]
+
+[ext_resource type="Resource" path="res://LEVELS/Skirmishes/Defense/SkirmishDefense.tres" id="7"]
+
+[ext_resource type="Resource" path="res://LEVELS/Campaign/Offense/CampaignOffense.tres" id="8"]
+
+[ext_resource type="Resource" path="res://LEVELS/Campaign/Defense/CampaignDefense.tres" id="9"]
+
 [resource]
 script = ExtResource("1")
-Campaigns = Array[ExtResource("2")]([ExtResource("4"), ExtResource("3"), ExtResource("5")])
+Campaigns = Array[ExtResource("2")]([ExtResource("4"), ExtResource("3"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
 AllowDevelopmentCompletion = true

@@ -19,7 +19,7 @@ internal static class LevelLauncher
     {
         if (!source.IsInsideTree()) return;
         var (catalog, _, level, profile) = Resolve(campaignId, levelId);
-        if (campaignId == AutoBattlerCampaignStore.CampaignId || campaignId == "Offense")
+        if (CampaignCatalog.IsTactical(campaignId))
         {
             LaunchAutoBattler(source, level, profile.Id, campaignId);
             return;
@@ -34,7 +34,7 @@ internal static class LevelLauncher
     private static void LaunchAutoBattler(Node source, LevelDefinition level, string profileId, string campaignId)
     {
         AutoBattlerCampaignState state;
-        try { state = AutoBattlerCampaignStore.Open(profileId, out _); }
+        try { state = CampaignCatalog.IsSkirmish(campaignId) ? null : AutoBattlerCampaignStore.Open(profileId, out _); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             throw new InvalidOperationException(error.Message, error);
@@ -51,7 +51,13 @@ internal static class LevelLauncher
         var arena = arenaScene.Instantiate<BenchmarkArena>();
         arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
         map.LevelSettings = level;
-        if (campaignId == "Offense") map.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.DestroyCitadel;
+        if (CampaignCatalog.IsOffense(campaignId)) map.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.DestroyCitadel;
+        if (CampaignCatalog.IsDefense(campaignId)) map.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.ProtectCitadel;
+        if (CampaignCatalog.IsSkirmish(campaignId))
+            state = new AutoBattlerCampaignState
+            {
+                OwnedUnits = new System.Collections.Generic.Dictionary<string, int>(map.AutoBattlerRules.SkirmishArmy)
+            };
         arena.ConfigureCampaignBattle(map, state, campaignId);
         MenuNavigation.Change(source, arena);
     }
@@ -67,7 +73,7 @@ internal static class LevelLauncher
         var campaign = catalog.Campaigns.FirstOrDefault(entry => entry.Id == campaignId)
             ?? throw new InvalidOperationException("Campaign unavailable.");
         var level = campaign.Levels.FirstOrDefault(entry => entry.Id == levelId);
-        if (level == null || !level.Enabled || !CampaignCatalog.IsUnlocked(level, profile))
+        if (level == null || !level.Enabled || (!CampaignCatalog.IsSkirmish(campaignId) && !CampaignCatalog.IsUnlocked(level, profile)))
             throw new InvalidOperationException("This level is unavailable or locked.");
         return (catalog, campaign, level, profile);
     }

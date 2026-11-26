@@ -47,3 +47,17 @@ Drag `WORLD/RESOURCES/CARBON/CarbonDeposit.tscn` under **Resources**, move or du
 ### Offense battle result
 
 Destroy the authored Red Citadel to win, even if defenders remain. The shared arena checks the objective at the simulation tick boundary, before rebuilding navigation for destroyed defenses, and stops further catch-up ticks when victory or defeat occurs. If both conditions occur in the same tick, Citadel destruction takes precedence. The top HUD shows enemy Citadel HP alongside army counts. Retry creates a fresh objective and clears the terminal flag. Source reviewed; owner validation and expanded exception stack trace pending if errors persist.
+
+
+## Campaign and Skirmishes authoring
+
+In the Level Editor start screen, choose Campaign, Skirmishes, or Fortress Defense.
+Campaign and Skirmishes each have separate Clash, Offense, and Defense level lists.
+Save registers the level in the selected list. Existing Campaign Clash levels retain
+their paths. Existing Offense Level001 appears under Skirmishes → Offense.
+
+Skirmish Map Settings include a preset Blue army. Player deployment uses these
+quantities without opening the campaign profile roster. Editor test deployment
+remains an unrestricted authoring tool. Offense maps require a Red Citadel, while
+Defense maps require a Blue Citadel and use Blue preplaced structures. Fortress
+Defense uses its progressive waves and its own level list.

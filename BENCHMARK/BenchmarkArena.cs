@@ -154,7 +154,7 @@ public partial class BenchmarkArena : Node3D
         AddChild(flatGround);
         camera = new IsometricCamera(); AddChild(camera); camera.Current = true;
         var authoredBuildings = GD.Load<BuildingCatalog>(BuildingCatalogPath);
-        if (IsOffense)
+        if (HasCitadelObjective)
         {
             var definitions = new Godot.Collections.Array<BuildingDefinition>(authoredBuildings.Definitions);
             definitions.Add(GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres"));
@@ -571,7 +571,7 @@ public partial class BenchmarkArena : Node3D
             panel.Status.Text = "Place soldiers and at least two teams.\n" + DeploymentCount();
             return;
         }
-        if (IsOffense && campaignMapError != null) { ReportStartError(campaignMapError); return; }
+        if (HasCitadelObjective && campaignMapError != null) { ReportStartError(campaignMapError); return; }
         var orders = settings.Orders;
         if (IsOffense)
         {
@@ -660,7 +660,7 @@ public partial class BenchmarkArena : Node3D
             defenseRenderer.Initialize(defenses, buildings, Config.ObstacleHeight, battle: true, terrain: terrain);
             defenseSystem = new DefenseSystem(defenses, buildings, Config.ObstacleHeight, defenseRenderer, catalog.DamageRules, layout.Obstacles.Field, terrain);
         }
-        if (IsOffense && defenseSystem != null && offenseCitadelSlot >= 0 && offenseCitadelSlot < defenseSystem.Structures.Count)
+        if (HasCitadelObjective && defenseSystem != null && offenseCitadelSlot >= 0 && offenseCitadelSlot < defenseSystem.Structures.Count)
             offenseCitadel = defenseSystem.Structures[offenseCitadelSlot];
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
@@ -732,7 +732,7 @@ public partial class BenchmarkArena : Node3D
                 int end = Math.Min(autoAttackCount, preparedTargets + InitialTargetsPerFrame);
                 grid.PrunePursuitCells = panel.PrunePursuitCells;
                 CombatSystem.PrepareTargets(units, grid, preparedTargets, end,
-                    localOnlyFaction: IsOffense ? Factions.Blue : -1);
+                    localOnlyFaction: HasCitadelObjective ? AssaultFaction : -1);
                 preparedTargets = end;
                 panel.Status.Text = $"Preparing targets {preparedTargets:N0} / {autoAttackCount:N0}";
                 if (preparedTargets < autoAttackCount) return;
@@ -755,7 +755,7 @@ public partial class BenchmarkArena : Node3D
                     dreadnaughts.SyncVisuals();
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
-                armyBalanceHud.BeginBattle(units, IsOffense ? offenseCitadel : null);
+                armyBalanceHud.BeginBattle(units, HasCitadelObjective ? offenseCitadel : null);
                 ShowAutoBattlerClock(true);
                 if (campaignHud != null)
                 {
@@ -916,13 +916,13 @@ public partial class BenchmarkArena : Node3D
             ref readonly var type = ref catalog[units.Type[id]];
             bool opening = units.OpeningOrders?.Active(id) == true;
             var sight = StructureCombat.Sight(type, units, BattleSight);
-            bool siege = offenseCitadel?.Destroyed == false && units.Faction[id] == Factions.Blue &&
+            bool siege = offenseCitadel?.Destroyed == false && units.Faction[id] == AssaultFaction &&
                 (type.TargetsUnits || type.TargetsStructures) && type.AgainstStructures(type.Damage) > 0f;
             if (siege && !opening && defenseCombat.TryPrioritize(id, type, offenseCitadel, sight, obstacles, tick, navigation,
                 (units.Target[id] < 0 || units.Health[units.Target[id]] <= 0f))) continue;
             if (opening || !type.TargetsStructures)
             {
-                if (IsOffense) defenseCombat.SetTarget(id, null);
+                if (HasCitadelObjective) defenseCombat.SetTarget(id, null);
                 continue;
             }
 
@@ -973,7 +973,7 @@ public partial class BenchmarkArena : Node3D
                 CombatSystem.Acquire(units, grid, Config, acquisitionStep, targetingStepSeconds, BattleSight,
                     panel.RangedTargetVariety, battleSeed, panel.SlowPursuitRefresh,
                     panel.DelayFarMeleeRetarget, panel.LimitPursuitQueries, autoAttackCount, autoAttackIds,
-                    localOnlyFaction: IsOffense ? Factions.Blue : -1);
+                    localOnlyFaction: HasCitadelObjective ? AssaultFaction : -1);
                 if (guards != null) AcquireGuards(acquisitionStep);
                 AcquireDefenseTargets(acquisitionStep);
                 targetingMs += Elapsed(start);

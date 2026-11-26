@@ -24,20 +24,26 @@ public partial class BenchmarkArena
     private int offenseCitadelSlot = -1;
     private StructureHealth offenseCitadel;
     private bool offenseBattleEnded;
-    private bool HasDefenseAttackers => units.HasStructureAttackers || IsOffense;
+    private bool IsDefense => autoBattlerPlaytestMap?.AutoBattlerRules?.Objective == AutoBattlerRules.ObjectiveType.ProtectCitadel;
+    private bool HasCitadelObjective => IsOffense || IsDefense;
+    private byte AssaultFaction => IsDefense ? Factions.Red : Factions.Blue;
+    private bool HasDefenseAttackers => units.HasStructureAttackers || HasCitadelObjective;
 
     // Check at the tick boundary, not after rendering or a whole frame of catch-up ticks.
     private bool TryFinishOffense()
     {
-        if (!IsOffense || spawning || units == null || offenseCitadel == null) return false;
+        if (!HasCitadelObjective || spawning || units == null || offenseCitadel == null) return false;
         if (offenseBattleEnded) return true;
         if (campaignRoster != null && !campaignBattleRunning) return false;
-        bool victory = offenseCitadel.Destroyed;
-        if (!victory && (units.FactionAlive[Factions.Blue] > 0 || blueWave?.Pending == true)) return false;
+        bool attackersRemain = units.FactionAlive[AssaultFaction] > 0 ||
+            (airSquadron?.Alive(AssaultFaction) ?? 0) > 0 ||
+            (IsDefense ? redWave?.Pending : blueWave?.Pending) == true;
+        if (!offenseCitadel.Destroyed && (attackersRemain || (IsDefense && projectiles?.Count > 0))) return false;
+        bool victory = IsDefense ? !offenseCitadel.Destroyed : offenseCitadel.Destroyed;
         offenseBattleEnded = true;
         paused = true;
         if (campaignHud != null) FinishCampaignBattle(victory ? "Victory" : "Defeat");
-        else panel.Status.Text = victory ? "Victory · Red Citadel destroyed" : "Defeat · Blue army eliminated";
+        else panel.Status.Text = IsDefense ? (victory ? "Victory · Blue Citadel held" : "Defeat · Blue Citadel destroyed") : victory ? "Victory · Red Citadel destroyed" : "Defeat · Blue army eliminated";
         armyBalanceHud?.RefreshCounts();
         return true;
     }
@@ -138,7 +144,7 @@ public partial class BenchmarkArena
 
         if (map.GetNodeOrNull<Node3D>("StartingDefenses") is Node3D defenses)
             foreach (var child in defenses.GetChildren())
-                if (child is CommandLaserPlacement tower && tower.Red)
+                if (child is CommandLaserPlacement tower && (tower.Red || IsDefense))
                 {
                     if (!buildings.TryResolve(tower.EffectiveDefinition?.Id, out int type))
                     {
@@ -151,22 +157,22 @@ public partial class BenchmarkArena
                         break;
                     }
                     var area = tower.Footprint(tower.GlobalPosition);
-                    if (IsOffense && tower.EffectiveDefinition.Id == "citadel")
+                    if (HasCitadelObjective && tower.Red != IsDefense && tower.EffectiveDefinition.Id == "citadel")
                     {
-                        if (offenseCitadelSlot >= 0) campaignMapError = "Offense requires exactly one Red Citadel.";
+                        if (offenseCitadelSlot >= 0) campaignMapError = "This battle requires exactly one objective Citadel.";
                         offenseCitadelSlot = autoBattlerDefenses.Count;
                     }
-                    autoBattlerDefenses.Add(new BuildingPlacement(area.X, area.Z, Factions.Red, type,
+                    autoBattlerDefenses.Add(new BuildingPlacement(area.X, area.Z, tower.Red ? Factions.Red : Factions.Blue, type,
                         campaignRoster != null ? area.GridSize : DeploymentLayout.CellSize));
                 }
 
-        if (IsOffense && offenseCitadelSlot < 0) campaignMapError = "Offense requires exactly one Red Citadel.";
+        if (HasCitadelObjective && offenseCitadelSlot < 0) campaignMapError = "This battle requires exactly one objective Citadel.";
         autoBattlerPaintCollision = BuildAutoBattlerField(autoBattlerCover.Concat(autoBattlerWater)
             .Concat(autoBattlerDefenses.Select(defense => defense.Footprint(buildings))));
         painter.BrushFaction = Factions.Blue;
         if (campaignRoster == null) painter.PaintRestriction = CanDeployBlue;
         painter.SetPreviewTerrain(terrain);
-        autoBattlerPlaytestPreview = LevelLayoutPreview.Build(map, redOnly: campaignRoster != null, holographicDeployment: true);
+        autoBattlerPlaytestPreview = LevelLayoutPreview.Build(map, redOnly: campaignRoster != null && !IsDefense, holographicDeployment: true);
         if (campaignRoster != null) PrepareCampaignDeployment();
     }
 

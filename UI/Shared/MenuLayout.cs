@@ -11,7 +11,7 @@ internal static class MenuLayout
 
     // =========================================================
     // Center the card while allowing the screen to scroll if its height is constrained.
-    public static VBoxContainer Create(Control root, string heading, string subtitle = "")
+    public static VBoxContainer Create(Control root, string heading, string subtitle = "", bool wide = false)
     {
         var background = new ColorRect { Color = Config.Background, MouseFilter = Control.MouseFilterEnum.Ignore };
         root.AddChild(background);
@@ -28,7 +28,15 @@ internal static class MenuLayout
         scroll.AddChild(center);
         var panel = new PanelContainer { CustomMinimumSize = new Vector2(Config.PanelWidth, 0) };
         panel.AddThemeStyleboxOverride("panel", PanelStyle);
-        center.AddChild(panel);
+        if (wide)
+        {
+            scroll.RemoveChild(center);
+            center.QueueFree();
+            panel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            panel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+            scroll.AddChild(panel);
+        }
+        else center.AddChild(panel);
         var content = new VBoxContainer();
         content.AddThemeConstantOverride("separation", Config.Spacing);
         panel.AddChild(content);
@@ -48,13 +56,14 @@ internal static class MenuLayout
         return label;
     }
 
-    public static VBoxContainer ScrollList(VBoxContainer parent)
+    public static VBoxContainer ScrollList(VBoxContainer parent, bool expand = false)
     {
         var scroll = new ScrollContainer
         {
             CustomMinimumSize = new Vector2(0, 240),
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            FollowFocus = true
+            FollowFocus = true,
+            SizeFlagsVertical = expand ? Control.SizeFlags.ExpandFill : Control.SizeFlags.Fill
         };
         parent.AddChild(scroll);
         var list = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };

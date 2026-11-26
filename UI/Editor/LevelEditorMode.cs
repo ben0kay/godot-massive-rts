@@ -10,6 +10,10 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
     public static readonly LevelEditorMode[] Supported =
     {
         new("Campaign001", "res://LEVELS/AutoBattler", true),
+        new("CampaignOffense", "res://LEVELS/Campaign/Offense", true),
+        new("CampaignDefense", "res://LEVELS/Campaign/Defense", true),
+        new("SkirmishClash", "res://LEVELS/Skirmishes/Clash", true),
+        new("SkirmishDefense", "res://LEVELS/Skirmishes/Defense", true),
         new("Offense", "res://LEVELS/Offense", true),
         new("OpenRTS", "res://LEVELS/FortressDefense", false)
     };
@@ -44,6 +48,7 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
             {
                 level.WaveDefinitions = new();
                 level.AutoBattlerRules = new AutoBattlerRules { LineAxis = AutoBattlerRules.DeploymentAxis.Z };
+                if (CampaignCatalog.IsSkirmish(CampaignId)) level.AutoBattlerRules.SetDefaultSkirmishArmy();
                 foreach (string name in new[] { "Citadel", "BlueSpawn", "Resources" })
                     level.GetNode(name).Free();
             }
@@ -53,7 +58,9 @@ internal sealed record LevelEditorMode(string CampaignId, string Folder, bool Is
             level.Free();
             throw new InvalidOperationException("The scene's authoring rules do not match this campaign.");
         }
-        if (CampaignId == "Offense") level.AutoBattlerRules.Objective = AutoBattlerRules.ObjectiveType.DestroyCitadel;
+        if (IsAutoBattler) level.AutoBattlerRules.Objective = CampaignCatalog.IsOffense(CampaignId)
+            ? AutoBattlerRules.ObjectiveType.DestroyCitadel : CampaignCatalog.IsDefense(CampaignId)
+            ? AutoBattlerRules.ObjectiveType.ProtectCitadel : AutoBattlerRules.ObjectiveType.EliminateEnemy;
         return level;
     }
 }

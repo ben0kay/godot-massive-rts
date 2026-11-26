@@ -171,7 +171,7 @@ public partial class LevelEditor
                 Heading(context, "Drag to place a Disruptor Grid line. Right-drag to erase.", 15);
                 break;
             case Tool.RedOrders:
-                Heading(context, mode.CampaignId == "Offense" ? "Box-select Red units and assign Guard, Hard Guard, or Auto Attack." :
+                Heading(context, CampaignCatalog.IsOffense(mode.CampaignId) ? "Box-select Red units and assign Guard, Hard Guard, or Auto Attack." :
                     "Drag a box around Red units, then assign Move or Wait.", 15);
                 break;
             case Tool.Select:
@@ -700,7 +700,7 @@ public partial class LevelEditor
                 node = formation; parent = UnitContainerName;
                 break;
             case Tool.Defense:
-                node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler || redTower };
+                node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler ? !CampaignCatalog.IsDefense(mode.CampaignId) : redTower };
                 parent = "StartingDefenses";
                 break;
             case Tool.Fabricator:
@@ -737,7 +737,7 @@ public partial class LevelEditor
         }
         if (parent != RedReserveFormation.ContainerName && !FitsPresetSide(node, point))
         {
-            SetStatus("Place the entire enemy formation or defense on the Red side of the deployment line.");
+            SetStatus("Place the entire enemy formation or defense on its faction’s side of the deployment line.");
             return false;
         }
         if (parent == RedReserveFormation.ContainerName && node is CommandUnitPlacement reserve &&
@@ -782,7 +782,7 @@ public partial class LevelEditor
         }
         if (!FitsPresetSide(node, point))
         {
-            SetStatus("Move the entire enemy formation or defense onto the Red side.");
+            SetStatus("Move the entire enemy formation or defense onto its faction’s side.");
             return;
         }
         Vector3 old = node.GlobalPosition;

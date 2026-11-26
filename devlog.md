@@ -680,3 +680,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — AIR-VIS1 — Added independently toggleable faceted V-wing interceptor and Heavy Bomber airframes with shared faction armor material, cockpit/gun/exhaust detailing and bomber engine nacelles/payload-bay inset. Cached meshes shared by editor/deployment and battle; original wingtip/tracer anchors, flight and combat untouched. Legacy/custom meshes retained. Source review only; owner shader/visual validation pending.
 
 - 2026-11-26 — Offense Blue attackers now use local defender acquisition so the default movement goal remains the Red Citadel between fights. Opening orders retain priority.
+
+- 2026-11-26 — Added standalone Skirmishes menus and authoring destinations, preset rosters, and short Defense encounters with a Blue Citadel. Campaign retains recruitment and Fortress Defense has its own menu.

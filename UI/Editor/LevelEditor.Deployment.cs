@@ -77,7 +77,7 @@ public partial class LevelEditor
         {
             AuthoredSoldiers = AuthoredRedSoldiers().ToArray(), EditorCamera = camera, EditorGround = WorldPoint,
             EditorSurface = point => new Vector3(point.X, Surface(point), point.Z),
-            OffenseEditor = mode.CampaignId == "Offense", ZIndex = 10, OrdersChanged = SaveOrders
+            OffenseEditor = CampaignCatalog.IsOffense(mode.CampaignId), ZIndex = 10, OrdersChanged = SaveOrders
         };
         redOrderOverlay = overlay;
         interfaceRoot.AddChild(overlay);
@@ -142,7 +142,7 @@ public partial class LevelEditor
         UpdateTool();
     }
 
-    private BuildingDefinition SelectedDefense => mode.CampaignId == "Offense" && paletteDefenseIndex == defenseDefinitions.Length
+    private BuildingDefinition SelectedDefense => (CampaignCatalog.IsOffense(mode.CampaignId) || CampaignCatalog.IsDefense(mode.CampaignId)) && paletteDefenseIndex == defenseDefinitions.Length
         ? GD.Load<BuildingDefinition>("res://WORLD/BUILDINGS/DEFINITIONS/Citadel.tres")
         : defenseDefinitions[mode.IsAutoBattler ? paletteDefenseIndex : defensePicker.Selected - 1];
 

@@ -25,7 +25,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
         Action<byte> select, Action<int> brush, Action clear, Action start,
         Action reset, Action retreat, Action leave, Func<byte, int> maxReserve,
-        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged, CheckButton circleMeshToggle)
+        Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged, CheckButton circleMeshToggle, bool skirmish = false)
     {
         Layer = 3;
         var panel = new PanelContainer { Position = new Vector2(16, 16), CustomMinimumSize = new Vector2(360, 0) };
@@ -41,7 +41,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         deployment.AddChild(help);
 
         if (choices.Length == 0)
-            deployment.AddChild(MenuLayout.Label("No eligible soldiers owned. Visit Headquarters to recruit.", muted: true));
+            deployment.AddChild(MenuLayout.Label(skirmish ? "This skirmish has no eligible preset soldiers." : "No eligible soldiers owned. Visit Headquarters to recruit.", muted: true));
         else
         {
             var palette = new UnitPlacementBar();
@@ -126,7 +126,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         withdraw = UIButtonFactory.Create("Withdraw", retreat);
         body.AddChild(retry);
         body.AddChild(withdraw);
-        body.AddChild(UIButtonFactory.Create("Headquarters", leave));
+        body.AddChild(UIButtonFactory.Create(skirmish ? "Back to Skirmishes" : "Headquarters", leave));
     }
 
     internal void AddDisruptorControls(int owned, Action<bool> activate)

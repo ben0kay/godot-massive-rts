@@ -91,7 +91,7 @@ public partial class BenchmarkArena
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
             () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
-            spread => painter.SoldierBrushSpread = spread, CreateCircleMeshToggle());
+            spread => painter.SoldierBrushSpread = spread, CreateCircleMeshToggle(), skirmish: CampaignCatalog.IsSkirmish(battleCampaignId));
         AddChild(campaignHud);
         campaignHud.AddDisruptorControls(campaignRoster.OwnedDisruptorTiles, enabled =>
         {
@@ -167,10 +167,10 @@ public partial class BenchmarkArena
     private string CampaignStartError()
     {
         if (campaignMapError != null) return campaignMapError;
-        if (autoBattlerRed.Length == 0 && autoBattlerDefenses.Count == 0 && AuthoredRedReserve == 0 && RedAircraftCount == 0) return "This level has no authored Red forces.";
+        if (autoBattlerRed.Length == 0 && !autoBattlerDefenses.Any(defense => defense.Faction == Factions.Red) && AuthoredRedReserve == 0 && RedAircraftCount == 0) return "This level has no authored Red forces.";
         if (campaignZoneCells.Count == 0 && autoBattlerPlaytestMap.AutoBattlerRules.LineAxis == AutoBattlerRules.DeploymentAxis.Disabled)
             return "This map has no authored Blue deployment area.";
-        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0 && BlueAircraftCount == 0) return "Deploy or reserve at least one owned soldier, or author a Blue aircraft flight.";
+        if (painter.Layout.Placements.Count == 0 && blueReserve.Count == 0 && BlueAircraftCount == 0) return "Deploy or reserve at least one Blue unit.";
         if ((long)painter.Layout.Placements.Count + autoBattlerRed.Length + AuthoredRedReserve + blueReserveCount > Config.MaxSoldiers)
             return "Both armies together exceed the simulation's total soldier capacity.";
         return null;
@@ -182,8 +182,8 @@ public partial class BenchmarkArena
         campaignHud.ShowDeployment(type =>
         {
             int owned = campaignRoster.Owned(catalog[type].Id), deployed = layout.CountForType(type);
-            return $"Owned {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
-        }, (IsOffense ? "Destroy the Red Citadel\n" : "") + $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count} defenses" +
+            return $"{(CampaignCatalog.IsSkirmish(battleCampaignId) ? "Preset" : "Owned")} {owned:N0}  ·  Deployed {deployed:N0}  ·  Reserve {Reserved(type):N0}  ·  Available {owned - deployed - Reserved(type):N0}";
+        }, (IsOffense ? "Destroy the Red Citadel\n" : IsDefense ? "Protect the Blue Citadel\n" : "") + $"Blue strength {layout.StrengthOf(Factions.Blue):N0}  ·  Red strength {campaignRedStrength:N0} + {autoBattlerDefenses.Count(defense => defense.Faction == Factions.Red)} defenses" +
             (AuthoredRedReserve > 0 ? $"\nRed reinforcements: {AuthoredRedReserve:N0}" : "") +
             (BlueAircraftCount + RedAircraftCount > 0 ? $"\nAircraft: Blue {BlueAircraftCount} · Red {RedAircraftCount}" : ""),
             CampaignStartError());
@@ -203,7 +203,12 @@ public partial class BenchmarkArena
     {
         if (!campaignBattleRunning || steps == 0) return;
         if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
-        if (IsOffense && TryFinishOffense()) return;
+        if (HasCitadelObjective && TryFinishOffense()) return;
+        if (IsDefense)
+        {
+            if (AutoBattlerElapsedSeconds >= CampaignBattleTimeLimit) FinishCampaignBattle("Stalemate");
+            return;
+        }
         if (units.FactionAlive[Factions.Blue] == 0 && (airSquadron?.Alive(Factions.Blue) ?? 0) == 0 && blueWave?.Pending != true) FinishCampaignBattle("Defeat");
         else if (!IsOffense && units.FactionAlive[Factions.Red] == 0 && (airSquadron?.Alive(Factions.Red) ?? 0) == 0 && redWave?.Pending != true && projectiles.Count == 0 &&
             (defenseSystem == null || defenseSystem.Structures.All(tower => tower.Destroyed)))
@@ -217,12 +222,12 @@ public partial class BenchmarkArena
         if (!campaignBattleRunning) return;
         campaignBattleRunning = false;
         paused = true;
-        if (IsOffense) offenseBattleEnded = true;
+        if (HasCitadelObjective) offenseBattleEnded = true;
         // All original Blue IDs precede Red IDs in the all-auto-attack snapshot.
         int survivors = 0;
         for (int id = 0; id < campaignInitialBlue; id++)
             if (units.Faction[id] == Factions.Blue && units.Health[id] > 0f) survivors++;
-        int defenses = defenseSystem?.Structures.Count(tower => !tower.Destroyed) ?? 0;
+        int defenses = defenseSystem?.Structures.Count(tower => tower.Faction == Factions.Red && !tower.Destroyed) ?? 0;
         int arrived = blueWave?.Released ?? 0;
         string reserveResult = blueWave == null ? "" :
             $"\nBlue reserve survivors {units.FactionAlive[Factions.Blue] - survivors:N0} / {arrived:N0} arrived";

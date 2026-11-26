@@ -82,7 +82,17 @@ public partial class LevelEditor
     private Func<(Action Undo, Action Redo)> AutoBattlerForm(Control parent)
     {
         var rules = map.AutoBattlerRules;
-        Heading(parent, "Objective · Eliminate the enemy", 17);
+        Heading(parent, CampaignCatalog.BattleType(campaign.Id), 17);
+        var presetCounts = new List<(string Id, SpinBox Count)>();
+        if (CampaignCatalog.IsSkirmish(campaign.Id))
+        {
+            Heading(parent, "Preset Blue army", 17);
+            foreach (var unit in units)
+            {
+                rules.SkirmishArmy.TryGetValue(unit.Id, out int count);
+                presetCounts.Add((unit.Id, Number(parent, unit.DisplayName, count, 0, 100000)));
+            }
+        }
         var allowance = Number(parent, "Blue unit limit", rules.BlueUnitLimit, 0, 50000);
         Heading(parent, "Allowed Blue unit types", 15);
         var allowed = new HashSet<string>(rules.AllowedBlueUnitIds);
@@ -104,8 +114,13 @@ public partial class LevelEditor
             if (restrict.ButtonPressed && chosen.Length == 0) throw new InvalidOperationException("Select at least one permitted unit type.");
             int oldAllowance = rules.BlueUnitLimit, nextAllowance = (int)allowance.Value;
             string[] oldAllowed = rules.AllowedBlueUnitIds;
-            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; },
-                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen; });
+            var oldArmy = rules.SkirmishArmy;
+            var newArmy = new Godot.Collections.Dictionary<string, int>();
+            foreach (var (id, count) in presetCounts)
+                if (count.Value > 0) newArmy[id] = (int)count.Value;
+            return (() => { rules.BlueUnitLimit = oldAllowance; rules.AllowedBlueUnitIds = oldAllowed; rules.SkirmishArmy = oldArmy; },
+                () => { rules.BlueUnitLimit = nextAllowance; rules.AllowedBlueUnitIds = chosen;
+                    if (presetCounts.Count > 0) rules.SkirmishArmy = newArmy; });
         };
     }
 
