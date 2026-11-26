@@ -755,7 +755,7 @@ public partial class BenchmarkArena : Node3D
                     dreadnaughts.SyncVisuals();
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
-                armyBalanceHud.BeginBattle(units, HasCitadelObjective ? offenseCitadel : null);
+                armyBalanceHud.BeginBattle(units, HasCitadelObjective ? offenseCitadel : null, airSquadron);
                 ShowAutoBattlerClock(true);
                 if (campaignHud != null)
                 {

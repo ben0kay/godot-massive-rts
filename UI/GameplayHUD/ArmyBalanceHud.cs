@@ -95,13 +95,16 @@ public partial class ArmyBalanceHud : Control
     // =========================================================
     public void BeginBattle(UnitState state) => BeginBattle(state, null);
 
+    private AirSquadron aircraft;
+
     // Citadel encounters add the objective’s health to the army strip.
-    internal void BeginBattle(UnitState state, StructureHealth citadel)
+    internal void BeginBattle(UnitState state, StructureHealth citadel, AirSquadron airSquadron = null)
     {
         Reset();
         source = state;
+        aircraft = airSquadron;
         objective = citadel;
-        if (source == null || (source.Count <= 0 && objective == null)) return;
+        if (source == null || (source.Count <= 0 && objective == null && aircraft == null)) return;
         RefreshCounts();
         Visible = true;
     }
@@ -110,6 +113,7 @@ public partial class ArmyBalanceHud : Control
     public void Reset()
     {
         source = null;
+        aircraft = null;
         objective = null;
         previousObjectiveHealth = -1f;
         objectiveFraction = 0f;
@@ -133,7 +137,7 @@ public partial class ArmyBalanceHud : Control
         int alive = 0;
         for (int faction = 0; faction < Factions.Count; faction++)
         {
-            int count = Math.Max(0, source.FactionAlive[faction]);
+            int count = Math.Max(0, source.FactionAlive[faction]) + (aircraft?.Alive((byte)faction) ?? 0);
             alive += count;
             if (previousCounts[faction] == count) continue;
             previousCounts[faction] = count;

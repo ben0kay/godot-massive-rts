@@ -37,7 +37,7 @@ public partial class AirSquadron : Node3D
     private DamageRules damageRules;
     private int blueAlive, redAlive;
     internal bool DogfightActive => blueAlive > 0 && redAlive > 0;
-    internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : redAlive;
+    internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : faction == Factions.Red ? redAlive : 0;
 
     internal void Initialize(Flight[] flights, float mapHalfWidth, TerrainHeightField heightField,
         float minimumAltitude, DamageRules damage, ProjectileCatalog projectiles)
