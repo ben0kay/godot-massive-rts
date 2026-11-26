@@ -55,7 +55,7 @@ internal sealed partial class AirSquadronVisuals : Node3D
         return batch;
     }
 
-    private static Mesh MakeWing()
+    internal static Mesh MakeWing()
     {
         using var mesh = new SurfaceTool();
         mesh.Begin(Mesh.PrimitiveType.Triangles);

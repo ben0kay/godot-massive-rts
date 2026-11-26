@@ -660,3 +660,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — VIS-TRIANGLE-BOLT — Reduced basic Triangle Archer LaserBolt visual mesh from 0.0675 × 0.0675 × 0.51 to 0.045 × 0.045 × 0.44 units (one-third thinner, approximately 14% shorter). Long Marksman bolt, faction tint, flight, hit detection and damage unchanged. Resource/source review only; owner visual check pending.
 
 - 2026-11-26 — AIR1-A: added authored Clash V-wing flights, separate air grid and fixed-step dogfights, variable altitude, and batched wingtip wisps. Source implemented, awaiting Godot playtest.
+
+- 2026-11-26 — AIR1-A authoring: moved V-wing placement into the Clash Units roster, with faction selection, painted and erasable starting positions, preview, and undo/redo. Old flight counts remain readable. Awaiting Godot playtest.

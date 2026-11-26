@@ -10,7 +10,7 @@ public partial class LevelEditor
     private Button[] paletteTabs;
     private Button paletteSelect, paletteMove, paletteErase, paletteRedOrders;
     private int paletteDefenseIndex;
-    private Button offenseCitadel;
+    private Button offenseCitadel, vWingCard;
     private VBoxContainer editorBrushControls;
     private HBoxContainer editorBrushSizes;
     private readonly ButtonGroup paletteTools = new();
@@ -100,16 +100,28 @@ public partial class LevelEditor
         int towers = defenseDefinitions.Length;
         palettePages = new[]
         {
-            placementPalette.BuildCards(picker, units.Length, (units.Length + 1) / 2, i => units[i].DisplayName,
-                i => UnitPlacementBar.Stats(units[i].Health, units[i].Damage), (icon, i) =>
+            placementPalette.BuildCards(picker, units.Length + 1, (units.Length + 2) / 2,
+                i => i == units.Length ? "V-wing" : units[i].DisplayName,
+                i => i == units.Length ? "Air interceptor" : UnitPlacementBar.Stats(units[i].Health, units[i].Damage),
+                (icon, i) =>
                 {
-                    icon.SetOutline(UnitOutline.FromDefinition(units[i], UnitOutline.EffectiveSize(units[i])));
+                    if (i == units.Length) icon.SetTexture(GD.Load<Texture2D>("res://GAMEPLAY/COMBAT/AIR/VWingIcon.svg"));
+                    else icon.SetOutline(UnitOutline.FromDefinition(units[i], UnitOutline.EffectiveSize(units[i])));
                     icon.SetColor(enemy);
                 }, i =>
                 {
+                    if (i == units.Length)
+                    {
+                        if (editingReserve) ToggleReserveGrid();
+                        PickPaletteTool(Tool.VWing);
+                        return;
+                    }
                     unitIndex = i;
                     PickPaletteTool(Tool.Soldiers);
-                }, paletteTools, selectFirst: false),
+                }, paletteTools, selectFirst: false, configureCard: (card, i) =>
+                {
+                    if (i == units.Length) vWingCard = card;
+                }),
             BuildDefenses(),
             ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls", "Cliff Painter" },
                 new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall, Tool.Cliff }),
@@ -197,6 +209,7 @@ public partial class LevelEditor
     private void SetPlacementPaletteMode()
     {
         bool legacy = !mode.IsAutoBattler;
+        vWingCard.Visible = mode.CampaignId == AutoBattlerCampaignStore.CampaignId;
         offenseCitadel.Visible = mode.CampaignId == "Offense";
         if (!offenseCitadel.Visible && paletteDefenseIndex == defenseDefinitions.Length) paletteDefenseIndex = 0;
         toolsHeading.Text = legacy ? "Map tools" : "Tool settings";

@@ -38,6 +38,8 @@ public partial class AutoBattlerRules : Resource
     [Export] public ObjectiveType Objective { get; set; }
     [Export(PropertyHint.Range, "0,64,1")] public int BlueVWings { get; set; }
     [Export(PropertyHint.Range, "0,64,1")] public int RedVWings { get; set; }
+    [Export] public Vector2[] BlueVWingStarts { get; set; } = System.Array.Empty<Vector2>();
+    [Export] public Vector2[] RedVWingStarts { get; set; } = System.Array.Empty<Vector2>();
     [Export] public int BlueUnitLimit { get; set; } = 200;
     [Export] public string[] AllowedBlueUnitIds { get; set; } = System.Array.Empty<string>();
     [Export] public Godot.Collections.Array<Vector2I> BlueDeploymentCells { get; set; } = new();

@@ -42,10 +42,12 @@ At touchdown, transfer the same combatant to the ground V-wing variant and its g
 
 ## Try AIR1-A in Clash
 
-Open a Clash level in the Level Editor and set **Map Settings → Starting V-wing flights**
-to 8 Blue and 8 Red. Apply the settings, start the Clash playtest, then press **Fight**.
-The flights can fight on their own or above deployed ground forces. Save the level to
-keep the counts for campaign play. Both counts default to zero on existing maps.
+Open a Clash level in the Level Editor, select **Units → V-wing** in the bottom
+roster, then choose Blue or Red in the tool settings. Left-drag paints starts;
+right-drag erases that faction’s starts. Try eight per side. Press **Test Clash**
+and then **Fight**, with or without ground troops. Save the map to keep the painted
+starts. Older map-authored flight counts still spawn their original automatic
+formation until the first painted start replaces that faction’s count.
 
 V-wings cruise about 12 world units above open ground. A stable aircraft-specific
 offset of up to 1 unit, a gentle oscillation, and the approach and breakaway offsets

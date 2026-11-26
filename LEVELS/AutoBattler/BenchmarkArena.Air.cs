@@ -8,10 +8,10 @@ public partial class BenchmarkArena
     private AirSquadron airSquadron;
 
     private int BlueVWings => !IsOffense && autoBattlerPlaytestMap?.AutoBattlerRules is { } rules
-        ? Mathf.Clamp(rules.BlueVWings, 0, AirSquadron.MaxPerFaction) : 0;
+        ? Mathf.Clamp(rules.BlueVWingStarts.Length > 0 ? rules.BlueVWingStarts.Length : rules.BlueVWings, 0, AirSquadron.MaxPerFaction) : 0;
 
     private int RedVWings => !IsOffense && autoBattlerPlaytestMap?.AutoBattlerRules is { } rules
-        ? Mathf.Clamp(rules.RedVWings, 0, AirSquadron.MaxPerFaction) : 0;
+        ? Mathf.Clamp(rules.RedVWingStarts.Length > 0 ? rules.RedVWingStarts.Length : rules.RedVWings, 0, AirSquadron.MaxPerFaction) : 0;
 
     private void StartAirSquadron()
     {
@@ -37,6 +37,7 @@ public partial class BenchmarkArena
         var scene = GD.Load<PackedScene>("res://GAMEPLAY/COMBAT/AIR/AirSquadron.tscn");
         airSquadron = scene.Instantiate<AirSquadron>();
         AddChild(airSquadron);
-        airSquadron.Initialize(blue, red, autoBattlerPlaytestMap.MapSize * 0.5f, terrain, clearance, catalog.DamageRules);
+        airSquadron.Initialize(blue, red, autoBattlerPlaytestMap.MapSize * 0.5f, terrain, clearance, catalog.DamageRules,
+            autoBattlerPlaytestMap.AutoBattlerRules.BlueVWingStarts, autoBattlerPlaytestMap.AutoBattlerRules.RedVWingStarts);
     }
 }

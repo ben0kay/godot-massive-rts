@@ -35,7 +35,7 @@ public partial class AirSquadron : Node3D
     internal int Alive(byte faction) => faction == Factions.Blue ? blueAlive : redAlive;
 
     internal void Initialize(int blue, int red, float mapHalfWidth, TerrainHeightField heightField,
-        float minimumAltitude, DamageRules damage)
+        float minimumAltitude, DamageRules damage, Vector2[] blueStarts, Vector2[] redStarts)
     {
         blueAlive = blue;
         redAlive = red;
@@ -45,14 +45,14 @@ public partial class AirSquadron : Node3D
         burstDamage = damage.Resolve(9f, damage.DamageType("Standard"), damage.ArmourClass("Light"), 1f);
         fighters = new Fighter[blue + red];
         grid = new AirSpatialGrid(fighters.Length);
-        SpawnFlight(0, blue, Factions.Blue, 1f);
-        SpawnFlight(blue, red, Factions.Red, -1f);
+        SpawnFlight(0, blue, Factions.Blue, 1f, blueStarts);
+        SpawnFlight(blue, red, Factions.Red, -1f, redStarts);
         visuals = new AirSquadronVisuals(fighters.Length);
         AddChild(visuals);
         visuals.Sync(fighters, terrain);
     }
 
-    private void SpawnFlight(int start, int count, byte faction, float direction)
+    private void SpawnFlight(int start, int count, byte faction, float direction, Vector2[] starts)
     {
         int columns = Mathf.Min(8, count);
         float spacing = Mathf.Min(3.6f, boundary / 10f);
@@ -62,11 +62,19 @@ public partial class AirSquadron : Node3D
             float offset = (id * 0.618034f % 1f) * 2f - 1f;
             float x = (i % columns - (columns - 1) * 0.5f) * spacing;
             float z = -direction * Mathf.Min(boundary - 3f, Mathf.Min(24f, boundary * 0.53f) + i / columns * spacing);
+            if (i < starts.Length)
+            {
+                x = Mathf.Clamp(starts[i].X, -boundary, boundary);
+                z = Mathf.Clamp(starts[i].Y, -boundary, boundary);
+            }
+            float heading = direction > 0f ? 0f : Mathf.Pi;
+            if (i < starts.Length && x * x + z * z > 1f)
+                heading = Mathf.Atan2(-x, -z);
             fighters[id] = new Fighter
             {
                 Faction = faction, Health = 75f, Target = -1,
                 Position = new Vector3(x, CruiseHeight(x, z) + offset, z),
-                Heading = direction > 0f ? 0f : Mathf.Pi, Forward = Vector3.Back * direction,
+                Heading = heading, Forward = new Vector3(Mathf.Sin(heading), 0f, Mathf.Cos(heading)),
                 AltitudeOffset = offset, Reacquire = (id % 12) * 0.015f
             };
         }
