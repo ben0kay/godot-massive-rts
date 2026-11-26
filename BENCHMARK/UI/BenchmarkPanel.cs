@@ -190,11 +190,16 @@ public partial class BenchmarkPanel : CanvasLayer
 			"Opposing lines", "Dense clusters", "Distributed battlefield",
 			"Layered ranks — full roster", "Cavalry pincer — flanking wings",
 			"Wedge assault vs shield wall", "Encirclement — defenders vs ring",
-            "Three-way clash — Blue / Red / Green"
+            "Three-way clash — Blue / Red / Green", "Mixed roster — all units"
 		}) LayoutChoice.AddItem(layout);
-		Field(preset, "Total soldiers", CountChoice); Field(preset, "Mode", ModeChoice);
+        if (!AutoBattlerPlaytest)
+        {
+            LayoutChoice.Select((int)Deployment.MixedRoster);
+            ModeChoice.Select((int)BenchmarkMode.Ranged);
+        }
+        Field(preset, "Total soldiers", CountChoice); Field(preset, "Mode", ModeChoice);
 		Field(preset, "Layout", LayoutChoice); Field(preset, "Seed", Seed);
-		preset.AddChild(Hint("New formations include all six shapes; Melee excludes archers."));
+		preset.AddChild(Hint("Mixed roster favors lower tiers. Older layouts use the ranged percentage."));
 		Field(preset, "Ranged %", RangedPercent);
 		TerrainChoice.AddItem("Flat ground");
 		TerrainChoice.AddItem("Test plateau");

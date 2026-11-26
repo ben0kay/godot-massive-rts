@@ -268,6 +268,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     private void Clear()
     {
+        generatedMixedRoster = false;
         armyBalanceHud?.Reset();
         ShowAutoBattlerClock(false);
         campaignBattleRunning = false;
@@ -336,9 +337,10 @@ public partial class BenchmarkArena : Node3D
         units = CreateUnitState();
         if (mode is BenchmarkMode.Melee or BenchmarkMode.Ranged) grid = new SpatialGrid(targetCount, Config.CellSize, profileTargeting: true);
         projectiles = new ProjectileSystem(Config.MaxProjectiles, catalog.Projectiles, projectileLifetime);
-        deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, (Deployment)panel.LayoutChoice.Selected, mode, (float)panel.RangedPercent.Value / 100);
-        spawning = true;
         Deployment chosenLayout = (Deployment)panel.LayoutChoice.Selected;
+        generatedMixedRoster = chosenLayout == Deployment.MixedRoster && autoBattlerPlaytestMap == null;
+        deployment = new DeploymentFactory(targetCount, (ulong)panel.Seed.Value, chosenLayout, mode, (float)panel.RangedPercent.Value / 100);
+        spawning = true;
         camera.Frame(chosenLayout >= Deployment.LayeredRanks
             ? Mathf.Sqrt(targetCount) * 7f + 180f
             : Mathf.Sqrt(targetCount / 2f) * 4f + (chosenLayout == Deployment.DistributedBattlefield ? 350f : 80f));

@@ -12,6 +12,7 @@ public sealed class DeploymentFactory
     private readonly float ranged;
     private readonly BenchmarkMode mode;
     private readonly SoldierPlacement[] painted;
+    private SoldierPlacement[] mixedRoster;
     private readonly int[] formationStarts, formationCounts, formationColumns, formationRows;
     private int[] ringStarts, ringCounts;
     private float[] ringRadii;
@@ -21,7 +22,7 @@ public sealed class DeploymentFactory
     {
         total = count; sideCount = (count + 1) / 2; columns = Mathf.CeilToInt(Mathf.Sqrt(sideCount));
         layout = scenario; mode = benchmarkMode; ranged = Mathf.Clamp(rangedFraction, 0f, 1f); random.Seed = seed;
-        if (scenario < Deployment.LayeredRanks) return;
+        if (scenario < Deployment.LayeredRanks || scenario == Deployment.MixedRoster) return;
         int factions = scenario == Deployment.ThreeWayClash ? 3 : 2;
         formationStarts = new int[factions]; formationCounts = new int[factions];
         formationColumns = new int[factions]; formationRows = new int[factions];
@@ -64,8 +65,10 @@ public sealed class DeploymentFactory
     public void Append(UnitState units, int budget)
     {
         int end = Mathf.Min(total, units.Count + budget);
+        if (layout == Deployment.MixedRoster) mixedRoster ??= BuildMixedRoster(units.Catalog);
+        var authored = painted ?? mixedRoster;
         float spacing = 0f;
-        if (painted == null)
+        if (authored == null)
         {
             // The three historical layouts retain their original spacing/composition.
             int limit = layout < Deployment.LayeredRanks ? RuntimeUnitCatalog.Hexagon : RuntimeUnitCatalog.Chevron;
@@ -78,13 +81,15 @@ public sealed class DeploymentFactory
 
         for (int i = units.Count; i < end; i++)
         {
-            if (painted != null)
+            if (authored != null)
             {
-                SoldierPlacement placement = painted[i];
+                SoldierPlacement placement = authored[i];
                 Vector3 p = placement.Position();
                 p.Y = units.Grounding?.Field.At(p.X, p.Z) ?? 0f;
                 units.Position[i] = p;
                 units.Facing[i] = placement.AuthoredFacing;
+                if (mixedRoster != null && mode == BenchmarkMode.Movement)
+                    units.Goal[i] = new Vector3(-p.X, 0f, p.Z);
                 units.Faction[i] = placement.Faction; units.Type[i] = placement.Type;
                 InitializeSoldier(units, i);
                 continue;
@@ -229,6 +234,74 @@ public sealed class DeploymentFactory
         RuntimeUnitCatalog.Pentagon => 5,
         _ => 20
     };
+
+    // Give each side one of every eligible type before spending the remaining
+    // slots on tier-weighted picks. Use actual footprints to pack mixed rows.
+    private SoldierPlacement[] BuildMixedRoster(RuntimeUnitCatalog catalog)
+    {
+        var mandatory = new List<byte>();
+        var weighted = new List<byte>();
+        var cumulative = new List<float>();
+        float weight = 0f;
+        for (byte type = 0; type < catalog.Count; type++)
+        {
+            ref readonly var unit = ref catalog[type];
+            if (mode == BenchmarkMode.Melee && (unit.Ranged || type == RuntimeUnitCatalog.Dreadnaught)) continue;
+            mandatory.Add(type);
+            if (type == RuntimeUnitCatalog.Dreadnaught) continue;
+            weight += 1f / Mathf.Pow(unit.SizeTier, 5f);
+            weighted.Add(type);
+            cumulative.Add(weight);
+        }
+
+        var placements = new SoldierPlacement[total];
+        int start = 0;
+        for (byte faction = 0; faction <= 1; faction++)
+        {
+            int count = faction == Factions.Blue ? sideCount : total - sideCount;
+            var types = new byte[count];
+            int guaranteed = Math.Min(count, mandatory.Count);
+            for (int i = 0; i < guaranteed; i++) types[i] = mandatory[i];
+            for (int i = guaranteed; i < count; i++)
+            {
+                int pick = cumulative.BinarySearch(random.Randf() * weight);
+                types[i] = weighted[Math.Min(pick < 0 ? ~pick : pick, weighted.Count - 1)];
+            }
+            for (int i = count - 1; i > 0; i--)
+            {
+                int swap = random.RandiRange(0, i);
+                (types[i], types[swap]) = (types[swap], types[i]);
+            }
+
+            float depth = 14f;
+            for (int row = 0; row < count; row += columns)
+            {
+                int end = Math.Min(row + columns, count);
+                float rowRadius = 0f, rowWidth = 0f;
+                for (int i = row; i < end; i++)
+                {
+                    float radius = catalog[types[i]].Footprint;
+                    rowRadius = Mathf.Max(rowRadius, radius);
+                    rowWidth += 2f * radius + 0.35f;
+                }
+                float x = (faction == Factions.Blue ? -1f : 1f) * (depth + rowRadius);
+                float lateral = -(rowWidth - 0.35f) * 0.5f;
+                for (int i = row; i < end; i++)
+                {
+                    float radius = catalog[types[i]].Footprint;
+                    placements[start + i] = new SoldierPlacement(0, 0, faction, types[i])
+                    {
+                        AuthoredPosition = new Vector3(x, 0f, lateral + radius),
+                        AuthoredFacing = faction == Factions.Blue ? Vector2.Right : Vector2.Left
+                    };
+                    lateral += 2f * radius + 0.35f;
+                }
+                depth += 2f * rowRadius + 0.35f;
+            }
+            start += count;
+        }
+        return placements;
+    }
 
     private void InitializeSoldier(UnitState units, int i)
     {

@@ -8,6 +8,7 @@ namespace MassiveRts;
 public partial class BenchmarkArena
 {
     private AirSquadron airSquadron;
+    private bool generatedMixedRoster;
 
     private UnitDefinition[] aircraftRoster = Array.Empty<UnitDefinition>();
     private AirSquadron.Flight[] aircraftFlights = Array.Empty<AirSquadron.Flight>();
@@ -128,6 +129,21 @@ public partial class BenchmarkArena
 
     private void StartAirSquadron()
     {
+        if (generatedMixedRoster && mode == BenchmarkMode.Ranged)
+        {
+            var flights = new List<AirSquadron.Flight>();
+            var roster = GD.Load<UnitCatalog>(UnitCatalogPath).Aircraft;
+            foreach (var unit in roster)
+            {
+                if (unit == null) continue;
+                flights.Add(new AirSquadron.Flight(unit, Factions.Blue, 4, Array.Empty<Vector2>()));
+                flights.Add(new AirSquadron.Flight(unit, Factions.Red, 4, Array.Empty<Vector2>()));
+            }
+            if (flights.Count > 0)
+                CreateAirSquadron(flights.ToArray(), DeploymentLayout.WorldHalfWidth, Config.ObstacleHeight + 3f);
+            return;
+        }
+
         if (aircraftFlights.Length == 0) return;
 
         // Bound vertical clearance once for authored cover and defense footprints.
@@ -146,9 +162,14 @@ public partial class BenchmarkArena
             clearance = Mathf.Max(clearance, ground + obstacleHeight + 3f);
         }
 
+        CreateAirSquadron(aircraftFlights, autoBattlerPlaytestMap.MapSize * 0.5f, clearance);
+    }
+
+    private void CreateAirSquadron(AirSquadron.Flight[] flights, float halfWidth, float clearance)
+    {
         var scene = GD.Load<PackedScene>("res://GAMEPLAY/COMBAT/AIR/AirSquadron.tscn");
         airSquadron = scene.Instantiate<AirSquadron>();
         AddChild(airSquadron);
-        airSquadron.Initialize(aircraftFlights, autoBattlerPlaytestMap.MapSize * 0.5f, terrain, clearance, catalog.DamageRules);
+        airSquadron.Initialize(flights, halfWidth, terrain, clearance, catalog.DamageRules);
     }
 }
