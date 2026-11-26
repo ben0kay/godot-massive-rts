@@ -1,6 +1,6 @@
 // Layered weathered rock with vertical fissures and a lighter plateau cap.
 shader_type spatial;
-render_mode cull_disabled;
+render_mode cull_disabled, ambient_light_disabled, specular_disabled;
 varying vec3 world_position;
 varying float cap;
 
@@ -28,6 +28,13 @@ void fragment() {
     float strata = smoothstep(0.67, 0.88, fract(p.y * 1.55 + large * 0.48));
     float fissure = smoothstep(0.62, 0.86, stone_noise(p * vec3(2.1, 0.34, 2.1)));
     vec3 rock = mix(vec3(0.19, 0.22, 0.27), vec3(0.31, 0.33, 0.36), cap);
-    ALBEDO = rock * (0.72 + large * 0.46 + grit * 0.18 - (1.0 - cap) * (strata * 0.18 + fissure * 0.23));
-    ROUGHNESS = 0.93;
+    ALBEDO = rock * (0.78 + large * 0.29 + grit * 0.10 - (1.0 - cap) * (strata * 0.18 + fissure * 0.23));
+    EMISSION = ALBEDO * 0.43;
+    ROUGHNESS = 1.0;
+}
+
+void light() {
+    float facing = max(dot(NORMAL, LIGHT), 0.0);
+    vec3 sun = clamp(LIGHT_COLOR / PI, vec3(0.0), vec3(1.0));
+    DIFFUSE_LIGHT += ALBEDO * sun * facing * ATTENUATION * 0.34;
 }

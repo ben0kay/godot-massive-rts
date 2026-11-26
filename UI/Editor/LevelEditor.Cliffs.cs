@@ -10,10 +10,13 @@ public partial class LevelEditor
     private readonly List<Vector2> cliffPoints = new();
     private float cliffRise = 8f;
     private MeshInstance3D cliffStroke;
+    private Label3D cliffCompleteCue;
 
     private void CancelCliffStroke()
     {
         cliffPoints.Clear();
+        cliffCompleteCue?.Hide();
+        cliffCompleteCue = null;
         if (cliffStroke == null) return;
         cliffStroke.QueueFree();
         cliffStroke = null;
@@ -24,7 +27,8 @@ public partial class LevelEditor
         if (input is InputEventMouseMotion motion)
         {
             if (cliffPoints.Count > 0 && WorldPoint(motion.Position, out var hover))
-                DrawCliffStroke(ObstacleField.Xz(hover));
+                DrawCliffStroke(ObstacleField.Xz(hover), motion.Position);
+            else cliffCompleteCue?.Hide();
             return true;
         }
         if (input is not InputEventMouseButton mouse || mouse.ButtonIndex is not (MouseButton.Left or MouseButton.Right))
@@ -48,10 +52,7 @@ public partial class LevelEditor
 
         if (cliffPoints.Count > 0)
         {
-            var first = cliffPoints[0];
-            Vector2 screen = camera.UnprojectPosition(new Vector3(first.X, Surface(new Vector3(first.X, 0f, first.Y)), first.Y));
-            if (cliffPoints.Count >= 3 && (screen.DistanceSquaredTo(mouse.Position) <= 144f ||
-                first.DistanceSquaredTo(point) <= Grid * Grid))
+            if (CanCloseCliff(point, mouse.Position))
             {
                 FinishCliff(terrain);
                 return true;
@@ -64,7 +65,7 @@ public partial class LevelEditor
             return true;
         }
         cliffPoints.Add(point);
-        DrawCliffStroke(point);
+        DrawCliffStroke(point, mouse.Position);
         SetStatus("Click the first point to finish the cliff.");
         return true;
     }
@@ -95,7 +96,17 @@ public partial class LevelEditor
         else cliff.Free();
     }
 
-    private void DrawCliffStroke(Vector2 hover)
+    private bool CanCloseCliff(Vector2 point, Vector2 mouse)
+    {
+        if (cliffPoints.Count < 3) return false;
+        var first = cliffPoints[0];
+        var world = new Vector3(first.X, 0f, first.Y);
+        world.Y = Surface(world);
+        return camera.UnprojectPosition(world).DistanceSquaredTo(mouse) <= 144f ||
+            first.DistanceSquaredTo(point) <= Grid * Grid;
+    }
+
+    private void DrawCliffStroke(Vector2 hover, Vector2 mouse)
     {
         if (cliffStroke == null)
         {
@@ -107,6 +118,18 @@ public partial class LevelEditor
                     ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, NoDepthTest = true }
             };
             map.AddChild(cliffStroke, false, InternalMode.Back);
+            cliffCompleteCue = new Label3D
+            {
+                Text = "Complete cliff",
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+                NoDepthTest = true,
+                FixedSize = true,
+                FontSize = 20,
+                OutlineSize = 6,
+                Modulate = new Color("#b2ffe0"),
+                Visible = false
+            };
+            cliffStroke.AddChild(cliffCompleteCue);
         }
         var mesh = (ImmediateMesh)cliffStroke.Mesh;
         mesh.ClearSurfaces();
@@ -123,9 +146,13 @@ public partial class LevelEditor
             mesh.SurfaceAddVertex(OnGround(cliffPoints[i]));
         }
         mesh.SurfaceAddVertex(OnGround(cliffPoints[^1]));
-        mesh.SurfaceAddVertex(OnGround(hover));
+        bool closing = CanCloseCliff(hover, mouse);
         var first = OnGround(cliffPoints[0]);
-        const float size = 0.55f;
+        mesh.SurfaceAddVertex(closing ? first : OnGround(hover));
+        cliffCompleteCue.Position = first;
+        cliffCompleteCue.Offset = new Vector2(0f, 23f);
+        cliffCompleteCue.Visible = closing;
+        float size = closing ? 0.85f : 0.55f;
         mesh.SurfaceAddVertex(first - Vector3.Right * size);
         mesh.SurfaceAddVertex(first + Vector3.Right * size);
         mesh.SurfaceAddVertex(first - Vector3.Forward * size);
