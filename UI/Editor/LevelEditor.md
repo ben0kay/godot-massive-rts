@@ -24,6 +24,10 @@ Fortress Defense uses the existing command scene structure and the shared moveme
 **Show grid** displays the same 2-unit cells used by grid snapping and painting, with a heavier line every eight cells. It defaults to on and can be toggled independently of snapping. Layout previews hide the grid.
 
 
+## Paint marsh
+
+Select **Terrain → Marsh** or **Paint marsh** in the tool picker. Drag to paint, right-drag to erase, or enable **Rectangle fill**. Marsh is passable. It slows Tier 1 ground units by 15%, Tier 2 by 25%, and Tier 3 and higher by 40%, with gradual steps between those tiers. Forest overlap uses the stronger speed penalty. Aircraft fly over it normally. Save the level or start an editor playtest to try it.
+
 ## Draw bridge
 
 Pick **Draw bridge**, then drag a rectangle and release to place it. The longer side sets the direction of the deck and its rail lights. You can paint the rectangle anywhere within the map. Right-click a bridge while using **Draw bridge** to remove it, or right-click during a drag to cancel. **Erase** also removes a bridge with a left-click. Placement and removal support undo and redo and save with the map.

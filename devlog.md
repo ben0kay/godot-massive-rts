@@ -758,3 +758,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Enabled cosmetic shield ricochets for the Marksman's LongLaserBolt via the existing projectile opt-in. No gameplay or rendering-system changes; owner validation pending.
 
 - 2026-11-27 — MAPGEN1: Smoothed River Divide’s banks along the meander and removed auto-generated bridges. Crossings can be drawn manually in the editor.
+
+- 2026-11-27 — Added a paintable marsh surface with brush and rectangle editing, undo and saves, batched terrain mesh rendering, and tier-based ground movement penalties in Skirmish and Fortress Defense playtests. Owner Godot validation pending.

@@ -16,7 +16,8 @@ public partial class WorldPaint : Node3D
     private WorldPaintData data;
     private WorldPaintData observedData;
     private CommandTerrain terrain;
-    private MeshInstance3D rocksView, waterView, bridgeView;
+    private MeshInstance3D rocksView, waterView, bridgeView, marshView;
+    internal HashSet<Vector2I> MarshCells { get; private set; }
     private Node3D forestView;
     internal ForestCover Forest { get; private set; }
     internal ObstacleRectangle[] MovementWater { get; private set; } = Array.Empty<ObstacleRectangle>();
@@ -85,6 +86,7 @@ public partial class WorldPaint : Node3D
         RebuildViews(new HashSet<Vector2I>(data?.RockCells ?? new Cells()),
             new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
         RebuildForest();
+        RebuildMarsh();
         UpdateConfigurationWarnings();
     }
 
@@ -95,6 +97,8 @@ public partial class WorldPaint : Node3D
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
         foreach (var cell in data.WaterCells)
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
+        foreach (var cell in data.MarshCells)
+            if (!Contains(cell)) return new[] { "Some marsh cells lie beyond this map." };
         foreach (var cell in data.ForestCells)
             if (!Contains(cell)) return new[] { "Some forest cells lie beyond this map." };
         foreach (var layer in new[] { data.IndustrialWallCells, data.BlueWallCells, data.RedWallCells })
@@ -169,6 +173,7 @@ public partial class WorldPaint : Node3D
         if (visualDirty || displayedHalfWidth != MapHalfWidth)
         {
             RebuildForest();
+            RebuildMarsh();
             visualDirty = false;
             displayedHalfWidth = MapHalfWidth;
         }
@@ -209,6 +214,38 @@ public partial class WorldPaint : Node3D
             Forest = new ForestCover(forestView);
         }
         Forest.Rebuild(cells, Surface);
+    }
+
+    private void RebuildMarsh()
+    {
+        MarshCells = null;
+        if (data == null || data.MarshCells.Count == 0 || data.MarshCells.Count > MaxPaintedCells)
+        {
+            if (marshView != null) marshView.Mesh = null;
+            return;
+        }
+
+        var cells = new HashSet<Vector2I>(data.MarshCells);
+        cells.RemoveWhere(cell => !Contains(cell));
+        cells.ExceptWith(data.RockCells);
+        cells.ExceptWith(data.WaterCells);
+        if (cells.Count == 0)
+        {
+            if (marshView != null) marshView.Mesh = null;
+            return;
+        }
+
+        MarshCells = cells;
+        if (marshView == null)
+        {
+            marshView = AddView("MarshPreview");
+            marshView.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            var material = (ShaderMaterial)GD.Load<ShaderMaterial>("res://WORLD/WORLD_PAINT/ForestFloor.tres").Duplicate();
+            material.RenderPriority = 0;
+            material.SetShaderParameter("marsh", true);
+            marshView.MaterialOverride = material;
+        }
+        marshView.Mesh = ForestFloor.Build(cells, Surface, heightOffset: 0.028f);
     }
 
     private void RebuildViews(HashSet<Vector2I> rocks, HashSet<Vector2I> water)

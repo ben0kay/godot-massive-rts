@@ -685,6 +685,7 @@ public partial class BenchmarkArena : Node3D
             units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, OrderFor, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
         defenseSystem?.RegisterShieldEmitters(units);
         units.Forest = autoBattlerForest;
+        units.MarshCells = autoBattlerPaint?.MarshCells;
         var redTraps = autoBattlerPlaytestMap?.AutoBattlerRules.RedDisruptorCells;
         if (redTraps != null && (redTraps.Count > 0 || blueDisruptors.Count > 0))
             units.Disruptors = new DisruptorGrid(blueDisruptors, redTraps);

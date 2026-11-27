@@ -15,7 +15,7 @@ internal static class ForestFloor
         Vector2I.Up, Vector2I.Right, Vector2I.Down, Vector2I.Left
     };
 
-    internal static Mesh Build(HashSet<Vector2I> cells, TerrainHeightField terrain)
+    internal static Mesh Build(HashSet<Vector2I> cells, TerrainHeightField terrain, float heightOffset = 0.018f)
     {
         if (cells.Count == 0) return null;
         using var surface = new SurfaceTool();
@@ -55,7 +55,7 @@ internal static class ForestFloor
         void Vertex(Vector2 point, float fill)
         {
             surface.SetUV(new Vector2(fill, 0f));
-            float y = (terrain?.At(point.X, point.Y) ?? 0f) + 0.018f;
+            float y = (terrain?.At(point.X, point.Y) ?? 0f) + heightOffset;
             surface.AddVertex(new Vector3(point.X, y, point.Y));
         }
     }

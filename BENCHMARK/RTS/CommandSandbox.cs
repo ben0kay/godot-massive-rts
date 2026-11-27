@@ -192,6 +192,7 @@ public partial class CommandSandbox : Node3D
         var (rocks, water) = paint?.Compile() ??
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         units.Forest = paint?.Forest;
+        units.MarshCells = paint?.MarshCells;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
             WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, paint?.MovementWater ?? water, paint?.BridgeAreas ?? System.Array.Empty<Rect2>(), StartingCarbon);
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)

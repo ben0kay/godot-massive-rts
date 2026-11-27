@@ -13,7 +13,7 @@ public partial class WorldPaintData : Resource
     private Color deepWaterColor = new("#104953"), shorelineColor = new("#506b63");
     private float shorelineWidth = 0.9f, bankHeight = 0.16f, rippleStrength = 0.045f, rippleSpeed = 0.45f;
 
-    private Cells rockCells = new(), waterCells = new(), forestCells = new();
+    private Cells rockCells = new(), waterCells = new(), forestCells = new(), marshCells = new();
 
     [Export]
     public Cells RockCells
@@ -34,6 +34,13 @@ public partial class WorldPaintData : Resource
     {
         get => forestCells;
         set { forestCells = value ?? new Cells(); EmitChanged(); }
+    }
+
+    [Export]
+    public Cells MarshCells
+    {
+        get => marshCells;
+        set { marshCells = value ?? new Cells(); EmitChanged(); }
     }
 
     [Export] public Cells BlueWallCells { get; set; } = new();

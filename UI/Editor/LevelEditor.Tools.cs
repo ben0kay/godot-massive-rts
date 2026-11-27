@@ -9,7 +9,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -18,8 +18,11 @@ public partial class LevelEditor
     private WorldPaint paint;
     private int brushRadius = 2;
     private Vector2I? previousCell;
-    private (Cells Rocks, Cells Water, Cells Forest, Cells Blue)? beforePaint;
-    private HashSet<Vector2I> rocks, water, forest, deployment;
+    private (Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Cells Blue)? beforePaint;
+    private HashSet<Vector2I> rocks, water, forest, marsh, deployment;
+    private bool marshRectangle;
+    private Vector2I? marshStart;
+    private MouseButton marshButton;
     private const double PaintPreviewInterval = 0.125;
     private bool paintChanged, paintPreviewPending;
     private double paintPreviewCooldown;
@@ -44,7 +47,7 @@ public partial class LevelEditor
                 Tool.RedOrders => "Red orders",
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
-                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Elevation => "Paint elevation",
+                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Elevation => "Paint elevation",
                 Tool.Wall => "Industrial Walls", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
@@ -190,8 +193,15 @@ public partial class LevelEditor
             case Tool.Rock:
             case Tool.Water:
             case Tool.Forest:
+            case Tool.Marsh:
             case Tool.Deployment:
             case Tool.Erase:
+                if (tool == Tool.Marsh)
+                {
+                    var rectangle = new CheckBox { Text = "Rectangle fill", ButtonPressed = marshRectangle };
+                    context.AddChild(rectangle);
+                    rectangle.Toggled += enabled => { EndPaint(); marshRectangle = enabled; };
+                }
                 Number(context, "Brush radius (cells)", brushRadius, 1, 14).ValueChanged += value => brushRadius = (int)value;
                 Heading(context, tool == Tool.Erase ? "Click object to remove it.\nDrag over paint to erase it." : "Drag to paint. Right-drag to erase.", 15);
                 break;
@@ -410,6 +420,7 @@ public partial class LevelEditor
         if (editingReserve && tool is not Tool.Soldiers) return;
         if ((tool is Tool.Wall or Tool.FactionWall) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
+        if (tool == Tool.Marsh && marshRectangle && HandleMarshRectangle(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.Cliff && HandleCliffPaint(input))
         {
@@ -448,7 +459,7 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment ||
+        if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Deployment ||
             (tool == Tool.Erase && (mouse.ButtonIndex == MouseButton.Right || Pick(hit) == null)))
         {
             BeginPaint();
@@ -470,6 +481,7 @@ public partial class LevelEditor
     public override void _Process(double delta)
     {
         UpdateElevation(delta);
+        if (marshStart.HasValue && !Input.IsMouseButtonPressed(marshButton)) CancelMarshRectangle();
         if (aircraftStroke != null && !Input.IsMouseButtonPressed(aircraftStrokeButton)) EndAircraftStroke();
         if (bridgeStart.HasValue && !Input.IsMouseButtonPressed(MouseButton.Left)) CancelBridge();
         if (wallStrokeStart.HasValue && !Input.IsMouseButtonPressed(wallStrokeButton)) CancelWallStroke();
@@ -513,7 +525,7 @@ public partial class LevelEditor
 
     private void ShowCursor(Vector3 point)
     {
-        bool brush = tool is Tool.Wall or Tool.Rock or Tool.Water or Tool.Forest or Tool.Deployment or Tool.Erase;
+        bool brush = tool is Tool.Wall or Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Deployment or Tool.Erase;
         var position = brush ? new Vector3((Cell(point).X + 0.5f) * Grid, 0, (Cell(point).Y + 0.5f) * Grid) : Snap(point);
         position.Y = Surface(position) + 0.13f;
         cursor.GlobalPosition = position;
@@ -533,10 +545,11 @@ public partial class LevelEditor
     private void BeginPaint()
     {
         EndPaint();
-        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.AutoBattlerRules?.BlueDeploymentCells);
+        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, map.AutoBattlerRules?.BlueDeploymentCells);
         rocks = new(paint.Data.RockCells);
         water = new(paint.Data.WaterCells);
         forest = new(paint.Data.ForestCells);
+        marsh = new(paint.Data.MarshCells);
         deployment = map.AutoBattlerRules == null ? new() : new(map.AutoBattlerRules.BlueDeploymentCells);
         paintChanged = paintPreviewPending = false;
         paintPreviewCooldown = 0;
@@ -560,8 +573,11 @@ public partial class LevelEditor
                 if (tool == Tool.Erase || (erase && tool == Tool.Rock)) changed |= rocks.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Water)) changed |= water.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Forest)) changed |= forest.Remove(next);
+                if (tool == Tool.Erase || (erase && tool == Tool.Marsh)) changed |= marsh.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Deployment)) changed |= deployment.Remove(next);
                 if (erase || tool == Tool.Erase) continue;
+                if (tool == Tool.Marsh && !water.Contains(next) && !rocks.Contains(next)) changed |= marsh.Add(next);
+                if (tool is Tool.Rock or Tool.Water) changed |= marsh.Remove(next);
                 if (tool == Tool.Rock) { changed |= forest.Remove(next); changed |= water.Remove(next); changed |= rocks.Add(next); }
                 if (tool == Tool.Water) { changed |= forest.Remove(next); changed |= rocks.Remove(next); changed |= water.Add(next); }
                 if (tool == Tool.Forest) { changed |= rocks.Remove(next); changed |= water.Remove(next); changed |= forest.Add(next); }
@@ -576,13 +592,75 @@ public partial class LevelEditor
         if (paintPreviewCooldown <= 0) PublishPaintPreview();
     }
 
+    // =========================================================
+    private bool HandleMarshRectangle(InputEvent input)
+    {
+        if (input is InputEventMouseMotion motion && marshStart is { } origin)
+        {
+            if (WorldPoint(motion.Position, out var point))
+            {
+                var area = RectangleArea(origin, Cell(point));
+                Vector2 center = (area.Min + area.Max) * 0.5f;
+                var at = new Vector3(center.X, 0f, center.Y);
+                at.Y = Surface(at) + 0.15f;
+                cursor.GlobalPosition = at;
+                cursor.Scale = new Vector3(area.Width * Grid, 1f, area.Depth * Grid);
+                cursor.Show();
+            }
+            else cursor.Hide();
+            return true;
+        }
+        if (input is not InputEventMouseButton mouse || mouse.ButtonIndex is not (MouseButton.Left or MouseButton.Right))
+            return false;
+        if (mouse.Pressed)
+        {
+            if (marshStart == null && WorldPoint(mouse.Position, out var point) && paint.Contains(Cell(point)))
+            {
+                marshStart = Cell(point);
+                marshButton = mouse.ButtonIndex;
+                ShowCursor(point);
+                cursor.Scale = new Vector3(Grid, 1f, Grid);
+            }
+        }
+        else if (marshStart is { } start && mouse.ButtonIndex == marshButton)
+        {
+            CancelMarshRectangle();
+            if (WorldPoint(mouse.Position, out var point)) FillMarshRectangle(start, Cell(point), mouse.ButtonIndex == MouseButton.Right);
+        }
+        GetViewport().SetInputAsHandled();
+        return true;
+    }
+
+    private void CancelMarshRectangle()
+    {
+        if (marshStart == null) return;
+        marshStart = null;
+        cursor?.Hide();
+    }
+
+    private void FillMarshRectangle(Vector2I start, Vector2I end, bool erase)
+    {
+        BeginPaint();
+        var area = RectangleArea(start, end);
+        for (int z = area.Z; z < area.Z + area.Depth; z++)
+        for (int x = area.X; x < area.X + area.Width; x++)
+        {
+            var cell = new Vector2I(x, z);
+            if (!paint.Contains(cell)) continue;
+            if (erase) paintPreviewPending |= marsh.Remove(cell);
+            else if (!rocks.Contains(cell) && !water.Contains(cell)) paintPreviewPending |= marsh.Add(cell);
+        }
+        EndPaint();
+    }
+
     // Mouse motion can arrive much faster than the renderer can replace forest batches.
     private void PublishPaintPreview()
     {
         if (!paintPreviewPending || beforePaint is not { } previous) return;
         paintPreviewPending = false;
         paintPreviewCooldown = PaintPreviewInterval;
-        if (!paint.TryMerge(new(rocks), new(water), out _, out _) || forest.Count > WorldPaint.MaxPaintedCells || deployment.Count > WorldPaint.MaxPaintedCells)
+        if (!paint.TryMerge(new(rocks), new(water), out _, out _) || forest.Count > WorldPaint.MaxPaintedCells ||
+            marsh.Count > WorldPaint.MaxPaintedCells || deployment.Count > WorldPaint.MaxPaintedCells)
         {
             beforePaint = null;
             previousCell = null;
@@ -591,7 +669,7 @@ public partial class LevelEditor
             return;
         }
         paintChanged = true;
-        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(deployment)),
+        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(marsh), Sorted(deployment)),
             refreshLayout: tool is Tool.Deployment or Tool.Erase);
     }
 
@@ -599,6 +677,7 @@ public partial class LevelEditor
 
     private void EndPaint()
     {
+        CancelMarshRectangle();
         EndAircraftStroke();
         EndElevation();
         PublishPaintPreview();
@@ -606,16 +685,17 @@ public partial class LevelEditor
         beforePaint = null;
         previousCell = null;
         if (!paintChanged) return;
-        (Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, map.AutoBattlerRules?.BlueDeploymentCells);
+        (Cells, Cells, Cells, Cells, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, map.AutoBattlerRules?.BlueDeploymentCells);
         bool refreshLayout = tool is Tool.Deployment or Tool.Erase;
         Remember(() => SetPaint(previous, refreshLayout), () => SetPaint(next, refreshLayout));
     }
 
-    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Blue) cells, bool refreshLayout = true)
+    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Cells Blue) cells, bool refreshLayout = true)
     {
         paint.Data.RockCells = cells.Rocks;
         paint.Data.WaterCells = cells.Water;
         paint.Data.ForestCells = cells.Forest;
+        paint.Data.MarshCells = cells.Marsh;
         if (map.AutoBattlerRules != null) map.AutoBattlerRules.BlueDeploymentCells = cells.Blue;
         if (refreshLayout || previewReserveEntry) RefreshMap();
         else paint.Compile();

@@ -66,9 +66,22 @@ public sealed class UnitState
 
     internal DisruptorGrid Disruptors { get; set; }
 
-    internal float TravelSpeed(int id, in UnitStats stats) =>
-        stats.Speed * (Forest?.Contains(Position[id]) == true ? 0.65f : 1f) *
-        (Disruptors?.SpeedScale(Position[id], Faction[id]) ?? 1f);
+    internal HashSet<Vector2I> MarshCells { get; set; }
+
+    internal float TravelSpeed(int id, in UnitStats stats)
+    {
+        Vector3 position = Position[id];
+        float surfaceScale = Forest?.Contains(position) == true ? 0.65f : 1f;
+        if (MarshCells != null && MarshCells.Contains(new Vector2I(
+            Mathf.FloorToInt(position.X / WorldPaint.CellSize), Mathf.FloorToInt(position.Z / WorldPaint.CellSize))))
+        {
+            float tier = stats.SizeTier;
+            float marshScale = tier <= 2f ? Mathf.Lerp(0.85f, 0.75f, Mathf.Clamp(tier - 1f, 0f, 1f))
+                : Mathf.Lerp(0.75f, 0.60f, Mathf.Clamp(tier - 2f, 0f, 1f));
+            surfaceScale = Mathf.Min(surfaceScale, marshScale);
+        }
+        return stats.Speed * surfaceScale * (Disruptors?.SpeedScale(position, Faction[id]) ?? 1f);
+    }
 
     private const float DownhillBonus = 0.10f;
     internal float MaximumTravelSpeed => Catalog.MaxSpeed * (Grounding == null ? 1f : 1f + DownhillBonus);

@@ -3,6 +3,7 @@ shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
 
 uniform sampler2D ground_detail : repeat_enable, filter_linear_mipmap_anisotropic;
+uniform bool marsh = false;
 varying vec2 world_xz;
 
 void vertex() {
@@ -33,5 +34,12 @@ void fragment() {
     vec3 foliage = mix(vec3(0.047, 0.068, 0.028), vec3(0.145, 0.175, 0.067),
         smoothstep(0.22, 0.81, grass_fiber));
     ALBEDO = mix(dirt, foliage, grass);
+    if (marsh) {
+        float basin = noise_at(skew * vec2(0.46, 0.27));
+        float puddle = smoothstep(0.59, 0.70, basin + (grit - 0.5) * 0.10);
+        vec3 mud = mix(vec3(0.105, 0.090, 0.054), vec3(0.24, 0.22, 0.13), grit);
+        vec3 shallow_water = mix(vec3(0.065, 0.115, 0.108), vec3(0.15, 0.22, 0.19), grass_fiber);
+        ALBEDO = mix(mud, shallow_water, puddle);
+    }
     ALPHA = smoothstep(0.03, 0.33, UV.x + (grit - 0.5) * 0.13);
 }

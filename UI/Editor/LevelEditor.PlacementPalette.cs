@@ -136,8 +136,8 @@ public partial class LevelEditor
                     if (i >= units.Length) aircraftCards.Add(card);
                 }),
             BuildDefenses(),
-            ToolPage(new[] { "Rocks", "Forest", "Water", "Elevation", "Bridge", "Industrial Walls", "Cliff Painter" },
-                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Elevation, Tool.Bridge, Tool.Wall, Tool.Cliff }),
+            ToolPage(new[] { "Rocks", "Forest", "Water", "Marsh", "Elevation", "Bridge", "Industrial Walls", "Cliff Painter" },
+                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Marsh, Tool.Elevation, Tool.Bridge, Tool.Wall, Tool.Cliff }),
             ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
                 new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
             simulation
