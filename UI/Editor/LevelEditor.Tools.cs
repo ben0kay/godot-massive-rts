@@ -696,6 +696,7 @@ public partial class LevelEditor
         paint.Data.WaterCells = cells.Water;
         paint.Data.ForestCells = cells.Forest;
         paint.Data.MarshCells = cells.Marsh;
+        map.GetNodeOrNull<CommandTerrain>("Terrain")?.Rebuild(force: false);
         if (map.AutoBattlerRules != null) map.AutoBattlerRules.BlueDeploymentCells = cells.Blue;
         if (refreshLayout || previewReserveEntry) RefreshMap();
         else paint.Compile();

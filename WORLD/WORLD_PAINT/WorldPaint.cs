@@ -216,26 +216,25 @@ public partial class WorldPaint : Node3D
         Forest.Rebuild(cells, Surface);
     }
 
-    private void RebuildMarsh()
+    internal HashSet<Vector2I> CollectMarshCells()
     {
-        MarshCells = null;
-        if (data == null || data.MarshCells.Count == 0 || data.MarshCells.Count > MaxPaintedCells)
-        {
-            if (marshView != null) marshView.Mesh = null;
-            return;
-        }
-
+        if (data == null || data.MarshCells.Count == 0 || data.MarshCells.Count > MaxPaintedCells) return null;
         var cells = new HashSet<Vector2I>(data.MarshCells);
         cells.RemoveWhere(cell => !Contains(cell));
         cells.ExceptWith(data.RockCells);
         cells.ExceptWith(data.WaterCells);
-        if (cells.Count == 0)
+        return cells.Count == 0 ? null : cells;
+    }
+
+    private void RebuildMarsh()
+    {
+        MarshCells = CollectMarshCells();
+        if (MarshCells == null)
         {
             if (marshView != null) marshView.Mesh = null;
             return;
         }
 
-        MarshCells = cells;
         if (marshView == null)
         {
             marshView = AddView("MarshPreview");
@@ -245,7 +244,7 @@ public partial class WorldPaint : Node3D
             material.SetShaderParameter("marsh", true);
             marshView.MaterialOverride = material;
         }
-        marshView.Mesh = ForestFloor.Build(cells, Surface, heightOffset: 0.028f);
+        marshView.Mesh = ForestFloor.Build(MarshCells, Surface, heightOffset: 0.028f);
     }
 
     private void RebuildViews(HashSet<Vector2I> rocks, HashSet<Vector2I> water)

@@ -772,3 +772,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — MAPGEN1: Added a Cliffs layout with a density slider, native closed Cliff Painter outlines, preview and undo. Open Plains starts with flat ground and lets authors add elevation and scenery independently.
 
 - 2026-11-27 — Wreck obstacle refreshes now defer costly unit-type route graphs until requested and build at most one per route update. Collision uses the refreshed obstacle field immediately. Owner performance validation pending.
+
+- 2026-11-27 — Marsh paint now lowers the shared terrain surface by up to 0.32 world units with feathered edges, and renders with streaked muddy water and subtle ripples.

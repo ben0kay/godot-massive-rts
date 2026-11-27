@@ -35,11 +35,16 @@ void fragment() {
         smoothstep(0.22, 0.81, grass_fiber));
     ALBEDO = mix(dirt, foliage, grass);
     if (marsh) {
-        float basin = noise_at(skew * vec2(0.46, 0.27));
-        float puddle = smoothstep(0.59, 0.70, basin + (grit - 0.5) * 0.10);
-        vec3 mud = mix(vec3(0.105, 0.090, 0.054), vec3(0.24, 0.22, 0.13), grit);
-        vec3 shallow_water = mix(vec3(0.065, 0.115, 0.108), vec3(0.15, 0.22, 0.19), grass_fiber);
-        ALBEDO = mix(mud, shallow_water, puddle);
+        vec2 channels = skew * vec2(0.12, 0.63);
+        channels.y += (noise_at(world_xz * 0.13) - 0.5) * 1.3;
+        float flow = noise_at(channels);
+        float pool = noise_at(world_xz * 0.22);
+        float wet = smoothstep(0.41, 0.67, flow * 0.73 + pool * 0.27);
+        float ripple = noise_at(channels * vec2(1.7, 3.6) + vec2(TIME * 0.065, -TIME * 0.04));
+        vec3 mud = mix(vec3(0.072, 0.063, 0.039), vec3(0.17, 0.155, 0.091), grit);
+        vec3 water = mix(vec3(0.044, 0.085, 0.076), vec3(0.14, 0.22, 0.18), ripple);
+        float sheen = smoothstep(0.65, 0.88, ripple) * wet;
+        ALBEDO = mix(mud, water, wet) + vec3(0.055, 0.075, 0.068) * sheen;
     }
     ALPHA = smoothstep(0.03, 0.33, UV.x + (grit - 0.5) * 0.13);
 }

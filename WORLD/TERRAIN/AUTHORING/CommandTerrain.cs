@@ -77,6 +77,12 @@ public partial class CommandTerrain : Node3D
             hash.Add(hill);
         }
 
+        var marsh = GetParent()?.GetNodeOrNull<WorldPaint>("WorldPaint")?.CollectMarshCells();
+        if (marsh != null)
+        {
+            hash.Add(marsh.Count);
+            foreach (var cell in marsh) hash.Add(cell);
+        }
         hash.Add(elevationRevision);
         int signature = hash.ToHashCode();
         if (!force && signature == fingerprint) return;
@@ -95,7 +101,7 @@ public partial class CommandTerrain : Node3D
         }
         CliffObstacles = Array.Empty<ObstacleRectangle>();
         Field = null;
-        if (hills.Count == 0 && elevation.Count == 0)
+        if (hills.Count == 0 && elevation.Count == 0 && marsh == null)
         {
             Ground?.SetInstanceShaderParameter("terrain_replaces_ground", false);
             BuildCliffs(cliffs, half);
@@ -114,7 +120,7 @@ public partial class CommandTerrain : Node3D
         }
         var editedChunks = new HashSet<Vector2I>();
         int chunkSize = TerrainHeightField.ChunkCells;
-        foreach (var sample in elevation.Keys)
+        void IncludeSample(Vector2I sample)
         {
             // A changed sample on a chunk edge affects both adjoining meshes.
             int left = Mathf.FloorToInt((sample.X - 0.5f) / chunkSize);
@@ -124,6 +130,19 @@ public partial class CommandTerrain : Node3D
             for (int z = near; z <= far; z++)
             for (int x = left; x <= right; x++)
                 editedChunks.Add(new Vector2I(x, z));
+        }
+        foreach (var sample in elevation.Keys) IncludeSample(sample);
+        const float spacing = TerrainHeightField.Spacing;
+        if (marsh != null)
+        {
+            foreach (var cell in marsh)
+            {
+                var min = (Vector2)cell * WorldPaint.CellSize;
+                var max = min + Vector2.One * WorldPaint.CellSize;
+                for (int z = Mathf.FloorToInt(min.Y / spacing) - 1; z <= Mathf.CeilToInt(max.Y / spacing) + 1; z++)
+                for (int x = Mathf.FloorToInt(min.X / spacing) - 1; x <= Mathf.CeilToInt(max.X / spacing) + 1; x++)
+                    IncludeSample(new Vector2I(x, z));
+            }
         }
         foreach (var chunk in editedChunks)
             regions.Add(new Rect2(((Vector2)chunk + Vector2.One * 0.5f) * (chunkSize * TerrainHeightField.Spacing), Vector2.Zero));
@@ -139,7 +158,7 @@ public partial class CommandTerrain : Node3D
                 height = Mathf.Max(height, hill.Rise * factor * factor * (3f - 2f * factor));
             }
             var key = (Vector2I)(point / TerrainHeightField.Spacing).Round();
-            return height + (elevation.TryGetValue(key, out float change) ? change : 0f);
+            return height + (elevation.TryGetValue(key, out float change) ? change : 0f) - MarshDepth(point, marsh);
         });
         var ground = Ground;
         if (ground?.GetActiveMaterial(0) is ShaderMaterial material)
@@ -156,6 +175,23 @@ public partial class CommandTerrain : Node3D
         preview.GlobalTransform = Transform3D.Identity;
         BuildCliffs(cliffs, half);
         SurfaceChanged?.Invoke();
+    }
+
+    private static float MarshDepth(Vector2 point, HashSet<Vector2I> marsh)
+    {
+        if (marsh == null) return 0f;
+        const float width = TerrainHeightField.Spacing * 0.5f;
+        int covered = 0;
+        // Average the painted coverage around each height sample to feather the banks.
+        for (int z = -1; z <= 1; z += 2)
+        for (int x = -1; x <= 1; x += 2)
+        {
+            var offset = point + new Vector2(x, z) * width;
+            var cell = new Vector2I(Mathf.FloorToInt(offset.X / WorldPaint.CellSize),
+                Mathf.FloorToInt(offset.Y / WorldPaint.CellSize));
+            if (marsh.Contains(cell)) covered++;
+        }
+        return covered * 0.08f;
     }
 
     private void BuildCliffs(List<TerrainCliff> cliffs, float half)
