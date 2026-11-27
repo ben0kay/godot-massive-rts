@@ -15,5 +15,8 @@ void fragment() {
     float rim = smoothstep(0.60, 0.98, grazing);
     float base_edge = (1.0 - smoothstep(0.0, 0.018, local_height)) * 0.035;
     ALBEDO = mix(COLOR.rgb, vec3(1.0), 0.16 + rim * 0.14);
-    ALPHA = max(base_edge, mix(center_opacity, rim_opacity, rim));
+    // Slow upward-moving faction-tinted bands; the center stays nearly clear.
+    float wave = pow(0.5 + 0.5 * cos(6.283185 * (local_height * 3.0 - TIME * 0.32)), 12.0);
+    float band = wave * 0.027 * smoothstep(0.06, 0.25, local_height) * (1.0 - smoothstep(0.84, 1.0, local_height));
+    ALPHA = max(base_edge, mix(center_opacity, rim_opacity, rim)) + band;
 }

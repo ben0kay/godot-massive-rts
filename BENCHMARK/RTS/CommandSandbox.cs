@@ -598,7 +598,8 @@ public partial class CommandSandbox : Node3D
         bool changed = waves.Step((float)delta);
         impactRings.SampleCavalry(units, (float)delta);
         if (waves.Defeat || waves.Victory) buildings.WorkerProductionOpen = false;
-        buildings.RemoveDestroyed();
+        impactRings.SampleDamagedBuildings(buildings.Structures, units.Grounding?.Field, (float)delta);
+        buildings.RemoveDestroyed(impactRings);
         if (feedbackChanged || changed || previousCount != units.Count || army.HasInfantryWalkMotion) SyncArmy();
         projectileRenderer.Sync(waves.Projectiles);
         impactRings.Sync(units);

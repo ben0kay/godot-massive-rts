@@ -23,12 +23,16 @@ public partial class DefenseRenderer : Node3D
     // Shared neutral metal / faction paint / emissive trim for authored two-tone towers.
     private static readonly ShaderMaterial TwoToneTowerMaterial = CreateTowerArmor();
 
-    private static ShaderMaterial CreateTowerArmor()
+    private static readonly ShaderMaterial RailChargeMaterial = CreateTowerArmor(1);
+    private static readonly ShaderMaterial BarrageAmmoMaterial = CreateTowerArmor(2);
+
+    private static ShaderMaterial CreateTowerArmor(int statusMode = 0)
     {
         var material = new ShaderMaterial
         {
             Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/BroadsideArmor.gdshader")
         };
+        material.SetShaderParameter("status_mode", statusMode);
         material.SetShaderParameter("crack_mask",
             GD.Load<Texture2D>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCrackMask.svg"));
         return material;
@@ -59,6 +63,7 @@ public partial class DefenseRenderer : Node3D
     private readonly Transform3D[] groundFlashPose = new Transform3D[GroundFlashCapacity];
     private readonly Color[] groundFlashTint = new Color[GroundFlashCapacity];
     private MultiMesh bases, heads, barrels, rocketBases, rocketHeads, rocketBarrels, rightRocketBarrels, beams, beamGlows, flashes;
+    private readonly int[] railChargeSteps = new int[DeploymentLayout.MaxBuildings];
     private readonly int[] crackStages = new int[DeploymentLayout.MaxBuildings];
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
@@ -189,7 +194,7 @@ public partial class DefenseRenderer : Node3D
     {
         bases ??= Batch(BaseMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
         heads ??= Batch(HeadMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
-        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        barrels ??= Batch(BarrelMesh, DeploymentLayout.MaxBuildings, RailChargeMaterial, useCustomData: true);
         rocketBases ??= Batch(RocketBaseMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
         rocketHeads ??= Batch(RocketHeadMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
         rocketBarrels ??= Batch(RocketBarrelMesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
@@ -200,6 +205,7 @@ public partial class DefenseRenderer : Node3D
         bool rocket = false, bool shield = false, float shieldRadius = 0f, bool shelter = false, bool minigun = false, int antiAir = 0)
     {
         crackStages[index] = 0;
+        railChargeSteps[index] = 16;
         shelterSlots[index] = shelter;
         minigunSlots[index] = minigun;
         airSlots[index] = antiAir;
@@ -356,9 +362,9 @@ public partial class DefenseRenderer : Node3D
         batch.VisibleInstanceCount = 0;
     }
 
-    private MultiMesh CreateMinigunBatch(Mesh mesh)
+    private MultiMesh CreateMinigunBatch(Mesh mesh, Material material = null)
     {
-        MultiMesh batch = Batch(mesh, DeploymentLayout.MaxBuildings, TwoToneTowerMaterial, useCustomData: true);
+        MultiMesh batch = Batch(mesh, DeploymentLayout.MaxBuildings, material ?? TwoToneTowerMaterial, useCustomData: true);
         for (int i = 0; i < batch.InstanceCount; i++) batch.SetInstanceTransform(i, Hidden);
         batch.VisibleInstanceCount = 0;
         return batch;
@@ -387,13 +393,31 @@ public partial class DefenseRenderer : Node3D
     private void ShowAntiAir(int index, ObstacleRectangle area, byte faction, float height, float ground, int variant)
     {
         int kind = variant - 1;
-        var batch = airBatches[kind] ??= CreateMinigunBatch(AirMeshes[kind] ??= AntiAirTowerMeshes.Create(variant));
+        var batch = airBatches[kind] ??= CreateMinigunBatch(AirMeshes[kind] ??= AntiAirTowerMeshes.Create(variant),
+            variant == 1 ? BarrageAmmoMaterial : TwoToneTowerMaterial);
         Vector2 size = area.Max - area.Min;
         Vector2 center = (area.Max + area.Min) * 0.5f;
         batch.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
             new Vector3(center.X, ground, center.Y)));
         SetArmorTint(batch, index, ArmyRenderer.FactionColor(faction));
         batch.VisibleInstanceCount = Mathf.Max(batch.VisibleInstanceCount, index + 1);
+    }
+
+    // COLOR alpha is otherwise unused by the opaque tower shader. Pack up to
+    // 12 rounds and next socket into one normalized byte; custom alpha remains cracks.
+    internal void SetAirAmmo(int index, int ammo, int nextSocket)
+    {
+        if (airSlots[index] != 1 || airBatches[0] == null) return;
+        float packed = (Mathf.Clamp(ammo, 0, 12) * 12 + nextSocket % 12) / 255f;
+        airBatches[0].SetInstanceColor(index, new Color(1f, 1f, 1f, packed));
+    }
+
+    internal void SetRailCharge(int index, float charge)
+    {
+        int step = Mathf.RoundToInt(Mathf.Clamp(charge, 0f, 1f) * 16f);
+        if (railChargeSteps[index] == step) return;
+        railChargeSteps[index] = step;
+        barrels.SetInstanceColor(index, new Color(1f, 1f, 1f, step / 16f));
     }
 
     private void HideAntiAir(int index)

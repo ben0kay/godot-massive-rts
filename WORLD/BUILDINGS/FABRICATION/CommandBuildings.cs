@@ -454,12 +454,13 @@ internal sealed class CommandBuildings
         movement.SetObstacles(field);
     }
 
-    public void RemoveDestroyed()
+    public void RemoveDestroyed(ShockwaveRenderer effects = null)
     {
         bool removed = false, obstaclesChanged = false;
         foreach (var building in structures)
         {
             if (!building.Destroyed) continue;
+            effects?.EmitBuildingDestruction(building, units.Grounding?.Field);
             if (building is CarbonExtractor extractor)
             {
                 var deposit = extractor.Deposit;

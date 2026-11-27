@@ -15,6 +15,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private MeleeEffects meleeEffects;
     private ScorchMarks scorchMarks;
     private readonly CavalryDust cavalryDust = new();
+    private TreadMarks treads;
+    private MuzzleSmoke buildingSmoke;
+    private float smokeCooldown;
+    private int smokeCursor;
     private int count;
     private bool dirty;
 
@@ -113,7 +117,72 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             meleeEffects.Emit(contact, direction, Mathf.Clamp(footprint * 3.9f, 1.3f, 3.1f), 1);
     }
 
-    internal void SampleCavalry(UnitState units, float delta) => cavalryDust.Sample(units, delta, this);
+    internal void SampleCavalry(UnitState units, float delta)
+    {
+        cavalryDust.Sample(units, delta, this);
+        treads ??= new TreadMarks(this);
+        treads.Sample(units, delta);
+    }
+
+    // =========================================================
+    // Scan only the small structure roster at a low cadence, not the army grid.
+    internal void SampleDamagedBuildings(System.Collections.Generic.IReadOnlyList<StructureHealth> buildings,
+        TerrainHeightField terrain, float delta)
+    {
+        if (buildings == null || buildings.Count == 0) return;
+        smokeCooldown -= delta;
+        if (smokeCooldown > 0f) return;
+        smokeCooldown = 0.7f;
+        int emitted = 0;
+        for (int n = 0; n < buildings.Count; n++)
+        {
+            int slot = (smokeCursor + n) % buildings.Count;
+            var building = buildings[slot];
+            if (building == null || building.Destroyed || building.Health > building.MaxHealth * 0.25f) continue;
+            Vector3 point = BuildingGround(building, terrain);
+            float size = BuildingRadius(building);
+            buildingSmoke ??= new MuzzleSmoke(this, MuzzleSmoke.DefaultWind);
+            Vector3 vent = point + Vector3.Up * Mathf.Clamp(size * 0.45f, 0.65f, 2.5f);
+            buildingSmoke.Emit(vent, Mathf.Clamp(size * 0.35f, 0.65f, 1.8f), dark: true);
+            // Occasional short electrical glints reuse the melee contact pool.
+            if ((slot + Mathf.FloorToInt(point.X + point.Z)) % 3 == 0)
+            {
+                meleeEffects ??= new MeleeEffects(this);
+                meleeEffects.Emit(vent + Vector3.Right * size * 0.20f, Vector2.Zero, Mathf.Clamp(size * 0.35f, 0.7f, 1.8f), 0);
+            }
+            if (++emitted >= 12)
+            {
+                smokeCursor = (slot + 1) % buildings.Count;
+                return;
+            }
+        }
+    }
+
+    private static Vector3 BuildingGround(StructureHealth building, TerrainHeightField terrain)
+    {
+        Vector2 center = (building.Area.Min + building.Area.Max) * 0.5f;
+        return new Vector3(center.X, terrain?.At(center.X, center.Y) ?? 0f, center.Y);
+    }
+
+    private static float BuildingRadius(StructureHealth building) =>
+        Mathf.Clamp((building.Area.Max - building.Area.Min).Length() * 0.55f, 2f, 9f);
+
+    // One event from the existing removal lifecycle; no damage or wreck obstacle.
+    internal void EmitBuildingDestruction(StructureHealth building, TerrainHeightField terrain)
+    {
+        Vector3 ground = BuildingGround(building, terrain);
+        float radius = BuildingRadius(building);
+        Vector3 burst = ground + Vector3.Up * Mathf.Clamp(radius * 0.32f, 0.5f, 2f);
+        Emit(ground, radius, burst, structureChips: true);
+        EmitScorch(ground, radius, terrain);
+        buildingSmoke ??= new MuzzleSmoke(this, MuzzleSmoke.DefaultWind);
+        for (int i = 0; i < 3; i++)
+        {
+            float angle = i * Mathf.Tau / 3f;
+            Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius * 0.25f;
+            buildingSmoke.Emit(burst + offset, Mathf.Clamp(radius * 0.5f, 1f, 3f), dark: true);
+        }
+    }
 
     internal void EmitCavalryDust(Vector3 position, float size)
     {
@@ -125,6 +194,8 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     {
         meleeEffects?.Advance(dt);
         scorchMarks?.Advance(dt);
+        treads?.Advance(dt);
+        buildingSmoke?.Advance(dt);
         if (count == 0) return;
         dirty = true;
         for (int i = count - 1; i >= 0; i--)
@@ -234,6 +305,10 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         cavalryDust.Clear();
         meleeEffects?.Clear();
         scorchMarks?.Clear();
+        treads?.Clear();
+        buildingSmoke?.Clear();
+        smokeCooldown = 0f;
+        smokeCursor = 0;
         count = 0;
         dirty = true;
         Sync();

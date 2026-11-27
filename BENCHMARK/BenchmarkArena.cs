@@ -1126,7 +1126,8 @@ public partial class BenchmarkArena : Node3D
         // Commit the objective result before destruction cleanup / navigation rebuilding.
         // A finished Offense battle needs no new route graph or additional simulation ticks.
         if (offenseCitadel != null) TryFinishOffense();
-        if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles))
+        shockwaves.SampleDamagedBuildings(defenseSystem?.Structures, units.Grounding?.Field, dt);
+        if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles, shockwaves, units.Grounding?.Field))
         {
             if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
             else SetBattleObstacles(remainingObstacles, battleWalls.Mesh);

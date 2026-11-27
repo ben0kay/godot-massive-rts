@@ -13,6 +13,7 @@ Width = 1.5
 Height = 0.95
 SizeMultiplier = 1.5
 SizeTier = 3.0
+LeavesTreadMarks = true
 Speed = 1.54
 AccelerationSecondsOverride = 1.0
 TurnDegreesPerSecond = 85.0

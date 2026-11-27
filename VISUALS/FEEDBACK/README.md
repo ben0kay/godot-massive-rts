@@ -38,3 +38,7 @@ Open [UnitVisualConfig.tres](../../GAMEPLAY/UNITS/UnitVisualConfig.tres) in the 
 First Crack Health and Heavy Crack Health default to 75% and 25%. The intermediate threshold is halfway between them. The shared crack mask adds progressive dark fractures to upper facets in mesh-local space, with a stable orientation derived from each unit ID. Crack Darkness sets the maximum shading and defaults to 0.84. The existing opaque MultiMesh alpha channel carries stage and orientation, retaining the 16-float instance stride. The white hit flash temporarily hides the cracks.
 
 [UNIT_DEATHS](UNIT_DEATHS/README.md) owns fragments and splats. Benchmark, Fortress Defense and the Level Editor's combat tests use these shared visuals. The AutoBattler campaign layout view is static.
+
+### Reactive buildings and treads
+
+ShockwaveRenderer samples low-health structures at 0.7-second intervals (up to 12 smoke emissions per sample, with a subset emitting contact-pool sparks), and existing destruction cleanup triggers one building explosion, chips, scorch and three dark smoke puffs. Shared smoke shader supports dark puffs without changing ordinary muzzle smoke. Siege Ram alone opts into `LeavesTreadMarks` (Entity Editor → Appearance and size); other unit types can opt in later. TreadMarks tracks eligible moving units at 0.16-second cadence, emits paired ground marks by distance, and caps the lazy batch at 512 marks with 12-second lifetime and 4-second fade. Ground slope is approximated; sharp slopes skip marks. No navigation or combat changes.

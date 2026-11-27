@@ -734,3 +734,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Added Skirmishes and Missions selectors above the Clash, Offense, and Defense tabs in the Level Editor. Both use their existing separate save destinations. Fortress Defense retains its own level list.
 
 - 2026-11-27 — Added the Tier 2 Rally Commander with a tall pennant and an area pulse that temporarily boosts nearby allied ground troops. The pulse shares the soldier grid and shockwave batch.
+
+- 2026-11-27 — Added live Barrage magazine indicators, white Railgun cooldown charging, faint faction shield waves, low-health dark building smoke, sparks and tower base light flicker, pooled visual-only building destruction bursts/chips/scorch/smoke, and optional Siege Ram tread marks (Entity Editor flag). Existing gameplay and tower batches preserved; owner visual/FPS validation pending.

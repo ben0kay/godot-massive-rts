@@ -4,10 +4,12 @@ render_mode unshaded, blend_mix, cull_disabled, shadows_disabled, skip_vertex_tr
 
 varying flat float age;
 varying flat float seed;
+varying flat float dark;
 
 void vertex() {
     age = INSTANCE_CUSTOM.x;
     seed = INSTANCE_CUSTOM.y;
+    dark = INSTANCE_CUSTOM.w;
     float size = mix(0.85, 3.3, sqrt(age)) * INSTANCE_CUSTOM.z;
     VERTEX = MODELVIEW_MATRIX[3].xyz + vec3((UV - 0.5) * size, 0.0);
 }
@@ -30,5 +32,6 @@ void fragment() {
     float density = max(core, lobes * 0.81);
     float light = clamp(0.45 - p.y * 0.32 + lobes * 0.23, 0.0, 1.0);
     ALBEDO = mix(vec3(0.26, 0.28, 0.32), vec3(0.67, 0.69, 0.72), light);
+    ALBEDO = mix(ALBEDO, ALBEDO * 0.36, dark);
     ALPHA = density * smoothstep(0.0, 0.08, age) * (1.0 - smoothstep(0.24, 1.0, age)) * 0.57;
 }

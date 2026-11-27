@@ -52,6 +52,7 @@ internal sealed class DefenseSystem
         renderer.ShowTower(slot, structure.Area, structure.Faction, height, ground, stats.ProjectileType >= 0, stats.ShieldEmitter.Enabled,
             stats.ShieldEmitter.Radius, stats.Id == PrefabShelterMeshes.Id, stats.Id == TwinMinigunTowerMeshes.Id,
             AntiAirTowerMeshes.Variant(stats.Id));
+        renderer.SetAirAmmo(slot, stats.AirDefense.Magazine, 0);
         ActiveCount++;
     }
 
@@ -87,6 +88,7 @@ internal sealed class DefenseSystem
             structures[i] = new StructureHealth(area, placement.Faction, stats.Health, rules, stats.ArmourClass, stats.Armour) { IsTower = true };
             float ground = terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f;
             towers[i] = CreateTower(structures[i], stats, height, ground);
+            renderer.SetAirAmmo(i, stats.AirDefense.Magazine, 0);
         }
     }
 
@@ -95,7 +97,7 @@ internal sealed class DefenseSystem
             Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1,
             BaseHeight = height, AirAmmo = stats.AirDefense.Magazine };
 
-    public bool RemoveDestroyed(out ObstacleField field)
+    public bool RemoveDestroyed(out ObstacleField field, ShockwaveRenderer effects = null, TerrainHeightField terrain = null)
     {
         field = null;
         bool changed = false;
@@ -105,6 +107,7 @@ internal sealed class DefenseSystem
             if (!structures[i].Destroyed) { alive++; continue; }
             if (removed[i]) continue;
             removed[i] = true;
+            effects?.EmitBuildingDestruction(structures[i], terrain);
             renderer.HideTower(i);
             changed = true;
         }
@@ -212,6 +215,8 @@ internal sealed class DefenseSystem
 
             if (oldYaw != tower.Yaw || oldSlope != tower.BeamSlope || left != tower.LeftRecoil || right != tower.RightRecoil)
                 renderer.Aim(i, tower.Pivot, tower.Yaw, tower.LeftRecoil, tower.RightRecoil, tower.BeamSlope);
+            if (weapon == TowerWeapon.DirectBeam)
+                renderer.SetRailCharge(i, tower.BeamRemaining > 0f ? 1f : 1f - tower.Cooldown / Mathf.Max(0.01f, tower.Stats.Interval));
             if (tower.BeamRemaining <= 0f) continue;
             float firingSeconds = Mathf.Min(dt, tower.BeamRemaining);
             TraceBeam(i, in tower, units, grid, obstacles, tower.Stats.Damage * firingSeconds);
@@ -231,7 +236,11 @@ internal sealed class DefenseSystem
             if (tower.Stats.Weapon != TowerWeapon.AntiAir || structures[i] is not { Destroyed: false } source) continue;
             tower.AirCooldown -= dt;
             if (tower.AirCooldown > 0f) continue;
-            if (tower.AirAmmo == 0) tower.AirAmmo = tower.Stats.AirDefense.Magazine;
+            if (tower.AirAmmo == 0)
+            {
+                tower.AirAmmo = tower.Stats.AirDefense.Magazine;
+                renderer.SetAirAmmo(i, tower.AirAmmo, tower.AirSocket);
+            }
             int variant = AntiAirTowerMeshes.Variant(tower.Stats.Id);
             Vector3 muzzle = AntiAirTowerMeshes.Muzzle(tower.Pivot, tower.Footprint, tower.BaseHeight, variant, tower.AirSocket);
             if (!air.TryLaunchTowerMissile(tower.Pivot, muzzle, source, in tower.Stats))
@@ -242,6 +251,7 @@ internal sealed class DefenseSystem
             effects?.EmitMuzzleSmoke(muzzle, tower.Stats.Id == AntiAirTowerMeshes.HeavyId ? 1.60f : 0.55f);
             tower.AirSocket = (tower.AirSocket + 1) % AntiAirTowerMeshes.SocketCount(variant);
             tower.AirAmmo--;
+            renderer.SetAirAmmo(i, tower.AirAmmo, tower.AirSocket);
             tower.AirCooldown = tower.AirAmmo == 0
                 ? Mathf.Max(tower.Stats.Interval, tower.Stats.AirDefense.ReloadSeconds) : tower.Stats.Interval;
         }
