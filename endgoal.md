@@ -1,6 +1,6 @@
 # End Goal — Godot Massive RTS
 
-**Design direction updated 2026-11-26.** The strategic Campaign and standalone Skirmishes describe the intended direction. Existing playable scenes and menus are the starting point for that work.
+**Design direction updated 2026-11-27.** Conquest, Missions, and standalone Skirmishes describe the intended direction. Existing playable scenes and menus are the starting point for that work.
 
 ## Vision
 
@@ -8,13 +8,14 @@ Build a 3D isometric Godot .NET strategy game where players compose and paint la
 
 ## Play modes
 
-| Mode | Core loop | Army and progression |
+| Menu path | Core loop | Army and progression |
 | --- | --- | --- |
-| **Campaign** | Move armies on a strategic map, capture territories, build fortresses, and resolve encounters. | Shared unit catalogue, persistent faction forces, recruitment, Credits, and research. |
-| **Skirmishes** | Pick a standalone Clash, Offense, or Defense scenario, place the supplied army, and fight. | Authored quantities and base stats. Replay to try a different deployment or opening order. |
-| **Fortress Defense** | Build and hold a base through a longer session of progressive enemy waves. | Its own scenario pacing, build and production rules, and in-match economy. Carbon is the established resource direction. |
+| **Profile → Campaign → Conquest** | Move army stacks on a territory map, capture regions, build fortresses, and resolve encounters. | Persistent armies and garrisons, recruitment, Credits, and research. |
+| **Profile → Campaign → Missions** | Progress through authored Clash, Offense, and Defense battles. | Each mission supplies a starting army and a credit allowance for extra units or upgrades. |
+| **Profile → Skirmishes** | Jump into a standalone Clash, Offense, or Defense battle. Use **Instant Action** as the subtitle. | Fixed authored roster and base stats. Placement and opening orders are the challenge. |
+| **Profile → Fortress Defense** | Build and hold a base through progressive enemy waves. | In-match production and a Carbon economy. |
 
-## Strategic Campaign
+## Campaign → Conquest
 
 1. Move army stacks between connected territories. Territories track ownership and fortress state. A fortress can hold a garrison.
 2. Opposing forces meeting on a territory create a battle. The territory and who controls its fortress determine the objective from the player's perspective.
@@ -29,13 +30,24 @@ Build a 3D isometric Godot .NET strategy game where players compose and paint la
 
 **Auto-resolve** should compare the participating forces using unit strengths and relevant modifiers, such as research and a fortress advantage. A bounded amount of variation can keep results from feeling mechanical. Showing the likely outcome and casualty range before committing is a proposed UI.
 
-**Fight Battle** uses the units brought to the encounter, with legal deployment areas and optional opening orders. Campaign research modifies the faction's eligible units across Clash, Offense, and Defense. Both resolution paths should produce the same result format so the map can handle them consistently.
+**Fight Battle** uses the actual participating armies, with legal deployment areas and optional opening orders. An encounter can be as uneven as 20 Circle Infantry against 5,000 Square Infantry. Show the odds and let the player choose between fighting and quickly resolving the encounter. An overwhelming defeat can be resolved without loading the tactical map or running live combat. Campaign research modifies the faction's eligible units across Clash, Offense, and Defense. Both resolution paths should produce the same result format so the map can handle them consistently.
 
 Recruitment adds units to the faction's forces for assignment to armies or garrisons. The campaign tracks ownership, locations, and research using stable unit IDs from the shared catalogue. Carrying casualties forward into the army stack is proposed. The final casualty, replenishment, and retreat rules remain open.
 
+## Campaign → Missions
+
+Missions have their own authored maps and enemy setups. A single progression can mix Clash, Offense, and Defense and show the battle type on each mission. Keep those encounters separate from fixed-roster Skirmishes so the supplied Skirmish army never gives away what to buy.
+
+1. Preview the terrain and enemy army.
+2. Receive the mission's authored starting army and credit allowance. The starting army is guaranteed and has no resale value.
+3. Spend the same allowance on extra units, upgrades for the army, or a mix of both. Purchases can be refunded before the fight starts.
+4. Deploy and fight. On retry, restore the starting army and full allowance. Credits and purchased upgrades reset each mission.
+
+Progression can unlock new purchase options while each mission sets its own budget and eligible units and upgrades. Later missions can feature more elites and allow higher-tier purchases. Share upgrade definitions with Conquest, where research persists between battles.
+
 ## Standalone Skirmishes
 
-Skirmishes reuse the short battle types and battlefield tools. Each authored scenario supplies preset unit quantities and base stats, with its own terrain, defenses, legal deployment area and objective. Players can replay the same setup to learn what changes when they paint a different formation or give a different opening order. Campaign recruitment, Credits and research stay in Campaign.
+Skirmishes reuse the short battle types and battlefield tools. Each authored scenario supplies preset unit quantities and base stats, with its own terrain, defenses, legal deployment area and objective. Players can replay the same setup to learn what changes when they paint a different formation or give a different opening order. Start with about **30 Clash skirmishes** of increasing difficulty. Keep unit purchases and upgrades in Campaign.
 
 ## Fortress Defense
 
@@ -86,7 +98,7 @@ The owner's illustration was **10 soldiers processed in one frame, then 10 more 
 - Maintain Benchmark as an independent stress-test harness. Measure like-for-like battles with consistent counts, rosters, seeds, and camera settings before making performance claims.
 - Preserve authored levels and stable save IDs when evolving the menu and campaign structure.
 
-## Suggested first campaign prototype
+## Suggested first Conquest prototype
 
 Use a small connected territory map with a player army, an opposing army, and one fortress. Prove that the player can enter an open-territory Clash, assault the fortress, and later defend it in a short Defense battle. Verify that both Auto-resolve and Fight Battle update the map correctly. Expand recruitment, research, map size, and AI as the loop earns them.
 
