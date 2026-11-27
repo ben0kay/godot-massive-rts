@@ -746,3 +746,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — MAPGEN1: Allowed Large Forest to grow through the passable center lane on dry maps, removing the straight clearing. Bridge approaches and the rock clearance checks remain in place.
 
 - 2026-11-27 — Changed the forest maximum range penalty for ranged ground units from 50% to 20% and applied it to Dreadnaught turrets. The shared range checks use the attacker's current forest cell.
+
+- 2026-11-27 — Increased the forest maximum attack range penalty for ranged ground units from 20% to 35%.
