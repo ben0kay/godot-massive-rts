@@ -750,3 +750,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Increased the forest maximum attack range penalty for ranged ground units from 20% to 35%.
 
 - 2026-11-27 — Added direct projectile body-impact sparks and cosmetic shield ricochets for Triangle Archer bolts/minigun rounds. Reuses swept contacts and actual health/shield outcomes, shared contact spark pool and one bounded reflected-tracer batch. Resource opt-in, no combat or collision changes; owner validation pending.
+
+- 2026-11-27 — MAPGEN1: Removed the full-length rock clearance exclusion from both forest patterns on all layouts. Trees still respect water, bridges and protected areas.

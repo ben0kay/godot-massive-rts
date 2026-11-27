@@ -79,7 +79,7 @@ internal static class ProceduralBattlefield
                 (settings.Fortress && Mathf.Abs(point.X) <= 32f && point.Y >= -38f && point.Y <= 18f);
         }
 
-        bool InLane(Vector2I cell)
+        bool InRockClearanceLane(Vector2I cell)
         {
             if (!river) return Mathf.Abs(cell.X) <= clearance + edge / 7;
             int width = bridgeSpan / 2 + clearance + 1;
@@ -103,15 +103,14 @@ internal static class ProceduralBattlefield
 
         bool CanPlaceRock(Vector2I cell) =>
             cell.X >= -edge && cell.X < edge && cell.Y >= -edge && cell.Y < edge &&
-            !Protected(Center(cell)) && !InLane(cell) && OpenForScenery(cell) && !rocks.Contains(cell);
+            !Protected(Center(cell)) && !InRockClearanceLane(cell) && OpenForScenery(cell) && !rocks.Contains(cell);
 
         BuildRockOutcrops(settings, edge, water.Count, CanPlaceRock, rocks);
         foreach (var cell in rocks) paint.RockCells.Add(cell);
 
-        // A large forest can cover the passable central lane on dry maps. Keep bridge approaches clear.
-        bool forestCanCoverLane = !river && settings.Trees == ForestPattern.LargeForest;
+        // Trees are passable. Only rocks need the full-length navigation clearance lanes.
         var forest = BuildForest(settings, edge, cell => OpenForScenery(cell) && !rocks.Contains(cell) &&
-            (forestCanCoverLane || !InLane(cell)) && Mathf.Abs(Center(cell).Y) < size * (0.5f - settings.FlatBand * 0.5f));
+            Mathf.Abs(Center(cell).Y) < size * (0.5f - settings.FlatBand * 0.5f));
         foreach (var cell in forest) paint.ForestCells.Add(cell);
 
         // Check the reserved routes on the same cells the world-paint compiler opens.
