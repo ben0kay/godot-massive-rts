@@ -65,8 +65,13 @@ public partial class LevelEditor
         Button(seedRow, "Randomize", () => seed.Value = Random.Shared.Next());
         var size = Number(form, "Map width and depth", 256, ProceduralBattlefield.MinSize, ProceduralBattlefield.MaxSize, 4);
         var relief = Number(form, "Elevation intensity", 9, 0, 24);
-        var forest = Number(form, "Forest coverage (%)", 30, 0, 100);
-        var rock = Number(form, "Rock density (%)", 40, 0, 100);
+        Heading(form, "Forest pattern", 15);
+        var trees = new OptionButton();
+        trees.AddItem("Scattered Groves", (int)ProceduralBattlefield.ForestPattern.Groves);
+        trees.AddItem("Large Forest", (int)ProceduralBattlefield.ForestPattern.LargeForest);
+        form.AddChild(trees);
+        var forest = Number(form, "Forest coverage target (% of map)", 30, 0, 100);
+        var rock = Number(form, "Rock outcrop density (%)", 40, 0, 100);
         var flat = Number(form, "Flat deployment ends (%) per side", 20, 12, 26);
         var riverOptions = new VBoxContainer();
         form.AddChild(riverOptions);
@@ -105,6 +110,7 @@ public partial class LevelEditor
             riverOptions.Visible = preset.GetSelectedId() == (int)ProceduralBattlefield.Layout.RiverDivide;
             Invalidate();
         };
+        trees.ItemSelected += _ => Invalidate();
         foreach (var field in new[] { seed, size, relief, forest, rock, flat, riverWidth, meander, crossings, bridgeWidth })
             field.ValueChanged += _ => Invalidate();
         RefreshPreview();
@@ -124,15 +130,23 @@ public partial class LevelEditor
             {
                 var settings = new ProceduralBattlefield.Settings((int)seed.Value, (int)size.Value,
                     (ProceduralBattlefield.Layout)preset.GetSelectedId(), (float)relief.Value, (float)forest.Value / 100f,
-                    (float)rock.Value / 100f, (int)riverWidth.Value, (int)crossings.Value,
+                    (ProceduralBattlefield.ForestPattern)trees.GetSelectedId(), (float)rock.Value / 100f, (int)riverWidth.Value, (int)crossings.Value,
                     (int)bridgeWidth.Value, (float)meander.Value / 100f, (float)flat.Value / 100f,
                     clearance, !adapter.IsAutoBattler);
                 var result = ProceduralBattlefield.Generate(settings);
                 ValidateGeneratedPaint(result);
                 image.Texture = ImageTexture.CreateFromImage(result.Preview);
                 candidate = result;
+                float cellsAcross = result.Size / WorldPaint.CellSize;
+                float mapCells = cellsAcross * cellsAcross;
+                float forestCoverage = result.Paint.ForestCells.Count / mapCells;
+                float rockCoverage = result.Paint.RockCells.Count / mapCells;
                 message.Text = $"{result.Size} × {result.Size} · Seed {settings.Seed}\n" +
-                    $"{result.Paint.ForestCells.Count} forest cells · {result.Paint.RockCells.Count} rock cells · {result.Paint.Bridges.Count} bridges";
+                    $"Forest {forestCoverage:P1} of map · Rock {rockCoverage:P1} · Bridges {result.Paint.Bridges.Count}";
+                if (forestCoverage + 0.0001f < settings.Forest)
+                    message.Text += result.Paint.ForestCells.Count == WorldPaint.MaxPaintedCells
+                        ? "\nForest coverage limited by the paint cell budget."
+                        : "\nForest coverage limited by available land.";
             }
             catch (Exception error)
             {

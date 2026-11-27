@@ -740,3 +740,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Rally Commander tuning: size multiplier 0.9 → 1.08 (+20% linear scale and footprint), rally radius 18 → 14.4 (−20%), successful pulse cooldown 12 → 8 seconds (+50% frequency). Shared pulse ring follows the new radius. Five-second non-stacking buff, 15% boost, initial delay, empty-target retry and other stats unchanged. Source review only; owner Godot validation pending.
 
 - 2026-11-27 — MAPGEN1-A/B: Added Blank and Procedural new-level choices, seeded map previews, editable elevation/scenery, and footprint-checked River Divide bridges. Generation uses the normal editor history and save flow. Owner Godot validation pending.
+
+- 2026-11-27 — MAPGEN1 scenery: Added whole-map forest targets, Scattered Groves and Large Forest patterns, more varied rock outcrops and rolling terrain, and actual coverage in the preview. Owner Godot validation pending.

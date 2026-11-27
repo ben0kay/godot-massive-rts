@@ -9,11 +9,12 @@ namespace MassiveRts;
 internal static class ProceduralBattlefield
 {
     internal enum Layout { OpenPlains, RiverDivide, MountainPass }
+    internal enum ForestPattern { Groves, LargeForest }
     internal const int MinSize = 192;
     internal const int MaxSize = 1024;
     private const float Cell = WorldPaint.CellSize;
 
-    internal sealed record Settings(int Seed, int Size, Layout Preset, float Relief, float Forest, float Rock,
+    internal sealed record Settings(int Seed, int Size, Layout Preset, float Relief, float Forest, ForestPattern Trees, float Rock,
         int RiverWidth, int Crossings, int BridgeWidth, float Meander, float FlatBand, float Clearance, bool Fortress);
 
     internal sealed record Candidate(int Size, Samples Elevation, WorldPaintData Paint, Image Preview);
@@ -88,47 +89,29 @@ internal static class ProceduralBattlefield
         Vector2 Center(Vector2I cell) => ((Vector2)cell + Vector2.One * 0.5f) * Cell;
         var water = new HashSet<Vector2I>(paint.WaterCells);
         var rocks = new HashSet<Vector2I>();
-        var forest = new HashSet<Vector2I>();
-        var scenery = new Random(unchecked(settings.Seed ^ 0x2D3A318B));
-        bool LegalScenery(Vector2I cell) =>
-            !Protected(Center(cell)) && !InLane(cell) &&
-            (!settings.Fortress || Mathf.Abs(Center(cell).Y + 13f) > settings.Clearance + 4f) && !water.Contains(cell) &&
-            !rocks.Contains(cell) && !forest.Contains(cell);
-
-        // Place compact rock groups so the existing rectangle compiler can merge them.
-        int rockGroups = Mathf.RoundToInt(settings.Rock * (settings.Preset == Layout.MountainPass ? 16 : 10));
-        for (int i = 0; i < rockGroups; i++)
+        var bridges = new List<Rect2I>(paint.Bridges);
+        bool OpenForScenery(Vector2I cell)
         {
-            int width = scenery.Next(3, 7), depth = scenery.Next(2, 6);
-            int sign = i % 2 == 0 ? -1 : 1;
-            int x = settings.Preset == Layout.MountainPass
-                ? sign * scenery.Next(edge / 3, edge * 4 / 5) : scenery.Next(-edge + 2, edge - width);
-            int z = settings.Preset == Layout.MountainPass
-                ? scenery.Next(-edge / 5, edge / 5) : scenery.Next(-edge + 2, edge - depth);
-            var patch = new List<Vector2I>();
-            for (int dz = 0; dz < depth; dz++)
-            for (int dx = 0; dx < width; dx++)
-                patch.Add(new Vector2I(x + dx, z + dz));
-            if (patch.Exists(cell => cell.X >= edge || !LegalScenery(cell))) continue;
-            foreach (var cell in patch) { rocks.Add(cell); paint.RockCells.Add(cell); }
+            if (InLane(cell) || water.Contains(cell)) return false;
+            foreach (var bridge in bridges)
+                if (bridge.HasPoint(cell)) return false;
+            if (!settings.Fortress) return true;
+            var point = Center(cell);
+            return Mathf.Abs(point.Y + 13f) > settings.Clearance + 4f &&
+                (Mathf.Abs(point.X) > 32f || point.Y < -38f || point.Y > 18f);
         }
 
-        scenery = new Random(unchecked(settings.Seed ^ 0x491A56B7));
-        int clusters = Mathf.RoundToInt(settings.Forest * Mathf.Lerp(14f, 56f, size / (float)MaxSize));
-        for (int i = 0; i < clusters; i++)
-        {
-            int x = scenery.Next(-edge + 10, edge - 10), z = scenery.Next(-edge + 10, edge - 10);
-            int radius = scenery.Next(4, 10);
-            for (int dz = -radius; dz <= radius; dz++)
-            for (int dx = -radius; dx <= radius; dx++)
-            {
-                if (dx * dx + dz * dz > radius * radius || scenery.NextDouble() > 0.78) continue;
-                var cell = new Vector2I(x + dx, z + dz);
-                if (!LegalScenery(cell)) continue;
-                forest.Add(cell);
-                paint.ForestCells.Add(cell);
-            }
-        }
+        bool CanPlaceRock(Vector2I cell) =>
+            cell.X >= -edge && cell.X < edge && cell.Y >= -edge && cell.Y < edge &&
+            !Protected(Center(cell)) && OpenForScenery(cell) && !rocks.Contains(cell);
+
+        BuildRockOutcrops(settings, edge, water.Count, CanPlaceRock, rocks);
+        foreach (var cell in rocks) paint.RockCells.Add(cell);
+
+        // Keep the outer halves of the flat deployment bands clear. Forests are passable.
+        var forest = BuildForest(settings, edge, cell => OpenForScenery(cell) && !rocks.Contains(cell) &&
+            Mathf.Abs(Center(cell).Y) < size * (0.5f - settings.FlatBand * 0.5f));
+        foreach (var cell in forest) paint.ForestCells.Add(cell);
 
         // Check the reserved routes on the same cells the world-paint compiler opens.
         void CheckLane(int x, Rect2I? bridge)
@@ -150,6 +133,8 @@ internal static class ProceduralBattlefield
         else CheckLane(0, null);
 
         // Broad slopes taper to zero at deployment ends, around the fortress and along the river valley.
+        var hills = new FastNoiseLite { Seed = settings.Seed, Frequency = 3.1f };
+        var foothills = new FastNoiseLite { Seed = unchecked(settings.Seed + 1), Frequency = 7f };
         float Height(Vector2 point)
         {
             float end = size * (0.5f - settings.FlatBand) - TerrainHeightField.Spacing * 1.5f;
@@ -166,8 +151,8 @@ internal static class ProceduralBattlefield
                 envelope *= Mathf.SmoothStep(0f, size * 0.12f, Mathf.Abs(point.Y - riverCenter * Cell) - bank);
             }
             float u = point.X / size, v = point.Y / size;
-            float shape = Mathf.Sin(u * 10f + phase) * Mathf.Cos(v * 8f - phase)
-                + 0.35f * Mathf.Sin((u + v) * 17f);
+            float shape = hills.GetNoise2D(u * 0.9f, v) * 1.45f +
+                foothills.GetNoise2D(u, v * 1.15f) * 0.35f;
             if (settings.Preset == Layout.MountainPass)
                 shape += 1.4f * Mathf.SmoothStep(0.16f, 0.43f, Mathf.Abs(u));
             return shape * settings.Relief * envelope;
@@ -191,7 +176,6 @@ internal static class ProceduralBattlefield
         }
         float half = size * 0.5f;
         var surface = new TerrainHeightField(new Vector2(-half, -half), new Vector2(half, half), Sample);
-        var bridges = new List<Rect2I>(paint.Bridges);
         const int pixels = 256;
         var preview = Image.CreateEmpty(pixels, pixels, false, Image.Format.Rgb8);
         for (int z = 0; z < pixels; z++)
@@ -202,7 +186,7 @@ internal static class ProceduralBattlefield
             float height = surface.At(point.X, point.Y);
             var color = new Color(0.31f, 0.39f, 0.32f).Lightened(Mathf.Clamp((height + 9f) / 90f, 0f, 0.4f));
             if (Protected(point)) color = new Color("#647668");
-            if (forest.Contains(cell)) color = new Color("#28543d");
+            if (forest.Contains(cell)) color = new Color("#28543d").Lightened(Mathf.Clamp((height + 9f) / 110f, 0f, 0.3f));
             if (rocks.Contains(cell)) color = new Color("#626b75");
             if (water.Contains(cell)) color = new Color("#287692");
             foreach (var bridge in bridges)
@@ -210,5 +194,106 @@ internal static class ProceduralBattlefield
             preview.SetPixel(x, z, color);
         }
         return new Candidate(size, heights, paint, preview);
+    }
+
+    // =========================================================
+    // A few broad outcrops plus smaller satellites. Stepped banks keep the obstacle data compact.
+    private static void BuildRockOutcrops(Settings settings, int edge, int waterCount,
+        Func<Vector2I, bool> canPlace, HashSet<Vector2I> rocks)
+    {
+        bool mountain = settings.Preset == Layout.MountainPass;
+        var random = new Random(unchecked(settings.Seed ^ 0x2D3A318B));
+        int target = Mathf.RoundToInt(settings.Rock * (mountain ? 24 : 18));
+        int accepted = 0;
+        for (int attempt = 0; attempt < target * 8 && accepted < target; attempt++)
+        {
+            bool small = accepted % 3 == 2;
+            int scale = Mathf.Clamp(edge / 6, 7, 28);
+            int length = small ? random.Next(3, scale) : random.Next(scale, scale * 3);
+            int depth = small ? random.Next(2, 5) : random.Next(5, Mathf.Max(7, scale + 1));
+            int x = mountain ? (attempt % 2 == 0 ? -1 : 1) * random.Next(edge / 3, edge * 4 / 5)
+                : random.Next(-edge, edge);
+            int z = random.Next(-edge, edge);
+            int drift = random.Next(-depth, depth + 1);
+            bool turn = random.Next(2) == 0;
+            var patch = new List<Vector2I>();
+            for (int row = 0; row < depth; row++)
+            {
+                // Quantize the profile to a few terraces so long outcrops still merge efficiently.
+                float t = (row * 5 / depth + 0.5f) / 5f;
+                int width = Mathf.Max(2, Mathf.RoundToInt(length * (0.25f + 0.75f * Mathf.Sin(t * Mathf.Pi))));
+                int offset = Mathf.RoundToInt(drift * (t - 0.5f));
+                for (int column = -width / 2; column < (width + 1) / 2; column++)
+                {
+                    int along = column + offset, across = row - depth / 2;
+                    var cell = new Vector2I(x + (turn ? across : along), z + (turn ? along : across));
+                    if (canPlace(cell)) patch.Add(cell);
+                }
+            }
+            if (patch.Count < length * depth * 0.4f || rocks.Count + patch.Count + waterCount > WorldPaint.MaxPaintedCells)
+                continue;
+
+            rocks.UnionWith(patch);
+            int rectangleBudget = settings.Preset == Layout.RiverDivide
+                ? WorldPaint.MaxPaintedRectangles / 2 : WorldPaint.MaxPaintedRectangles;
+            if (ObstacleCellCompiler.Merge(rocks, Cell, rectangleBudget) == null)
+            {
+                rocks.ExceptWith(patch);
+                continue;
+            }
+            accepted++;
+        }
+    }
+
+    // =========================================================
+    // Rank eligible cells by a continuous canopy field, then fill to a whole-map area target.
+    private static HashSet<Vector2I> BuildForest(Settings settings, int edge, Func<Vector2I, bool> canPlace)
+    {
+        var forest = new HashSet<Vector2I>();
+        int target = Math.Min(WorldPaint.MaxPaintedCells,
+            Mathf.RoundToInt(4 * edge * edge * settings.Forest));
+        if (target == 0) return forest;
+
+        int seed = unchecked(settings.Seed ^ 0x491A56B7);
+        var broad = new FastNoiseLite { Seed = seed, Frequency = 4f };
+        var detail = new FastNoiseLite { Seed = unchecked(seed + 1), Frequency = 21f };
+        var warp = new FastNoiseLite { Seed = unchecked(seed + 2), Frequency = 3f };
+        var groves = new FastNoiseLite { Seed = unchecked(seed + 3), Frequency = 11f };
+        var fringe = new FastNoiseLite { Seed = unchecked(seed + 4), Frequency = 43f };
+        var random = new Random(seed);
+        Vector2 along = Vector2.Right.Rotated((float)random.NextDouble() * Mathf.Pi);
+        Vector2 across = new(-along.Y, along.X);
+        float bend = (float)random.NextDouble() * Mathf.Tau;
+        bool sweeping = settings.Trees == ForestPattern.LargeForest;
+        var ranked = new List<(Vector2I Cell, float Score)>();
+
+        for (int z = -edge; z < edge; z++)
+        for (int x = -edge; x < edge; x++)
+        {
+            var cell = new Vector2I(x, z);
+            if (!canPlace(cell)) continue;
+            var point = ((Vector2)cell + Vector2.One * 0.5f) / (2f * edge);
+            float u = point.Dot(along), v = point.Dot(across);
+            float curved = v + 0.13f * Mathf.Sin(u * 6f + bend) + 0.12f * warp.GetNoise2D(u, v);
+            float patches = groves.GetNoise2D(u * 0.8f, curved * 1.15f);
+            float boundary = detail.GetNoise2D(u, v) * 0.15f + fringe.GetNoise2D(u, v) * 0.09f;
+            float score = sweeping
+                ? broad.GetNoise2D(u * 0.55f, curved * 1.4f) * 0.33f - Mathf.Abs(curved) * 1.6f + patches * 0.25f
+                : patches * 0.78f + broad.GetNoise2D(u, v) * 0.22f;
+            // Small per-cell variation breaks up the edge and leaves occasional outlying trees.
+            score += boundary + ((float)random.NextDouble() - 0.5f) * 0.12f;
+            ranked.Add((cell, score));
+        }
+
+        ranked.Sort((a, b) =>
+        {
+            int score = b.Score.CompareTo(a.Score);
+            if (score != 0) return score;
+            int row = a.Cell.Y.CompareTo(b.Cell.Y);
+            return row != 0 ? row : a.Cell.X.CompareTo(b.Cell.X);
+        });
+        int count = Math.Min(target, ranked.Count);
+        for (int i = 0; i < count; i++) forest.Add(ranked[i].Cell);
+        return forest;
     }
 }
