@@ -209,3 +209,16 @@ The aircraft models use a single cached faceted surface per type, with the share
 ### Heavy Bomber payload and exhaust (AIR-VIS2)
 
 **Use Enhanced Bomber Bomb Visuals**, **Use Bomber Engine Flames**, and **Use Bomber Smoke Trails** are independent enabled-by-default switches in UnitVisualConfig.tres; relaunch after editing. The new finned dark-metal payload replaces the orange box only at mesh selection. Twin short flickering yellow-orange emissive flames attach to the modeled nacelle ends (approximate anchors for legacy wings); explicit custom aircraft meshes are not assigned guessed ports. Dark expanding smoke puffs remain in world space as the bomber turns. Existing wingtip wisps and offset ground shadows remain. The flame batch is shared and the smoke pool is capped at 1024 puffs, sampled every 0.085 simulation seconds, with nominal 1.45-second lifetime (oldest overwritten at capacity). No exhaust allocation without supported bombers. No per-aircraft particle nodes, flight or combat changes. Owner checks: bomb orientation, engine alignment during banks, smoke fading, toggles and dense air flights.
+
+
+### Blocking wrecks
+
+In Entity Editor, open **Appearance and size** and use **Leaves blocking wreck**
+on units of Size Tier 3 or higher. Hexagon Siege has the setting enabled by
+default. An opted-in casualty settles into the ground with a tilted, darkened
+hull. Its footprint blocks ground movement and routing for either faction.
+Ranged line of sight and projectile collision still use the existing cover rules.
+
+The first pass retains up to 32 wrecks per battle and batches updates to the
+ground routing field. Later casualties use ordinary death effects. Wrecks
+clear with the battle.

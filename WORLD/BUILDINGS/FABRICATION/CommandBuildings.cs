@@ -39,7 +39,7 @@ internal sealed class CommandBuildings
     private readonly record struct ExtractorJob(int Worker, CarbonDeposit Deposit, Vector3 Goal);
     public CitadelWorkerProduction Workers { get; }
     private readonly BuildingDefinition citadelDefinition, fabricatorDefinition;
-    private ObstacleField field;
+    private ObstacleField field, baseMovementField;
     public readonly CarbonBalance Carbon;
     public CommandStructure Citadel { get; }
     public ObstacleField MovementField => field;
@@ -425,8 +425,14 @@ internal sealed class CommandBuildings
             if (!structure.Destroyed && structure is not CarbonExtractor) areas.Add(structure.Area);
         CoverField = areas.Count == 0 ? null : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
         areas.AddRange(movementWater);
-        field = areas.Count == 0 ? null : movementWater.Length == 0 && bridges.Length == 0
+        baseMovementField = areas.Count == 0 ? null : movementWater.Length == 0 && bridges.Length == 0
             ? CoverField : new ObstacleField(areas.ToArray(), movement.MapHalfWidth, bridges);
+        RefreshWreckObstacles();
+    }
+
+    internal void RefreshWreckObstacles()
+    {
+        field = units.Wrecks?.Combine(baseMovementField, movement.MapHalfWidth) ?? baseMovementField;
         movement.SetObstacles(field);
     }
 

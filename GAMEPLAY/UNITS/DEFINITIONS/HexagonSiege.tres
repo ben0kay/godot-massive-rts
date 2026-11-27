@@ -13,6 +13,7 @@ Width = 1.6
 Height = 0.825
 SizeMultiplier = 2.0
 SizeTier = 3.0
+LeavesNavigationWreck = true
 Speed = 2.2
 TurnDegreesPerSecond = 120.0
 Health = 600.0

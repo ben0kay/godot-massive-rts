@@ -187,6 +187,7 @@ public sealed class UnitState
     }
 
     public DeathFeedbackSystem DeathFeedback { get; set; }
+    internal WreckField Wrecks { get; set; }
     internal ShieldSystem Shields { get; private set; }
 
     internal void AddShieldTower(StructureHealth tower, ShieldEmitterStats stats)
@@ -241,7 +242,8 @@ public sealed class UnitState
             prismAlive--;
             SetPrismCharge(id, 0f);
         }
-        DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id], Catalog[Type[id]], Grounding?.Field);
+        if (Wrecks?.TryAdd(Position[id], Type[id], Facing[id]) != true)
+            DeathFeedback?.Emit(Position[id], Type[id], Faction[id], Facing[id], Catalog[Type[id]], Grounding?.Field);
         Dirty[id] = true;
     }
 }

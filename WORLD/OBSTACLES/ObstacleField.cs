@@ -8,10 +8,11 @@ namespace MassiveRts;
 public sealed class ObstacleField
 {
     private readonly record struct Box(Vector2 Min, Vector2 Max);
-    private readonly record struct Leaf(Box Bounds, Vector2? AirborneHeightRange);
-    private readonly record struct Node(Box Bounds, int Left, int Right);
+    private readonly record struct Leaf(Box Bounds, Vector2? AirborneHeightRange, bool AllowInteriorEscape);
+    private readonly record struct Node(Box Bounds, int Left, int Right, bool AllowInteriorEscape = false);
     private readonly Node[] nodes;
     private int nodeCount;
+    private readonly bool hasInteriorEscape;
     private readonly Vector2?[] airborneHeights;
     public int RectangleCount => rectangles.Length;
     public ReadOnlySpan<ObstacleRectangle> Rectangles => rectangles;
@@ -61,7 +62,8 @@ public sealed class ObstacleField
         for (int i = 0; i < leaves.Length; i++)
         {
             var area = rectangles[i];
-            leaves[i] = new Leaf(new Box(area.Min, area.Max), area.AirborneHeightRange);
+            leaves[i] = new Leaf(new Box(area.Min, area.Max), area.AirborneHeightRange, area.AllowInteriorEscape);
+            hasInteriorEscape |= area.AllowInteriorEscape;
             hasCustomAirborneHeight |= area.AirborneHeightRange.HasValue;
         }
         nodes = new Node[leaves.Length * 2 - 1];
@@ -77,7 +79,7 @@ public sealed class ObstacleField
             bounds = new Box(bounds.Min.Min(leaves[i].Bounds.Min), bounds.Max.Max(leaves[i].Bounds.Max));
         if (count == 1)
         {
-            nodes[index] = new Node(bounds, -1, -1);
+            nodes[index] = new Node(bounds, -1, -1, leaves[start].AllowInteriorEscape);
             if (airborneHeights != null) airborneHeights[index] = leaves[start].AirborneHeightRange;
         }
         else
@@ -284,7 +286,29 @@ public sealed class ObstacleField
             exit = to;
             return true;
         }
+        if (!hasInteriorEscape) return false;
+        // Newly settled wrecks can enclose a survivor's center. Probe beyond
+        // their nearest face when the normal short clearance probes fail.
+        foreach (var area in rectangles)
+        {
+            if (!area.AllowInteriorEscape || !new Rect2(area.Min, area.Max - area.Min).HasPoint(from)) continue;
+            Vector2 direction = NearestFace(from, new Box(area.Min, area.Max), out float depth);
+            Vector2 to = from + direction * (depth + radius + ClearanceContactSkin + 0.05f);
+            if (HasClearanceContact(to, radius) || !CanExitClearance(from, to, radius)) continue;
+            exit = to;
+            return true;
+        }
         return false;
+    }
+
+    private static Vector2 NearestFace(Vector2 point, Box box, out float depth)
+    {
+        float left = point.X - box.Min.X, right = box.Max.X - point.X;
+        float near = point.Y - box.Min.Y, far = box.Max.Y - point.Y;
+        float x = Mathf.Min(left, right), z = Mathf.Min(near, far);
+        depth = Mathf.Min(x, z);
+        return x <= z ? (left <= right ? Vector2.Left : Vector2.Right) :
+            (near <= far ? Vector2.Up : Vector2.Down);
     }
 
     internal bool CanExitClearance(Vector2 from, Vector2 to, float radius)
@@ -324,6 +348,8 @@ public sealed class ObstacleField
         {
             Vector2 away = from - from.Max(box.Min).Min(box.Max);
             float distanceSquared = away.LengthSquared();
+            if (entry == 0f && distanceSquared == 0f && node.AllowInteriorEscape &&
+                NearestFace(from, box, out _).Dot(delta) > 0f) return;
             // Ignore only the initial clearance overlap while moving away from its solid.
             float contactRadius = radius + ClearanceContactSkin;
             if (entry == 0f && distanceSquared > 0f && distanceSquared <= contactRadius * contactRadius &&

@@ -321,7 +321,12 @@ public partial class BenchmarkArena : Node3D
         flatGround.Visible = autoBattlerPlaytestMap == null;
         if (armyRenderer != null) { RemoveChild(armyRenderer); armyRenderer.QueueFree(); armyRenderer = null; }
         if (projectileRenderer != null) { RemoveChild(projectileRenderer); projectileRenderer.QueueFree(); projectileRenderer = null; }
-        obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
+        if (units?.Wrecks is { } wrecks)
+        {
+            RemoveChild(wrecks);
+            wrecks.QueueFree();
+        }
+        baseMovementObstacles = obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
         meleeSteering = null;
         units = null; projectiles = null; grid = null; separation = null; hardSeparation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
         targetingAccumulator = 0; targetingStep = 0;
@@ -380,9 +385,11 @@ public partial class BenchmarkArena : Node3D
             : null;
         var recoil = (mode is BenchmarkMode.Ranged or BenchmarkMode.Melee) && catalog.HasRangedRecoil
             ? new RangedRecoilSystem(capacity) : null;
+        WreckField wrecks = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? WreckField.Create(this, catalog) : null;
         return new UnitState(capacity, catalog, feedback, terrain, recoil)
         {
             CircleUsesFacing = unitVisuals.UseCircleRobotMesh,
+            Wrecks = wrecks,
             DeathFeedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? deathFeedback : null
         };
     }
@@ -404,7 +411,8 @@ public partial class BenchmarkArena : Node3D
 
     private void SetBattleObstacles(ObstacleField field, Mesh mesh)
     {
-        obstacles = field;
+        baseMovementObstacles = field;
+        obstacles = units?.Wrecks?.Combine(field, BattleBoundary) ?? field;
         obstacles?.ResetCounters();
         battleWalls.Mesh = mesh;
         battleObstacleShadows.Mesh = GroundShadowMeshes.Obstacles(field, Config.ObstacleHeight);
@@ -696,6 +704,11 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     public override void _Process(double delta)
     {
+        if (!paused && !spawning && units?.Wrecks?.ConsumeObstacleChange((float)delta) == true)
+        {
+            obstacles = units.Wrecks.Combine(baseMovementObstacles, BattleBoundary);
+            RebuildBattleNavigation();
+        }
         // Also handles an empty battlefield or a terminal objective left by the preceding frame.
         if (!spawning && offenseCitadel != null && !offenseBattleEnded) TryFinishOffense();
         if (!paused) weather.Advance((float)delta);
@@ -755,9 +768,7 @@ public partial class BenchmarkArena : Node3D
             if (units.Count == targetCount)
             {
                 if (grid != null) trample = TrampleSystem.Create(units, autoAttackCount);
-                if (obstacles != null && mode != BenchmarkMode.RenderingOnly)
-                    navigation = new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
-                        Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
+                if (mode != BenchmarkMode.RenderingOnly) RebuildBattleNavigation();
                 CreateArmyRenderer();
                 StartAirSquadron();
                 projectileRenderer = new ProjectileRenderer(); AddChild(projectileRenderer);
@@ -1113,8 +1124,7 @@ public partial class BenchmarkArena : Node3D
         {
             if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
             else SetBattleObstacles(remainingObstacles, battleWalls.Mesh);
-            navigation = offenseBattleEnded || obstacles == null ? null : new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
-                Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64));
+            RebuildBattleNavigation();
         }
         tick++;
         double tickMs = Elapsed(total);

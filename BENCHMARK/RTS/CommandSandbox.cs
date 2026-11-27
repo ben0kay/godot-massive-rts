@@ -184,7 +184,8 @@ public partial class CommandSandbox : Node3D
             catalog.HasRangedRecoil ? new RangedRecoilSystem(capacity) : null)
         {
             CircleUsesFacing = unitVisuals.UseCircleRobotMesh,
-            DeathFeedback = deathFeedback
+            DeathFeedback = deathFeedback,
+            Wrecks = WreckField.Create(this, catalog)
         };
         movement = new CommandMovement(units, halfWidth);
         var paint = GetNodeOrNull<WorldPaint>("WorldPaint");
@@ -543,6 +544,7 @@ public partial class CommandSandbox : Node3D
     public override void _Process(double delta)
     {
         if (units == null) return;
+        if (units.Wrecks?.ConsumeObstacleChange((float)delta) == true) buildings.RefreshWreckObstacles();
         units.Forest?.UpdateVisibility(units, (float)delta);
         deathFeedback.Advance((float)delta);
         deathRenderer.Sync(deathFeedback);

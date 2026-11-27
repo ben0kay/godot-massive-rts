@@ -75,7 +75,20 @@ public partial class BenchmarkArena
                 DisruptorGridVisual.Refresh(blueDisruptorView, draft, Factions.Blue, DisruptorHeight);
             }, campaignHud.ReportDisruptors, PreviewBlueDisruptors);
 
-    private ObstacleField BattleSight => autoBattlerPlaytestMap != null ? autoBattlerSight : obstacles;
+    private ObstacleField BattleSight => autoBattlerPlaytestMap != null ? autoBattlerSight : baseMovementObstacles;
+    private ObstacleField baseMovementObstacles;
+    private float BattleBoundary => autoBattlerPlaytestMap?.MapSize * 0.5f ?? DeploymentLayout.WorldHalfWidth;
+
+    private void RebuildBattleNavigation()
+    {
+        navigation = offenseBattleEnded || obstacles == null ? null :
+            new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
+                Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64))
+            {
+                ReuseCorridors = panel.ReuseCorridors,
+                ReuseWaypoints = panel.ReuseWaypoints
+            };
+    }
 
     internal void ConfigureAutoBattlerPlaytest(CommandSandbox map)
     {
