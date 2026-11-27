@@ -163,6 +163,7 @@ public sealed class ProjectileSystem
                     ground.Y = units.Grounding?.Field?.At(next.X, next.Z) ?? 0f;
                     rings?.Emit(ground, flight.ExplosionRadius, next, sourceFaction[i],
                         structureChips: structure.Health < before);
+                    rings?.EmitScorch(ground, flight.ExplosionRadius, units.Grounding?.Field);
                 }
             }
             else if (flight.ExplosionRadius > 0f)
@@ -245,6 +246,7 @@ public sealed class ProjectileSystem
         Vector3 burstOrigin = impact;
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
         rings?.Emit(impact, flight.ExplosionRadius, burstOrigin, sourceFaction[index]);
+        rings?.EmitScorch(impact, flight.ExplosionRadius, terrain);
         return true;
     }
 

@@ -255,6 +255,7 @@ public partial class AirSquadron : Node3D
                         heavy ? 38f : 22f, 0.35f, ground.MaximumTravelSpeed * delta,
                         damageType: damageRules.DamageType("Standard"));
                 impacts?.Emit(impact, radius, impact + Vector3.Up * 0.25f, fighter.Faction, structureChips: true);
+                impacts?.EmitScorch(impact, radius, terrain);
                 crashSmoke.Emit(impact);
                 crashAftermath = 2.6f;
                 fighter.Crashing = false;

@@ -716,3 +716,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Softened the Railgun ground illumination with a rounded capsule falloff at both ends, retaining central brightness, width, faction tint, terrain fade and existing batch layout. Shader-only visual change; owner validation pending.
 
 - 2026-11-26 — Added per-unit blocking wrecks for Tier 3 and above, enabled on Hexagon Siege. The dark, tilted hull settles into the terrain and joins the ground navigation field. Wreck rendering and route updates are batched and capped for initial testing.
+
+- 2026-11-26 — Added temporary ground scorch marks for explosive projectile impacts and aircraft crashes, using a capped MultiMesh with slow fade updates and terrain sampling at impact.

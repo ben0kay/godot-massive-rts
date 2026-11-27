@@ -38,3 +38,8 @@ The default `GAMEPLAY/COMBAT/AIR/BomberPayload.tres` retains all flight and spla
 ### Minigun rounds and defense firing feedback
 
 The shared `MinigunRound.tres` now blends 28% of the source faction color into its pale warm tracer and opts into the same height-faded, capped 256-instance travelling ground glow as Triangle Archer bolts. This affects both Dreadnaught and Twin Minigun Tower shots. The shared glow shader retains its default 0.20 intensity; Broadside ground flashes reuse it with an independent material at 0.72 intensity. Neither effect changes projectile behavior.
+
+Explosive projectile impacts and aircraft crashes leave temporary ground
+scorch marks. Marks size to the blast, follow the local terrain slope, and
+fade over the last four seconds of a nine-second lifetime. The shared renderer
+retains up to 128 marks in one MultiMesh and clears them on battle reset.

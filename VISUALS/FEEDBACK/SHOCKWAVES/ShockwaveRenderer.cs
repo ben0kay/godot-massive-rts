@@ -13,6 +13,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private readonly Ring[] rings = new Ring[Capacity];
     private MultiMesh bursts, chips;
     private MeleeEffects meleeEffects;
+    private ScorchMarks scorchMarks;
     private readonly CavalryDust cavalryDust = new();
     private int count;
     private bool dirty;
@@ -94,6 +95,13 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         dirty = true;
     }
 
+    internal void EmitScorch(Vector3 ground, float blastRadius, TerrainHeightField terrain)
+    {
+        if (blastRadius <= 0f) return;
+        scorchMarks ??= new ScorchMarks(this);
+        scorchMarks.Emit(ground, blastRadius, terrain);
+    }
+
     internal void EmitMelee(Vector3 contact, Vector2 direction, float footprint, bool cleave)
     {
         meleeEffects ??= new MeleeEffects(this);
@@ -113,6 +121,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     public void Advance(float dt)
     {
         meleeEffects?.Advance(dt);
+        scorchMarks?.Advance(dt);
         if (count == 0) return;
         dirty = true;
         for (int i = count - 1; i >= 0; i--)
@@ -175,6 +184,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     {
         cavalryDust.Clear();
         meleeEffects?.Clear();
+        scorchMarks?.Clear();
         count = 0;
         dirty = true;
         Sync();
