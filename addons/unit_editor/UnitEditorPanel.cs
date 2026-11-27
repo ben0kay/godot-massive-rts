@@ -408,7 +408,9 @@ public partial class UnitEditorPanel : VBoxContainer
         if (draft.Definition is BuildingDefinition)
         {
             summary.Text = $"{Defense.Width} × {Defense.Depth} cells";
-            if (Defense.AttacksSoldiers)
+            if (Defense.AirMissileMagazine > 0)
+                summary.Text += $"\n{Defense.MaximumRange:0.##} u AA range · {Defense.AirMissileMagazine} missiles\n{Defense.Damage:0.##} damage · {Defense.AirMissileReloadSeconds:0.##} s reload";
+            else if (Defense.AttacksSoldiers)
                 summary.Text += $"\n{Defense.MinimumRange:0.##}–{Defense.MaximumRange:0.##} u range" +
                     (Defense.Projectile == null
                         ? $"\n{Defense.Damage:0.##} DPS · {Defense.BeamSeconds:0.##} s beam"

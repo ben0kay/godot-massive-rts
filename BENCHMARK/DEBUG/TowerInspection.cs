@@ -28,7 +28,7 @@ internal sealed partial class TowerInspection : Control
         selected = tower;
         camera = view;
         pivot = center;
-        radius = stats.AttacksSoldiers ? stats.MaximumRange : stats.ShieldEmitter.Enabled ? stats.ShieldEmitter.Radius : 0f;
+        radius = (stats.AttacksSoldiers || stats.AirDefense.Enabled) ? stats.MaximumRange : stats.ShieldEmitter.Enabled ? stats.ShieldEmitter.Radius : 0f;
         Vector2 min = tower.Area.Min - Vector2.One * 0.12f;
         Vector2 max = tower.Area.Max + Vector2.One * 0.12f;
         footprint[0] = Ground(min.X, min.Y);

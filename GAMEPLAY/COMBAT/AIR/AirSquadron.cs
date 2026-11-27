@@ -333,6 +333,20 @@ public partial class AirSquadron : Node3D
 
     private float CruiseHeight(float x, float z) => Mathf.Max(clearance, (terrain?.At(x, z) ?? 0f) + CruiseAltitude);
 
+    // Towers and infantry share the bounded guided-missile pool.
+    internal bool TryLaunchTowerMissile(Vector3 center, Vector3 muzzle, StructureHealth source,
+        in BuildingStats stats)
+    {
+        if (fighters == null || (source.Faction == Factions.Blue ? redAlive : source.Faction == Factions.Red ? blueAlive : blueAlive + redAlive) == 0 ||
+            interceptors?.HasCapacity == false) return false;
+        int target = grid.FindEnemy(fighters, center, source.Faction, stats.MaximumRange,
+            stats.MinimumRange, horizontal: true);
+        if (target < 0) return false;
+        interceptors ??= new InterceptorLauncher(this);
+        return interceptors.TryLaunch(muzzle, Vector3.Up, target, source.Faction,
+            stats.Damage, stats.DamageType, stats.AirDefense.VisualScale, source);
+    }
+
     internal void ApplyDamage(int target, float damage, int damageType)
     {
         ref var enemy = ref fighters[target];

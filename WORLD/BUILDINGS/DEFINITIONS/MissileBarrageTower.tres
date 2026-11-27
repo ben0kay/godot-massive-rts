@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFINITIONS/BuildingDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "missile_barrage_tower"
+DisplayName = "Missile Barrage Tower"
+Width = 2
+Depth = 2
+Health = 1100.0
+MinimumRange = 0.0
+MaximumRange = 34.0
+Damage = 26.0
+ShotsPerSecond = 6.0
+AttacksSoldiers = false
+RequiresLineOfSight = false
+AirMissileMagazine = 12
+AirMissileReloadSeconds = 8.0
+AirMissileVisualScale = 1.0
+BuildCost = 950

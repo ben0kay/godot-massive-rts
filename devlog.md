@@ -718,3 +718,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added per-unit blocking wrecks for Tier 3 and above, enabled on Hexagon Siege. The dark, tilted hull settles into the terrain and joins the ground navigation field. Wreck rendering and route updates are batched and capped for initial testing.
 
 - 2026-11-26 — Added temporary ground scorch marks for explosive projectile impacts and aircraft crashes, using a capped MultiMesh with slow fade updates and terrain sampling at impact.
+
+- 2026-11-26 — Added Missile Barrage Tower (34 range, 12-round magazine, 6 shots/s, 8 s reload) and Long-Range AA Tower (95 range, heavy 2.2× missile, 6 s interval), sharing existing guided Interceptor missile pool and air grid. Added faction-armored vertical launch meshes, catalog/placement/inspection/Entity Editor and Fortress build registration. Aircraft combat runs in existing AirSquadron-enabled battles; Fortress air waves not implemented. Godot validation pending.

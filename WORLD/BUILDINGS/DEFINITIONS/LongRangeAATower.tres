@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://WORLD/BUILDINGS/DEFINITIONS/BuildingDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "long_range_aa_tower"
+DisplayName = "Long-Range AA Tower"
+Width = 3
+Depth = 3
+Health = 1800.0
+MinimumRange = 0.0
+MaximumRange = 95.0
+Damage = 85.0
+ShotsPerSecond = 0.16666667
+AttacksSoldiers = false
+RequiresLineOfSight = false
+AirMissileMagazine = 1
+AirMissileReloadSeconds = 6.0
+AirMissileVisualScale = 2.2
+BuildCost = 1800

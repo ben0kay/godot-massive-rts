@@ -20,7 +20,9 @@ internal sealed class InterceptorLauncher
         internal Vector3 Position, Direction, TrailNear, TrailFar;
         internal int Target;
         internal byte Faction;
-        internal float Age, BurstAge, TrailAge;
+        internal float Age, BurstAge, TrailAge, Damage, Scale;
+        internal int DamageType;
+        internal StructureHealth Source;
         internal bool Bursting;
     }
 
@@ -33,6 +35,17 @@ internal sealed class InterceptorLauncher
     private float clock;
     private bool uploaded;
     internal bool HasEffects => count > 0;
+    internal bool HasCapacity => count < Capacity;
+
+    internal bool TryLaunch(Vector3 muzzle, Vector3 direction, int target, byte faction,
+        float damage, int type, float scale = 1f, StructureHealth source = null)
+    {
+        if (!HasCapacity || target < 0) return false;
+        missiles[count++] = new Missile { Position = muzzle, Direction = direction, Target = target,
+            Faction = faction, Damage = damage, DamageType = type, Scale = scale, Source = source,
+            TrailNear = muzzle, TrailFar = muzzle };
+        return true;
+    }
 
     internal InterceptorLauncher(AirSquadron owner) => this.owner = owner;
 
@@ -88,7 +101,8 @@ internal sealed class InterceptorLauncher
             if (hit <= 1f && hit <= surface)
             {
                 missile.Position += travel * hit;
-                owner.ApplyDamage(contact, 26f, damageType);
+                owner.ApplyDamage(contact, missile.Damage, missile.DamageType);
+                if (fighters[contact].Health <= 0f && missile.Source != null) missile.Source.Kills++;
                 missile.Bursting = true;
             }
             else if (surface <= 1f)
@@ -113,7 +127,7 @@ internal sealed class InterceptorLauncher
 
         bool blueTargets = owner.Alive(Factions.Red) > 0;
         bool redTargets = owner.Alive(Factions.Blue) > 0;
-        if ((!blueTargets && !redTargets) || count == Capacity || ground?.InterceptorIds == null) return;
+        if ((!blueTargets && !redTargets) || count == Capacity || ground?.InterceptorIds == null || ground.InterceptorIds.Count == 0) return;
         var launchers = ground.InterceptorIds;
         int slices = Mathf.Min(ScanSlices, (launchers.Count + 3) / 4);
         slice = (slice + 1) % slices;
@@ -137,11 +151,7 @@ internal sealed class InterceptorLauncher
             var pose = LocalPose(height);
             Vector3 muzzle = ground.Position[id] + Vector3.Up * (height * 0.5f) +
                 basis * (pose * new Vector3(0f, 0f, -height));
-            missiles[count++] = new Missile
-            {
-                Position = muzzle, Direction = -(basis * pose.Basis.Z), Target = target, Faction = faction,
-                TrailNear = muzzle, TrailFar = muzzle
-            };
+            TryLaunch(muzzle, -(basis * pose.Basis.Z), target, faction, 26f, damageType);
         }
     }
 
@@ -180,17 +190,17 @@ internal sealed class InterceptorLauncher
             if (missile.Bursting)
             {
                 float progress = missile.BurstAge / BurstTime;
-                float size = 0.15f + progress * 1.25f;
+                float size = (0.15f + progress * 1.25f) * missile.Scale;
                 Spark(missile.Position, Vector3.Right * size, tint, 1f - progress);
                 Spark(missile.Position, Vector3.Up * size, tint, 1f - progress);
                 Spark(missile.Position, Vector3.Back * size, tint.Lightened(0.6f), 1f - progress);
                 continue;
             }
             Vector3 up = Mathf.Abs(missile.Direction.Y) > 0.98f ? Vector3.Right : Vector3.Up;
-            var pose = Basis.LookingAt(missile.Direction, up) * Basis.FromScale(new Vector3(0.56f, 0.56f, 0.85f));
+            var pose = Basis.LookingAt(missile.Direction, up) * Basis.FromScale(new Vector3(0.56f, 0.56f, 0.85f) * missile.Scale);
             bodies.SetInstanceTransform(slot++, new Transform3D(pose, missile.Position));
-            Vector3 tail = missile.Position - missile.Direction * 0.43f;
-            Line(tail, tail - missile.Direction * 0.62f, Colors.White, 0.95f, 0.2f);
+            Vector3 tail = missile.Position - missile.Direction * (0.43f * missile.Scale);
+            Line(tail, tail - missile.Direction * (0.62f * missile.Scale), Colors.White, 0.95f, 0.2f);
             Line(tail, missile.TrailNear, tint, 0.92f, 0.36f);
             Line(missile.TrailNear.Lerp(missile.TrailFar, 0.28f), missile.TrailFar, tint, 0.38f, 0f);
         }

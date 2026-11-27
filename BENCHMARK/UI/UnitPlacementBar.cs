@@ -86,7 +86,7 @@ internal partial class UnitPlacementBar : PanelContainer
             });
         int defenseCount = buildings?.Count ?? 0;
         defenseCards = BuildCards(body, defenseCount, defenseCount, i => buildings[i].Name,
-            i => Stats(buildings[i].Health, buildings[i].AttacksSoldiers ? buildings[i].Damage : 0f),
+            i => Stats(buildings[i].Health, (buildings[i].AttacksSoldiers || buildings[i].AirDefense.Enabled) ? buildings[i].Damage : 0f),
             (icon, i) => icon.SetDefense(buildings[i]), i => DefenseSelected?.Invoke(i));
         ShowDefenses(false);
     }
@@ -227,7 +227,7 @@ internal partial class UnitPlacementBar : PanelContainer
     {
         private Vector2[] points = Array.Empty<Vector2>();
 
-        private (bool Projectile, bool Shield, bool Minigun)? defense;
+        private (bool Projectile, bool Shield, bool Minigun, int AntiAir)? defense;
         private Texture2D texture;
         private bool textureUsesFactionColor;
         private bool wall;
@@ -263,12 +263,12 @@ internal partial class UnitPlacementBar : PanelContainer
         internal void SetDefense(BuildingStats stats)
         {
             if (stats.Id == PrefabShelterMeshes.Id) SetWall();
-            else SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled, stats.Id == TwinMinigunTowerMeshes.Id);
+            else SetDefense(stats.Weapon == TowerWeapon.Projectile, stats.ShieldEmitter.Enabled, stats.Id == TwinMinigunTowerMeshes.Id, AntiAirTowerMeshes.Variant(stats.Id));
         }
 
-        internal void SetDefense(bool projectile, bool shield, bool minigun = false)
+        internal void SetDefense(bool projectile, bool shield, bool minigun = false, int antiAir = 0)
         {
-            defense = (projectile, shield, minigun);
+            defense = (projectile, shield, minigun, antiAir);
             CustomMinimumSize = new Vector2(28, 0);
         }
 
@@ -309,7 +309,17 @@ internal partial class UnitPlacementBar : PanelContainer
                 var baseRect = new Rect2(center - new Vector2(12, 5), new Vector2(24, 17));
                 DrawRect(baseRect, tint);
                 DrawRect(baseRect, edge, false, 1.6f);
-                if (stats.Shield)
+                if (stats.AntiAir > 0)
+                {
+                    int count = stats.AntiAir == 1 ? 12 : 1;
+                    for (int i = 0; i < count; i++)
+                    {
+                        Vector2 cell = count == 12 ? new Vector2((i % 4 - 1.5f) * 5f, (i / 4 - 1f) * 4f + 3f) : new Vector2(0, 3);
+                        float w = count == 12 ? 3f : 12f;
+                        DrawRect(new Rect2(center + cell - Vector2.One * w * 0.5f, Vector2.One * w), edge);
+                    }
+                }
+                else if (stats.Shield)
                     DrawArc(center, 12, Mathf.Pi, Mathf.Tau, 16, edge, 2f, true);
                 else if (stats.Minigun)
                 {

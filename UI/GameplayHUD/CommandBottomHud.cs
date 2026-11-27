@@ -61,6 +61,10 @@ public partial class CommandBottomHud : Control
             () => PlaceRequested?.Invoke(CommandBuildType.RocketTower), UIButtonStyle.Compact));
         menu.AddChild(UIButtonFactory.Create($"Twin Minigun Tower  ·  {buildings.TwinMinigunTowerCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.TwinMinigunTower), UIButtonStyle.Compact));
+        menu.AddChild(UIButtonFactory.Create($"Missile Barrage Tower  ·  {buildings.MissileBarrageTowerCost} Carbon",
+            () => PlaceRequested?.Invoke(CommandBuildType.MissileBarrageTower), UIButtonStyle.Compact));
+        menu.AddChild(UIButtonFactory.Create($"Long-Range AA Tower  ·  {buildings.LongRangeAATowerCost} Carbon",
+            () => PlaceRequested?.Invoke(CommandBuildType.LongRangeAATower), UIButtonStyle.Compact));
         menu.AddChild(UIButtonFactory.Create($"Shield Generator  ·  {buildings.ShieldGeneratorCost} Carbon",
             () => PlaceRequested?.Invoke(CommandBuildType.ShieldGenerator), UIButtonStyle.Compact));
         menu.AddChild(UIButtonFactory.Create("Carbon Extractor",

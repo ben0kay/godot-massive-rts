@@ -31,6 +31,11 @@ public partial class BuildingDefinition : Resource
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;
     [Export] public bool AttacksSoldiers { get; set; } = true;
     [Export] public bool RequiresLineOfSight { get; set; } = true;
+    [ExportGroup("Guided anti-air")]
+    // Zero magazine disables AA. One round is a slow heavy interceptor.
+    [Export(PropertyHint.Range, "0,12,1")] public int AirMissileMagazine { get; set; }
+    [Export(PropertyHint.Range, "0.1,30,0.1")] public float AirMissileReloadSeconds { get; set; } = 8f;
+    [Export(PropertyHint.Range, "0.5,3,0.1")] public float AirMissileVisualScale { get; set; } = 1f;
     [ExportGroup("Shield field")]
     [Export] public int BuildCost { get; set; } = 1000;
     [Export] public bool ShieldEmitterEnabled { get; set; }

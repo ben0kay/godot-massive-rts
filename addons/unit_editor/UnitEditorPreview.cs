@@ -96,6 +96,20 @@ public partial class UnitEditorPreview : Control
         var bounds = new Rect2(center - extent * 0.5f, extent);
         DrawRect(bounds, Body.Darkened(0.3f));
         DrawRect(bounds, Footprint, false, 1f);
+        int aa = AntiAirTowerMeshes.Variant(defense.Id);
+        if (aa > 0)
+        {
+            int count = AntiAirTowerMeshes.SocketCount(aa);
+            float w = Mathf.Min(extent.X, extent.Y) * (aa == 1 ? 0.15f : 0.40f);
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 offset = aa == 1 ? new Vector2((i % 4 - 1.5f) * extent.X * 0.19f, (i / 4 - 1f) * extent.Y * 0.22f) : Vector2.Zero;
+                var cell = new Rect2(center + offset - Vector2.One * w * 0.5f, Vector2.One * w);
+                DrawRect(cell, Body.Lightened(0.3f));
+                DrawRect(cell, Footprint, false, 1f);
+            }
+            return;
+        }
         float turret = Mathf.Min(extent.X, extent.Y) * 0.26f;
         DrawRect(new Rect2(center - new Vector2(turret * 0.12f, turret * 1.3f),
             new Vector2(turret * 0.24f, turret)), Body.Lightened(0.3f));

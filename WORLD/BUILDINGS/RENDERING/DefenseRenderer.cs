@@ -72,6 +72,9 @@ public partial class DefenseRenderer : Node3D
     private MultiMesh minigunBase, minigunHead, minigunBarrels;
     private static Mesh minigunBaseMesh, minigunHeadMesh, minigunBarrelMesh;
     private readonly bool[] minigunSlots = new bool[DeploymentLayout.MaxBuildings];
+    private readonly int[] airSlots = new int[DeploymentLayout.MaxBuildings];
+    private readonly MultiMesh[] airBatches = new MultiMesh[2];
+    private static readonly Mesh[] AirMeshes = new Mesh[2];
     private readonly MultiMesh[] shelterBatches = new MultiMesh[PrefabShelterMeshes.VariantCount];
     private static readonly Mesh[] ShelterMeshes = new Mesh[PrefabShelterMeshes.VariantCount];
     private readonly bool[] shelterSlots = new bool[DeploymentLayout.MaxBuildings];
@@ -156,6 +159,7 @@ public partial class DefenseRenderer : Node3D
         ResetMinigunBatch(minigunBase);
         ResetMinigunBatch(minigunHead);
         ResetMinigunBatch(minigunBarrels);
+        foreach (var batch in airBatches) ResetMinigunBatch(batch);
         foreach (var batch in shelterBatches)
         {
             if (batch == null) continue;
@@ -176,7 +180,7 @@ public partial class DefenseRenderer : Node3D
             ShowTower(i, area, placement.Faction, height, terrain?.FootprintHeight(area.Min, area.Max, out _) ?? 0f,
                 catalog[placement.Type].ProjectileType >= 0, catalog[placement.Type].ShieldEmitter.Enabled,
                 catalog[placement.Type].ShieldEmitter.Radius, catalog[placement.Type].Id == PrefabShelterMeshes.Id,
-                catalog[placement.Type].Id == TwinMinigunTowerMeshes.Id);
+                catalog[placement.Type].Id == TwinMinigunTowerMeshes.Id, AntiAirTowerMeshes.Variant(catalog[placement.Type].Id));
         }
         if (battle)
         {
@@ -201,11 +205,19 @@ public partial class DefenseRenderer : Node3D
     }
 
     internal void ShowTower(int index, ObstacleRectangle area, byte faction, float height, float ground = 0f,
-        bool rocket = false, bool shield = false, float shieldRadius = 0f, bool shelter = false, bool minigun = false)
+        bool rocket = false, bool shield = false, float shieldRadius = 0f, bool shelter = false, bool minigun = false, int antiAir = 0)
     {
         crackStages[index] = 0;
         shelterSlots[index] = shelter;
         minigunSlots[index] = minigun;
+        airSlots[index] = antiAir;
+        if (antiAir > 0)
+        {
+            HideTower(index);
+            ShowAntiAir(index, area, faction, height, ground, antiAir);
+            return;
+        }
+        HideAntiAir(index);
         if (minigun)
         {
             HideTower(index);
@@ -271,7 +283,7 @@ public partial class DefenseRenderer : Node3D
         int stage = fraction <= 0.25f ? 3 : fraction <= 0.50f ? 2 : fraction <= 0.75f ? 1 : 0;
         if (crackStages[index] == stage) return;
         crackStages[index] = stage;
-        MultiMesh batch = minigunSlots[index] ? minigunBase : shelterSlots[index] ? shelterBatches[shelterVariants[index]] : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
+        MultiMesh batch = airSlots[index] > 0 ? airBatches[airSlots[index] - 1] : minigunSlots[index] ? minigunBase : shelterSlots[index] ? shelterBatches[shelterVariants[index]] : shield ? shieldTowers : rocketSlots[index] ? rocketBases : bases;
         Color data = batch.GetInstanceCustomData(index);
         data.A = stage / 3f;
         batch.SetInstanceCustomData(index, data);
@@ -378,6 +390,25 @@ public partial class DefenseRenderer : Node3D
         minigunBase.VisibleInstanceCount = minigunHead.VisibleInstanceCount = minigunBarrels.VisibleInstanceCount = count;
     }
 
+    // =========================================================
+    // Static vertical-launch cells are baked into one shared model per AA type.
+    private void ShowAntiAir(int index, ObstacleRectangle area, byte faction, float height, float ground, int variant)
+    {
+        int kind = variant - 1;
+        var batch = airBatches[kind] ??= CreateMinigunBatch(AirMeshes[kind] ??= AntiAirTowerMeshes.Create(variant));
+        Vector2 size = area.Max - area.Min;
+        Vector2 center = (area.Max + area.Min) * 0.5f;
+        batch.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(size.X, height, size.Y)),
+            new Vector3(center.X, ground, center.Y)));
+        SetArmorTint(batch, index, ArmyRenderer.FactionColor(faction));
+        batch.VisibleInstanceCount = Mathf.Max(batch.VisibleInstanceCount, index + 1);
+    }
+
+    private void HideAntiAir(int index)
+    {
+        foreach (var batch in airBatches) batch?.SetInstanceTransform(index, Hidden);
+    }
+
     private void HideMinigun(int index)
     {
         minigunBase?.SetInstanceTransform(index, Hidden);
@@ -395,6 +426,7 @@ public partial class DefenseRenderer : Node3D
         var hidden = new Transform3D(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero);
         HideShelter(index);
         HideMinigun(index);
+        HideAntiAir(index);
         bases.SetInstanceTransform(index, hidden);
         heads.SetInstanceTransform(index, hidden);
         barrels.SetInstanceTransform(index, hidden);
@@ -409,6 +441,7 @@ public partial class DefenseRenderer : Node3D
 
     public void Aim(int index, Vector3 pivot, float yaw, float leftRecoil = 0f, float rightRecoil = 0f, float beamSlope = 0f)
     {
+        if (airSlots[index] > 0) return;
         Basis basis = new Basis(Vector3.Up, yaw);
         if (minigunSlots[index])
         {

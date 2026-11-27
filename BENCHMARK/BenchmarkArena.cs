@@ -820,7 +820,11 @@ public partial class BenchmarkArena : Node3D
                 }
                 if (airSquadron == null || units.Alive > 0 || projectiles.Count > 0 || ReservesPending)
                     Step(Config.TickSeconds);
-                else airSquadron?.Step(Config.TickSeconds, units, grid, projectiles, shockwaves);
+                else
+                {
+                    airSquadron?.Step(Config.TickSeconds, units, grid, projectiles, shockwaves);
+                    defenseSystem?.StepAir(airSquadron, Config.TickSeconds);
+                }
                 accumulator -= Config.TickSeconds;
                 steps++;
                 if (offenseBattleEnded) { accumulator = 0; break; }
@@ -1006,6 +1010,7 @@ public partial class BenchmarkArena : Node3D
             }
             start = Stamp();
             airSquadron?.Step(dt, units, grid, projectiles, shockwaves);
+            defenseSystem?.StepAir(airSquadron, dt);
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
             defenseSystem?.Step(units, grid, BattleSight, projectiles, dt, acquisitionStep, targetingStepSeconds);

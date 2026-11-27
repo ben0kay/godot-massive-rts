@@ -153,7 +153,7 @@ public partial class LevelEditor
                 i => i < towers ? defenseDefinitions[i].DisplayName :
                     i == wall ? "Faction Wall" : i == disruptor ? DisruptorGrid.Name : "Citadel",
                 i => i < towers ? UnitPlacementBar.Stats(defenseDefinitions[i].Health,
-                    defenseDefinitions[i].AttacksSoldiers ? defenseDefinitions[i].Damage : 0f) : null,
+                    (defenseDefinitions[i].AttacksSoldiers || defenseDefinitions[i].AirMissileMagazine > 0) ? defenseDefinitions[i].Damage : 0f) : null,
                 (icon, i) =>
                 {
                     icon.SetColor(enemy);
@@ -163,7 +163,7 @@ public partial class LevelEditor
                     {
                         var defense = defenseDefinitions[i];
                         if (defense.Id == PrefabShelterMeshes.Id) icon.SetWall();
-                        else icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled, defense.Id == TwinMinigunTowerMeshes.Id);
+                        else icon.SetDefense(defense.Projectile != null, defense.ShieldEmitterEnabled, defense.Id == TwinMinigunTowerMeshes.Id, AntiAirTowerMeshes.Variant(defense.Id));
                     }
                 },
                 i =>

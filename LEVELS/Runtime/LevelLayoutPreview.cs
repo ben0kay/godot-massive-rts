@@ -154,7 +154,7 @@ internal static class LevelLayoutPreview
                     var emitter = ShieldEmitterStats.Compile(definition.ShieldEmitterEnabled, definition.ShieldRadius,
                         definition.ShieldCapacity, definition.ShieldRegenerationPerSecond, definition.ShieldDecayPerSecond);
                     defenses.ShowTower(index++, area, tower.Faction, CommandLaserPlacement.BaseHeight, ground,
-                        definition.Projectile != null, emitter.Enabled, emitter.Radius, definition.Id == PrefabShelterMeshes.Id, definition.Id == TwinMinigunTowerMeshes.Id);
+                        definition.Projectile != null, emitter.Enabled, emitter.Radius, definition.Id == PrefabShelterMeshes.Id, definition.Id == TwinMinigunTowerMeshes.Id, AntiAirTowerMeshes.Variant(definition.Id));
                 }
         }
     }
