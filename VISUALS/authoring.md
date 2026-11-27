@@ -168,3 +168,5 @@ Keep muzzle feedback at the actual launch/beam origin and use the existing cappe
 For sustained Railgun beams, keep the bright core faction-tinted and project a soft additive streak along the clipped beam segment, using a bounded shared batch and terrain samples. Ground illumination is visual-only and follows the live beam slot lifecycle; do not project beyond blocking cover or spawn real lights.
 
 Reactive visuals should follow real state: Barrage ammo lamps reflect its actual magazine, Railgun coils charge white during recovery, dome bands remain faint and faction tinted, and low-health smoke/destruction effects reuse capped shared pools. Tread marks are opt-in per unit; keep the paired tracks aligned to movement, temporary and nonblocking.
+
+Direct projectile body hits use brief pooled metallic sparks; fully shield-absorbed light rounds may show an outward reflected tracer with the firing faction tint. Only explicitly opted-in projectile definitions may ricochet, initially Triangle Archer bolts and minigun rounds. Use real damage results and existing hit fractions, preserve shield overflow behavior, and keep all reflections cosmetic and capped.

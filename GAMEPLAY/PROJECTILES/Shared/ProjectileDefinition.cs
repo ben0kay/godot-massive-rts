@@ -16,6 +16,8 @@ public partial class ProjectileDefinition : Resource
     // Visual-only opt-in; disabled by default for existing projectiles.
     [Export] public bool TintByFaction { get; set; }
     [Export] public bool UseGroundGlow { get; set; }
+    // Cosmetic only: a fully shield-absorbed direct hit can spawn a fading reflected tracer.
+    [Export] public bool ShieldRicochetEnabled { get; set; }
     [Export] public bool UseLaunchEffects { get; set; }
     [Export] public bool UseFlightSmoke { get; set; }
     [Export(PropertyHint.Range, "1,200,0.1,or_greater")] public float Speed { get; set; } = 45f;

@@ -9,7 +9,10 @@ void vertex() {
     kind = INSTANCE_CUSTOM.y;
     vec2 p = UV - 0.5;
     float size = length(MODELVIEW_MATRIX[0].xyz);
-    if (kind > 1.5) {
+    if (kind > 2.5) {
+        // Direct bullet impact: expanding radial sparks, not a dust puff.
+        p *= mix(0.55, 1.0, age);
+    } else if (kind > 1.5) {
         p *= mix(0.45, 1.0, age);
         p.y += age * 0.18;
     } else if (kind > 0.5) {
@@ -23,7 +26,23 @@ void vertex() {
 void fragment() {
     vec2 p = UV * 2.0 - 1.0;
     float fade = 1.0 - age;
-    if (kind > 1.5) {
+    if (kind > 2.5) {
+        float sparks = 0.0;
+        for (int i = 0; i < 5; i++) {
+            float angle = float(i) * 2.399963;
+            vec2 d = vec2(cos(angle), sin(angle));
+            float along = dot(p, d);
+            float across = abs(dot(p, vec2(-d.y, d.x)));
+            float head = mix(0.30, 0.88, age) * (0.72 + 0.07 * float(i));
+            float tail = head - 0.24 * (1.0 - age * 0.55);
+            float streak = (1.0 - smoothstep(0.018, 0.065, across))
+                * smoothstep(tail - 0.08, tail, along) * (1.0 - smoothstep(head, head + 0.09, along));
+            sparks = max(sparks, streak);
+        }
+        float flash = (1.0 - smoothstep(0.04, 0.21, length(p))) * fade * fade;
+        ALBEDO = mix(vec3(1.35, 0.67, 0.22), vec3(1.55, 1.35, 0.9), flash);
+        ALPHA = max(flash, sparks * fade);
+    } else if (kind > 1.5) {
         p.x += sin(p.y * 8.0 + age * 3.0) * 0.10;
         float lobe = min(length(p + vec2(0.23, -0.10)), length(p - vec2(0.24, 0.06)));
         ALBEDO = vec3(0.51, 0.44, 0.34);
