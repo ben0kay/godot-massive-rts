@@ -97,7 +97,7 @@ internal sealed class DefenseSystem
             Pivot = DefenseRenderer.Pivot(structure.Area, height) + Vector3.Up * ground, Target = -1,
             BaseHeight = height, AirAmmo = stats.AirDefense.Magazine };
 
-    public bool RemoveDestroyed(out ObstacleField field, ShockwaveRenderer effects = null, TerrainHeightField terrain = null)
+    public bool RemoveDestroyed(out ObstacleField field, ShockwaveRenderer effects = null, TerrainHeightField terrain = null, WreckField wrecks = null)
     {
         field = null;
         bool changed = false;
@@ -108,6 +108,7 @@ internal sealed class DefenseSystem
             if (removed[i]) continue;
             removed[i] = true;
             effects?.EmitBuildingDestruction(structures[i], terrain);
+            wrecks?.TryAddBuilding(structures[i], towers[i].Pivot.Y - towers[i].BaseHeight - 0.25f);
             renderer.HideTower(i);
             changed = true;
         }

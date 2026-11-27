@@ -14,7 +14,7 @@ The default targeting range is **6–50.4 world units**. Use **Entity Editor →
 
 ## FAB1 command structures
 
-`FABRICATION/CommandStructure.cs` supplies shared beveled geometry and health/construction state for the Citadel and Fabricator001. The Command Sandbox exposes starting Citadel HP in the scene Inspector. `CommandBuildings.cs` reserves grid footprints at placement, updates the shared obstacle field, and checks the gate and holding/rally slots before release. Citadel and Fabricator armour settings live in `DEFINITIONS/`. Both use the shared damage matrix and percentage armour. Destruction hides the building, stops production and removes its footprint from obstacle routing at the end of the simulation tick. The Command Sandbox includes an idle enemy Fabricator as a test target. Citadels, Fabricators and benchmark towers share a default of 1,000 HP. Scene authors can override Citadel health in the Command Sandbox.
+`FABRICATION/CommandStructure.cs` supplies shared beveled geometry and health/construction state for the Citadel and Fabricator001. The Command Sandbox exposes starting Citadel HP in the scene Inspector. `CommandBuildings.cs` reserves grid footprints at placement, updates the shared obstacle field, and checks the gate and holding/rally slots before release. Citadel and Fabricator armour settings live in `DEFINITIONS/`. Both use the shared damage matrix and percentage armour. Destruction hides the building, stops production and replaces its live footprint with temporary movement-only rubble when the shared wreck budget permits. The Command Sandbox includes an idle enemy Fabricator as a test target. Citadels, Fabricators and benchmark towers share a default of 1,000 HP. Scene authors can override Citadel health in the Command Sandbox.
 
 Completed Fabricators show a world-space production bar while making or dispensing a batch. The sandbox samples the bar about three times per second. Orange means output is blocked. The construction percentage label remains separate.
 
@@ -66,8 +66,12 @@ The two static, shared armor meshes display twelve launch cells or one large rai
 
 ### Reactive building visuals
 
-Barrage socket lights indicate the actual remaining magazine and restore on reload. Railgun induction coils brighten white from rear to front as the real recovery cooldown completes; they remain bright while firing. Existing faction panels and damage cracks are preserved. Shield coverage domes have faint upward faction-colored waves. Damaged buildings at or below 25% health emit dark pooled smoke and occasional electrical glints; damaged tower base lights flicker; destruction emits a scaled visual-only burst, fragments, scorch mark and smoke through the existing effect pools. No extra damage, collision or permanent debris. Owner visual validation pending.
+Barrage socket lights indicate the actual remaining magazine and restore on reload. Railgun induction coils brighten white from rear to front as the real recovery cooldown completes; they remain bright while firing. Existing faction panels and damage cracks are preserved. Shield coverage domes have faint upward faction-colored waves. Damaged buildings at or below 25% health emit dark pooled smoke and occasional electrical glints; damaged tower base lights flicker; destruction emits a scaled visual-only burst, fragments, scorch mark and smoke through the existing effect pools. No extra damage; temporary blocking husks are owned separately by WreckField. Owner visual validation pending.
 
 ### Optional shell casing ejection
 
 Broadside Artillery alone enables `EjectShellCasings` by default, with `ShellCasingScale = 1`. A successful alternating shot ejects a brass casing from the matching rotating receiver side. Other ground projectile towers can opt in under Entity Editor → Defenses (Eject shell casings, Casing size). Beams and guided AA launchers do not use this hook. Casings are purely visual, with no ammo or balance change.
+
+### Burnt building husks
+
+Destroyed authored defenses and Fortress Defense structures leave a low, charred, collapsed shared mesh and retain their former footprint for 30 seconds when the shared 32-wreck budget permits. Tier 4 and smaller units route around it; larger units can crush it like other heavy wrecks. Rubble prevents building over it until cleared. The usual explosion, smoke and scorch effects remain. Rubble is movement-only, not a live structure or projectile cover; underlying Carbon deposits remain solid. Owner visual/navigation validation pending.

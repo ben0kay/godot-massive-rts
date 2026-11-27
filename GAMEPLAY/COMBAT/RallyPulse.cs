@@ -20,6 +20,7 @@ internal sealed class RallyPulse
     internal RallyPulse(int capacity) => expires = new float[capacity];
 
     internal IReadOnlyList<int> Recipients => recipients;
+    internal float RemainingFraction(int id) => Mathf.Clamp((expires[id] - clock) / Duration, 0f, 1f);
     internal float Multiplier(int id) => expires[id] > 0f ? Boost : 1f;
 
     internal void AddCommander(int id) => commanders.Add(new Commander(id, clock + 3f));

@@ -183,7 +183,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private static float BuildingRadius(StructureHealth building) =>
         Mathf.Clamp((building.Area.Max - building.Area.Min).Length() * 0.55f, 2f, 9f);
 
-    // One event from the existing removal lifecycle; no damage or wreck obstacle.
+    // One visual event from removal; blocking rubble is owned by WreckField.
     internal void EmitBuildingDestruction(StructureHealth building, TerrainHeightField terrain)
     {
         Vector3 ground = BuildingGround(building, terrain);
@@ -289,13 +289,9 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             {
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
                 UseColors = true,
-                Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.035f, 0.09f),
-                    Material = new StandardMaterial3D
-                    {
-                        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                        VertexColorUseAsAlbedo = true
-                    }
-                },
+                UseCustomData = true,
+                Mesh = new QuadMesh { Material = new ShaderMaterial
+                    { Shader = GD.Load<Shader>("res://VISUALS/FEEDBACK/SHOCKWAVES/RallyMarker.gdshader") } },
                 InstanceCount = markerCapacity, VisibleInstanceCount = 0
             };
             AddChild(new MultiMeshInstance3D
@@ -308,11 +304,12 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         foreach (int id in recipients)
         {
             if (units.Health[id] <= 0f) continue;
-            Vector3 position = units.Position[id];
-            position.Y += 0.065f;
-            position.Z += units.Catalog[units.Type[id]].Footprint * 0.8f;
-            rallyMarkers.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
-            rallyMarkers.SetInstanceColor(slot++, Factions.Color(units.Faction[id]).Lightened(0.55f));
+            ref readonly var type = ref units.Catalog[units.Type[id]];
+            Vector3 position = units.Position[id] + Vector3.Up * (type.Height + 0.36f);
+            float size = Mathf.Clamp(type.Footprint * 0.65f, 0.38f, 0.85f);
+            rallyMarkers.SetInstanceTransform(slot, new Transform3D(Basis.FromScale(Vector3.One * size), position));
+            rallyMarkers.SetInstanceColor(slot, Factions.Color(units.Faction[id]));
+            rallyMarkers.SetInstanceCustomData(slot++, new Color(units.Rally.RemainingFraction(id), (id % 17) / 17f, 0f, 0f));
             if (slot == markerCapacity) break;
         }
         rallyMarkers.VisibleInstanceCount = slot;

@@ -1128,7 +1128,7 @@ public partial class BenchmarkArena : Node3D
         // A finished Offense battle needs no new route graph or additional simulation ticks.
         if (offenseCitadel != null) TryFinishOffense();
         shockwaves.SampleDamagedBuildings(defenseSystem?.Structures, units.Grounding?.Field, dt);
-        if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles, shockwaves, units.Grounding?.Field))
+        if (defenseSystem != null && defenseSystem.RemoveDestroyed(out var remainingObstacles, shockwaves, units.Grounding?.Field, units.Wrecks))
         {
             if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
             else SetBattleObstacles(remainingObstacles, battleWalls.Mesh);

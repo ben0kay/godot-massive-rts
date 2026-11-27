@@ -46,3 +46,7 @@ ShockwaveRenderer samples low-health structures at 0.7-second intervals (up to 1
 ### Projectile contact feedback
 
 `ShockwaveRenderer.EmitBulletImpact` reuses `MeleeEffects` (kind 3, 0.15-second metallic sparks, shared 256-effect cap and spatial cooldown). `ShieldRicochetEffects` is one lazy 256-instance MultiMesh of short faction-tinted cosmetic tracers. Reflection uses the existing hit point and approximate unit collision sphere, with independent cosmetic scatter. The pool is advanced, synchronized and cleared alongside the other battle feedback; it drops excess effects rather than queueing them. No new spatial queries or per-projectile nodes. Owner validation pending.
+
+### Rally indicators and building aftermath
+
+The existing 384-slot rally marker batch now shows small camera-facing faction chevrons over living buff recipients, softly pulsing in shader and fading toward the real buff expiry. No additional unit queries. Building destruction keeps the existing explosion/smoke/scorch event while WreckField owns the temporary burnt husk mesh and collision lifecycle (see navigation guide).

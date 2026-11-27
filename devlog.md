@@ -762,3 +762,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Added a paintable marsh surface with brush and rectangle editing, undo and saves, batched terrain mesh rendering, and tier-based ground movement penalties in Skirmish and Fortress Defense playtests. Owner Godot validation pending.
 
 - 2026-11-27 — Added opt-in shell casing ejection and size to unit/defense definitions and Entity Editor, enabled only on Broadside Artillery. Shared lazy 256-case visual pool with brass mesh, tumble, terrain bounce and fade; successful ground projectile/Dreadnaught minigun hooks. No gameplay changes; owner validation pending.
+
+- 2026-11-27 — Upgraded Commander rally markers to pulsing overhead faction chevrons tied to buff expiry; added 30-second burnt building husks to the existing capped wreck field, with tier-4 movement collision, higher-tier crush and placement protection. Shared rubble mesh, existing destruction effects retained; owner validation pending.

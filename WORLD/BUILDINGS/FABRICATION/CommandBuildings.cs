@@ -161,6 +161,7 @@ internal sealed class CommandBuildings
         goal = default;
         if (!CanOperateCitadel || !GodotObject.IsInstanceValid(deposit) || !deposits.Contains(deposit) ||
             deposit.Depleted || deposit.WorkerAssigned || OverlapsPaint(deposit.Area) ||
+            units.Wrecks?.OverlapsBuildingHusk(deposit.Area) == true ||
             deposit.Extractor is { Destroyed: true } or { BuildProgress: >= 1f }) return false;
 
         float nearest = float.PositiveInfinity;
@@ -284,7 +285,8 @@ internal sealed class CommandBuildings
 
     public bool CanPlace(ObstacleRectangle area, CommandBuildType type)
     {
-        if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type) || OverlapsPaint(area)) return false;
+        if (type == CommandBuildType.Extractor || !FitsMap(area) || Carbon.Amount < Cost(type) || OverlapsPaint(area) ||
+            units.Wrecks?.OverlapsBuildingHusk(area) == true) return false;
         int towerCount = defenses?.ActiveCount ?? 0;
         if ((type is CommandBuildType.LaserTower or CommandBuildType.RocketTower or CommandBuildType.ShieldGenerator or CommandBuildType.TwinMinigunTower or CommandBuildType.MissileBarrageTower or CommandBuildType.LongRangeAATower) &&
             towerCount >= LaserTowerLimit) return false;
@@ -461,6 +463,7 @@ internal sealed class CommandBuildings
         {
             if (!building.Destroyed) continue;
             effects?.EmitBuildingDestruction(building, units.Grounding?.Field);
+            if (units.Wrecks?.TryAddBuilding(building, building.Center.Y) == true) obstaclesChanged = true;
             if (building is CarbonExtractor extractor)
             {
                 var deposit = extractor.Deposit;
