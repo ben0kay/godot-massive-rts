@@ -73,11 +73,14 @@ public sealed class UnitState
     internal HashSet<Vector2I> HeavyRubbleCells { get; set; }
     internal float HeavyRubbleSpeed { get; set; } = 0.75f;
 
+    internal HashSet<Vector2I> RoadCells { get; set; }
+    internal float RoadSpeedMultiplier { get; set; } = 1f;
+
     internal float TravelSpeed(int id, in UnitStats stats)
     {
         Vector3 position = Position[id];
         float surfaceScale = Forest?.Contains(position) == true ? 0.65f : 1f;
-        if (MarshCells != null || HeavyRubbleCells != null)
+        if (MarshCells != null || HeavyRubbleCells != null || RoadCells != null)
         {
             var cell = new Vector2I(Mathf.FloorToInt(position.X / WorldPaint.CellSize),
                 Mathf.FloorToInt(position.Z / WorldPaint.CellSize));
@@ -89,12 +92,13 @@ public sealed class UnitState
                     : Mathf.Lerp(0.75f, 0.60f, Mathf.Clamp(tier - 2f, 0f, 1f));
                 surfaceScale = Mathf.Min(surfaceScale, marshScale);
             }
+            if (RoadCells?.Contains(cell) == true) surfaceScale *= RoadSpeedMultiplier;
         }
         return stats.Speed * surfaceScale * (Disruptors?.SpeedScale(position, Faction[id]) ?? 1f);
     }
 
     private const float DownhillBonus = 0.10f;
-    internal float MaximumTravelSpeed => Catalog.MaxSpeed * (Grounding == null ? 1f : 1f + DownhillBonus);
+    internal float MaximumTravelSpeed => Catalog.MaxSpeed * (RoadCells == null ? 1f : RoadSpeedMultiplier) * (Grounding == null ? 1f : 1f + DownhillBonus);
 
     // Ramps between a 2% dead zone and a 35% grade, measured in the travel direction.
     internal float SlopeSpeedFactor(int id, in UnitStats stats, Vector2 direction)

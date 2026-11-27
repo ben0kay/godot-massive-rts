@@ -193,6 +193,8 @@ internal static class LevelEditorSave
             throw new InvalidOperationException("Rubble exceeds its paint budget or has an invalid variant.");
         if (paint?.Data is WorldPaintData forestData && forestData.ForestCells.Count > WorldPaint.MaxPaintedCells)
             throw new InvalidOperationException("The forest layout exceeds the map paint budget.");
+        if (paint?.Data is WorldPaintData roadData && roadData.RoadCells.Count > WorldPaint.MaxPaintedCells)
+            throw new InvalidOperationException("The road layout exceeds the map paint budget.");
         if (paint?.Data is WorldPaintData marshData && marshData.MarshCells.Count > WorldPaint.MaxPaintedCells)
             throw new InvalidOperationException("The marsh layout exceeds the map paint budget.");
 

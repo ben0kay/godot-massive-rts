@@ -193,6 +193,8 @@ public partial class CommandSandbox : Node3D
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         units.Forest = paint?.Forest;
         units.MarshCells = paint?.MarshCells;
+        units.RoadCells = paint?.RoadCells;
+        units.RoadSpeedMultiplier = paint?.RoadSpeedMultiplier ?? 1f;
         units.Barricades = paint?.BuildBarricades();
         units.HeavyRubbleCells = paint?.HeavyRubbleCells;
         units.HeavyRubbleSpeed = paint?.HeavyRubbleSpeed ?? 0.75f;

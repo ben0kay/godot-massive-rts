@@ -65,3 +65,7 @@ Open **Terrain → Tiered Elevation** and pick Level 1–7. Left-drag with the b
 ## Light Barricade
 
 Select **Defenses → Light Barricade** or use the tool picker. Choose a faction and paint with Brush, Line, or Rectangle Fill. Right-drag to erase that faction’s segments. The editor saves the paint and supports undo and redo. A map supports up to 2,048 segments.
+
+## Road
+
+Select **Terrain → Road**. Drag to paint or enable **Rectangle fill**. Right-drag or use **Erase** to remove road paint. Road coverage saves with the level and supports undo and redo. It follows the existing surface and skips rock and water.

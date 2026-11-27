@@ -10,7 +10,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -19,9 +19,9 @@ public partial class LevelEditor
     private WorldPaint paint;
     private int brushRadius = 2;
     private Vector2I? previousCell;
-    private (Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Rubble Rubble, Cells Blue)? beforePaint;
-    private HashSet<Vector2I> rocks, water, forest, marsh, deployment;
-    private bool marshRectangle, rubbleRectangle;
+    private (Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Cells Road, Rubble Rubble, Cells Blue)? beforePaint;
+    private HashSet<Vector2I> rocks, water, forest, marsh, roads, deployment;
+    private bool marshRectangle, rubbleRectangle, roadRectangle;
     private int rubbleDensity = 65;
     private WorldPaint.RubbleKind rubbleKind = WorldPaint.RubbleKind.Small;
     private Rubble rubble;
@@ -51,7 +51,7 @@ public partial class LevelEditor
                 Tool.RedOrders => "Red orders",
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
-                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
+                Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Road => "Paint road", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
                 Tool.Wall => "Industrial Walls", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
@@ -198,15 +198,21 @@ public partial class LevelEditor
             case Tool.Water:
             case Tool.Forest:
             case Tool.Marsh:
+            case Tool.Road:
             case Tool.Rubble:
             case Tool.Deployment:
             case Tool.Erase:
                 if (tool == Tool.Rubble) RubbleControls();
-                if (tool == Tool.Marsh)
+                if (tool is Tool.Marsh or Tool.Road)
                 {
-                    var rectangle = new CheckBox { Text = "Rectangle fill", ButtonPressed = marshRectangle };
+                    var rectangle = new CheckBox { Text = "Rectangle fill", ButtonPressed = tool == Tool.Road ? roadRectangle : marshRectangle };
                     context.AddChild(rectangle);
-                    rectangle.Toggled += enabled => { EndPaint(); marshRectangle = enabled; };
+                    rectangle.Toggled += enabled =>
+                    {
+                        EndPaint();
+                        if (tool == Tool.Road) roadRectangle = enabled;
+                        else marshRectangle = enabled;
+                    };
                 }
                 Number(context, "Brush radius (cells)", brushRadius, 1, 14).ValueChanged += value => brushRadius = (int)value;
                 Heading(context, tool == Tool.Erase ? "Click object to remove it.\nDrag over paint to erase it." : "Drag to paint. Right-drag to erase.", 15);
@@ -430,7 +436,7 @@ public partial class LevelEditor
         if (editingReserve && tool is not Tool.Soldiers) return;
         if ((tool is Tool.Wall or Tool.FactionWall or Tool.Barricade) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
-        if ((tool == Tool.Marsh && marshRectangle || tool == Tool.Rubble && rubbleRectangle) && HandleSceneryRectangle(input)) return;
+        if ((tool == Tool.Marsh && marshRectangle || tool == Tool.Rubble && rubbleRectangle || tool == Tool.Road && roadRectangle) && HandleSceneryRectangle(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.TieredElevation && HandleTieredElevation(input)) return;
         if (tool == Tool.Cliff && HandleCliffPaint(input))
@@ -470,7 +476,7 @@ public partial class LevelEditor
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Rubble or Tool.Deployment ||
+        if (tool is Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Road or Tool.Rubble or Tool.Deployment ||
             (tool == Tool.Erase && (mouse.ButtonIndex == MouseButton.Right || Pick(hit) == null)))
         {
             BeginPaint();
@@ -536,7 +542,7 @@ public partial class LevelEditor
 
     private void ShowCursor(Vector3 point)
     {
-        bool brush = tool is Tool.Wall or Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Rubble or Tool.Deployment or Tool.Erase;
+        bool brush = tool is Tool.Wall or Tool.Rock or Tool.Water or Tool.Forest or Tool.Marsh or Tool.Road or Tool.Rubble or Tool.Deployment or Tool.Erase;
         var position = brush ? new Vector3((Cell(point).X + 0.5f) * Grid, 0, (Cell(point).Y + 0.5f) * Grid) : Snap(point);
         position.Y = Surface(position) + 0.13f;
         cursor.GlobalPosition = position;
@@ -556,11 +562,12 @@ public partial class LevelEditor
     private void BeginPaint()
     {
         EndPaint();
-        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, paint.Data.RubbleCells, map.AutoBattlerRules?.BlueDeploymentCells);
+        beforePaint = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, paint.Data.RoadCells, paint.Data.RubbleCells, map.AutoBattlerRules?.BlueDeploymentCells);
         rocks = new(paint.Data.RockCells);
         water = new(paint.Data.WaterCells);
         forest = new(paint.Data.ForestCells);
         marsh = new(paint.Data.MarshCells);
+        roads = new(paint.Data.RoadCells);
         rubble = new();
         foreach (var entry in paint.Data.RubbleCells) rubble.Add(entry.Key, entry.Value);
         deployment = map.AutoBattlerRules == null ? new() : new(map.AutoBattlerRules.BlueDeploymentCells);
@@ -588,11 +595,16 @@ public partial class LevelEditor
                 if (tool == Tool.Erase || (erase && tool == Tool.Forest)) changed |= forest.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Marsh)) changed |= marsh.Remove(next);
                 if (tool == Tool.Erase || (erase && tool == Tool.Deployment)) changed |= deployment.Remove(next);
+                if (tool is Tool.Road or Tool.Erase) changed |= PaintRoadCell(next, erase || tool == Tool.Erase);
                 if (tool is Tool.Rubble or Tool.Erase) changed |= PaintRubbleCell(next, erase || tool == Tool.Erase);
                 if (erase || tool == Tool.Erase) continue;
                 if (tool is Tool.Rock or Tool.Water) changed |= rubble.Remove(next);
                 if (tool == Tool.Marsh && !water.Contains(next) && !rocks.Contains(next)) changed |= marsh.Add(next);
-                if (tool is Tool.Rock or Tool.Water) changed |= marsh.Remove(next);
+                if (tool is Tool.Rock or Tool.Water)
+                {
+                    changed |= marsh.Remove(next);
+                    changed |= roads.Remove(next);
+                }
                 if (tool == Tool.Rock) { changed |= forest.Remove(next); changed |= water.Remove(next); changed |= rocks.Add(next); }
                 if (tool == Tool.Water) { changed |= forest.Remove(next); changed |= rocks.Remove(next); changed |= water.Add(next); }
                 if (tool == Tool.Forest) { changed |= rocks.Remove(next); changed |= water.Remove(next); changed |= forest.Add(next); }
@@ -678,6 +690,9 @@ public partial class LevelEditor
         cursor?.Hide();
     }
 
+    private bool PaintRoadCell(Vector2I cell, bool erase) =>
+        erase ? roads.Remove(cell) : !rocks.Contains(cell) && !water.Contains(cell) && roads.Add(cell);
+
     private void FillSceneryRectangle(Vector2I start, Vector2I end, bool erase)
     {
         BeginPaint();
@@ -688,6 +703,7 @@ public partial class LevelEditor
             var cell = new Vector2I(x, z);
             if (!paint.Contains(cell)) continue;
             if (tool == Tool.Rubble) paintPreviewPending |= PaintRubbleCell(cell, erase);
+            else if (tool == Tool.Road) paintPreviewPending |= PaintRoadCell(cell, erase);
             else if (erase) paintPreviewPending |= marsh.Remove(cell);
             else if (!rocks.Contains(cell) && !water.Contains(cell)) paintPreviewPending |= marsh.Add(cell);
         }
@@ -701,7 +717,7 @@ public partial class LevelEditor
         paintPreviewPending = false;
         paintPreviewCooldown = PaintPreviewInterval;
         if (!paint.TryMerge(new(rocks), new(water), out _, out _) || forest.Count > WorldPaint.MaxPaintedCells ||
-            marsh.Count > WorldPaint.MaxPaintedCells || !WorldPaint.ValidRubble(rubble) || deployment.Count > WorldPaint.MaxPaintedCells)
+            marsh.Count > WorldPaint.MaxPaintedCells || roads.Count > WorldPaint.MaxPaintedCells || !WorldPaint.ValidRubble(rubble) || deployment.Count > WorldPaint.MaxPaintedCells)
         {
             beforePaint = null;
             previousCell = null;
@@ -712,7 +728,7 @@ public partial class LevelEditor
         paintChanged = true;
         var rubbleSnapshot = new Rubble();
         foreach (var entry in rubble) rubbleSnapshot.Add(entry.Key, entry.Value);
-        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(marsh), rubbleSnapshot, Sorted(deployment)),
+        SetPaint((Sorted(rocks), Sorted(water), Sorted(forest), Sorted(marsh), Sorted(roads), rubbleSnapshot, Sorted(deployment)),
             refreshLayout: tool is Tool.Deployment or Tool.Erase or Tool.Rubble);
     }
 
@@ -728,17 +744,18 @@ public partial class LevelEditor
         beforePaint = null;
         previousCell = null;
         if (!paintChanged) return;
-        (Cells, Cells, Cells, Cells, Rubble, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, paint.Data.RubbleCells, map.AutoBattlerRules?.BlueDeploymentCells);
+        (Cells, Cells, Cells, Cells, Cells, Rubble, Cells) next = (paint.Data.RockCells, paint.Data.WaterCells, paint.Data.ForestCells, paint.Data.MarshCells, paint.Data.RoadCells, paint.Data.RubbleCells, map.AutoBattlerRules?.BlueDeploymentCells);
         bool refreshLayout = tool is Tool.Deployment or Tool.Erase or Tool.Rubble;
         Remember(() => SetPaint(previous, refreshLayout), () => SetPaint(next, refreshLayout));
     }
 
-    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Rubble Rubble, Cells Blue) cells, bool refreshLayout = true)
+    private void SetPaint((Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Cells Road, Rubble Rubble, Cells Blue) cells, bool refreshLayout = true)
     {
         paint.Data.RockCells = cells.Rocks;
         paint.Data.WaterCells = cells.Water;
         paint.Data.ForestCells = cells.Forest;
         paint.Data.MarshCells = cells.Marsh;
+        paint.Data.RoadCells = cells.Road;
         bool rubbleChanged = paint.Data.RubbleCells.Count != cells.Rubble.Count ||
             cells.Rubble.Any(entry => !paint.Data.RubbleCells.TryGetValue(entry.Key, out int variant) || variant != entry.Value);
         paint.Data.RubbleCells = cells.Rubble;

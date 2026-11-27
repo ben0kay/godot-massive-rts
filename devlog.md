@@ -782,3 +782,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — RUBBLE1 / ELEV2: Added three neutral rubble paint variants with batched husks, ground slowdown and structural cover. Added configurable seven-level elevation painting on the shared heightfield, with brush, rectangle and undo. Godot owner validation pending.
 
 - 2026-11-27 — BARRICADE1: Added faction-painted Light Barricades with fixed-step traversal damage, heavy crush, height-aware projectile interception and static batching. Navigation and targeting sight use their existing fields. Owner tuning and validation pending.
+
+- 2026-11-27 — ROAD1: Added saved road paint with brush and rectangle editing, terrain-following industrial pavement, and a configurable 20% ground movement bonus. Pathfinding remains unchanged. Owner Godot validation pending.

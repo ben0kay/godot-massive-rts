@@ -4,6 +4,7 @@ render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabl
 
 uniform sampler2D ground_detail : repeat_enable, filter_linear_mipmap_anisotropic;
 uniform bool marsh = false;
+uniform bool road = false;
 varying vec2 world_xz;
 
 void vertex() {
@@ -45,6 +46,13 @@ void fragment() {
         vec3 water = mix(vec3(0.044, 0.085, 0.076), vec3(0.14, 0.22, 0.18), ripple);
         float sheen = smoothstep(0.65, 0.88, ripple) * wet;
         ALBEDO = mix(mud, water, wet) + vec3(0.055, 0.075, 0.068) * sheen;
+    }
+    if (road) {
+        vec2 joints = abs(fract(world_xz * vec2(0.25, 0.5) + 0.5) - 0.5);
+        float seam = 1.0 - smoothstep(0.008, 0.043, min(joints.x, joints.y));
+        float wear = smoothstep(0.28, 0.76, grit * 0.76 + patch * 0.24);
+        vec3 pavement = mix(vec3(0.070, 0.079, 0.088), vec3(0.18, 0.19, 0.19), wear);
+        ALBEDO = pavement * (1.0 - seam * 0.23);
     }
     ALPHA = smoothstep(0.03, 0.33, UV.x + (grit - 0.5) * 0.13);
 }

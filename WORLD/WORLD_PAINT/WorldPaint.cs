@@ -16,10 +16,13 @@ public partial class WorldPaint : Node3D
     private WorldPaintData data;
     private WorldPaintData observedData;
     private CommandTerrain terrain;
-    private MeshInstance3D rocksView, waterView, bridgeView, marshView;
+    private MeshInstance3D rocksView, waterView, bridgeView, marshView, roadView;
     internal HashSet<Vector2I> MarshCells { get; private set; }
     internal const int MaxBarricades = 2048;
     private MultiMeshInstance3D barricadeView;
+    internal HashSet<Vector2I> RoadCells { get; private set; }
+    internal float RoadSpeedMultiplier => 1f + (data != null && float.IsFinite(data.RoadSpeedBonus)
+        ? Mathf.Clamp(data.RoadSpeedBonus, 0f, 0.5f) : 0.2f);
     private Node3D forestView;
     internal ForestCover Forest { get; private set; }
     internal ObstacleRectangle[] MovementWater { get; private set; } = Array.Empty<ObstacleRectangle>();
@@ -89,6 +92,7 @@ public partial class WorldPaint : Node3D
             new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
         RebuildForest();
         RebuildMarsh();
+        RebuildRoad();
         RebuildRubble();
         BuildBarricades();
         UpdateConfigurationWarnings();
@@ -101,6 +105,8 @@ public partial class WorldPaint : Node3D
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
         foreach (var cell in data.WaterCells)
             if (!Contains(cell)) return new[] { "Some World Paint cells lie beyond this map. They are kept in the level and skipped until they fit." };
+        foreach (var cell in data.RoadCells)
+            if (!Contains(cell)) return new[] { "Some road cells lie beyond this map." };
         foreach (var cell in data.MarshCells)
             if (!Contains(cell)) return new[] { "Some marsh cells lie beyond this map." };
         foreach (var cell in data.ForestCells)
@@ -178,6 +184,7 @@ public partial class WorldPaint : Node3D
         {
             RebuildForest();
             RebuildMarsh();
+            RebuildRoad();
             RebuildRubble();
             BuildBarricades();
             visualDirty = false;
@@ -270,6 +277,35 @@ public partial class WorldPaint : Node3D
             marshView.MaterialOverride = material;
         }
         marshView.Mesh = ForestFloor.Build(MarshCells, Surface, heightOffset: 0.028f);
+    }
+
+    // Reuse the irregular-edged floor mesh, sampling the same surface as ground units.
+    private void RebuildRoad()
+    {
+        RoadCells = null;
+        if (data != null && data.RoadCells.Count > 0 && data.RoadCells.Count <= MaxPaintedCells)
+        {
+            var cells = new HashSet<Vector2I>(data.RoadCells);
+            cells.RemoveWhere(cell => !Contains(cell));
+            cells.ExceptWith(data.RockCells);
+            cells.ExceptWith(data.WaterCells);
+            if (cells.Count > 0) RoadCells = cells;
+        }
+        if (RoadCells == null)
+        {
+            if (roadView != null) roadView.Mesh = null;
+            return;
+        }
+        if (roadView == null)
+        {
+            roadView = AddView("RoadPreview");
+            roadView.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            var material = (ShaderMaterial)GD.Load<ShaderMaterial>("res://WORLD/WORLD_PAINT/ForestFloor.tres").Duplicate();
+            material.RenderPriority = 1;
+            material.SetShaderParameter("road", true);
+            roadView.MaterialOverride = material;
+        }
+        roadView.Mesh = ForestFloor.Build(RoadCells, Surface, heightOffset: 0.04f);
     }
 
     private void RebuildViews(HashSet<Vector2I> rocks, HashSet<Vector2I> water)

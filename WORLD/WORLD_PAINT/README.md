@@ -31,3 +31,7 @@ Ranged ground units standing in forest have 65% of their usual maximum attack ra
 ## Ruins and rubble
 
 `WorldPaintData.RubbleCells` stores neutral small rubble, heavy rubble and structural ruins. Heavy rubble defaults to 75% ground speed. The strongest applicable forest, marsh or rubble slowdown is used. Structural ruins are static movement and sight blockers with configurable footprint width and height. The shared wreck mesh is instanced as a static batch, with stable rotation and scale variation. The editor supports up to 48 structural ruins per map.
+
+## Roads
+
+Road cells share the world-paint grid and reuse the terrain-following floor batch with a dark pavement material. Set `WorldPaintData.RoadSpeedBonus` to tune the default 20% speed bonus. Both factions benefit. The road multiplier applies after terrain slowdowns, and repeated paint does not accumulate. Navigation and aircraft use their existing behavior.

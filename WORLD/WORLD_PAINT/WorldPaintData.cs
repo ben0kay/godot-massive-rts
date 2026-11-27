@@ -13,7 +13,7 @@ public partial class WorldPaintData : Resource
     private Color deepWaterColor = new("#104953"), shorelineColor = new("#506b63");
     private float shorelineWidth = 0.9f, bankHeight = 0.16f, rippleStrength = 0.045f, rippleSpeed = 0.45f;
 
-    private Cells rockCells = new(), waterCells = new(), forestCells = new(), marshCells = new();
+    private Cells rockCells = new(), waterCells = new(), forestCells = new(), marshCells = new(), roadCells = new();
 
     [Export]
     public Cells RockCells
@@ -42,6 +42,15 @@ public partial class WorldPaintData : Resource
         get => marshCells;
         set { marshCells = value ?? new Cells(); EmitChanged(); }
     }
+
+    [Export]
+    public Cells RoadCells
+    {
+        get => roadCells;
+        set { roadCells = value ?? new Cells(); EmitChanged(); }
+    }
+
+    [Export(PropertyHint.Range, "0,0.5,0.01")] public float RoadSpeedBonus { get; set; } = 0.2f;
 
     private Godot.Collections.Dictionary<Vector2I, int> rubbleCells = new();
 

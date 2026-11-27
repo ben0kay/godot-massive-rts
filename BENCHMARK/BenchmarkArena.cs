@@ -686,6 +686,8 @@ public partial class BenchmarkArena : Node3D
         defenseSystem?.RegisterStructureDomes(units);
         units.Forest = autoBattlerForest;
         units.MarshCells = autoBattlerPaint?.MarshCells;
+        units.RoadCells = autoBattlerPaint?.RoadCells;
+        units.RoadSpeedMultiplier = autoBattlerPaint?.RoadSpeedMultiplier ?? 1f;
         units.Barricades = autoBattlerPaint?.BuildBarricades();
         units.HeavyRubbleCells = autoBattlerPaint?.HeavyRubbleCells;
         units.HeavyRubbleSpeed = autoBattlerPaint?.HeavyRubbleSpeed ?? 0.75f;
