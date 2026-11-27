@@ -34,6 +34,7 @@ public sealed class ObstacleNavigation
 
     private readonly ObstacleField[] fields;
     private readonly Graph[] graphs;
+    private readonly RuntimeUnitCatalog catalog;
     private readonly Follower[] followers;
     private readonly ApproachMemo[] approachMemos;
     public bool ReuseCorridors { get; set; } = true;
@@ -58,8 +59,9 @@ public sealed class ObstacleNavigation
     public string LastIndividualFailure { get; private set; } = "";
 
     public ObstacleNavigation(ObstacleField field, RuntimeUnitCatalog catalog, int soldiers,
-        float sectorSize, int capacity, int budget)
+        float sectorSize, int capacity, int budget, bool deferGraphs = false)
     {
+        this.catalog = catalog;
         fields = new ObstacleField[catalog.Count];
         this.sectorSize = sectorSize;
         this.capacity = capacity;
@@ -68,7 +70,7 @@ public sealed class ObstacleNavigation
         for (int i = 0; i < graphs.Length; i++)
         {
             fields[i] = field.ForTier(catalog[i].SizeTier);
-            graphs[i] = new Graph(fields[i], catalog[i].Footprint);
+            if (!deferGraphs) graphs[i] = new Graph(fields[i], catalog[i].Footprint);
         }
         followers = new Follower[soldiers];
         approachMemos = new ApproachMemo[soldiers];
@@ -85,11 +87,21 @@ public sealed class ObstacleNavigation
     public void BuildQueuedRoutes()
     {
         frame++;
-        for (int i = 0; i < budget && requests.TryDequeue(out Request request); i++)
+        bool builtGraph = false;
+        for (int i = 0; i < budget && requests.TryPeek(out Request request); i++)
         {
+            byte type = request.Key.Type;
+            var field = fields[type];
+            var graph = graphs[type];
+            if (graph == null)
+            {
+                // After a wreck refresh, build at most one requested unit graph this update.
+                if (builtGraph) break;
+                graph = graphs[type] = new Graph(field, catalog[type].Footprint);
+                builtGraph = true;
+            }
+            requests.Dequeue();
             pending.Remove(request.Key);
-            var graph = graphs[request.Key.Type];
-            var field = fields[request.Key.Type];
             Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner,
                 out bool endsAtAttackPoint, out int validAttackPoints);
             if (points == null && request.Key.Soldier >= 0 && request.Key.Detail == 2)
@@ -120,7 +132,7 @@ public sealed class ObstacleNavigation
         out bool detouring, out bool routeCorner)
     {
         var field = fields[type];
-        float radius = graphs[type].Radius;
+        float radius = catalog[type].Footprint;
         ref Follower follower = ref followers[id];
         routeCorner = false;
         if (follower.ClearanceExit is Vector2 exit)

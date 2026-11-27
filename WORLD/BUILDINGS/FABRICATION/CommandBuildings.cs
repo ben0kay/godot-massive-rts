@@ -450,10 +450,10 @@ internal sealed class CommandBuildings
         RefreshWreckObstacles();
     }
 
-    internal void RefreshWreckObstacles()
+    internal void RefreshWreckObstacles(bool deferGraphs = false)
     {
         field = units.Wrecks?.Combine(baseMovementField, movement.MapHalfWidth) ?? baseMovementField;
-        movement.SetObstacles(field);
+        movement.SetObstacles(field, deferGraphs);
     }
 
     public void RemoveDestroyed(ShockwaveRenderer effects = null)

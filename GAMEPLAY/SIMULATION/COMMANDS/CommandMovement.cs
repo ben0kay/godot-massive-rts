@@ -21,6 +21,7 @@ internal sealed class CommandMovement
         Mathf.Abs(point.X) + radius <= MapHalfWidth && Mathf.Abs(point.Z) + radius <= MapHalfWidth;
     private ObstacleField field;
     private ObstacleNavigation navigation;
+    private bool deferObstacleGraphs;
 
     public CommandMovement(UnitState units, float mapHalfWidth)
     {
@@ -37,19 +38,20 @@ internal sealed class CommandMovement
         exits = new Vector3[capacity];
     }
 
-    public void SetObstacles(ObstacleField obstacles)
+    public void SetObstacles(ObstacleField obstacles, bool deferGraphs = false)
     {
         field = obstacles;
+        deferObstacleGraphs = deferGraphs;
         navigation = null;
     }
 
     internal ObstacleNavigation StructureNavigation() =>
-        field == null ? null : (navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4));
+        field == null ? null : (navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4, deferObstacleGraphs));
 
     internal void PrepareBridgeRoutes()
     {
         if (field?.Bridges.Length > 0)
-            navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
+            navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4, deferObstacleGraphs);
     }
 
     public static Vector3 Slot(Vector3 front, Vector3 right, int columns, int index, int count, float spacing)
@@ -159,7 +161,7 @@ internal sealed class CommandMovement
             var movementField = field?.ForTier(stats.SizeTier);
             if (movementField?.BlocksCorridor(start, waypoint, stats.Footprint) == true)
             {
-                navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
+                navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4, deferObstacleGraphs);
                 waypoint = navigation.Steer(id, type, start, waypoint, 0, out _, out _);
             }
             float speed = units.TravelSpeed(id, stats) * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);

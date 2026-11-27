@@ -545,7 +545,7 @@ public partial class CommandSandbox : Node3D
     public override void _Process(double delta)
     {
         if (units == null) return;
-        if (units.Wrecks?.ConsumeObstacleChange((float)delta) == true) buildings.RefreshWreckObstacles();
+        if (units.Wrecks?.ConsumeObstacleChange((float)delta) == true) buildings.RefreshWreckObstacles(deferGraphs: true);
         units.Forest?.UpdateVisibility(units, (float)delta);
         deathFeedback.Advance((float)delta);
         deathRenderer.Sync(deathFeedback);

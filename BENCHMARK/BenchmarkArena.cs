@@ -708,7 +708,7 @@ public partial class BenchmarkArena : Node3D
         if (!paused && !spawning && units?.Wrecks?.ConsumeObstacleChange((float)delta) == true)
         {
             obstacles = units.Wrecks.Combine(baseMovementObstacles, BattleBoundary);
-            RebuildBattleNavigation();
+            RebuildBattleNavigation(deferGraphs: true);
         }
         // Also handles an empty battlefield or a terminal objective left by the preceding frame.
         if (!spawning && offenseCitadel != null && !offenseBattleEnded) TryFinishOffense();

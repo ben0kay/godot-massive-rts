@@ -79,11 +79,11 @@ public partial class BenchmarkArena
     private ObstacleField baseMovementObstacles;
     private float BattleBoundary => autoBattlerPlaytestMap?.MapSize * 0.5f ?? DeploymentLayout.WorldHalfWidth;
 
-    private void RebuildBattleNavigation()
+    private void RebuildBattleNavigation(bool deferGraphs = false)
     {
         navigation = offenseBattleEnded || obstacles == null ? null :
             new ObstacleNavigation(obstacles, catalog, units.Position.Length, Config.RouteSectorSize,
-                Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64))
+                Mathf.Clamp(Config.RouteCacheCapacity, 64, 8192), Mathf.Clamp(Config.RoutesPerFrame, 1, 64), deferGraphs)
             {
                 ReuseCorridors = panel.ReuseCorridors,
                 ReuseWaypoints = panel.ReuseWaypoints
