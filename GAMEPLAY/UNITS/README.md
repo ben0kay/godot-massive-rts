@@ -227,10 +227,12 @@ clear with the battle.
 
 ### Rally Commander
 
-The Rally Commander is a Tier 2 melee support unit with the Pentagon Elite's
-footprint and a tall faction pennant. Its secondary ability pulses over an
-18-unit radius and buffs allied ground units for 5 seconds. The pulse has a
-12-second cooldown after a successful rally. It grants 15% maximum health and
+The Rally Commander is a Tier 2 melee support unit with a Pentagon-style
+outline and a tall faction pennant. Its SizeMultiplier is 1.08 (20% larger than
+its previous 0.9 scale, including collision clearance). Its secondary ability
+pulses over a 14.4-unit radius and buffs allied ground units for 5 seconds.
+The pulse has an 8-second cooldown after a successful rally (50% more frequent
+than the former 12-second cadence). It grants 15% maximum health and
 damage, and 15% range to ranged weapons. Health percentage is preserved.
 Overlapping pulses refresh duration. A faction-colored ring marks the cast and
 a capped batch of ground ticks marks active recipients.

@@ -6,9 +6,9 @@ namespace MassiveRts;
 
 internal sealed class RallyPulse
 {
-    internal const float Radius = 18f;
+    internal const float Radius = 14.4f;
     private const float Duration = 5f;
-    private const float Cooldown = 12f;
+    private const float Cooldown = 8f;
     private const float Boost = 1.15f;
 
     private readonly record struct Commander(int Id, float ReadyAt);

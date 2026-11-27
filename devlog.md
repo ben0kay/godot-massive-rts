@@ -736,3 +736,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Added the Tier 2 Rally Commander with a tall pennant and an area pulse that temporarily boosts nearby allied ground troops. The pulse shares the soldier grid and shockwave batch.
 
 - 2026-11-27 — Added live Barrage magazine indicators, white Railgun cooldown charging, faint faction shield waves, low-health dark building smoke, sparks and tower base light flicker, pooled visual-only building destruction bursts/chips/scorch/smoke, and optional Siege Ram tread marks (Entity Editor flag). Existing gameplay and tower batches preserved; owner visual/FPS validation pending.
+
+- 2026-11-27 — Rally Commander tuning: size multiplier 0.9 → 1.08 (+20% linear scale and footprint), rally radius 18 → 14.4 (−20%), successful pulse cooldown 12 → 8 seconds (+50% frequency). Shared pulse ring follows the new radius. Five-second non-stacking buff, 15% boost, initial delay, empty-target retry and other stats unchanged. Source review only; owner Godot validation pending.
