@@ -19,6 +19,7 @@ public partial class ProjectileRenderer : Node3D
     private MuzzleSmoke smoke;
     private ProjectileSystem smokeSource;
     private ProjectileCatalog smokeCatalog;
+    private Vector2 smokeWind;
     private ProjectileSystem beamSource;
     private PrismBeamEffects prismBeams;
     private int prismEffectCap = -1;
@@ -51,17 +52,18 @@ public partial class ProjectileRenderer : Node3D
         }
         beamSource = projectiles;
         beamSource.PrismBeamFired += OnPrismBeam;
-        var visuals = catalog.HasLaunchEffects ? GD.Load<UnitVisualConfig>(UnitVisualConfig.DefaultPath) : null;
-        if (visuals?.UseProjectileLaunchEffects == true)
+        var visuals = UnitVisualConfig.Load();
+        if (catalog.HasLaunchEffects && visuals.UseProjectileLaunchEffects)
         {
             launchEffects = new ProjectileLaunchEffects(this, catalog, maximum);
         }
-        if (visuals?.UseMuzzleSmoke == true)
+        if (visuals.UseMuzzleSmoke)
         {
-            smoke = new MuzzleSmoke(this, smokeWind);
+            this.smokeWind = smokeWind;
             smokeSource = projectiles;
             smokeCatalog = catalog;
             smokeSource.ShotLaunched += OnShotLaunched;
+            smokeSource.MuzzleSmokeRequested += EmitMuzzleSmoke;
         }
         batches = new MultiMesh[catalog.Count];
         counts = new int[catalog.Count];
@@ -88,7 +90,13 @@ public partial class ProjectileRenderer : Node3D
 
     private void OnShotLaunched(Vector3 muzzle, int projectileType)
     {
-        if (smokeCatalog.UsesLaunchEffects(projectileType)) smoke.Emit(muzzle);
+        if (smokeCatalog.UsesLaunchEffects(projectileType)) EmitMuzzleSmoke(muzzle, 1f);
+    }
+
+    private void EmitMuzzleSmoke(Vector3 muzzle, float scale)
+    {
+        smoke ??= new MuzzleSmoke(this, smokeWind);
+        smoke.Emit(muzzle, scale);
     }
 
     private void OnPrismBeam(Vector3 from, Vector3 to, byte faction, float seconds)
@@ -107,7 +115,11 @@ public partial class ProjectileRenderer : Node3D
 
     public override void _ExitTree()
     {
-        if (smokeSource != null) smokeSource.ShotLaunched -= OnShotLaunched;
+        if (smokeSource != null)
+        {
+            smokeSource.ShotLaunched -= OnShotLaunched;
+            smokeSource.MuzzleSmokeRequested -= EmitMuzzleSmoke;
+        }
         if (beamSource != null) beamSource.PrismBeamFired -= OnPrismBeam;
     }
 

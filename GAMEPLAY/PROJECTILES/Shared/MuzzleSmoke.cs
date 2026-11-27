@@ -9,7 +9,7 @@ internal sealed class MuzzleSmoke
     private const int Capacity = 512;
     private const float Delay = 0.065f;
     private const float Lifetime = 2.4f;
-    private readonly record struct Puff(Vector3 Origin, float Born, float Seed);
+    private readonly record struct Puff(Vector3 Origin, float Born, float Seed, float Scale);
     private readonly Puff[] puffs = new Puff[Capacity];
     private readonly MultiMesh batch;
     private readonly Vector3 wind;
@@ -38,11 +38,11 @@ internal sealed class MuzzleSmoke
         });
     }
 
-    internal void Emit(Vector3 muzzle)
+    internal void Emit(Vector3 muzzle, float scale = 1f)
     {
         if (count == Capacity) return;
         float seed = (unchecked(++sequence * 2654435761u) >> 16) / 65535f;
-        puffs[count++] = new Puff(muzzle, clock + Delay, seed);
+        puffs[count++] = new Puff(muzzle, clock + Delay, seed, scale);
     }
 
     internal void Advance(float delta)
@@ -65,7 +65,7 @@ internal sealed class MuzzleSmoke
             Vector3 center = puff.Origin + wind * (age * (0.52f + puff.Seed * 0.35f))
                 + Vector3.Up * (age * 0.38f);
             batch.SetInstanceTransform(visible, new Transform3D(Basis.Identity, center));
-            batch.SetInstanceCustomData(visible++, new Color(progress, puff.Seed, 0f, 0f));
+            batch.SetInstanceCustomData(visible++, new Color(progress, puff.Seed, puff.Scale, 0f));
         }
         batch.VisibleInstanceCount = visible;
         if (count == 0) clock = 0f;

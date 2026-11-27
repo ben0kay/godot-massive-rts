@@ -22,6 +22,8 @@ public sealed class ProjectileSystem
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
     internal event System.Action<Vector3, int> ShotLaunched;
+    internal event System.Action<Vector3, float> MuzzleSmokeRequested;
+    internal void EmitMuzzleSmoke(Vector3 muzzle, float scale) => MuzzleSmokeRequested?.Invoke(muzzle, scale);
     internal event System.Action<Vector3, Vector3, byte, float> PrismBeamFired;
     internal void EmitPrismBeam(Vector3 from, Vector3 to, byte faction, float seconds) =>
         PrismBeamFired?.Invoke(from, to, faction, seconds);

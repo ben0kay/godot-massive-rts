@@ -726,3 +726,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Ground units now route through strictly lower-tier wrecks and remove them on physical contact. Same-tier and heavier wrecks still block movement.
 
 - 2026-11-26 — Explicitly classified V-Wing as Size Tier 1 and Heavy Bomber as Size Tier 2.
+
+- 2026-11-26 — Anti-air towers now emit artillery-style smoke from the launch socket on successful guided missile launches. Barrage puffs use 0.55× scale and the long-range plume uses 1.60×, sharing the existing muzzle-smoke batch.
