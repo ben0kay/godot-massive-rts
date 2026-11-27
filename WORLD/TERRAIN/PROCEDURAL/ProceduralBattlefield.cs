@@ -8,16 +8,17 @@ namespace MassiveRts;
 
 internal static class ProceduralBattlefield
 {
-    internal enum Layout { OpenPlains, RiverDivide, MountainPass }
+    internal enum Layout { OpenPlains, RiverDivide, MountainPass, Cliffs }
     internal enum ForestPattern { Groves, LargeForest }
     internal const int MinSize = 192;
     internal const int MaxSize = 1024;
     private const float Cell = WorldPaint.CellSize;
 
     internal sealed record Settings(int Seed, int Size, Layout Preset, float Relief, float Forest, ForestPattern Trees, float Rock,
-        int RiverWidth, float Meander, float FlatBand, bool Fortress);
+        int RiverWidth, float Meander, float FlatBand, bool Fortress, int CliffDensity);
 
-    internal sealed record Candidate(int Size, Samples Elevation, WorldPaintData Paint, Image Preview);
+    internal sealed record Cliff(Vector2[] Points, float Rise, Vector2[] Outline, Rect2 Bounds);
+    internal sealed record Candidate(int Size, Samples Elevation, WorldPaintData Paint, Image Preview, List<Cliff> Cliffs);
 
     // =========================================================
     internal static Candidate Generate(Settings settings)
@@ -65,12 +66,20 @@ internal static class ProceduralBattlefield
                 (settings.Fortress && Mathf.Abs(point.X) <= 32f && point.Y >= -38f && point.Y <= 18f);
         }
 
+        var cliffs = BuildCliffs(settings);
+        bool OnCliff(Vector2 point)
+        {
+            foreach (var cliff in cliffs)
+                if (cliff.Bounds.HasPoint(point) && Geometry2D.IsPointInPolygon(point, cliff.Outline)) return true;
+            return false;
+        }
+
         Vector2 Center(Vector2I cell) => ((Vector2)cell + Vector2.One * 0.5f) * Cell;
         var water = new HashSet<Vector2I>(paint.WaterCells);
         var rocks = new HashSet<Vector2I>();
         bool OpenForScenery(Vector2I cell)
         {
-            if (water.Contains(cell)) return false;
+            if (water.Contains(cell) || OnCliff(Center(cell))) return false;
             if (!settings.Fortress) return true;
             var point = Center(cell);
             return Mathf.Abs(point.X) > 32f || point.Y < -38f || point.Y > 18f;
@@ -150,10 +159,57 @@ internal static class ProceduralBattlefield
             if (Protected(point)) color = new Color("#647668");
             if (forest.Contains(cell)) color = new Color("#28543d").Lightened(Mathf.Clamp((height + 9f) / 110f, 0f, 0.3f));
             if (rocks.Contains(cell)) color = new Color("#626b75");
+            if (OnCliff(point)) color = new Color("#a68f71");
             if (water.Contains(cell)) color = new Color("#287692");
             preview.SetPixel(x, z, color);
         }
-        return new Candidate(size, heights, paint, preview);
+        return new Candidate(size, heights, paint, preview, cliffs);
+    }
+
+    // =========================================================
+    private static List<Cliff> BuildCliffs(Settings settings)
+    {
+        var cliffs = new List<Cliff>();
+        if (settings.Preset != Layout.Cliffs) return cliffs;
+
+        int target = Math.Clamp(settings.CliffDensity, 0, TerrainCliff.MaxCliffs);
+        var random = new Random(unchecked(settings.Seed ^ 0x3CE47015));
+        float half = settings.Size * 0.5f;
+        float usableDepth = settings.Size * (0.5f - settings.FlatBand);
+        float radiusScale = Mathf.Clamp(settings.Size / 256f, 0.85f, 2.1f) *
+            Mathf.Lerp(1f, 0.65f, target / (float)TerrainCliff.MaxCliffs);
+        for (int attempt = 0; attempt < target * 32 && cliffs.Count < target; attempt++)
+        {
+            float radius = random.Next(10, 25) * radiusScale;
+            float margin = radius * 1.4f + WorldPaint.CellSize;
+            var center = new Vector2(
+                Mathf.Lerp(-half + margin, half - margin, (float)random.NextDouble()),
+                Mathf.Lerp(-usableDepth + margin, usableDepth - margin, (float)random.NextDouble()));
+            var bounds = new Rect2(center - Vector2.One * margin, Vector2.One * (2f * margin));
+            if (cliffs.Exists(cliff => cliff.Bounds.Intersects(bounds))) continue;
+            if (settings.Fortress && bounds.Intersects(new Rect2(-32f, -38f, 64f, 56f))) continue;
+
+            var points = new Vector2[random.Next(9, 15)];
+            float rotation = (float)random.NextDouble() * Mathf.Tau;
+            float stretch = Mathf.Lerp(0.65f, 1f, (float)random.NextDouble());
+            for (int i = 0; i < points.Length; i++)
+            {
+                float angle = i * Mathf.Tau / points.Length;
+                float distance = radius * Mathf.Lerp(0.78f, 1.22f, (float)random.NextDouble());
+                var point = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * stretch) * distance;
+                points[i] = center + point.Rotated(rotation);
+            }
+
+            float rise = random.Next(5, 15);
+            var candidate = new TerrainCliff { Points = points, Rise = rise };
+            try
+            {
+                if (candidate.TryCompile(half, out var outline, out _))
+                    cliffs.Add(new Cliff(points, rise, outline, bounds));
+            }
+            finally { candidate.Free(); }
+        }
+        return cliffs;
     }
 
     // =========================================================

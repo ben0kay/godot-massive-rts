@@ -57,6 +57,7 @@ public partial class LevelEditor
         preset.AddItem("Open Plains", (int)ProceduralBattlefield.Layout.OpenPlains);
         preset.AddItem("River Divide", (int)ProceduralBattlefield.Layout.RiverDivide);
         preset.AddItem("Mountain Pass", (int)ProceduralBattlefield.Layout.MountainPass);
+        preset.AddItem("Cliffs", (int)ProceduralBattlefield.Layout.Cliffs);
         form.AddChild(preset);
         var seedRow = new HBoxContainer();
         form.AddChild(seedRow);
@@ -64,19 +65,26 @@ public partial class LevelEditor
         seed.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         Button(seedRow, "Randomize", () => seed.Value = Random.Shared.Next());
         var size = Number(form, "Map width and depth", 256, ProceduralBattlefield.MinSize, ProceduralBattlefield.MaxSize, 4);
-        var relief = Number(form, "Elevation (0 flat · 1 very gentle)", 9, 0, 24);
+        var relief = Number(form, "Elevation (0 flat · 1 very gentle)", 0, 0, 24);
         Heading(form, "Forest pattern", 15);
         var trees = new OptionButton();
         trees.AddItem("Scattered Groves", (int)ProceduralBattlefield.ForestPattern.Groves);
         trees.AddItem("Large Forest", (int)ProceduralBattlefield.ForestPattern.LargeForest);
         form.AddChild(trees);
-        var forest = Number(form, "Forest coverage target (% of map)", 30, 0, 100);
-        var rock = Number(form, "Rock outcrop density (%)", 40, 0, 100);
+        var forest = Number(form, "Forest coverage target (% of map)", 0, 0, 100);
+        var rock = Number(form, "Rock outcrop density (%)", 0, 0, 100);
         var flat = Number(form, "Flat deployment ends (%) per side", 20, 12, 26);
         var riverOptions = new VBoxContainer();
         form.AddChild(riverOptions);
         var riverWidth = Number(riverOptions, "River width", 16, 8, 40, 4);
         var meander = Number(riverOptions, "River meander (%)", 45, 0, 75, 5);
+
+        var cliffOptions = new VBoxContainer();
+        form.AddChild(cliffOptions);
+        var cliffLabel = Heading(cliffOptions, "Cliff density · 6", 15);
+        var cliffDensity = new HSlider { MinValue = 0, MaxValue = TerrainCliff.MaxCliffs, Step = 1, Value = 6 };
+        cliffOptions.AddChild(cliffDensity);
+        cliffOptions.Hide();
 
         var previewPanel = new VBoxContainer { CustomMinimumSize = new Vector2(310, 0) };
         body.AddChild(previewPanel);
@@ -100,7 +108,14 @@ public partial class LevelEditor
         riverOptions.Hide();
         preset.ItemSelected += _ =>
         {
-            riverOptions.Visible = preset.GetSelectedId() == (int)ProceduralBattlefield.Layout.RiverDivide;
+            int layout = preset.GetSelectedId();
+            riverOptions.Visible = layout == (int)ProceduralBattlefield.Layout.RiverDivide;
+            cliffOptions.Visible = layout == (int)ProceduralBattlefield.Layout.Cliffs;
+            Invalidate();
+        };
+        cliffDensity.ValueChanged += value =>
+        {
+            cliffLabel.Text = $"Cliff density · {(int)value}";
             Invalidate();
         };
         trees.ItemSelected += _ => Invalidate();
@@ -124,7 +139,7 @@ public partial class LevelEditor
                 var settings = new ProceduralBattlefield.Settings((int)seed.Value, (int)size.Value,
                     (ProceduralBattlefield.Layout)preset.GetSelectedId(), (float)relief.Value, (float)forest.Value / 100f,
                     (ProceduralBattlefield.ForestPattern)trees.GetSelectedId(), (float)rock.Value / 100f, (int)riverWidth.Value,
-                    (float)meander.Value / 100f, (float)flat.Value / 100f, !adapter.IsAutoBattler);
+                    (float)meander.Value / 100f, (float)flat.Value / 100f, !adapter.IsAutoBattler, (int)cliffDensity.Value);
                 var result = ProceduralBattlefield.Generate(settings);
                 ValidateGeneratedPaint(result);
                 image.Texture = ImageTexture.CreateFromImage(result.Preview);
@@ -135,6 +150,8 @@ public partial class LevelEditor
                 float rockCoverage = result.Paint.RockCells.Count / mapCells;
                 message.Text = $"{result.Size} × {result.Size} · Seed {settings.Seed}\n" +
                     $"Forest {forestCoverage:P1} of map · Rock {rockCoverage:P1}";
+                if (settings.Preset == ProceduralBattlefield.Layout.Cliffs)
+                    message.Text += $"\nCliffs {result.Cliffs.Count} / {settings.CliffDensity} requested";
                 if (settings.Preset == ProceduralBattlefield.Layout.RiverDivide)
                     message.Text += "\nUse Draw bridge in the Level Editor to add crossings.";
                 if (forestCoverage + 0.0001f < settings.Forest)
@@ -183,13 +200,29 @@ public partial class LevelEditor
         var terrain = map.GetNode<CommandTerrain>("Terrain");
         var before = (terrain.Elevation, paint.Data);
         var after = (candidate.Elevation, candidate.Paint);
-        void Apply((Godot.Collections.Dictionary<Vector2I, float> Heights, WorldPaintData Paint) data)
+        var cliffs = candidate.Cliffs.Select(cliff => new TerrainCliff
         {
+            Name = "Cliff",
+            Points = cliff.Points,
+            Rise = cliff.Rise
+        }).ToArray();
+        detached.AddRange(cliffs);
+        void Apply((Godot.Collections.Dictionary<Vector2I, float> Heights, WorldPaintData Paint) data, bool generated)
+        {
+            foreach (var cliff in cliffs)
+            {
+                if (generated)
+                {
+                    terrain.AddChild(cliff, true);
+                    cliff.Owner = map;
+                }
+                else terrain.RemoveChild(cliff);
+            }
             terrain.Elevation = data.Heights;
             paint.Data = data.Paint;
             RefreshMap(terrainChanged: true);
         }
-        Apply(after);
-        Remember(() => Apply(before), () => Apply(after));
+        Apply(after, true);
+        Remember(() => Apply(before, false), () => Apply(after, true));
     }
 }
