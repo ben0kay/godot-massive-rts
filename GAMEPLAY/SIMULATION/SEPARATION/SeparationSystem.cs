@@ -384,11 +384,13 @@ public sealed class SeparationSystem
             position.Z += pz;
             if (obstacles != null)
             {
-                Vector2 safe = obstacles.ClipMove(ObstacleField.Xz(units.Position[id]), ObstacleField.Xz(position),
+                Vector2 safe = obstacles.ForTier(units.Catalog[units.Type[id]].SizeTier)
+                    .ClipMove(ObstacleField.Xz(units.Position[id]), ObstacleField.Xz(position),
                     footprintByType[units.Type[id]]);
                 position.X = safe.X;
                 position.Z = safe.Y;
             }
+            units.Wrecks?.CrushAlong(ObstacleField.Xz(units.Position[id]), ObstacleField.Xz(position), units.Catalog[units.Type[id]]);
             MovedSoldiers |= position != units.Position[id];
             units.Position[id] = position;
             units.Grounding?.MarkMoved(id);

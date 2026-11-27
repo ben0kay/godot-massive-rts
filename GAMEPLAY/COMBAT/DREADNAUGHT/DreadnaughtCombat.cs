@@ -155,13 +155,13 @@ internal partial class DreadnaughtCombat : Node3D
     }
 
     // =========================================================
-    public void Step(SpatialGrid grid, ProjectileSystem projectiles, ObstacleField obstacles, float dt, float padding, float fireRate)
+    public void Step(SpatialGrid grid, ProjectileSystem projectiles, ObstacleField obstacles, float dt, float padding, float fireRate, ObstacleField movementObstacles = null)
     {
         time += dt;
         foreach (var hull in hulls)
         {
             if (units.Health[hull.Id] <= 0) continue;
-            if (units.Type[hull.Id] == RuntimeUnitCatalog.Dreadnaught) Contact(hull, grid, obstacles, padding);
+            if (units.Type[hull.Id] == RuntimeUnitCatalog.Dreadnaught) Contact(hull, grid, obstacles, movementObstacles ?? obstacles, padding);
             for (int slot = 0; slot < hull.Guns.Length; slot++)
                 StepGun(hull.Id, slot, ref hull.Guns[slot], grid, projectiles, obstacles, dt, padding, fireRate);
         }
@@ -227,7 +227,7 @@ internal partial class DreadnaughtCombat : Node3D
     }
 
     // =========================================================
-    private void Contact(Hull hull, SpatialGrid grid, ObstacleField obstacles, float padding)
+    private void Contact(Hull hull, SpatialGrid grid, ObstacleField obstacles, ObstacleField movementObstacles, float padding)
     {
         int id = hull.Id;
         ref readonly var stats = ref units.Catalog[units.Type[id]];
@@ -260,7 +260,9 @@ internal partial class DreadnaughtCombat : Node3D
             if (units.Health[victim] <= 0 || clearance >= radius) continue;
             Vector2 from = ObstacleField.Xz(position);
             Vector2 desired = from + (right * outward.X - forward * outward.Y) * Mathf.Min(0.16f, radius - clearance);
-            Vector2 safe = obstacles?.ClipMove(from, desired, radius) ?? desired;
+            ref readonly var victimType = ref units.Catalog[units.Type[victim]];
+            Vector2 safe = movementObstacles?.ForTier(victimType.SizeTier).ClipMove(from, desired, radius) ?? desired;
+            units.Wrecks?.CrushAlong(from, safe, victimType);
             units.Position[victim] = new Vector3(safe.X, position.Y, safe.Y);
             units.Grounding?.MarkMoved(victim);
             units.Dirty[victim] = true;

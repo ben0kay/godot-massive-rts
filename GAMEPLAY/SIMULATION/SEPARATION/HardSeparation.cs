@@ -58,8 +58,9 @@ internal sealed class HardSeparation
             if (units.Health[id] <= 0) continue;
             Vector2 origin = ObstacleField.Xz(units.Position[id]);
             float radius = units.Catalog[units.Type[id]].Footprint;
-            if (Fits(units, origin, radius, obstacles, boundary, out _)) Add(id, origin);
-            else if (!FindRoom(units, id, origin, radius, obstacles, boundary))
+            var movementField = obstacles?.ForTier(units.Catalog[units.Type[id]].SizeTier);
+            if (Fits(units, origin, radius, movementField, boundary, out _)) Add(id, origin);
+            else if (!FindRoom(units, id, origin, radius, movementField, boundary))
             {
                 placementFailed = true;
                 return false;
@@ -87,8 +88,9 @@ internal sealed class HardSeparation
             }
 
             float radius = units.Catalog[units.Type[id]].Footprint;
+            var movementField = obstacles?.ForTier(units.Catalog[units.Type[id]].SizeTier);
             Remove(id, from);
-            if (!Fits(units, to, radius, obstacles, boundary, out int blocker))
+            if (!Fits(units, to, radius, movementField, boundary, out int blocker))
             {
                 BlockedMoves++;
                 Vector2 forward = move.Normalized();
@@ -107,7 +109,7 @@ internal sealed class HardSeparation
                     Remove(id, from);
                 }
 
-                if (!Fits(units, to, radius, obstacles, boundary, out _))
+                if (!Fits(units, to, radius, movementField, boundary, out _))
                 {
                     // Try around the obstruction, within the original movement budget.
                     Vector2 step = side * move.Length();
@@ -118,13 +120,14 @@ internal sealed class HardSeparation
                             ? (move + step) * 0.70710678f : step;
                         if ((attempt & 1) != 0) offset -= step * (attempt < 2 ? 1.41421356f : 2f);
                         Vector2 candidate = from + offset;
-                        if (!FitsStep(units, from, candidate, radius, obstacles, boundary, out _)) continue;
+                        if (!FitsStep(units, from, candidate, radius, movementField, boundary, out _)) continue;
                         to = candidate;
                         break;
                     }
                 }
             }
             Add(id, to);
+            units.Wrecks?.CrushAlong(from, to, units.Catalog[units.Type[id]]);
             Apply(units, id, to);
         }
         firstMover = (firstMover + 1) % units.Count;
@@ -149,6 +152,7 @@ internal sealed class HardSeparation
         {
             int shifted = yieldMoves[i].Id;
             yielded[shifted] = true;
+            units.Wrecks?.CrushAlong(yieldMoves[i].From, accepted[shifted], units.Catalog[units.Type[shifted]]);
             Apply(units, shifted, accepted[shifted]);
         }
         return true;
@@ -163,9 +167,10 @@ internal sealed class HardSeparation
         Vector2 from = accepted[id], to = from + shift;
         float radius = units.Catalog[units.Type[id]].Footprint;
         Remove(id, from);
-        bool fits = FitsStep(units, from, to, radius, obstacles, boundary, out int blocker);
+        var movementField = obstacles?.ForTier(units.Catalog[units.Type[id]].SizeTier);
+        bool fits = FitsStep(units, from, to, radius, movementField, boundary, out int blocker);
         if (!fits && blocker >= 0 && TryYield(units, blocker, faction, shift, obstacles, boundary, remaining - 1))
-            fits = FitsStep(units, from, to, radius, obstacles, boundary, out _);
+            fits = FitsStep(units, from, to, radius, movementField, boundary, out _);
 
         Add(id, fits ? to : from);
         if (fits) yieldMoves[yieldCount++] = new YieldMove(id, from);

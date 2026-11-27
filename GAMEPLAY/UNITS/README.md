@@ -216,7 +216,9 @@ The aircraft models use a single cached faceted surface per type, with the share
 In Entity Editor, open **Appearance and size** and use **Leaves blocking wreck**
 on units of Size Tier 3 or higher. Hexagon Siege has the setting enabled by
 default. An opted-in casualty settles into the ground with a tilted, darkened
-hull. Its footprint blocks ground movement and routing for either faction.
+hull. Its footprint blocks ground units of the same or a lower size tier.
+Higher-tier units route through it and crush it when their footprint touches it,
+clearing the route for either faction.
 Ranged line of sight and projectile collision still use the existing cover rules.
 
 The first pass retains up to 32 wrecks per battle and batches updates to the

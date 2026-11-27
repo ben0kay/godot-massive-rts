@@ -12,6 +12,8 @@ public sealed class ObstacleField
     private readonly record struct Node(Box Bounds, int Left, int Right, bool AllowInteriorEscape = false);
     private readonly Node[] nodes;
     private int nodeCount;
+    private readonly float lowestWreckTier;
+    private System.Collections.Generic.Dictionary<float, ObstacleField> tierFields;
     private readonly bool hasInteriorEscape;
     private readonly Vector2?[] airborneHeights;
     public int RectangleCount => rectangles.Length;
@@ -57,18 +59,40 @@ public sealed class ObstacleField
         float gridSize = rectangles.Length > 0 ? rectangles[0].GridSize : DeploymentLayout.CellSize;
         Boundary = boundary ?? DeploymentLayout.CellHalfWidth(gridSize) * gridSize;
         this.rectangles = (ObstacleRectangle[])rectangles.Clone();
+        lowestWreckTier = float.PositiveInfinity;
         var leaves = new Leaf[rectangles.Length];
         bool hasCustomAirborneHeight = false;
         for (int i = 0; i < leaves.Length; i++)
         {
             var area = rectangles[i];
+            if (area.WreckTier > 0f) lowestWreckTier = Mathf.Min(lowestWreckTier, area.WreckTier);
             leaves[i] = new Leaf(new Box(area.Min, area.Max), area.AirborneHeightRange, area.AllowInteriorEscape);
             hasInteriorEscape |= area.AllowInteriorEscape;
             hasCustomAirborneHeight |= area.AirborneHeightRange.HasValue;
         }
-        nodes = new Node[leaves.Length * 2 - 1];
+        nodes = new Node[Math.Max(0, leaves.Length * 2 - 1)];
         if (hasCustomAirborneHeight) airborneHeights = new Vector2?[nodes.Length];
-        Build(leaves, 0, leaves.Length);
+        if (leaves.Length > 0) Build(leaves, 0, leaves.Length);
+    }
+
+    internal ObstacleField ForTier(float tier)
+    {
+        if (tier <= lowestWreckTier) return this;
+        tierFields ??= new();
+        if (tierFields.TryGetValue(tier, out var cached)) return cached;
+        var remaining = Array.FindAll(rectangles, area => area.WreckTier == 0f || area.WreckTier >= tier);
+        return tierFields[tier] = new ObstacleField(remaining, Boundary, Bridges);
+    }
+
+    internal static bool TouchesSweep(ObstacleRectangle area, Vector2 from, Vector2 to, float radius)
+    {
+        Vector2 delta = to - from;
+        var box = new Box(area.Min, area.Max);
+        var padding = new Vector2(radius, radius);
+        if (!EnterBox(from, delta, box.Min - padding, box.Max + padding, out _)) return false;
+        float hit = float.PositiveInfinity;
+        TraceRoundedBox(box, from, delta, radius, ref hit);
+        return hit <= 1f;
     }
 
     private int Build(Leaf[] leaves, int start, int count)
@@ -107,7 +131,7 @@ public sealed class ObstacleField
     public bool IntersectsCircle(Vector2 point, float radius)
     {
         long start = BeginSample(Query.Circle);
-        bool hit = IntersectsCircle(0, point, radius * radius);
+        bool hit = nodeCount > 0 && IntersectsCircle(0, point, radius * radius);
         EndSample(Query.Circle, start);
         return hit;
     }
@@ -137,7 +161,7 @@ public sealed class ObstacleField
     {
         LosQueries++;
         long start = BeginSample(Query.Sight);
-        bool blocked = BlocksSightExcept(0, Xz(from), Xz(to - from), new Box(own.Min, own.Max));
+        bool blocked = nodeCount > 0 && BlocksSightExcept(0, Xz(from), Xz(to - from), new Box(own.Min, own.Max));
         EndSample(Query.Sight, start);
         if (blocked) LosBlocks++;
         return blocked;
@@ -154,7 +178,7 @@ public sealed class ObstacleField
     internal float FirstSightHitExcept(Vector3 from, Vector3 segment, ObstacleRectangle own)
     {
         float nearest = 1f;
-        FindSightHit(0, Xz(from), Xz(segment), new Box(own.Min, own.Max), ref nearest);
+        if (nodeCount > 0) FindSightHit(0, Xz(from), Xz(segment), new Box(own.Min, own.Max), ref nearest);
         return nearest;
     }
 
@@ -215,7 +239,7 @@ public sealed class ObstacleField
     public float AirborneHit(Vector3 from, Vector3 delta, float wallHeight)
     {
         float enter = 0f, exit = 1f, first = float.PositiveInfinity;
-        if (airborneHeights != null || Axis(from.Y, delta.Y, 0f, wallHeight, ref enter, ref exit))
+        if (nodeCount > 0 && (airborneHeights != null || Axis(from.Y, delta.Y, 0f, wallHeight, ref enter, ref exit)))
             SearchAirborne(0, from, delta, wallHeight, enter, exit, ref first);
         return first;
     }
@@ -254,7 +278,7 @@ public sealed class ObstacleField
     {
         long start = BeginSample(Query.Corridor);
         var margin = new Vector2(inset, inset);
-        bool blocked = CrossesWallInterior(0, from, to - from, margin);
+        bool blocked = nodeCount > 0 && CrossesWallInterior(0, from, to - from, margin);
         EndSample(Query.Corridor, start);
         return blocked;
     }
@@ -321,7 +345,7 @@ public sealed class ObstacleField
     private bool Trace(Vector2 from, Vector2 to, float radius, bool anyHit, out float fraction, bool allowExit = false)
     {
         fraction = float.PositiveInfinity;
-        Search(0, from, to - from, radius, anyHit, ref fraction, allowExit);
+        if (nodeCount > 0) Search(0, from, to - from, radius, anyHit, ref fraction, allowExit);
         return fraction <= 1f;
     }
 
@@ -356,10 +380,15 @@ public sealed class ObstacleField
                 away.Dot(delta) > 0f) return;
         }
 
+        TraceRoundedBox(box, from, delta, radius, ref first);
+    }
+
+    private static void TraceRoundedBox(Box box, Vector2 from, Vector2 delta, float radius, ref float first)
+    {
         // Two rectangular strips and four circles form the exact rounded Minkowski expansion.
         var xPad = new Vector2(radius, 0f);
         var zPad = new Vector2(0f, radius);
-        if (EnterBox(from, delta, box.Min - xPad, box.Max + xPad, out entry)) first = Mathf.Min(first, entry);
+        if (EnterBox(from, delta, box.Min - xPad, box.Max + xPad, out float entry)) first = Mathf.Min(first, entry);
         if (EnterBox(from, delta, box.Min - zPad, box.Max + zPad, out entry)) first = Mathf.Min(first, entry);
         float lengthSquared = delta.LengthSquared();
         TestCorner(box.Min, from, delta, lengthSquared, radius, ref first);

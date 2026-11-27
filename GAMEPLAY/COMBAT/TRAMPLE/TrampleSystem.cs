@@ -141,7 +141,7 @@ public sealed class TrampleSystem
             charge.Heading = heading;
             if (distance <= launchRange && charge.RunUp >= type.Trample.RunUp &&
                 units.MoveSpeed[id] >= type.Speed * EntrySpeedFraction &&
-                obstacles?.BlocksCorridor(charge.Start, Xz(units.Position[target]), 0f) != true)
+                obstacles?.ForTier(type.SizeTier).BlocksCorridor(charge.Start, Xz(units.Position[target]), 0f) != true)
             {
                 charge.Active = true;
                 charge.Distance = type.Trample.Distance;
@@ -172,7 +172,8 @@ public sealed class TrampleSystem
             {
                 Vector2 from = Xz(units.Position[id]);
                 Vector2 to = from + shove;
-                Place(units, id, obstacles?.ClipMove(from, to, units.Catalog[units.Type[id]].Footprint) ?? to);
+                ref readonly var type = ref units.Catalog[units.Type[id]];
+                Place(units, id, obstacles?.ForTier(type.SizeTier).ClipMove(from, to, type.Footprint) ?? to);
                 appliedShove = true;
             }
             shoves[id] = Vector2.Zero;
@@ -186,6 +187,7 @@ public sealed class TrampleSystem
     {
         ref Charge charge = ref states[slot];
         ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+        obstacles = obstacles?.ForTier(type.SizeTier);
         charge.BypassThisTick = true;
         float momentumFraction = charge.Momentum / type.Trample.Efficiency;
         float speed = units.TravelSpeed(id, type) * (0.55f + 0.45f * momentumFraction);
@@ -344,6 +346,7 @@ public sealed class TrampleSystem
 
     private static void Place(UnitState units, int id, Vector2 p)
     {
+        units.Wrecks?.CrushAlong(Xz(units.Position[id]), p, units.Catalog[units.Type[id]]);
         units.Position[id] = new Vector3(p.X, units.Position[id].Y, p.Y);
         units.Grounding?.MarkMoved(id);
         units.Dirty[id] = true;

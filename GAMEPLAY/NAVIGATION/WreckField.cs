@@ -10,8 +10,9 @@ internal sealed partial class WreckField : Node3D
     private const int Capacity = 32;
     private const float SettleSeconds = 0.24f;
     private const float RefreshInterval = 0.15f;
-    private readonly List<ObstacleRectangle> areas = new(Capacity);
-    private readonly List<SettlingWreck> settling = new(Capacity);
+    private readonly List<Wreck> wrecks = new(Capacity);
+    private float lowestTier = float.PositiveInfinity;
+    private Rect2 bounds;
     private RuntimeUnitCatalog catalog;
     private bool[] enabledTypes;
     private MultiMesh[] meshes;
@@ -19,7 +20,7 @@ internal sealed partial class WreckField : Node3D
     private bool changed;
     private float refreshDelay;
 
-    private record struct SettlingWreck(MultiMesh Mesh, int Slot, Vector3 Ground, float Height, float Yaw, float Tilt, float Age);
+    private record struct Wreck(ObstacleRectangle Area, byte Type, int Slot, Vector3 Ground, float Height, float Yaw, float Tilt, float Age);
 
     internal static WreckField Create(Node3D parent, RuntimeUnitCatalog catalog)
     {
@@ -43,25 +44,28 @@ internal sealed partial class WreckField : Node3D
 
     internal bool TryAdd(Vector3 ground, byte type, Vector2 facing)
     {
-        if (!enabledTypes[type] || areas.Count == Capacity) return false;
+        if (!enabledTypes[type] || wrecks.Count == Capacity) return false;
         ref readonly var stats = ref catalog[type];
         float yaw = facing == Vector2.Zero ? 0f : stats.Shape == UnitShape.Diamond
             ? Mathf.Atan2(-facing.Y, facing.X) : Mathf.Atan2(-facing.X, -facing.Y);
         float x = stats.Outline.RadiusX * 0.64f, z = stats.Outline.RadiusZ * 0.64f;
         float cosine = Mathf.Abs(Mathf.Cos(yaw)), sine = Mathf.Abs(Mathf.Sin(yaw));
         Vector2 halfSize = new(x * cosine + z * sine, x * sine + z * cosine);
-        areas.Add(new ObstacleRectangle
+        var area = new ObstacleRectangle
         {
             WorldBounds = new Rect2(ObstacleField.Xz(ground) - halfSize, halfSize * 2f),
-            AllowInteriorEscape = true
-        });
+            AllowInteriorEscape = true, WreckTier = stats.SizeTier
+        };
         changed = true;
 
         var mesh = meshes[type] ??= CreateBatch(type);
         int slot = meshCounts[type]++;
         float tilt = slot % 2 == 0 ? 0.15f : -0.19f;
-        var wreck = new SettlingWreck(mesh, slot, ground, stats.Height, yaw, tilt, 0f);
-        settling.Add(wreck);
+        var wreck = new Wreck(area, type, slot, ground, stats.Height, yaw, tilt, 0f);
+        var footprint = area.WorldBounds.Value;
+        bounds = wrecks.Count == 0 ? footprint : bounds.Merge(footprint);
+        lowestTier = Mathf.Min(lowestTier, stats.SizeTier);
+        wrecks.Add(wreck);
         WritePose(wreck);
         mesh.VisibleInstanceCount = meshCounts[type];
         SetProcess(true);
@@ -82,24 +86,68 @@ internal sealed partial class WreckField : Node3D
 
     public override void _Process(double delta)
     {
-        for (int i = settling.Count - 1; i >= 0; i--)
+        bool stillSettling = false;
+        for (int i = 0; i < wrecks.Count; i++)
         {
-            var wreck = settling[i];
+            var wreck = wrecks[i];
+            if (wreck.Age >= SettleSeconds) continue;
             wreck.Age += (float)delta;
             WritePose(wreck);
-            if (wreck.Age >= SettleSeconds) settling.RemoveAt(i);
-            else settling[i] = wreck;
+            wrecks[i] = wreck;
+            stillSettling |= wreck.Age < SettleSeconds;
         }
-        if (settling.Count == 0) SetProcess(false);
+        if (!stillSettling) SetProcess(false);
     }
 
-    private static void WritePose(SettlingWreck wreck)
+    private void WritePose(Wreck wreck)
     {
         float t = Mathf.Clamp(wreck.Age / SettleSeconds, 0f, 1f);
         float ease = t * (2f - t);
         var basis = new Basis(Vector3.Up, wreck.Yaw) * new Basis(Vector3.Forward, wreck.Tilt * (0.5f + ease * 0.5f));
         Vector3 center = wreck.Ground + Vector3.Up * (wreck.Height * Mathf.Lerp(0.39f, 0.13f, ease));
-        wreck.Mesh.SetInstanceTransform(wreck.Slot, new Transform3D(basis, center));
+        meshes[wreck.Type].SetInstanceTransform(wreck.Slot, new Transform3D(basis, center));
+    }
+
+    internal void CrushAlong(Vector2 from, Vector2 to, in UnitStats mover)
+    {
+        if (mover.SizeTier <= lowestTier || from == to) return;
+        Vector2 start = from.Min(to), end = from.Max(to);
+        if (!bounds.Grow(mover.Footprint).Intersects(new Rect2(start, end - start), true)) return;
+
+        bool crushed = false;
+        for (int i = wrecks.Count - 1; i >= 0; i--)
+        {
+            var wreck = wrecks[i];
+            if (mover.SizeTier <= wreck.Area.WreckTier ||
+                !ObstacleField.TouchesSweep(wreck.Area, from, to, mover.Footprint)) continue;
+            int lastSlot = --meshCounts[wreck.Type];
+            if (wreck.Slot != lastSlot)
+            {
+                for (int other = 0; other < wrecks.Count; other++)
+                {
+                    var moved = wrecks[other];
+                    if (moved.Type != wreck.Type || moved.Slot != lastSlot) continue;
+                    moved.Slot = wreck.Slot;
+                    wrecks[other] = moved;
+                    WritePose(moved);
+                    break;
+                }
+            }
+            meshes[wreck.Type].VisibleInstanceCount = lastSlot;
+            wrecks.RemoveAt(i);
+            crushed = true;
+        }
+        if (!crushed) return;
+        lowestTier = float.PositiveInfinity;
+        for (int i = 0; i < wrecks.Count; i++)
+        {
+            var area = wrecks[i].Area;
+            var footprint = area.WorldBounds.Value;
+            bounds = i == 0 ? footprint : bounds.Merge(footprint);
+            lowestTier = Mathf.Min(lowestTier, area.WreckTier);
+        }
+        changed = true;
+        refreshDelay = 0f;
     }
 
     internal bool ConsumeObstacleChange(float delta)
@@ -113,12 +161,12 @@ internal sealed partial class WreckField : Node3D
 
     internal ObstacleField Combine(ObstacleField staticField, float boundary)
     {
-        if (areas.Count == 0) return staticField;
-        int count = staticField?.RectangleCount ?? 0;
-        var rectangles = new ObstacleRectangle[count + areas.Count];
-        if (staticField != null) staticField.Rectangles.CopyTo(rectangles);
-        areas.CopyTo(rectangles, count);
         changed = false;
+        if (wrecks.Count == 0) return staticField;
+        int count = staticField?.RectangleCount ?? 0;
+        var rectangles = new ObstacleRectangle[count + wrecks.Count];
+        if (staticField != null) staticField.Rectangles.CopyTo(rectangles);
+        for (int i = 0; i < wrecks.Count; i++) rectangles[count + i] = wrecks[i].Area;
         return new ObstacleField(rectangles, staticField?.Boundary ?? boundary, staticField?.Bridges);
     }
 }

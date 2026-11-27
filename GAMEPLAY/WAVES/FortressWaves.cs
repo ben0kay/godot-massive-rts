@@ -455,7 +455,7 @@ internal sealed class FortressWaves
             {
                 int turn = (sample + 1) / 2 * (sample % 2 == 0 ? -1 : 1);
                 Vector2 candidate = defender + direction.Rotated(turn * Mathf.Pi / 4f) * approachRange;
-                if (!ClearApproach(candidate, type.Footprint, buildings.MovementField)) continue;
+                if (!ClearApproach(candidate, type.Footprint, buildings.MovementField?.ForTier(type.SizeTier))) continue;
                 movement.SetGoal(id, Ground(candidate));
                 return;
             }
@@ -494,7 +494,7 @@ internal sealed class FortressWaves
             standOff = Mathf.Max(type.Footprint + 0.05f, type.MinimumFireRange + 0.05f);
         }
         Vector2 approach = edge + normal * standOff;
-        var movementField = buildings.MovementField;
+        var movementField = buildings.MovementField?.ForTier(type.SizeTier);
         if (!ClearApproach(approach, type.Footprint, movementField))
             approach = FindCitadelApproach(p, standOff, type.Footprint, movementField);
         movement.SetGoal(id, Ground(approach));

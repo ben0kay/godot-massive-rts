@@ -110,6 +110,7 @@ internal sealed class StructureCombat
             approachField = field;
         }
 
+        field = field?.ForTier(type.SizeTier);
         goal = position;
         Vector3 origin = position;
         if (checkRoute && towerApproaches != null && towerApproaches.TryGetValue(key, out var previous))

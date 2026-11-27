@@ -11,7 +11,7 @@ public static class MovementSystem
     internal static void Step(UnitState units, BenchmarkMode mode, float dt, float separationGap,
         ref MovementProfile profile, int samplePhase, byte[] voluntaryMovement, float meleeRampSeconds, float rangedRampSeconds, TrampleSystem trample = null,
         ObstacleField obstacles = null, ObstacleNavigation navigation = null, SpatialGrid grid = null, MeleeSteering melee = null, int end = -1, int[] activeIds = null, StructureCombat structureCombat = null,
-        ObstacleField separateSight = null, bool useSeparateSight = false)
+        ObstacleField separateSight = null, bool useSeparateSight = false, bool deferWreckCrush = false)
     {
         var catalog = units.Catalog;
         var sight = useSeparateSight ? separateSight : obstacles;
@@ -30,6 +30,7 @@ public static class MovementSystem
                 melee?.Reset(i);
                 continue;
             }
+            var movementField = obstacles?.ForTier(catalog[units.Type[i]].SizeTier);
             var opening = units.OpeningOrders;
             bool hasOrder = opening?.Active(i) == true;
             int target = units.Target[i];
@@ -76,7 +77,7 @@ public static class MovementSystem
                 bool inRange = (rangedCombat || obstacles != null) && distanceSquared <= reach * reach;
                 float sightRange = steerMelee ? reach + 0.075f : reach;
                 // Water is transparent to projectile sight but still separates melee targets.
-                var attackSight = type.Ranged ? sight : obstacles ?? sight;
+                var attackSight = type.Ranged ? sight : movementField ?? sight;
                 bool blockedInRange = attackSight != null && distanceSquared <= sightRange * sightRange &&
                     (type.DirectFire(units.Catalog.Projectiles)) &&
                     attackSight.BlocksSight(units.Position[i], destination);
@@ -165,7 +166,7 @@ public static class MovementSystem
                 {
                     bool sample = (i & (MovementProfile.SampleStride - 1)) == samplePhase;
                     long start = sample ? Stopwatch.GetTimestamp() : 0;
-                    direction = melee.Steer(units, grid, obstacles, i, direction, type.Footprint, travel, units.MaximumTravelSpeed * dt);
+                    direction = melee.Steer(units, grid, movementField, i, direction, type.Footprint, travel, units.MaximumTravelSpeed * dt);
                     if (sample)
                     {
                         profile.SidestepTicks += Stopwatch.GetTimestamp() - start;
@@ -193,11 +194,11 @@ public static class MovementSystem
             float slopeFactor = units.SlopeSpeedFactor(i, type, ObstacleField.Xz(direction));
             travel = Mathf.Min(speed * dt * slopeFactor, remaining) * headingFactor;
             Vector3 next = units.Position[i] + direction * travel;
-            if (obstacles != null)
+            if (movementField != null)
             {
                 Vector2 from = ObstacleField.Xz(units.Position[i]);
                 Vector2 desired = ObstacleField.Xz(next);
-                Vector2 safe = obstacles.ClipMove(from, desired, type.Footprint);
+                Vector2 safe = movementField.ClipMove(from, desired, type.Footprint);
                 if (safe != desired)
                 {
                     travel = from.DistanceTo(safe);
@@ -214,6 +215,7 @@ public static class MovementSystem
                 next.DistanceSquaredTo(destination) > (stop + 0.35f) * (stop + 0.35f));
             if (travel > 0.00001f && (type.Shape != UnitShape.Circle || turnCircle) && !type.Outline.IsDreadnaught)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnSteps[units.Type[i]]);
+            if (!deferWreckCrush) units.Wrecks?.CrushAlong(ObstacleField.Xz(units.Position[i]), ObstacleField.Xz(next), type);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);
             units.Dirty[i] = true;

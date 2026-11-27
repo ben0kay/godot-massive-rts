@@ -215,7 +215,7 @@ public static class CombatSystem
             else if (offset.LengthSquared() > radius * radius) continue;
             if (type.MinimumFireRange > 0f && ObstacleField.Xz(offset).LengthSquared() <
                 type.MinimumFireRange * type.MinimumFireRange) continue;
-            var attackSight = type.Ranged ? obstacles : meleeObstacles ?? obstacles;
+            var attackSight = type.Ranged ? obstacles : meleeObstacles?.ForTier(type.SizeTier) ?? obstacles;
             if (attackSight != null && type.DirectFire(units.Catalog.Projectiles) &&
                 attackSight.BlocksSight(units.Position[i], units.Position[target])) continue;
             Vector2 facing = units.Facing[i];

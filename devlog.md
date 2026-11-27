@@ -722,3 +722,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added Missile Barrage Tower (34 range, 12-round magazine, 6 shots/s, 8 s reload) and Long-Range AA Tower (95 range, heavy 2.2× missile, 6 s interval), sharing existing guided Interceptor missile pool and air grid. Added faction-armored vertical launch meshes, catalog/placement/inspection/Entity Editor and Fortress build registration. Aircraft combat runs in existing AirSquadron-enabled battles; Fortress air waves not implemented. Godot validation pending.
 
 - 2026-11-26 — Shared the Railgun ground glow with Prism Lance and softened both beam tips. Reduced the Prism firing cycle from 9 to 6 seconds by shortening recovery. Increased Siege Ram speed from 1.4 to 1.54.
+
+- 2026-11-26 — Ground units now route through strictly lower-tier wrecks and remove them on physical contact. Same-tier and heavier wrecks still block movement.

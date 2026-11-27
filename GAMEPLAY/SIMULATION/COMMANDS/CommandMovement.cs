@@ -75,9 +75,10 @@ internal sealed class CommandMovement
 
     private void IssueOne(int id, Vector3 goal, bool attack)
     {
-        float radius = units.Catalog[units.Type[id]].Footprint;
+        ref readonly var stats = ref units.Catalog[units.Type[id]];
+        float radius = stats.Footprint;
         if (units.Health[id] <= 0 || !OnMap(goal, radius) ||
-            field?.IntersectsCircle(ObstacleField.Xz(goal), radius) == true) return;
+            field?.ForTier(stats.SizeTier).IntersectsCircle(ObstacleField.Xz(goal), radius) == true) return;
         SetGoal(id, goal);
         attackMove[id] = attack;
         units.Target[id] = -1;
@@ -155,7 +156,8 @@ internal sealed class CommandMovement
             if (arrived) continue;
 
             byte type = units.Type[id];
-            if (field?.BlocksCorridor(start, waypoint, stats.Footprint) == true)
+            var movementField = field?.ForTier(stats.SizeTier);
+            if (movementField?.BlocksCorridor(start, waypoint, stats.Footprint) == true)
             {
                 navigation ??= new ObstacleNavigation(field, units.Catalog, active.Length, 12f, 128, 4);
                 waypoint = navigation.Steer(id, type, start, waypoint, 0, out _, out _);
@@ -163,8 +165,9 @@ internal sealed class CommandMovement
             float speed = units.TravelSpeed(id, stats) * (hasExit[id] ? FabricatorExitSpeedMultiplier : 1f);
             if (units.Grounding != null) speed *= units.SlopeSpeedFactor(id, stats, (waypoint - start).Normalized());
             Vector2 next = start.MoveToward(waypoint, speed * delta);
-            if (field != null) next = field.ClipMove(start, next, stats.Footprint);
+            if (movementField != null) next = movementField.ClipMove(start, next, stats.Footprint);
             if (next == start) continue;
+            units.Wrecks?.CrushAlong(start, next, stats);
             units.Position[id] = new Vector3(next.X, previous.Y, next.Y);
             units.Grounding?.MarkMoved(id);
             if (stats.Shape != UnitShape.Circle)

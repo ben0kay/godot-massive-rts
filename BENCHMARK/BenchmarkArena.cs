@@ -1061,10 +1061,10 @@ public partial class BenchmarkArena : Node3D
             meleeSteering = new MeleeSteering(units.Position.Length, holdMelee, sidestepMelee);
         MovementSystem.Step(units, mode, dt, separate ? Config.SeparationGap : -1f, ref movementProfile, samplePhase, movementFlags,
             Config.MeleeAccelerationSeconds, Config.RangedAccelerationSeconds, activeTrample, obstacles, navigation, grid, meleeSteering, autoAttackCount, autoAttackIds, HasDefenseAttackers ? defenseCombat : null,
-            BattleSight, autoBattlerPlaytestMap != null);
+            BattleSight, autoBattlerPlaytestMap != null, deferWreckCrush: hard);
         if (guards != null)
             foreach (GuardGroup group in guards)
-                group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags);
+                group?.Move(units, dt, separate ? Config.SeparationGap : 0f, obstacles, navigation, movementFlags, deferWreckCrush: hard);
         float tramplePadding = activeTrample?.MoveCharges(units, grid, dt, obstacles, shockwaves, stopOnSurvivors: strongEnemies) ?? 0f;
         double movementElapsed = Elapsed(start);
         movementMs += movementElapsed;
@@ -1117,7 +1117,7 @@ public partial class BenchmarkArena : Node3D
         {
             start = Stamp();
             CombatSystem.Step(units, grid, projectiles, (float)panel.FireRate.Value, dt, extraMovementPadding, separate ? Config.SeparationGap : 0f, activeTrample, BattleSight, shockwaves, HasDefenseAttackers ? defenseCombat : null, useDreadnaughtContact: dreadnaughts != null, meleeObstacles: obstacles);
-            dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.MaximumTravelSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value);
+            dreadnaughts?.Step(grid, projectiles, BattleSight, dt, units.MaximumTravelSpeed * dt + extraMovementPadding, (float)panel.FireRate.Value, movementObstacles: obstacles);
             AttackDefenses(dt);
             combatMs += Elapsed(start);
             if (mode == BenchmarkMode.Ranged || dreadnaughts != null || projectiles.Count > 0) { start = Stamp(); projectiles.Step(units, grid, Config, dt, extraMovementPadding, BattleSight, shockwaves); projectileMs += Elapsed(start); }

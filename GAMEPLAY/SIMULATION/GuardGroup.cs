@@ -66,7 +66,7 @@ public sealed class GuardGroup
         post.DistanceSquaredTo(ObstacleField.Xz(units.Position[target])) <= rangeSquared;
 
     public void Move(UnitState units, float dt, float separationGap, ObstacleField obstacles,
-        ObstacleNavigation navigation, byte[] movementFlags)
+        ObstacleNavigation navigation, byte[] movementFlags, bool deferWreckCrush = false)
     {
         var turnSteps = units.TurnSteps(dt);
         for (int id = Start; id < End; id++)
@@ -79,6 +79,7 @@ public sealed class GuardGroup
             Vector2 from = ObstacleField.Xz(position);
             int target = units.Target[id];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
+            var movementField = obstacles?.ForTier(type.SizeTier);
             float rangedReach = type.Ranged ? units.RangedReach(id, type) : 0f;
             float engagementRadiusSquared = type.Ranged ? rangedReach * rangedReach : radiusSquared;
             bool engaging = IsEngaging(units, target, anchor, engagementRadiusSquared);
@@ -101,7 +102,7 @@ public sealed class GuardGroup
                     CombatSystem.MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap);
                 bool indirect = type.Ranged && !type.PrismBeam.Enabled &&
                     units.Catalog.Projectiles.Flight(type.ProjectileType).ObstacleFire == ObstacleFireMode.IndirectFire;
-                bool clear = indirect || obstacles?.BlocksSight(position, units.Position[target]) != true;
+                bool clear = indirect || movementField?.BlocksSight(position, units.Position[target]) != true;
                 float minimum = type.MinimumFireRange;
                 if (minimum > 0f && from.DistanceSquaredTo(destination) < minimum * minimum)
                 {
@@ -127,10 +128,11 @@ public sealed class GuardGroup
             Vector2 next = from + direction * Mathf.Min(speed * dt, distance - stop);
             float currentRadiusSquared = anchor.DistanceSquaredTo(from);
             if (anchor.DistanceSquaredTo(next) > Mathf.Max(radiusSquared, currentRadiusSquared)) continue;
-            if (obstacles != null) next = obstacles.ClipMove(from, next, type.Footprint);
+            if (movementField != null) next = movementField.ClipMove(from, next, type.Footprint);
             if (next == from) continue;
             if (movementFlags != null) movementFlags[id] = 1;
             if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, turnSteps[units.Type[id]]);
+            if (!deferWreckCrush) units.Wrecks?.CrushAlong(from, next, type);
             units.Position[id] = new Vector3(next.X, position.Y, next.Y);
             units.Grounding?.MarkMoved(id);
             units.Dirty[id] = true;

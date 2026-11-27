@@ -32,7 +32,7 @@ public sealed class ObstacleNavigation
         public Vector2? ClearanceExit;
     }
 
-    private readonly ObstacleField field;
+    private readonly ObstacleField[] fields;
     private readonly Graph[] graphs;
     private readonly Follower[] followers;
     private readonly ApproachMemo[] approachMemos;
@@ -60,13 +60,16 @@ public sealed class ObstacleNavigation
     public ObstacleNavigation(ObstacleField field, RuntimeUnitCatalog catalog, int soldiers,
         float sectorSize, int capacity, int budget)
     {
-        this.field = field;
+        fields = new ObstacleField[catalog.Count];
         this.sectorSize = sectorSize;
         this.capacity = capacity;
         this.budget = budget;
         graphs = new Graph[catalog.Count];
         for (int i = 0; i < graphs.Length; i++)
-            graphs[i] = new Graph(field, catalog[i].Footprint);
+        {
+            fields[i] = field.ForTier(catalog[i].SizeTier);
+            graphs[i] = new Graph(fields[i], catalog[i].Footprint);
+        }
         followers = new Follower[soldiers];
         approachMemos = new ApproachMemo[soldiers];
     }
@@ -86,6 +89,7 @@ public sealed class ObstacleNavigation
         {
             pending.Remove(request.Key);
             var graph = graphs[request.Key.Type];
+            var field = fields[request.Key.Type];
             Vector2[] points = graph.FindRoute(field, request.Start, request.Goal, request.Stop, out bool hasReachableCorner,
                 out bool endsAtAttackPoint, out int validAttackPoints);
             if (points == null && request.Key.Soldier >= 0 && request.Key.Detail == 2)
@@ -115,6 +119,7 @@ public sealed class ObstacleNavigation
     public Vector2 Steer(int id, byte type, Vector2 start, Vector2 goal, float stop,
         out bool detouring, out bool routeCorner)
     {
+        var field = fields[type];
         float radius = graphs[type].Radius;
         ref Follower follower = ref followers[id];
         routeCorner = false;
@@ -127,7 +132,7 @@ public sealed class ObstacleNavigation
             }
             follower = default;
         }
-        if (CanApproachSoldier(id, start, goal, radius, stop))
+        if (CanApproachSoldier(field, id, start, goal, radius, stop))
         {
             follower = default;
             detouring = false;
@@ -137,8 +142,8 @@ public sealed class ObstacleNavigation
         detouring = true;
         Vector2I goalSector = Sector(goal, sectorSize);
         if (follower.Route != null && (follower.Route.EndsAtAttackPoint
-            ? CanFinish(follower.Route, goal, radius, stop)
-            : follower.GoalSector == goalSector || CanFinish(follower.Route, goal, radius, stop)))
+            ? CanFinish(field, follower.Route, goal, radius, stop)
+            : follower.GoalSector == goalSector || CanFinish(field, follower.Route, goal, radius, stop)))
         {
             follower.GoalSector = goalSector;
             Vector2[] points = follower.Route.Points;
@@ -159,7 +164,7 @@ public sealed class ObstacleNavigation
             for (int next = last; next >= follower.Next; next--)
             {
                 if (field.BlocksCorridor(start, points[next], radius)) continue;
-                RememberWaypoint(ref follower, next, start, points[next], radius);
+                RememberWaypoint(field, ref follower, next, start, points[next], radius);
                 routeCorner = true;
                 return points[next];
             }
@@ -167,7 +172,7 @@ public sealed class ObstacleNavigation
             if (follower.Next > 0 && follower.Next < points.Length &&
                 !field.BlocksCorridor(start, points[follower.Next - 1], radius))
             {
-                RememberWaypoint(ref follower, follower.Next - 1, start, points[follower.Next - 1], radius);
+                RememberWaypoint(field, ref follower, follower.Next - 1, start, points[follower.Next - 1], radius);
                 routeCorner = true;
                 return points[follower.Next];
             }
@@ -182,7 +187,7 @@ public sealed class ObstacleNavigation
             if (routes.TryGetValue(key, out Route route))
             {
                 Vector2[] points = route.Points;
-                if (points != null && points.Length != 0 && CanFinish(route, goal, radius, stop))
+                if (points != null && points.Length != 0 && CanFinish(field, route, goal, radius, stop))
                 {
                     int next = 0;
                     while (next < points.Length &&
@@ -192,7 +197,7 @@ public sealed class ObstacleNavigation
                     {
                         CacheHits++;
                         follower = new Follower { Route = route, Next = next, GoalSector = goalSector };
-                        RememberWaypoint(ref follower, next, start, points[next], radius);
+                        RememberWaypoint(field, ref follower, next, start, points[next], radius);
                         routeCorner = true;
                         return points[next];
                     }
@@ -237,7 +242,7 @@ public sealed class ObstacleNavigation
         return route.Points != null;
     }
 
-    private bool CanFinish(Route route, Vector2 goal, float radius, float stop)
+    private bool CanFinish(ObstacleField field, Route route, Vector2 goal, float radius, float stop)
     {
         Vector2 last = route.Points[^1];
         if (!route.EndsAtAttackPoint) return CanApproach(field, last, goal, radius, stop);
@@ -257,7 +262,7 @@ public sealed class ObstacleNavigation
         return (offset - segment * progress).LengthSquared() <= CorridorMargin * CorridorMargin;
     }
 
-    private void RememberWaypoint(ref Follower follower, int index, Vector2 start, Vector2 waypoint, float radius)
+    private void RememberWaypoint(ObstacleField field, ref Follower follower, int index, Vector2 start, Vector2 waypoint, float radius)
     {
         follower.Next = index;
         follower.WaypointVerified = ReuseWaypoints;
@@ -266,7 +271,7 @@ public sealed class ObstacleNavigation
         follower.WaypointHasMargin = !field.BlocksCorridor(start, waypoint, radius + ProofInset);
     }
 
-    private bool CanApproachSoldier(int id, Vector2 start, Vector2 goal, float radius, float stop)
+    private bool CanApproachSoldier(ObstacleField field, int id, Vector2 start, Vector2 goal, float radius, float stop)
     {
         if (!ReuseCorridors) return CanApproach(field, start, goal, radius, stop);
         ref ApproachMemo memo = ref approachMemos[id];
