@@ -149,6 +149,7 @@ internal sealed class FortressWaves
     {
         if (Defeat || Victory) return false;
         units.StructureDomes.Step(delta);
+        bool ventMoved = units.Geothermal?.Step(units, grid, buildings.MovementField, buildings.MapHalfWidth, delta) == true;
         SampleTicks++;
         tick++;
         structureVisualChanged = false;
@@ -185,7 +186,7 @@ internal sealed class FortressWaves
                 Countdown = Mathf.Max(0, Countdown - delta);
                 if (Countdown == 0) BeginNext();
             }
-            return shieldChanged || (shields?.Revision ?? 0) != shieldRevision || idleMoved || attackVisualsChanged || structureVisualChanged || units.Alive != before;
+            return ventMoved || shieldChanged || (shields?.Revision ?? 0) != shieldRevision || idleMoved || attackVisualsChanged || structureVisualChanged || units.Alive != before;
         }
 
         int previousCount = units.Count, previousAlive = units.Alive;
@@ -199,7 +200,7 @@ internal sealed class FortressWaves
         for (int i = 0; i < enemyCount; i++)
         {
             int id = enemies[i];
-            if (units.Health[id] > 0) OrderEnemy(id, field);
+            if (units.Health[id] > 0 && !units.IsAirborne(id)) OrderEnemy(id, field);
         }
         bool moved = MoveAndSeparate(delta);
         if (moved) RebuildGrid();
@@ -207,7 +208,7 @@ internal sealed class FortressWaves
         for (int i = 0; i < enemyCount; i++)
         {
             int id = enemies[i];
-            if (units.Health[id] <= 0 || units.Target[id] < 0 ||
+            if (units.Health[id] <= 0 || units.IsAirborne(id) || units.Target[id] < 0 ||
                 (units.Catalog[units.Type[id]].TargetsStructures || units.Catalog[units.Type[id]].PrismBeam.Enabled)) continue;
             Vector2 position = ObstacleField.Xz(units.Position[id]);
             float radius = Detection(id, units.Catalog[units.Type[id]]);
@@ -239,7 +240,7 @@ internal sealed class FortressWaves
         }
 
         // Shared combat can turn a soldier even when no one moves or dies.
-        return activeShieldChanged || (shields?.Revision ?? 0) != shieldRevision || moved || weaponChanged || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
+        return ventMoved || activeShieldChanged || (shields?.Revision ?? 0) != shieldRevision || moved || weaponChanged || previousCount != units.Count || previousAlive != units.Alive || units.FactionAlive[Factions.Red] > 0;
     }
 
     private void TryRelease(float delta)
@@ -346,7 +347,7 @@ internal sealed class FortressWaves
     {
         for (int id = 0; id < units.Count; id++)
         {
-            if (units.Health[id] <= 0 || units.Faction[id] != Factions.Blue) continue;
+            if (units.Health[id] <= 0 || units.IsAirborne(id) || units.Faction[id] != Factions.Blue) continue;
             ref readonly var type = ref units.Catalog[units.Type[id]];
             bool onlyStructures = structuresOnly && !type.PrismBeam.Enabled;
             if (onlyStructures && !type.TargetsStructures) continue;

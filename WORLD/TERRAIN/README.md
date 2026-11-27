@@ -21,3 +21,7 @@ Command levels compile only the chunks around authored hills. The shared surface
 ## Tiered elevation
 
 The Tiered Elevation tool writes absolute plateau heights with blended edges to the same samples as Organic Elevation. The default levels are 0, 3, 6, 9, 12, 15 and 18 world units. Edit `CommandTerrain.ElevationTierHeights` to customize the brush targets. Saved terrain and gameplay use the sampled surface.
+
+## Geothermal vents
+
+Vents are neutral terrain objects. Their default cycle is 8 seconds dormant, 2 seconds warning, and 1 second erupting. The eruption launches nearby ground units below Tier 4 once. Launched units temporarily suspend their ground movement and attacks while retaining their orders. Landing uses the shared terrain and movement blockers. Damage defaults to zero. Vents use the soldier spatial grid and track only active launches, with up to 32 vents per map.

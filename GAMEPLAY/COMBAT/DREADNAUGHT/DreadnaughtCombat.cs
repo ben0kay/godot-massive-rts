@@ -250,7 +250,7 @@ internal partial class DreadnaughtCombat : Node3D
         while (checkedCount++ < CandidateLimit && candidates.MoveNext())
         {
             int victim = candidates.Current;
-            if (units.Health[victim] <= 0 || units.Type[victim] == RuntimeUnitCatalog.Dreadnaught) continue;
+            if (units.Health[victim] <= 0 || units.IsAirborne(victim) || units.Type[victim] == RuntimeUnitCatalog.Dreadnaught) continue;
             Vector3 position = units.Position[victim];
             Vector2 offset = ObstacleField.Xz(position - center);
             Vector2 local = new(offset.Dot(right), -offset.Dot(forward));

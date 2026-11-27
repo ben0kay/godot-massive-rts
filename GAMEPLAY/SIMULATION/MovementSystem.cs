@@ -24,7 +24,7 @@ public static class MovementSystem
         {
             int i = activeIds == null ? slot : activeIds[slot];
             if (voluntaryMovement != null) voluntaryMovement[i] = 0;
-            if (units.Health[i] <= 0) continue;
+            if (units.Health[i] <= 0 || units.IsAirborne(i)) continue;
             if (trample?.OverridesMovement(i) == true)
             {
                 melee?.Reset(i);

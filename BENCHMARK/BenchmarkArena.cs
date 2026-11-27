@@ -686,6 +686,7 @@ public partial class BenchmarkArena : Node3D
         defenseSystem?.RegisterStructureDomes(units);
         units.Forest = autoBattlerForest;
         units.MarshCells = autoBattlerPaint?.MarshCells;
+        units.Geothermal = GeothermalHazards.Create(autoBattlerPlaytestMap, units);
         units.RoadCells = autoBattlerPaint?.RoadCells;
         units.RoadSpeedMultiplier = autoBattlerPaint?.RoadSpeedMultiplier ?? 1f;
         units.Barricades = autoBattlerPaint?.BuildBarricades();
@@ -996,6 +997,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
+            units.Geothermal?.Step(units, grid, obstacles, BattleBoundary, dt, gridCurrent: true);
             units.Rally?.Step(units, grid, dt, shockwaves);
             units.Shields?.Step(units, grid, dt, panel.ShieldInterval, 0f, panel.ShieldsEnabled);
             // Keep expensive searches together so pursuit still builds at most one index per acquisition step.

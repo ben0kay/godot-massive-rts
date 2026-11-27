@@ -10,7 +10,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road, Vent }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -18,6 +18,8 @@ public partial class LevelEditor
     private MeshInstance3D cursor;
     private WorldPaint paint;
     private int brushRadius = 2;
+    private GeothermalVent ventSelection;
+    private float ventPlacementRadius = 7f;
     private Vector2I? previousCell;
     private (Cells Rocks, Cells Water, Cells Forest, Cells Marsh, Cells Road, Rubble Rubble, Cells Blue)? beforePaint;
     private HashSet<Vector2I> rocks, water, forest, marsh, roads, deployment;
@@ -52,7 +54,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Road => "Paint road", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
-                Tool.Wall => "Industrial Walls", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
+                Tool.Wall => "Industrial Walls", Tool.Vent => "Geothermal Vent", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -91,6 +93,10 @@ public partial class LevelEditor
     private void RefreshMap(bool terrainChanged = false)
     {
         if (terrainChanged) map.GetNodeOrNull<CommandTerrain>("Terrain")?.Rebuild(force: true);
+        var terrain = map.GetNodeOrNull<CommandTerrain>("Terrain");
+        if (terrain != null)
+            foreach (Node child in terrain.GetChildren())
+                if (child is GeothermalVent vent) vent.Seat(terrain.Field);
         UpdateEditorGround();
         map.ReadAuthoredWalls(updateVisuals: true);
         paint.Compile();
@@ -157,6 +163,9 @@ public partial class LevelEditor
     private void UpdateTool()
     {
         rectangleStart = null;
+        if (IsInstanceValid(ventSelection)) ventSelection.ShowRadius(false);
+        ventSelection = tool is Tool.Select or Tool.Move ? selected as GeothermalVent : null;
+        ventSelection?.ShowRadius(true);
         foreach (var section in new[] { mapToolsContext, unitContext, defenseContext })
             foreach (var child in section.GetChildren())
             {
@@ -169,8 +178,14 @@ public partial class LevelEditor
             Tool.Defense => defenseContext,
             _ => mapToolsContext
         };
+        if (ventSelection != null) VentSettings(ventSelection);
         switch (tool)
         {
+            case Tool.Vent:
+                Number(context, "Eruption radius", ventPlacementRadius, 1, 20, 0.5)
+                    .ValueChanged += value => ventPlacementRadius = (float)value;
+                Heading(context, "Click to place a geothermal vent. Select it to adjust the eruption cycle.", 15);
+                break;
             case Tool.Aircraft:
                 BuildAircraftControls();
                 break;
@@ -313,6 +328,25 @@ public partial class LevelEditor
         }
     }
 
+    private void VentSettings(GeothermalVent vent)
+    {
+        Heading(context, "Geothermal Vent", 17);
+        Number(context, "Eruption radius", vent.EffectiveRadius, 1, 20, 0.5).ValueChanged += value =>
+            SetValue(vent.Radius, (float)value, radius => { vent.Radius = radius; vent.ShowRadius(vent == ventSelection); });
+        Number(context, "Dormant seconds", vent.Rest, 0.25, 120, 0.25).ValueChanged += value =>
+            SetValue(vent.DormantSeconds, (float)value, seconds => vent.DormantSeconds = seconds);
+        Number(context, "Warning seconds", vent.Warning, 0, 30, 0.25).ValueChanged += value =>
+            SetValue(vent.WarningSeconds, (float)value, seconds => vent.WarningSeconds = seconds);
+        Number(context, "Eruption seconds", vent.Burst, 0.1, 15, 0.1).ValueChanged += value =>
+            SetValue(vent.EruptionSeconds, (float)value, seconds => vent.EruptionSeconds = seconds);
+        Number(context, "Initial cycle offset", vent.InitialOffset, -120, 120, 0.25).ValueChanged += value =>
+            SetValue(vent.InitialOffset, (float)value, offset => vent.InitialOffset = offset);
+        Number(context, "Launch strength", vent.Power, 0.1, 3, 0.05).ValueChanged += value =>
+            SetValue(vent.Strength, (float)value, strength => vent.Strength = strength);
+        Number(context, "Eruption damage", vent.Damage, 0, 1000).ValueChanged += value =>
+            SetValue(vent.EruptionDamage, (float)value, damage => vent.EruptionDamage = damage);
+    }
+
     private BoxMesh squareCursor;
     private CylinderMesh elevationCursor;
 
@@ -333,7 +367,7 @@ public partial class LevelEditor
         }
         if (cursor != null)
         {
-            cursor.Mesh = next == Tool.Elevation || (next == Tool.TieredElevation && !tierRectangle) ? elevationCursor : squareCursor;
+            cursor.Mesh = (next is Tool.Elevation or Tool.Vent) || (next == Tool.TieredElevation && !tierRectangle) ? elevationCursor : squareCursor;
             cursor.Hide();
         }
         redDisruptorLine.Cancel();
@@ -549,6 +583,7 @@ public partial class LevelEditor
         cursor.Scale = tool switch
         {
             Tool.Wall => new(Grid, 1, Grid),
+            Tool.Vent => new(ventPlacementRadius * 2f, 1f, ventPlacementRadius * 2f),
             Tool.Citadel => new(10, 1, 10),
             Tool.Defense => TowerCursor(),
             Tool.Carbon or Tool.Fabricator => new(6, 1, 6),
@@ -791,6 +826,7 @@ public partial class LevelEditor
                 CommandUnitPlacement group when group.PaintedOffsets.Length > 0 => distance <= 4 ||
                     group.Positions(0).Any(position => new Vector2(position.X - point.X, position.Z - point.Z).LengthSquared() <= 4),
                 TerrainHill hill => distance <= Mathf.Min(8, hill.Radius),
+                GeothermalVent => distance <= 1.6f,
                 _ => distance <= (node.Name == "Citadel" ? 7 : 4)
             };
             if (hit && distance < best) { best = distance; nearest = node; }
@@ -846,6 +882,15 @@ public partial class LevelEditor
             case Tool.Defense:
                 node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler ? !CampaignCatalog.IsDefense(mode.CampaignId) : redTower };
                 parent = "StartingDefenses";
+                break;
+            case Tool.Vent:
+                if (Objects().OfType<GeothermalVent>().Count() >= GeothermalVent.MaxPerMap)
+                {
+                    SetStatus($"A map supports up to {GeothermalVent.MaxPerMap} vents.");
+                    return;
+                }
+                node = new GeothermalVent { Name = "GeothermalVent", Radius = ventPlacementRadius };
+                parent = "Terrain";
                 break;
             case Tool.Fabricator:
                 if (!map.HasNode("StartingFabricators"))

@@ -69,3 +69,7 @@ Select **Defenses → Light Barricade** or use the tool picker. Choose a faction
 ## Road
 
 Select **Terrain → Road**. Drag to paint or enable **Rectangle fill**. Right-drag or use **Erase** to remove road paint. Road coverage saves with the level and supports undo and redo. It follows the existing surface and skips rock and water.
+
+## Geothermal Vent
+
+Choose **Terrain → Geothermal Vent**. The placement disc shows the eruption radius. Click to place a vent, or use **Select** to inspect its radius and tune the cycle, strength, offset and damage. Move and erase use the standard object tools. Vents save with the map and support undo and redo.

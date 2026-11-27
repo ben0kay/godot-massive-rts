@@ -215,7 +215,7 @@ internal sealed class StructureCombat
         StructureHealth target = targets[id];
         bool ram = units.Type[id] == RuntimeUnitCatalog.SiegeRam;
         if (ram) return AttackWithRam(id, target, dt, sight, effects);
-        if (target?.Destroyed != false || units.Health[id] <= 0f || units.Cooldown[id] > 0f) return false;
+        if (target?.Destroyed != false || units.Health[id] <= 0f || units.IsAirborne(id) || units.Cooldown[id] > 0f) return false;
         ref readonly var type = ref units.Catalog[units.Type[id]];
         if (!CanHit(id, type, target, sight)) return false;
         Vector2 from = ObstacleField.Xz(units.Position[id]);
@@ -236,7 +236,7 @@ internal sealed class StructureCombat
     private bool AttackWithRam(int id, StructureHealth target, float dt, ObstacleField sight, ShockwaveRenderer effects)
     {
         ref readonly var type = ref units.Catalog[units.Type[id]];
-        if (target?.Destroyed != false || units.Health[id] <= 0f || !CanHit(id, type, target, sight))
+        if (target?.Destroyed != false || units.Health[id] <= 0f || units.IsAirborne(id) || !CanHit(id, type, target, sight))
         {
             ramStrikes?.Remove(id);
             return false;

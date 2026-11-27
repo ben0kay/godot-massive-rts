@@ -179,6 +179,8 @@ internal static class LevelEditorSave
     // =========================================================
     internal static void ValidateContent(LevelEditorMode mode, CommandSandbox map)
     {
+        if (map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<GeothermalVent>().Count() > GeothermalVent.MaxPerMap)
+            throw new InvalidOperationException($"A map supports up to {GeothermalVent.MaxPerMap} vents.");
         var cliffs = map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<TerrainCliff>().ToArray()
             ?? Array.Empty<TerrainCliff>();
         if (cliffs.Length > TerrainCliff.MaxCliffs || cliffs.Any(cliff => !cliff.TryCompile(map.MapSize * 0.5f, out _, out _)))

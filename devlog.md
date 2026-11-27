@@ -784,3 +784,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — BARRICADE1: Added faction-painted Light Barricades with fixed-step traversal damage, heavy crush, height-aware projectile interception and static batching. Navigation and targeting sight use their existing fields. Owner tuning and validation pending.
 
 - 2026-11-27 — ROAD1: Added saved road paint with brush and rectangle editing, terrain-following industrial pavement, and a configurable 20% ground movement bonus. Pathfinding remains unchanged. Owner Godot validation pending.
+
+- 2026-11-27 — GEO1: Added neutral, placeable geothermal vents with configurable cycles, pooled steam visuals and tier-scaled ground-unit launches. Flight uses shared terrain and obstacle checks. Owner Godot validation pending.

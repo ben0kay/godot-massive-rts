@@ -28,7 +28,7 @@ public sealed class TerrainGrounding
         {
             int id = moved[index];
             ref var position = ref units.Position[id];
-            position.Y = Field.At(position.X, position.Z);
+            if (!units.IsAirborne(id)) position.Y = Field.At(position.X, position.Z);
             pending[id] = false;
         }
         int samples = count;

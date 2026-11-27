@@ -41,7 +41,7 @@ public static class CombatSystem
         for (int visited = 0, slot = first; visited < count; visited++, slot = slot + 1 == count ? 0 : slot + 1)
         {
             int i = activeIds == null ? slot : activeIds[slot];
-            if (units.Health[i] <= 0) continue;
+            if (units.Health[i] <= 0 || units.IsAirborne(i)) continue;
             if (!units.Catalog[units.Type[i]].TargetsUnits) { units.Target[i] = -1; continue; }
             if (units.OpeningOrders?.Active(i) == true)
             {
@@ -182,7 +182,7 @@ public static class CombatSystem
         int beamBudget = PrismLanceCombat.ShotsPerTick;
         for (int i = 0; i < units.Count; i++)
         {
-            if (units.Health[i] <= 0) continue;
+            if (units.Health[i] <= 0 || units.IsAirborne(i)) continue;
             float beforeCooldown = units.Cooldown[i];
             units.Cooldown[i] = Mathf.Max(0, beforeCooldown - dt);
             ref readonly UnitStats type = ref units.Catalog[units.Type[i]];

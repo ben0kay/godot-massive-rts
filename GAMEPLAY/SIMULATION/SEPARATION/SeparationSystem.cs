@@ -128,7 +128,7 @@ public sealed class SeparationSystem
         int alive = 0;
         for (int id = 0; id < count; id++)
         {
-            if (health[id] <= 0) continue;
+            if (health[id] <= 0 || units.IsAirborne(id)) continue;
             Vector3 p = position[id];
             if (p.X < minX) minX = p.X;
             if (p.X > maxX) maxX = p.X;
@@ -163,7 +163,7 @@ public sealed class SeparationSystem
 
         for (int id = 0; id < count; id++)
         {
-            if (health[id] <= 0) continue;
+            if (health[id] <= 0 || units.IsAirborne(id)) continue;
             Vector3 p = position[id];
             int cx = (int)(Math.Floor(p.X * inverse) - originX) + 1;
             int cz = (int)(Math.Floor(p.Z * inverse) - originZ) + 1;
@@ -180,7 +180,7 @@ public sealed class SeparationSystem
 
         for (int id = count - 1; id >= 0; id--)
         {
-            if (health[id] <= 0) continue;
+            if (health[id] <= 0 || units.IsAirborne(id)) continue;
             int slot = --cellStart[cellOfId[id]];
             Vector3 p = position[id];
             slotId[slot] = id;

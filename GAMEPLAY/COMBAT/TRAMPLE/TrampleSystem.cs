@@ -108,7 +108,7 @@ public sealed class TrampleSystem
             int id = ids[slot];
             ref Charge charge = ref states[slot];
             charge.BypassThisTick = false;
-            if (units.Health[id] <= 0f) continue;
+            if (units.Health[id] <= 0f || units.IsAirborne(id)) continue;
             charge.Recovery = Mathf.Max(0f, charge.Recovery - dt);
             if (units.OpeningOrders?.Active(id) == true && units.OpeningOrders.Holding(id))
             {
@@ -160,7 +160,7 @@ public sealed class TrampleSystem
         for (int slot = 0; slot < ids.Length; slot++)
         {
             int id = ids[slot];
-            if (units.Health[id] <= 0f || !states[slot].Active) continue;
+            if (units.Health[id] <= 0f || units.IsAirborne(id) || !states[slot].Active) continue;
             MoveCharge(units, grid, id, slot, dt, padding, turnSteps[units.Type[id]], obstacles, feedback, stopOnSurvivors);
         }
         bool appliedShove = false;
@@ -269,7 +269,7 @@ public sealed class TrampleSystem
         for (int i = 0; i < count; i++)
         {
             int other = hits[slot * HitSlots + i];
-            if (units.Health[other] <= 0f) continue;
+            if (units.Health[other] <= 0f || units.IsAirborne(other)) continue;
             float combined = radius + units.Catalog[units.Type[other]].Footprint;
             if (position.DistanceSquaredTo(Xz(units.Position[other])) < combined * combined) return false;
         }
@@ -288,7 +288,7 @@ public sealed class TrampleSystem
         while (candidates.MoveNext())
         {
             int other = candidates.Current;
-            if (units.Health[other] <= 0f || (!stopOnSurvivors && AlreadyHit(slot, other, states[slot].Hits))) continue;
+            if (units.Health[other] <= 0f || units.IsAirborne(other) || (!stopOnSurvivors && AlreadyHit(slot, other, states[slot].Hits))) continue;
             float combined = radius + units.Catalog[units.Type[other]].Footprint;
             Vector2 relative = Xz(units.Position[other]) - from;
             float outside = relative.LengthSquared() - combined * combined;
@@ -315,7 +315,7 @@ public sealed class TrampleSystem
         {
             ref Charge charge = ref states[slot];
             int id = ids[slot];
-            if (charge.Active || charge.Recovery > 0f || units.Health[id] <= 0f) continue;
+            if (charge.Active || charge.Recovery > 0f || units.Health[id] <= 0f || units.IsAirborne(id)) continue;
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             float progress = (Xz(units.Position[id]) - charge.Start).Dot(charge.Approach);
             if (units.MoveSpeed[id] >= type.Speed * 0.6f && progress >= units.MoveSpeed[id] * dt * units.SlopeSpeedFactor(id, type, charge.Approach) * 0.7f)

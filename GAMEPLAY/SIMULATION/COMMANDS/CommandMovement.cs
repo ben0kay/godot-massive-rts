@@ -139,6 +139,7 @@ internal sealed class CommandMovement
         for (int i = activeCount - 1; i >= 0; i--)
         {
             int id = active[i];
+            if (units.IsAirborne(id)) continue;
             Vector3 previous = units.Position[id];
             ref readonly var stats = ref units.Catalog[units.Type[id]];
             Vector2 start = ObstacleField.Xz(previous);

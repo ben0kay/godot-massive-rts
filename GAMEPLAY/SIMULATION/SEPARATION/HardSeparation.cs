@@ -49,13 +49,13 @@ internal sealed class HardSeparation
         if (Ready)
         {
             for (int id = 0; id < units.Count; id++)
-                if (units.Health[id] > 0) Add(id, ObstacleField.Xz(units.Position[id]));
+                if (units.Health[id] > 0 && !units.IsAirborne(id)) Add(id, ObstacleField.Xz(units.Position[id]));
             return true;
         }
 
         for (int id = 0; id < units.Count; id++)
         {
-            if (units.Health[id] <= 0) continue;
+            if (units.Health[id] <= 0 || units.IsAirborne(id)) continue;
             Vector2 origin = ObstacleField.Xz(units.Position[id]);
             float radius = units.Catalog[units.Type[id]].Footprint;
             var movementField = obstacles?.ForTier(units.Catalog[units.Type[id]].SizeTier);
@@ -67,7 +67,7 @@ internal sealed class HardSeparation
             }
         }
         for (int id = 0; id < units.Count; id++)
-            if (units.Health[id] > 0) Apply(units, id, accepted[id]);
+            if (units.Health[id] > 0 && !units.IsAirborne(id)) Apply(units, id, accepted[id]);
         Ready = repacked = true;
         return true;
     }
@@ -78,7 +78,7 @@ internal sealed class HardSeparation
         int id = firstMover;
         for (int visited = 0; visited < units.Count; visited++, id = (id + 1) % units.Count)
         {
-            if (units.Health[id] <= 0) continue;
+            if (units.Health[id] <= 0 || units.IsAirborne(id)) continue;
             Vector2 from = accepted[id], to = ObstacleField.Xz(units.Position[id]);
             Vector2 move = to - from;
             if (move.LengthSquared() < 0.00000001f)

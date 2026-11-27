@@ -35,7 +35,7 @@ public sealed class GuardGroup
         int offset = (tick % interval - Start % interval + interval) % interval;
         for (int id = Start + offset; id < End; id += interval)
         {
-            if (units.Health[id] <= 0f) continue;
+            if (units.Health[id] <= 0f || units.IsAirborne(id)) continue;
             Vector3 post = posts[id - Start];
             ref readonly UnitStats type = ref units.Catalog[units.Type[id]];
             if (!type.TargetsUnits) { units.Target[id] = -1; continue; }
@@ -72,7 +72,7 @@ public sealed class GuardGroup
         for (int id = Start; id < End; id++)
         {
             if (movementFlags != null) movementFlags[id] = 0;
-            if (units.Health[id] <= 0f) continue;
+            if (units.Health[id] <= 0f || units.IsAirborne(id)) continue;
             Vector3 post = posts[id - Start];
             Vector2 anchor = ObstacleField.Xz(post);
             Vector3 position = units.Position[id];

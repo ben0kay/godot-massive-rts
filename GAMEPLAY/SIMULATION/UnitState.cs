@@ -69,6 +69,8 @@ public sealed class UnitState
 
     internal HashSet<Vector2I> MarshCells { get; set; }
 
+    internal GeothermalHazards Geothermal { get; set; }
+    internal bool IsAirborne(int id) => Geothermal?.IsAirborne(id) == true;
     internal BarricadeField Barricades { get; set; }
     internal HashSet<Vector2I> HeavyRubbleCells { get; set; }
     internal float HeavyRubbleSpeed { get; set; } = 0.75f;
