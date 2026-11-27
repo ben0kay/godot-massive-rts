@@ -149,9 +149,10 @@ public partial class LevelEditor
             int wall = towers;
             int disruptor = towers + 1;
             int citadel = towers + 2;
-            return placementPalette.BuildCards(picker, towers + 3, (towers + 4) / 2,
+            int barricade = towers + 3;
+            return placementPalette.BuildCards(picker, towers + 4, (towers + 5) / 2,
                 i => i < towers ? defenseDefinitions[i].DisplayName :
-                    i == wall ? "Faction Wall" : i == disruptor ? DisruptorGrid.Name : "Citadel",
+                    i == wall ? "Faction Wall" : i == barricade ? "Light Barricade" : i == disruptor ? DisruptorGrid.Name : "Citadel",
                 i => i < towers ? UnitPlacementBar.Stats(defenseDefinitions[i].Health,
                     (defenseDefinitions[i].AttacksSoldiers || defenseDefinitions[i].AirMissileMagazine > 0) ? defenseDefinitions[i].Damage : 0f) : null,
                 (icon, i) =>
@@ -168,7 +169,8 @@ public partial class LevelEditor
                 },
                 i =>
                 {
-                    if (i == wall) PickPaletteTool(Tool.FactionWall);
+                    if (i == barricade) PickPaletteTool(Tool.Barricade);
+                    else if (i == wall) PickPaletteTool(Tool.FactionWall);
                     else if (i == disruptor) PickPaletteTool(Tool.Disruptor);
                     else
                     {

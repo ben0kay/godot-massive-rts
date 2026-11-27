@@ -215,6 +215,13 @@ public static class MovementSystem
                 next.DistanceSquaredTo(destination) > (stop + 0.35f) * (stop + 0.35f));
             if (travel > 0.00001f && (type.Shape != UnitShape.Circle || turnCircle) && !type.Outline.IsDreadnaught)
                 SoldierFacing.Turn(units, i, new Vector2(direction.X, direction.Z), turnSteps[units.Type[i]]);
+            if (units.Barricades is { } barricades)
+            {
+                Vector2 adjusted = barricades.Traverse(units.Faction[i], type.SizeTier, type.Footprint,
+                    ObstacleField.Xz(units.Position[i]), ObstacleField.Xz(next), dt);
+                next.X = adjusted.X;
+                next.Z = adjusted.Y;
+            }
             if (!deferWreckCrush) units.Wrecks?.CrushAlong(ObstacleField.Xz(units.Position[i]), ObstacleField.Xz(next), type);
             units.Position[i] = next;
             units.Grounding?.MarkMoved(i);

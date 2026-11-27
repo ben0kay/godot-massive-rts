@@ -90,13 +90,26 @@ public partial class LevelEditor
     private void CommitWallStroke(bool erase)
     {
         var data = paint.Data;
+        bool barricade = tool == Tool.Barricade;
         bool faction = tool == Tool.FactionWall;
         bool redWall = factionWallRed;
-        var before = !faction ? data.IndustrialWallCells : redWall ? data.RedWallCells : data.BlueWallCells;
+        var before = barricade ? (redWall ? data.RedBarricadeCells : data.BlueBarricadeCells) : !faction ? data.IndustrialWallCells : redWall ? data.RedWallCells : data.BlueWallCells;
         var occupied = new HashSet<Vector2I>();
         if (faction) occupied.UnionWith(data.IndustrialWallCells);
         if (!faction || !redWall) occupied.UnionWith(data.RedWallCells);
         if (!faction || redWall) occupied.UnionWith(data.BlueWallCells);
+        if (barricade)
+        {
+            occupied.UnionWith(data.IndustrialWallCells);
+            occupied.UnionWith(data.RedWallCells);
+            occupied.UnionWith(data.BlueWallCells);
+            occupied.UnionWith(redWall ? data.BlueBarricadeCells : data.RedBarricadeCells);
+        }
+        else
+        {
+            occupied.UnionWith(data.RedBarricadeCells);
+            occupied.UnionWith(data.BlueBarricadeCells);
+        }
         bool CanPaint(Vector2I cell) => paint.Contains(cell) && !occupied.Contains(cell);
         var draft = new HashSet<Vector2I>(before);
         bool changed = false;
@@ -125,6 +138,22 @@ public partial class LevelEditor
 
         CancelWallStroke();
         if (!changed) return;
+        if (barricade)
+        {
+            int otherCount = (redWall ? data.BlueBarricadeCells : data.RedBarricadeCells).Count;
+            if (draft.Count + otherCount > WorldPaint.MaxBarricades)
+            {
+                SetStatus($"The map supports up to {WorldPaint.MaxBarricades} barricade segments.");
+                return;
+            }
+            SetWallValue(before, Sorted(draft), cells =>
+            {
+                if (redWall) data.RedBarricadeCells = cells;
+                else data.BlueBarricadeCells = cells;
+                paint.BuildBarricades();
+            });
+            return;
+        }
         if (draft.Count > WorldPaint.MaxPaintedCells ||
             ObstacleCellCompiler.Merge(draft, Grid, WorldPaint.MaxPaintedRectangles) == null)
         {

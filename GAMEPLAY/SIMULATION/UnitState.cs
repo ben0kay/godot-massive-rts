@@ -69,6 +69,7 @@ public sealed class UnitState
 
     internal HashSet<Vector2I> MarshCells { get; set; }
 
+    internal BarricadeField Barricades { get; set; }
     internal HashSet<Vector2I> HeavyRubbleCells { get; set; }
     internal float HeavyRubbleSpeed { get; set; } = 0.75f;
 

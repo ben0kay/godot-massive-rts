@@ -193,6 +193,7 @@ public partial class CommandSandbox : Node3D
             (System.Array.Empty<ObstacleRectangle>(), System.Array.Empty<ObstacleRectangle>());
         units.Forest = paint?.Forest;
         units.MarshCells = paint?.MarshCells;
+        units.Barricades = paint?.BuildBarricades();
         units.HeavyRubbleCells = paint?.HeavyRubbleCells;
         units.HeavyRubbleSpeed = paint?.HeavyRubbleSpeed ?? 0.75f;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),

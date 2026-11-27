@@ -51,3 +51,7 @@ Non-explosive swept unit contacts that actually reduce health emit a small metal
 ### Cosmetic shell casings
 
 `UnitDefinition` and `BuildingDefinition` expose `EjectShellCasings` and `ShellCasingScale` (default off, size 0.4×). Only Broadside Artillery opts in initially at 1×. Successful ordinary ground projectile shots and Dreadnaught minigun shots have reusable source-side ejection hooks; the latter uses its own turret mount. Ground projectile towers use receiver-side anchors and alternate sides with the fired barrel. Aircraft and guided AA are not connected to casing ejection. `ProjectileRenderer` owns a lazy shared `ShellCasingEffects` pool: 256 brass cases, cosmetic ballistic tumble, terrain bounce and settle, 4.5-second lifetime with final 1-second fade. No rigid bodies, gameplay collisions, additional targeting, or simulation RNG. Terrain is sampled only while airborne. Cases can visually cross structures; no permanent clutter.
+
+## Light Barricade contact
+
+The shared projectile sweep tests hostile barricades at their physical height before resolving the next impact. A projectile that strikes a segment is consumed and damages its health pool. Friendly shots and arcs that clear the top pass through. Target acquisition can still see targets on the other side.

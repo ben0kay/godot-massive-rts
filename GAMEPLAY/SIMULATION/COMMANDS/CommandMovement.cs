@@ -168,6 +168,8 @@ internal sealed class CommandMovement
             if (units.Grounding != null) speed *= units.SlopeSpeedFactor(id, stats, (waypoint - start).Normalized());
             Vector2 next = start.MoveToward(waypoint, speed * delta);
             if (movementField != null) next = movementField.ClipMove(start, next, stats.Footprint);
+            if (units.Barricades is { } barricades)
+                next = barricades.Traverse(units.Faction[id], stats.SizeTier, stats.Footprint, start, next, delta);
             if (next == start) continue;
             units.Wrecks?.CrushAlong(start, next, stats);
             units.Position[id] = new Vector3(next.X, previous.Y, next.Y);

@@ -18,6 +18,8 @@ public partial class WorldPaint : Node3D
     private CommandTerrain terrain;
     private MeshInstance3D rocksView, waterView, bridgeView, marshView;
     internal HashSet<Vector2I> MarshCells { get; private set; }
+    internal const int MaxBarricades = 2048;
+    private MultiMeshInstance3D barricadeView;
     private Node3D forestView;
     internal ForestCover Forest { get; private set; }
     internal ObstacleRectangle[] MovementWater { get; private set; } = Array.Empty<ObstacleRectangle>();
@@ -88,6 +90,7 @@ public partial class WorldPaint : Node3D
         RebuildForest();
         RebuildMarsh();
         RebuildRubble();
+        BuildBarricades();
         UpdateConfigurationWarnings();
     }
 
@@ -176,6 +179,7 @@ public partial class WorldPaint : Node3D
             RebuildForest();
             RebuildMarsh();
             RebuildRubble();
+            BuildBarricades();
             visualDirty = false;
             displayedHalfWidth = MapHalfWidth;
         }
@@ -198,6 +202,25 @@ public partial class WorldPaint : Node3D
         AddChild(view, false, InternalMode.Back);
         view.GlobalTransform = Transform3D.Identity;
         return view;
+    }
+
+    internal BarricadeField BuildBarricades()
+    {
+        int count = data == null ? 0 : data.BlueBarricadeCells.Count + data.RedBarricadeCells.Count;
+        if (count == 0 || count > MaxBarricades)
+        {
+            if (barricadeView != null) barricadeView.Multimesh = null;
+            return null;
+        }
+        if (barricadeView == null)
+        {
+            barricadeView = new MultiMeshInstance3D { Name = "LightBarricades", TopLevel = true };
+            AddChild(barricadeView, false, InternalMode.Back);
+            barricadeView.GlobalTransform = Transform3D.Identity;
+        }
+        var field = new BarricadeField(this, data);
+        barricadeView.Multimesh = field.Batch;
+        return field;
     }
 
     private void RebuildForest()

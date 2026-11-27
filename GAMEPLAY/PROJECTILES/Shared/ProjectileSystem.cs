@@ -179,6 +179,9 @@ public sealed class ProjectileSystem
                 continue;
             }
 
+            var barricades = units.Barricades;
+            float barricadeHit = float.PositiveInfinity;
+            Vector2I? barricade = barricades?.FirstProjectileHit(sourceFaction[i], Position[i], segment, out barricadeHit);
             var dome = units.StructureDomes.FirstHit(sourceFaction[i], Position[i], segment, out float domeHit);
             if (structureTargets?[i] is StructureHealth structure)
             {
@@ -189,6 +192,12 @@ public sealed class ProjectileSystem
                 }
                 float wall = flight.BlocksOnObstacles
                     ? obstacles?.FirstSightHitExcept(Position[i], segment, structure.Area) ?? 1f : 1f;
+                if (barricade is { } wallCell && barricadeHit <= wall && barricadeHit < domeHit)
+                {
+                    barricades.Damage(wallCell, damage[i]);
+                    Remove(i);
+                    continue;
+                }
                 if (dome != null && domeHit <= wall)
                 {
                     Intercept(i, units, grid, movementPadding, rings, flight, segment, domeHit, dome);
@@ -212,7 +221,7 @@ public sealed class ProjectileSystem
             }
             else if (flight.ExplosionRadius > 0f)
             {
-                if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment, dome, domeHit))
+                if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment, dome, domeHit, barricade, barricadeHit))
                     continue;
             }
             else
@@ -234,6 +243,13 @@ public sealed class ProjectileSystem
                 int victim = wallHit > 0f
                     ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out contactFraction, wallHit)
                     : -1;
+                if (barricade is { } lightWall && barricadeHit <= wallHit && barricadeHit < domeHit &&
+                    (victim < 0 || barricadeHit <= contactFraction))
+                {
+                    barricades.Damage(lightWall, damage[i]);
+                    Remove(i);
+                    continue;
+                }
                 if (dome != null && domeHit <= wallHit && (victim < 0 || domeHit <= contactFraction))
                 {
                     Intercept(i, units, grid, movementPadding, rings, flight, segment, domeHit, dome);
@@ -286,7 +302,7 @@ public sealed class ProjectileSystem
     // Resolve the first contact before querying the explosion radius.
     private bool ImpactShell(int index, UnitState units, SpatialGrid grid, BenchmarkConfig config,
         float movementPadding, ObstacleField obstacles, ShockwaveRenderer rings, ProjectileFlight flight, Vector3 segment,
-        StructureShieldDomes.Dome dome, float domeHit)
+        StructureShieldDomes.Dome dome, float domeHit, Vector2I? barricade, float barricadeHit)
     {
         Vector3 from = Position[index];
         var terrain = units.Grounding?.Field;
@@ -300,6 +316,12 @@ public sealed class ProjectileSystem
         grid.FirstProjectileHit(units, sourceFaction[index], from, segment, config.ProjectileHitRadius,
             movementPadding, out float firstHit, hit);
         hit = firstHit;
+        if (barricade is { } wallCell && barricadeHit <= hit && barricadeHit < domeHit)
+        {
+            units.Barricades.Damage(wallCell, damage[index]);
+            Remove(index);
+            return true;
+        }
         if (dome != null && domeHit <= hit)
         {
             Intercept(index, units, grid, movementPadding, rings, flight, segment, domeHit, dome);

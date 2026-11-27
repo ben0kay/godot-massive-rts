@@ -10,7 +10,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -52,7 +52,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
-                Tool.Wall => "Industrial Walls", Tool.Cliff => "Cliff Painter",
+                Tool.Wall => "Industrial Walls", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -247,14 +247,15 @@ public partial class LevelEditor
                 Heading(context, "Click near a battlefield edge to set the Red entry.", 15);
                 break;
             case Tool.FactionWall:
+            case Tool.Barricade:
             case Tool.Wall:
                 Choice(context, "Paint mode", new[] { "1×1 Brush", "Line", "Rectangle Fill" },
                     (int)wallPaintMode, index => { CancelWallStroke(); wallPaintMode = (WallPaintMode)index; });
-                if (tool == Tool.FactionWall)
+                if (tool is Tool.FactionWall or Tool.Barricade)
                 {
                     Choice(context, "Faction", new[] { "Blue", "Red" }, factionWallRed ? 1 : 0,
                         index => { CancelWallStroke(); factionWallRed = index == 1; });
-                    Number(context, "Wall height", paint.Data.FactionWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
+                    if (tool == Tool.FactionWall) Number(context, "Wall height", paint.Data.FactionWallHeight, 0.5, 80, 0.5).ValueChanged += value =>
                         SetWallValue(paint.Data.FactionWallHeight, (float)value, height => paint.Data.FactionWallHeight = height);
                 }
                 else
@@ -427,7 +428,7 @@ public partial class LevelEditor
             return;
         }
         if (editingReserve && tool is not Tool.Soldiers) return;
-        if ((tool is Tool.Wall or Tool.FactionWall) && HandleWallPaint(input)) return;
+        if ((tool is Tool.Wall or Tool.FactionWall or Tool.Barricade) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
         if ((tool == Tool.Marsh && marshRectangle || tool == Tool.Rubble && rubbleRectangle) && HandleSceneryRectangle(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;

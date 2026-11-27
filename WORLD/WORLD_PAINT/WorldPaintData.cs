@@ -56,6 +56,17 @@ public partial class WorldPaintData : Resource
     [Export(PropertyHint.Range, "0.35,1,0.05")] public float RuinWidthFraction { get; set; } = 0.9f;
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float RuinHeight { get; set; } = 1.8f;
 
+    [ExportGroup("Light Barricades")]
+    [Export] public Cells BlueBarricadeCells { get; set; } = new();
+    [Export] public Cells RedBarricadeCells { get; set; } = new();
+    [Export] public float BarricadeHealth { get; set; } = 70f;
+    [Export] public float BarricadeTraversalDamage { get; set; } = 7f;
+    [Export] public float BarricadeLightSpeed { get; set; } = 0.25f;
+    [Export] public float BarricadeCrushSpeed { get; set; } = 0.75f;
+    [Export] public float BarricadeCrushTier { get; set; } = 2f;
+    [Export] public float BarricadeHeight { get; set; } = 0.95f;
+
+    [ExportGroup("Faction Walls")]
     [Export] public Cells BlueWallCells { get; set; } = new();
     [Export] public Cells RedWallCells { get; set; } = new();
     [Export(PropertyHint.Range, "0.5,80,0.5")] public float FactionWallHeight { get; set; } = 2.5f;

@@ -75,3 +75,7 @@ Broadside Artillery alone enables `EjectShellCasings` by default, with `ShellCas
 ### Burnt building husks
 
 Destroyed authored defenses and Fortress Defense structures leave a low, charred, collapsed shared mesh and retain their former footprint for 30 seconds when the shared 32-wreck budget permits. Tier 4 and smaller units route around it; larger units can crush it like other heavy wrecks. Rubble prevents building over it until cleared. The usual explosion, smoke and scorch effects remain. Rubble is movement-only, not a live structure or projectile cover; underlying Carbon deposits remain solid. Owner visual/navigation validation pending.
+
+## Light Barricades
+
+Light Barricades are authored defensive paint with 70 HP per segment. Hostile light ground units move at 25% speed during contact and deal 7 HP per second of traversal. Tier 2 and larger units crush a segment on contact at 75% speed for the contact step. Friendly ground units and aircraft pass freely. Tune health, damage per second, height, speeds and the crush threshold on WorldPaint data.

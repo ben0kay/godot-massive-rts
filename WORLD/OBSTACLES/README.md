@@ -7,3 +7,7 @@
 Melee, cleave and direct-fire weapons check cover at attack time. Direct projectiles compare the earliest wall and unit contact along each flight segment. Walls win ties. The initial cover test is 2D across XZ, including for shallow arrow arcs. **Obstacle Fire** and **Blocks On Obstacles** on the projectile definition separately control aim permission and projectile contact. Indirect fire bypasses the aiming gate. Explosive shells use the same wall index with a vertical sweep against the configured wall height, so sufficiently high arcs clear the wall.
 
 See [NAVIGATION](../../GAMEPLAY/NAVIGATION/README.md) for routing and the [OBST1 plan](OBST1_IMPLEMENTATION_PLAN.md) for the owner checks.
+
+## Light Barricades
+
+Barricades live in a separate WorldPaint cell lookup. Swept ground contacts modify the move in progress. Barricade damage never rebuilds an obstacle field or route graph, and targeting sight is evaluated independently.

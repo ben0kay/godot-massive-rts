@@ -129,6 +129,8 @@ public sealed class GuardGroup
             float currentRadiusSquared = anchor.DistanceSquaredTo(from);
             if (anchor.DistanceSquaredTo(next) > Mathf.Max(radiusSquared, currentRadiusSquared)) continue;
             if (movementField != null) next = movementField.ClipMove(from, next, type.Footprint);
+            if (units.Barricades is { } barricades)
+                next = barricades.Traverse(units.Faction[id], type.SizeTier, type.Footprint, from, next, dt);
             if (next == from) continue;
             if (movementFlags != null) movementFlags[id] = 1;
             if (type.Shape != UnitShape.Circle) SoldierFacing.Turn(units, id, direction, turnSteps[units.Type[id]]);
