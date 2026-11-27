@@ -179,7 +179,7 @@ internal partial class DreadnaughtCombat : Node3D
         float min = rocket ? cannon.MinimumRange :
             float.IsFinite(settings.Min[slot]) ? Mathf.Clamp(settings.Min[slot], 0f, max) : Mathf.Min(3f, max);
         float boost = units.AttackMultiplier(id);
-        max *= boost;
+        max *= boost * units.ForestRangeMultiplier(units.Position[id]);
         var flight = rocket ? units.Catalog.Projectiles.Flight(projectile) : default;
         bool indirect = rocket && flight.ObstacleFire == ObstacleFireMode.IndirectFire;
         bool groundAim = rocket && flight.ExplosionRadius > 0f;

@@ -54,8 +54,9 @@ public sealed class UnitState
     internal ForestCover Forest { get; set; }
     internal bool CircleUsesFacing { get; init; }
 
-    internal float RangedReach(Vector3 position, in UnitStats stats) =>
-        Forest?.Contains(position) == true ? stats.Reach * 0.5f : stats.Reach;
+    internal float ForestRangeMultiplier(Vector3 position) => Forest?.Contains(position) == true ? 0.8f : 1f;
+
+    internal float RangedReach(Vector3 position, in UnitStats stats) => stats.Reach * ForestRangeMultiplier(position);
 
     internal RallyPulse Rally { get; private set; }
     internal float AttackMultiplier(int id) => Rally?.Multiplier(id) ?? 1f;
