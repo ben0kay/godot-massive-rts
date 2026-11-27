@@ -873,7 +873,7 @@ public partial class BenchmarkArena : Node3D
         shieldRanges.RefreshShields(units, panel.ShowShieldRadii && panel.ShieldsEnabled && !spawning);
         attackRanges.Refresh(units, camera, (panel.Separation != SeparationMode.Off || panel.StrongEnemySeparation) && units?.Alive > 1
             ? Config.SeparationGap : 0f, panel.ShowAttackRanges && !spawning);
-        shockwaves.Sync();
+        shockwaves.Sync(units);
         deathRenderer.Sync(deathFeedback);
         measuredFrames++; hudClock += delta;
         if (hudClock >= 0.3)
@@ -989,6 +989,7 @@ public partial class BenchmarkArena : Node3D
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
             start = Stamp(); grid.Rebuild(units); gridMs += Elapsed(start);
+            units.Rally?.Step(units, grid, dt, shockwaves);
             units.Shields?.Step(units, grid, dt, panel.ShieldInterval, 0f, panel.ShieldsEnabled);
             // Keep expensive searches together so pursuit still builds at most one index per acquisition step.
             // Movement and attack execution check target health on every core tick.

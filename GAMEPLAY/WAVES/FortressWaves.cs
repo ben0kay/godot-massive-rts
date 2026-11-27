@@ -159,7 +159,8 @@ internal sealed class FortressWaves
             var idleField = buildings.CoverField;
             bool engageStructures = units.HasStructureAttackers;
             bool engagePrism = units.HasPrism && units.FactionAlive[Factions.Red] > 0;
-            if (engagePrism) RebuildGrid();
+            if (engagePrism || units.Rally != null) RebuildGrid();
+            units.Rally?.Step(units, grid, delta, impactRings);
             if (engageStructures || engagePrism) AcquireDefenderTargets(idleField, structuresOnly: true);
             bool idleMoved = MoveAndSeparate(delta);
             if (shields?.NeedsRefresh(delta, ShieldSystem.DefaultInterval) == true) RebuildGrid();
@@ -188,6 +189,7 @@ internal sealed class FortressWaves
 
         int previousCount = units.Count, previousAlive = units.Alive;
         RebuildGrid();
+        units.Rally?.Step(units, grid, delta, impactRings);
         bool activeShieldChanged = shields?.Step(units, grid, delta, ShieldSystem.DefaultInterval, 0f, true) == true;
         TryRelease(delta);
         var field = buildings.CoverField;
@@ -540,7 +542,7 @@ internal sealed class FortressWaves
         {
             if (distance > type.Footprint + ContactTolerance ||
                 !SoldierFacing.Aim(units, id, edge - from, dt, 0.97f)) return;
-            buildings.Citadel.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
+            buildings.Citadel.Damage(type.AgainstStructures(type.Damage) * units.AttackMultiplier(id), type.StructureDamageType);
             units.Kill(id);
             return;
         }

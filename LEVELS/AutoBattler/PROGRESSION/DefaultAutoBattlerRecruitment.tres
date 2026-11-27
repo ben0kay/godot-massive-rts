@@ -19,6 +19,7 @@ Prices = Dictionary[String, int]({
 "prism_lance": 85,
 "hexagon_siege": 100,
 "chevron_artillery": 120,
-"dreadnaught": 500
+"dreadnaught": 500,
+"rally_commander": 100
 })
-InitiallyAvailable = PackedStringArray("circle_infantry", "square_infantry", "triangle_archer", "obliterator", "siege_ram")
+InitiallyAvailable = PackedStringArray("circle_infantry", "square_infantry", "triangle_archer", "obliterator", "siege_ram", "rally_commander")

@@ -10,7 +10,7 @@ public static class AreaDamage
         in UnitStats type, Vector2 direction, float separationGap, float tolerance, float movementPadding, ObstacleField obstacles = null)
     {
         Vector3 origin = units.Position[attacker];
-        units.Damage(primary, type.AgainstUnits(type.Damage), type.UnitDamageType, melee: true);
+        units.Damage(primary, type.AgainstUnits(type.Damage) * units.AttackMultiplier(attacker), type.UnitDamageType, melee: true);
         int limit = type.CleaveMaxAdditionalTargets;
         if (direction == Vector2.Zero || type.CleaveSecondaryFraction <= 0f || limit == 0) return;
 
@@ -48,7 +48,7 @@ public static class AreaDamage
             distances[insert] = distance;
         }
 
-        float secondaryDamage = type.Damage * type.CleaveSecondaryFraction;
+        float secondaryDamage = type.Damage * type.CleaveSecondaryFraction * units.AttackMultiplier(attacker);
         for (int index = 0; index < count; index++) units.Damage(victims[index], type.AgainstUnits(secondaryDamage), type.UnitDamageType, melee: true);
     }
 

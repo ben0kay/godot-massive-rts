@@ -100,7 +100,7 @@ public sealed class ProjectileSystem
             aim = muzzle + (aim - muzzle).Rotated(Vector3.Up, Mathf.DegToRad(spread * (NextShotRoll() * 2f - 1f)));
         int slot = Count;
         bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
-            againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage),
+            (againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage)) * units.AttackMultiplier(shooter),
             againstStructure ? type.StructureDamageType : type.UnitDamageType);
         if (launched && !againstStructure)
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);

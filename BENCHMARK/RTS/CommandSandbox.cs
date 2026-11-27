@@ -588,7 +588,7 @@ public partial class CommandSandbox : Node3D
         if (waves.Defeat || waves.Victory)
         {
             buildings.FinishDefenseEffects((float)delta);
-            impactRings.Sync();
+            impactRings.Sync(units);
             if (units.Shields?.AdvanceFlash((float)delta) == true || feedbackChanged || army.HasInfantryWalkMotion) SyncArmy();
             return;
         }
@@ -601,7 +601,7 @@ public partial class CommandSandbox : Node3D
         buildings.RemoveDestroyed();
         if (feedbackChanged || changed || previousCount != units.Count || army.HasInfantryWalkMotion) SyncArmy();
         projectileRenderer.Sync(waves.Projectiles);
-        impactRings.Sync();
+        impactRings.Sync(units);
     }
 
     private void SyncArmy()

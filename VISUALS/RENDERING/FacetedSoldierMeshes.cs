@@ -120,7 +120,7 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
-        id == RuntimeUnitCatalog.SiegeRamId ||
+        id == RuntimeUnitCatalog.SiegeRamId || id == RuntimeUnitCatalog.RallyCommanderId ||
         (visuals.UseObliteratorAssaultMesh && id == RuntimeUnitCatalog.ObliteratorId) ||
         (visuals.UsePrismLanceMesh && id == RuntimeUnitCatalog.PrismLanceId) ||
         (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
@@ -171,6 +171,7 @@ public static class FacetedSoldierMeshes
             }
             else if (unit.Id == RuntimeUnitCatalog.TriangleId) AppendTriangleArcher(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PentagonId) AppendPentagonElite(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.RallyCommanderId) AppendPentagonElite(surface, outline, height, commander: true);
             else if (unit.Id == RuntimeUnitCatalog.DiamondId) AppendDiamondCavalry(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.HexagonId) AppendHexagonSiegeRobot(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.BreacherId) AppendHBreacher(surface, outline, height);
@@ -666,7 +667,7 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // Elite assault infantry. Five-sided chest, angular pauldrons and
     // a broad energy axe; retain the original radius, height and -Z facing.
-    private static void AppendPentagonElite(SurfaceTool surface, UnitOutline outline, float height)
+    private static void AppendPentagonElite(SurfaceTool surface, UnitOutline outline, float height, bool commander = false)
     {
         float x = outline.RadiusX, z = outline.RadiusZ;
         const float diagonal = 0.70710678f;
@@ -705,6 +706,17 @@ public static class FacetedSoldierMeshes
         Block(-0.54f, -0.08f, -0.06f, 0.28f, 0.26f, 0.34f, Steel(0.96f));
         Plate(0f, 0.12f, 0.43f, 0.26f, 0.24f, Steel(0.91f));
         Block(0f, 0.26f, 0.43f, 0.25f, 0.05f, 0.16f, Trim(0.85f));
+
+        if (commander)
+        {
+            // A rear mast and rigid faction pennant rise above the infantry line.
+            Block(0f, 0.93f, 0.43f, 0.10f, 1.45f, 0.12f, Steel(1f));
+            Block(0.29f, 1.42f, 0.43f, 0.61f, 0.31f, 0.09f, Paint(1f));
+            Block(0.50f, 1.47f, 0.43f, 0.28f, 0.19f, 0.09f, Paint(0.88f));
+            Block(0f, 1.68f, 0.43f, 0.20f, 0.16f, 0.20f, Trim(1f));
+            Block(0.55f, -0.17f, -0.19f, 0.29f, 0.31f, 0.48f, Steel(0.96f));
+            return;
+        }
 
         // Tagged axe and mechanical arm share a shoulder pivot at (0.48, 0.04).
         // A short diagonal haft overlaps the arm and keeps the axe assembled.

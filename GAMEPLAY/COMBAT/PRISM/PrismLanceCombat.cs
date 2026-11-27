@@ -116,7 +116,7 @@ internal static class PrismLanceCombat
             }
             closest[index] = new Hit(id, distance);
         }
-        float damage = type.AgainstUnits(type.Damage);
+        float damage = type.AgainstUnits(type.Damage) * units.AttackMultiplier(shooter);
         for (int i = 0; i < count; i++) units.Damage(closest[i].Id, damage, type.UnitDamageType);
     }
 }

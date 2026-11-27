@@ -473,7 +473,7 @@ public partial class ArmyRenderer : Node3D
             color = color.Lerp(new Color(0.70f, 0.94f, 1f), units.PrismCharge(id) / stats.PrismBeam.ChargeSeconds * 0.25f);
         if (cracksEnabled && !white)
         {
-            float health = units.Health[id];
+            float health = units.Health[id] / units.AttackMultiplier(id);
             int stage = health >= stats.Health * firstCrackHealth ? 0
                 : health >= stats.Health * middleCrackHealth ? 1
                 : health >= stats.Health * heavyCrackHealth ? 2 : 3;

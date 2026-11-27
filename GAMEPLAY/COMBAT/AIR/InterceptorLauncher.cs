@@ -138,7 +138,8 @@ internal sealed class InterceptorLauncher
             byte faction = ground.Faction[id];
             if ((faction == Factions.Blue && !blueTargets) || (faction == Factions.Red && !redTargets)) continue;
             if (readyAt != null && clock < readyAt[id]) continue;
-            int target = grid.FindEnemy(fighters, ground.Position[id], faction, Range);
+            float boost = ground.AttackMultiplier(id);
+            int target = grid.FindEnemy(fighters, ground.Position[id], faction, Range * boost);
             if (target < 0) continue;
 
             readyAt ??= new float[ground.Health.Length];
@@ -151,7 +152,7 @@ internal sealed class InterceptorLauncher
             var pose = LocalPose(height);
             Vector3 muzzle = ground.Position[id] + Vector3.Up * (height * 0.5f) +
                 basis * (pose * new Vector3(0f, 0f, -height));
-            TryLaunch(muzzle, -(basis * pose.Basis.Z), target, faction, 26f, damageType);
+            TryLaunch(muzzle, -(basis * pose.Basis.Z), target, faction, 26f * boost, damageType);
         }
     }
 

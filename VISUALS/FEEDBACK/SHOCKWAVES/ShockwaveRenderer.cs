@@ -9,9 +9,9 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private const int ChipsPerHit = 6;
     private const int Segments = 64;
     private const float Duration = 0.35f;
-    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction, bool StructureChips);
+    private readonly record struct Ring(Vector3 Origin, float Radius, float Age, Vector3? BurstOrigin, byte? Faction, bool StructureChips, bool Rally);
     private readonly Ring[] rings = new Ring[Capacity];
-    private MultiMesh bursts, chips;
+    private MultiMesh bursts, chips, rallyMarkers;
     private MeleeEffects meleeEffects;
     private ScorchMarks scorchMarks;
     private readonly CavalryDust cavalryDust = new();
@@ -88,12 +88,15 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
-    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null, byte? faction = null, bool structureChips = false)
+    public void Emit(Vector3 origin, float radius, Vector3? burstOrigin = null, byte? faction = null, bool structureChips = false, bool rally = false)
     {
         if (count == Capacity || (radius <= 0f && !structureChips)) return;
-        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin, faction, structureChips);
+        rings[count++] = new Ring(origin + Vector3.Up * 0.035f, radius, 0f, burstOrigin, faction, structureChips, rally);
         dirty = true;
     }
+
+    internal void EmitRally(Vector3 origin, float radius, byte faction) =>
+        Emit(origin + Vector3.Up * 0.10f, radius, faction: faction, rally: true);
 
     internal void EmitScorch(Vector3 ground, float blastRadius, TerrainHeightField terrain)
     {
@@ -132,8 +135,9 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         }
     }
 
-    public void Sync()
+    public void Sync(UnitState units = null)
     {
+        SyncRallyMarkers(units);
         meleeEffects?.Sync();
         if (!dirty) return;
         int ringCount = 0, flashCount = 0, chipCount = 0;
@@ -146,7 +150,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
             {
                 float radius = ring.Radius * Mathf.Lerp(0.08f, 1f, progress);
                 Multimesh.SetInstanceTransform(ringCount, new Transform3D(Basis.Identity.Scaled(new Vector3(radius, 1f, radius)), ring.Origin));
-                Color ringColor = Colors.White.Lerp(faction, 0.22f);
+                Color ringColor = ring.Rally ? faction.Lightened(0.25f) : Colors.White.Lerp(faction, 0.22f);
                 ringColor.A = 1f - progress * progress;
                 Multimesh.SetInstanceColor(ringCount++, ringColor);
             }
@@ -178,6 +182,51 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         chips.VisibleInstanceCount = chipCount;
         bursts.VisibleInstanceCount = flashCount;
         dirty = false;
+    }
+
+    private void SyncRallyMarkers(UnitState units)
+    {
+        var recipients = units?.Rally?.Recipients;
+        if (recipients == null || recipients.Count == 0)
+        {
+            if (rallyMarkers != null) rallyMarkers.VisibleInstanceCount = 0;
+            return;
+        }
+
+        const int markerCapacity = 384;
+        if (rallyMarkers == null)
+        {
+            rallyMarkers = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                UseColors = true,
+                Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.035f, 0.09f),
+                    Material = new StandardMaterial3D
+                    {
+                        ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                        VertexColorUseAsAlbedo = true
+                    }
+                },
+                InstanceCount = markerCapacity, VisibleInstanceCount = 0
+            };
+            AddChild(new MultiMeshInstance3D
+            {
+                Multimesh = rallyMarkers, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+            });
+        }
+
+        int slot = 0;
+        foreach (int id in recipients)
+        {
+            if (units.Health[id] <= 0f) continue;
+            Vector3 position = units.Position[id];
+            position.Y += 0.065f;
+            position.Z += units.Catalog[units.Type[id]].Footprint * 0.8f;
+            rallyMarkers.SetInstanceTransform(slot, new Transform3D(Basis.Identity, position));
+            rallyMarkers.SetInstanceColor(slot++, Factions.Color(units.Faction[id]).Lightened(0.55f));
+            if (slot == markerCapacity) break;
+        }
+        rallyMarkers.VisibleInstanceCount = slot;
     }
 
     public void Clear()

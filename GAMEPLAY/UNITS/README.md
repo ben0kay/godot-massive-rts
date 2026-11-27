@@ -224,3 +224,13 @@ Ranged line of sight and projectile collision still use the existing cover rules
 The first pass retains up to 32 wrecks per battle and batches updates to the
 ground routing field. Later casualties use ordinary death effects. Wrecks
 clear with the battle.
+
+### Rally Commander
+
+The Rally Commander is a Tier 2 melee support unit with the Pentagon Elite's
+footprint and a tall faction pennant. Its secondary ability pulses over an
+18-unit radius and buffs allied ground units for 5 seconds. The pulse has a
+12-second cooldown after a successful rally. It grants 15% maximum health and
+damage, and 15% range to ranged weapons. Health percentage is preserved.
+Overlapping pulses refresh duration. A faction-colored ring marks the cast and
+a capped batch of ground ticks marks active recipients.

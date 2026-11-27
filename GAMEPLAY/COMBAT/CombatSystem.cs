@@ -261,7 +261,7 @@ public static class CombatSystem
                 stomped = true;
                 ShockwaveStats stomp = type.Shockwave;
                 Vector3 impact = units.Position[i];
-                AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, type.AgainstUnits(stomp.Damage), stomp.EdgeDamageFraction,
+                AreaDamage.Radial(units, grid, units.Faction[i], impact, stomp.Radius, type.AgainstUnits(stomp.Damage) * units.AttackMultiplier(i), stomp.EdgeDamageFraction,
                     units.MaximumTravelSpeed * dt + separationPadding, stomp.RespectsCover ? obstacles : null, type.UnitDamageType, melee: true);
                 shockwaves?.Emit(impact, stomp.Radius);
             }
@@ -272,7 +272,7 @@ public static class CombatSystem
             }
             else
             {
-                float damage = type.AgainstUnits(type.Damage);
+                float damage = type.AgainstUnits(type.Damage) * units.AttackMultiplier(i);
                 if (units.Type[target] == type.MeleeBonusTarget) damage *= type.MeleeBonusMultiplier;
                 if (damage > 0f && type.FirstHitMultiplier > 1f && units.RecordFirstHit(i, target))
                     damage *= type.FirstHitMultiplier;

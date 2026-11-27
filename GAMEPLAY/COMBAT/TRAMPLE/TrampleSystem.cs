@@ -221,7 +221,7 @@ public sealed class TrampleSystem
             bool penetrates = charge.Momentum > resistance;
             float damage = type.Damage * type.Trample.DamageMultiplier * (penetrates ? 1f : 0.5f) / (1f + resistance);
             float previousHealth = units.Health[defender];
-            units.Damage(defender, type.AgainstUnits(damage), type.UnitDamageType, melee: true);
+            units.Damage(defender, type.AgainstUnits(damage) * units.AttackMultiplier(id), type.UnitDamageType, melee: true);
             if (units.Health[defender] < previousHealth)
             {
                 units.HitFeedback?.OnAttack(units, id);

@@ -51,7 +51,7 @@ public partial class SelectionHud : VBoxContainer
         {
             if ((uint)id >= (uint)units.Count || units.Health[id] <= 0f) continue;
             int type = units.Type[id];
-            float maxHealth = units.Catalog[type].Health;
+            float maxHealth = units.Catalog[type].Health * units.AttackMultiplier(id);
             current += Mathf.Min(units.Health[id], maxHealth);
             maximum += maxHealth;
             shield += units.Shields?.Amount(id) ?? 0f;

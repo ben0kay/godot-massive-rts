@@ -732,3 +732,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Added Conquest and Missions under Campaign on the profile menu. Conquest has a placeholder page, Missions opens the existing campaign entries, and Skirmishes remains directly accessible.
 
 - 2026-11-27 — Added Skirmishes and Missions selectors above the Clash, Offense, and Defense tabs in the Level Editor. Both use their existing separate save destinations. Fortress Defense retains its own level list.
+
+- 2026-11-27 — Added the Tier 2 Rally Commander with a tall pennant and an area pulse that temporarily boosts nearby allied ground troops. The pulse shares the soldier grid and shockwave batch.

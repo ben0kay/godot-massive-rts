@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "rally_commander"
+DisplayName = "Rally Commander"
+Role = "Armoured melee leader with a timed rally pulse"
+BattleRating = 320
+Shape = 4
+Width = 1.6
+Height = 0.825
+SizeMultiplier = 0.9
+SizeTier = 2.0
+Speed = 2.7
+TurnDegreesPerSecond = 180.0
+ArmourClass = "Medium"
+Health = 260.0
+ChargeResistance = 1.2
+Damage = 18.0
+Interval = 1.65
+Reach = 2.3

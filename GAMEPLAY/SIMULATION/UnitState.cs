@@ -57,7 +57,11 @@ public sealed class UnitState
     internal float RangedReach(Vector3 position, in UnitStats stats) =>
         Forest?.Contains(position) == true ? stats.Reach * 0.5f : stats.Reach;
 
-    internal float RangedReach(int id, in UnitStats stats) => RangedReach(Position[id], stats);
+    internal RallyPulse Rally { get; private set; }
+    internal float AttackMultiplier(int id) => Rally?.Multiplier(id) ?? 1f;
+    internal float RangedReach(int id, in UnitStats stats) => RangedReach(id, Position[id], stats);
+    internal float RangedReach(int id, Vector3 position, in UnitStats stats) =>
+        RangedReach(position, stats) * AttackMultiplier(id);
 
     internal DisruptorGrid Disruptors { get; set; }
 
@@ -153,6 +157,7 @@ public sealed class UnitState
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
         if (stats.PrismBeam.Enabled) prismAlive++;
+        if (type == RuntimeUnitCatalog.RallyCommander) (Rally ??= new RallyPulse(Health.Length)).AddCommander(id);
         if (type == RuntimeUnitCatalog.Interceptor) (InterceptorIds ??= new List<int>()).Add(id);
         if (stats.ShieldEmitter.Enabled)
         {

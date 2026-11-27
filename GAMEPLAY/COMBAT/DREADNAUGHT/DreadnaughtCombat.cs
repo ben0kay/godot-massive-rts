@@ -178,6 +178,8 @@ internal partial class DreadnaughtCombat : Node3D
             float.IsFinite(settings.Max[slot]) ? Mathf.Clamp(settings.Max[slot], 1f, 100f) : 30f;
         float min = rocket ? cannon.MinimumRange :
             float.IsFinite(settings.Min[slot]) ? Mathf.Clamp(settings.Min[slot], 0f, max) : Mathf.Min(3f, max);
+        float boost = units.AttackMultiplier(id);
+        max *= boost;
         var flight = rocket ? units.Catalog.Projectiles.Flight(projectile) : default;
         bool indirect = rocket && flight.ObstacleFire == ObstacleFireMode.IndirectFire;
         bool groundAim = rocket && flight.ExplosionRadius > 0f;
@@ -221,7 +223,7 @@ internal partial class DreadnaughtCombat : Node3D
         Vector3 muzzle = mount + Vector3.Forward.Rotated(Vector3.Up, gun.Yaw) * barrelLength;
         if (!indirect && obstacles?.BlocksSight(muzzle, aim) == true) return;
         if (projectiles.LaunchFrom(muzzle, aim, units.Faction[id], projectile,
-            rocket ? cannon.Damage : settings.Damage, DamageRules.NeutralType))
+            (rocket ? cannon.Damage : settings.Damage) * boost, DamageRules.NeutralType))
             units.HitFeedback?.OnAttack(units, id);
         gun.Cooldown = (rocket ? cannon.Interval : settings.Interval) / Mathf.Max(0.01f, fireRate);
     }
@@ -253,7 +255,7 @@ internal partial class DreadnaughtCombat : Node3D
                 obstacles?.BlocksSight(center, position) != true)
             {
                 hull.NextContact[victim] = time + stats.Interval;
-                units.Damage(victim, stats.AgainstUnits(stats.Damage), stats.UnitDamageType, melee: true);
+                units.Damage(victim, stats.AgainstUnits(stats.Damage) * units.AttackMultiplier(id), stats.UnitDamageType, melee: true);
                 units.HitFeedback?.OnAttack(units, id);
             }
 

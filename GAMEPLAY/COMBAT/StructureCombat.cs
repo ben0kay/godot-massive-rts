@@ -86,14 +86,14 @@ internal sealed class StructureCombat
         type.Ranged ? type.Reach : Mathf.Max(type.Reach, type.Footprint + 0.08f);
 
     public bool CanHit(int id, in UnitStats type, StructureHealth target, ObstacleField sight) =>
-        CanHit(units.Position[id], type, target, sight);
+        CanHit(id, units.Position[id], type, target, sight);
 
-    private bool CanHit(Vector3 position, in UnitStats type, StructureHealth target, ObstacleField sight)
+    private bool CanHit(int id, Vector3 position, in UnitStats type, StructureHealth target, ObstacleField sight)
     {
         Vector2 from = ObstacleField.Xz(position);
         Vector2 edge = Edge(target.Area, from);
         float squared = from.DistanceSquaredTo(edge);
-        float reach = type.Ranged ? units.RangedReach(position, type) : Reach(type);
+        float reach = type.Ranged ? units.RangedReach(id, position, type) : Reach(type);
         return squared <= reach * reach && squared >= type.MinimumFireRange * type.MinimumFireRange &&
             sight?.BlocksSightExcept(position, Ground(edge), target.Area) != true;
     }
@@ -116,7 +116,7 @@ internal sealed class StructureCombat
         if (checkRoute && towerApproaches != null && towerApproaches.TryGetValue(key, out var previous))
         {
             if (previous.Confirmed && previous.Goal is Vector3 reachable && targets[id] == target &&
-                CanHit(reachable, type, target, sight))
+                CanHit(id, reachable, type, target, sight))
             {
                 goal = reachable;
                 return true;
@@ -196,7 +196,7 @@ internal sealed class StructureCombat
                 Vector3 world = Ground(candidate);
                 if (Mathf.Abs(candidate.X) + type.Footprint > mapHalfWidth ||
                     Mathf.Abs(candidate.Y) + type.Footprint > mapHalfWidth ||
-                    field?.IntersectsCircle(candidate, type.Footprint) == true || !CanHit(world, type, target, sight)) continue;
+                    field?.IntersectsCircle(candidate, type.Footprint) == true || !CanHit(id, world, type, target, sight)) continue;
                 if (distance < nearest)
                 {
                     if (count > 0) candidates[count] = candidates[0];
@@ -227,7 +227,7 @@ internal sealed class StructureCombat
         {
             if (!projectiles.FireAtStructure(id, units, units.OnTerrain(Ground(edge)) + Vector3.Up * 1.5f, target)) return false;
         }
-        else target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
+        else target.Damage(type.AgainstStructures(type.Damage) * units.AttackMultiplier(id), type.StructureDamageType);
         units.HitFeedback?.OnAttack(units, id);
         units.Cooldown[id] = type.Interval;
         return units.Dirty[id] = true;
@@ -255,7 +255,7 @@ internal sealed class StructureCombat
             ramStrikes.Remove(id);
             if (!SoldierFacing.Aim(units, id, contact - from, dt, 0.97f)) return false;
             float before = target.Health;
-            target.Damage(type.AgainstStructures(type.Damage), type.StructureDamageType);
+            target.Damage(type.AgainstStructures(type.Damage) * units.AttackMultiplier(id), type.StructureDamageType);
             if (target.Health < before)
             {
                 var ground = units.OnTerrain(Ground(contact));
