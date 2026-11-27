@@ -44,7 +44,7 @@ internal sealed class DefenseSystem
         removed = new bool[capacity];
     }
 
-    public void AddTower(StructureHealth structure, BuildingStats stats, float height, float ground)
+    public void AddTower(StructureHealth structure, BuildingStats stats, float height, float ground, UnitState units = null)
     {
         int slot = System.Array.IndexOf(structures, null);
         structures[slot] = structure;
@@ -54,13 +54,23 @@ internal sealed class DefenseSystem
             AntiAirTowerMeshes.Variant(stats.Id));
         renderer.SetAirAmmo(slot, stats.AirDefense.Magazine, 0);
         ActiveCount++;
+        if (units != null) RegisterDome(units, slot);
     }
 
-    internal void RegisterShieldEmitters(UnitState units)
+    internal void RegisterStructureDomes(UnitState units)
     {
         for (int i = 0; i < towers.Length; i++)
-            if (structures[i]?.Destroyed == false && towers[i].Stats.ShieldEmitter.Enabled)
-                units.AddShieldTower(structures[i], towers[i].Stats.ShieldEmitter);
+            RegisterDome(units, i);
+    }
+
+    private void RegisterDome(UnitState units, int slot)
+    {
+        if (structures[slot] is not { Destroyed: false } structure) return;
+        var tower = towers[slot];
+        if (!tower.Stats.ShieldEmitter.Enabled) return;
+        Vector3 center = tower.Pivot - Vector3.Up * (tower.BaseHeight + 0.25f);
+        units.StructureDomes.Add(structure, center, tower.Stats.ShieldEmitter,
+            dome => renderer.RefreshStructureDome(slot, dome));
     }
 
     public void RemoveTower(StructureHealth structure)

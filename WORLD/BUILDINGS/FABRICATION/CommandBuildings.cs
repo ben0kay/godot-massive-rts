@@ -395,8 +395,7 @@ internal sealed class CommandBuildings
         }
         var tower = new CommandStructure(area, stats.Health, faction, definition,
             units.Catalog.DamageRules, readyView: new Node3D { Name = stats.AirDefense.Enabled ? stats.Id : stats.Id == TwinMinigunTowerMeshes.Id ? "TwinMinigunTower" : stats.ShieldEmitter.Enabled ? "ShieldGenerator" : stats.ProjectileType >= 0 ? "RocketTower" : "RailgunTower" }, groundHeight: height) { IsTower = true };
-        defenses.AddTower(tower, stats, TowerBaseHeight, height);
-        if (stats.ShieldEmitter.Enabled) units.AddShieldTower(tower, stats.ShieldEmitter);
+        defenses.AddTower(tower, stats, TowerBaseHeight, height, units);
         Add(tower);
     }
 

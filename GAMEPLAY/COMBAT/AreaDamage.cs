@@ -54,7 +54,8 @@ public static class AreaDamage
 
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.
     public static int Radial(UnitState units, SpatialGrid grid, int sourceFaction, Vector3 impact,
-        float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null, int damageType = 0, bool melee = false)
+        float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null, int damageType = 0, bool melee = false,
+        Vector3? protectedDomeCenter = null, float protectedDomeRadius = 0f)
     {
         if (!float.IsFinite(radius) || radius <= 0f || damage <= 0f) return 0;
         int kills = 0;
@@ -65,6 +66,12 @@ public static class AreaDamage
         {
             int id = candidates.Current;
             if (units.Health[id] <= 0f) continue;
+            if (protectedDomeCenter is { } center)
+            {
+                Vector3 target = units.Position[id] + Vector3.Up * (units.Catalog[units.Type[id]].Height * 0.5f) - center;
+                target.Y /= StructureShieldDomes.HeightRatio;
+                if (target.LengthSquared() <= protectedDomeRadius * protectedDomeRadius) continue;
+            }
             Vector3 offset = units.Position[id] - impact;
             float distanceSquared = offset.X * offset.X + offset.Z * offset.Z;
             if (distanceSquared > radiusSquared || cover?.BlocksSight(impact, units.Position[id]) == true) continue;

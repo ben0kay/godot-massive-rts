@@ -774,3 +774,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Wreck obstacle refreshes now defer costly unit-type route graphs until requested and build at most one per route update. Collision uses the refreshed obstacle field immediately. Owner performance validation pending.
 
 - 2026-11-27 — Marsh paint now lowers the shared terrain surface by up to 0.32 world units with feathered edges, and renders with streaked muddy water and subtle ripples.
+
+- 2026-11-27 — Shield Generator buildings now charge a shared interception dome in place of unit shield coverage. Projectile definitions select Light, Standard or Heavy contact behavior, with friendly pass-through and localized shield ripples. Source review only; Godot validation pending.

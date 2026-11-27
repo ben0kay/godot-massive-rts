@@ -14,6 +14,7 @@ public sealed class ProjectileSystem
     private readonly float[] forestDeflection;
     private uint shotRandom = 0x9E3779B9u;
     private StructureHealth[] structureTargets, firingTowers;
+    private StructureShieldDomes.Dome[] deflected;
     // Allocated only when a short-barrel static weapon fires.
     private ObstacleRectangle?[] firingFootprints;
     private readonly ProjectileCatalog catalog;
@@ -167,10 +168,33 @@ public sealed class ProjectileSystem
             Vector3 next = origin[i] + displacement[i] * t + Vector3.Up * (4f * arc[i] * t * (1f - t));
             Vector3 segment = next - Position[i];
             ProjectileFlight flight = catalog.Flight(Type[i]);
+            if (deflected?[i] is { } deflectingDome)
+            {
+                if (elapsed[i] >= endTime)
+                {
+                    DomeBurst(i, units, grid, movementPadding, rings, flight, next, deflectingDome);
+                    Remove(i);
+                }
+                else Position[i] = next;
+                continue;
+            }
+
+            var dome = units.StructureDomes.FirstHit(sourceFaction[i], Position[i], segment, out float domeHit);
             if (structureTargets?[i] is StructureHealth structure)
             {
-                if (structure.Destroyed || (flight.BlocksOnObstacles &&
-                    obstacles?.BlocksSightExcept(Position[i], next, structure.Area) == true))
+                if (structure.Destroyed)
+                {
+                    Remove(i);
+                    continue;
+                }
+                float wall = flight.BlocksOnObstacles
+                    ? obstacles?.FirstSightHitExcept(Position[i], segment, structure.Area) ?? 1f : 1f;
+                if (dome != null && domeHit <= wall)
+                {
+                    Intercept(i, units, grid, movementPadding, rings, flight, segment, domeHit, dome);
+                    continue;
+                }
+                if (wall < 1f)
                 {
                     Remove(i);
                     continue;
@@ -188,11 +212,8 @@ public sealed class ProjectileSystem
             }
             else if (flight.ExplosionRadius > 0f)
             {
-                if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment))
-                {
-                    Remove(i);
+                if (ImpactShell(i, units, grid, config, movementPadding, obstacles, rings, flight, segment, dome, domeHit))
                     continue;
-                }
             }
             else
             {
@@ -213,6 +234,11 @@ public sealed class ProjectileSystem
                 int victim = wallHit > 0f
                     ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out contactFraction, wallHit)
                     : -1;
+                if (dome != null && domeHit <= wallHit && (victim < 0 || domeHit <= contactFraction))
+                {
+                    Intercept(i, units, grid, movementPadding, rings, flight, segment, domeHit, dome);
+                    continue;
+                }
                 if (victim >= 0 || blocked)
                 {
                     if (victim >= 0)
@@ -259,7 +285,8 @@ public sealed class ProjectileSystem
     // =========================================================
     // Resolve the first contact before querying the explosion radius.
     private bool ImpactShell(int index, UnitState units, SpatialGrid grid, BenchmarkConfig config,
-        float movementPadding, ObstacleField obstacles, ShockwaveRenderer rings, ProjectileFlight flight, Vector3 segment)
+        float movementPadding, ObstacleField obstacles, ShockwaveRenderer rings, ProjectileFlight flight, Vector3 segment,
+        StructureShieldDomes.Dome dome, float domeHit)
     {
         Vector3 from = Position[index];
         var terrain = units.Grounding?.Field;
@@ -273,6 +300,12 @@ public sealed class ProjectileSystem
         grid.FirstProjectileHit(units, sourceFaction[index], from, segment, config.ProjectileHitRadius,
             movementPadding, out float firstHit, hit);
         hit = firstHit;
+        if (dome != null && domeHit <= hit)
+        {
+            Intercept(index, units, grid, movementPadding, rings, flight, segment, domeHit, dome);
+            // Intercept owns removal or reinitializes this slot for the short deflected flight.
+            return true;
+        }
         // Completing the flight lands at the recorded ground aim point. Expiring in flight does not explode.
         if (hit > 1f && elapsed[index] < duration[index]) return false;
         Vector3 impact = from + segment * Mathf.Min(hit, 1f);
@@ -283,7 +316,51 @@ public sealed class ProjectileSystem
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
         rings?.Emit(impact, flight.ExplosionRadius, burstOrigin, sourceFaction[index]);
         rings?.EmitScorch(impact, flight.ExplosionRadius, terrain);
+        Remove(index);
         return true;
+    }
+
+    private void Intercept(int index, UnitState units, SpatialGrid grid, float movementPadding,
+        ShockwaveRenderer rings, ProjectileFlight flight, Vector3 segment, float fraction, StructureShieldDomes.Dome dome)
+    {
+        Vector3 point = Position[index] + segment * fraction;
+        Vector3 normal = dome.Normal(point);
+        var weight = catalog.DomeWeight(Type[index]);
+        dome.Absorb(point, weight);
+        if (weight == ProjectileWeight.Light)
+        {
+            // Give the cosmetic ricochet the true surface normal of the flattened dome.
+            rings?.EmitShieldRicochet(point, segment, point - normal, 1f, sourceFaction[index], catalog.DomeTracerSize(Type[index]));
+            Remove(index);
+            return;
+        }
+        if (weight == ProjectileWeight.Heavy || flight.ExplosionRadius <= 0f)
+        {
+            DomeBurst(index, units, grid, movementPadding, rings, flight, point, dome);
+            Remove(index);
+            return;
+        }
+
+        Vector3 direction = segment.Normalized();
+        Vector3 reflected = direction - 2f * direction.Dot(normal) * normal;
+        deflected ??= new StructureShieldDomes.Dome[Position.Length];
+        deflected[index] = dome;
+        origin[index] = Position[index] = point;
+        elapsed[index] = 0f;
+        duration[index] = 0.14f;
+        arc[index] = 0f;
+        displacement[index] = Direction[index] = (reflected + normal * 0.35f).Normalized() * 1.7f;
+    }
+
+    private void DomeBurst(int index, UnitState units, SpatialGrid grid, float movementPadding,
+        ShockwaveRenderer rings, ProjectileFlight flight, Vector3 point, StructureShieldDomes.Dome dome)
+    {
+        if (flight.ExplosionRadius <= 0f) return;
+        int kills = AreaDamage.Radial(units, grid, sourceFaction[index], point, flight.ExplosionRadius,
+            damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index],
+            protectedDomeCenter: dome.Center, protectedDomeRadius: dome.Radius);
+        if (firingTowers?[index] is { } tower) tower.Kills += kills;
+        rings?.Emit(point, flight.ExplosionRadius, point, sourceFaction[index]);
     }
 
     private float NextShotRoll()
@@ -297,6 +374,11 @@ public sealed class ProjectileSystem
     private void Remove(int index)
     {
         int last = --Count;
+        if (deflected != null)
+        {
+            deflected[index] = deflected[last];
+            deflected[last] = null;
+        }
         if (structureTargets != null)
         {
             structureTargets[index] = structureTargets[last];

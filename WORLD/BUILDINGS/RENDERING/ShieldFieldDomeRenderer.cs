@@ -1,4 +1,4 @@
-// One lazy, compact MultiMesh for stationary shield influence domes. No per-frame work.
+// One compact MultiMesh for stationary shield domes and their contact ripples.
 using System;
 using Godot;
 
@@ -6,7 +6,6 @@ namespace MassiveRts;
 
 internal sealed class ShieldFieldDomeRenderer
 {
-    private const float HeightRatio = 0.55f;
     private const int Capacity = DeploymentLayout.MaxBuildings;
     private static Mesh sharedMesh;
     private static ShaderMaterial sharedMaterial;
@@ -27,7 +26,7 @@ internal sealed class ShieldFieldDomeRenderer
         batch = new MultiMesh
         {
             Mesh = sharedMesh, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true, InstanceCount = Capacity, VisibleInstanceCount = 0
+            UseColors = true, UseCustomData = true, InstanceCount = Capacity, VisibleInstanceCount = 0
         };
         view = new MultiMeshInstance3D
         {
@@ -38,8 +37,8 @@ internal sealed class ShieldFieldDomeRenderer
     }
 
     // =========================================================
-    // Radius is the compiled horizontal gameplay radius. Height is visual only.
-    internal void Show(int tower, Vector3 center, float radius, Color faction)
+    // Use the same ellipsoid proportions as the projectile interception test.
+    internal void Show(int tower, Vector3 center, float radius, Color faction, Color ripple = default)
     {
         int slot = slots[tower];
         if (slot < 0)
@@ -49,8 +48,9 @@ internal sealed class ShieldFieldDomeRenderer
             owners[slot] = tower;
         }
         batch.SetInstanceTransform(slot, new Transform3D(
-            Basis.Identity.Scaled(new Vector3(radius, radius * HeightRatio, radius)), center));
+            Basis.Identity.Scaled(new Vector3(radius, radius * StructureShieldDomes.HeightRatio, radius)), center));
         batch.SetInstanceColor(slot, faction);
+        batch.SetInstanceCustomData(slot, ripple);
         batch.VisibleInstanceCount = count;
     }
 
@@ -67,6 +67,7 @@ internal sealed class ShieldFieldDomeRenderer
             slots[moved] = slot;
             batch.SetInstanceTransform(slot, batch.GetInstanceTransform(last));
             batch.SetInstanceColor(slot, batch.GetInstanceColor(last));
+            batch.SetInstanceCustomData(slot, batch.GetInstanceCustomData(last));
         }
         batch.VisibleInstanceCount = count;
     }

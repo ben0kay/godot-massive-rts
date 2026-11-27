@@ -314,6 +314,21 @@ public partial class DefenseRenderer : Node3D
         }
     }
 
+    internal void RefreshStructureDome(int slot, StructureShieldDomes.Dome dome)
+    {
+        if (!dome.Active && dome.RippleTime <= 0f)
+        {
+            shieldDomes?.Hide(slot);
+            return;
+        }
+        shieldDomes ??= new ShieldFieldDomeRenderer(this, showShieldDomes);
+        Vector3 encoded = dome.RippleDirection * 0.5f + Vector3.One * 0.5f;
+        float ripple = dome.RippleTime > 0f
+            ? (int)dome.LastHit + (dome.Active ? 1f : 5f) + (1f - dome.RippleTime / 0.45f) * 0.99f : 0f;
+        shieldDomes.Show(slot, dome.Center, dome.Radius, Factions.Color(dome.Owner.Faction),
+            new Color(encoded.X, encoded.Y, encoded.Z, ripple));
+    }
+
     // Benchmark's visual toggle is independent of the individual soldier shells.
     internal void SetShieldDomesVisible(bool visible)
     {

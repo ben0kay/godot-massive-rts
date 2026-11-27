@@ -12,3 +12,5 @@ Health = 1250.0
 AttacksSoldiers = false
 ShieldEmitterEnabled = true
 ShieldRadius = 21.0
+ShieldCapacity = 100.0
+ShieldRegenerationPerSecond = 5.0

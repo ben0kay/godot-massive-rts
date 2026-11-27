@@ -148,6 +148,7 @@ internal sealed class FortressWaves
     public bool Step(float delta)
     {
         if (Defeat || Victory) return false;
+        units.StructureDomes.Step(delta);
         SampleTicks++;
         tick++;
         structureVisualChanged = false;

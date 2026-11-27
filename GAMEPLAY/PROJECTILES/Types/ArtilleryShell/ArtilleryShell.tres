@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1")
+DomeImpactWeight = 1
 ObstacleFire = 1
 UseLaunchEffects = true
 VisualMesh = ExtResource("2")

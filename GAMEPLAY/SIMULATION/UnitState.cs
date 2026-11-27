@@ -51,6 +51,7 @@ public sealed class UnitState
     }
     public int Count;
     internal OpeningOrders OpeningOrders { get; set; }
+    internal StructureShieldDomes StructureDomes { get; } = new();
     internal ForestCover Forest { get; set; }
     internal bool CircleUsesFacing { get; init; }
 

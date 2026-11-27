@@ -24,6 +24,7 @@ internal sealed class InterceptorLauncher
         internal int DamageType;
         internal StructureHealth Source;
         internal bool Bursting;
+        internal float DeflectTime;
     }
 
     private readonly AirSquadron owner;
@@ -66,6 +67,15 @@ internal sealed class InterceptorLauncher
                 continue;
             }
 
+            if (missile.DeflectTime > 0f)
+            {
+                float travelTime = Mathf.Min(delta, missile.DeflectTime);
+                missile.Position += missile.Direction * (12f * travelTime);
+                missile.DeflectTime -= travelTime;
+                missile.Bursting = missile.DeflectTime <= 0f;
+                continue;
+            }
+
             float remaining = FlightTime - missile.Age;
             float step = Mathf.Min(delta, remaining);
             missile.Age += step;
@@ -98,6 +108,21 @@ internal sealed class InterceptorLauncher
                     hit = along / Mathf.Max(0.0001f, travel.Length());
             }
             float surface = terrain?.SurfaceHit(from, travel, 1f) ?? float.PositiveInfinity;
+            if (ground != null)
+            {
+                var dome = ground.StructureDomes.FirstHit(missile.Faction, from, travel, out float domeHit);
+                if (dome != null && domeHit <= hit && domeHit <= surface)
+                {
+                    missile.Position = from + travel * domeHit;
+                    Vector3 normal = dome.Normal(missile.Position);
+                    dome.Absorb(missile.Position, ProjectileWeight.Standard);
+                    missile.Direction = (missile.Direction - 2f * missile.Direction.Dot(normal) * normal +
+                        normal * 0.35f).Normalized();
+                    missile.DeflectTime = 0.14f;
+                    missile.TrailFar = missile.TrailNear = missile.Position;
+                    continue;
+                }
+            }
             if (hit <= 1f && hit <= surface)
             {
                 missile.Position += travel * hit;

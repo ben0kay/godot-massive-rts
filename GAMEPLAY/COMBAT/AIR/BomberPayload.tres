@@ -13,6 +13,7 @@ size = Vector3(0.3, 0.3, 0.72)
 
 [resource]
 script = ExtResource("1")
+DomeImpactWeight = 2
 VisualMesh = SubResource("Mesh_payload")
 Speed = 23.0
 ArcHeight = 0.0

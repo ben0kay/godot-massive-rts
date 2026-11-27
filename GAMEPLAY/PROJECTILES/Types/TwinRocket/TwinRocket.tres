@@ -12,6 +12,7 @@ size = Vector3(0.20, 0.175, 0.50)
 
 [resource]
 script = ExtResource("1")
+DomeImpactWeight = 1
 ObstacleFire = 1
 BlocksOnObstacles = true
 VisualMesh = SubResource("Rocket")

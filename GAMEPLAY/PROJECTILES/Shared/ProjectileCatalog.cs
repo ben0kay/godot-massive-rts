@@ -15,6 +15,8 @@ public sealed class ProjectileCatalog
     private readonly List<bool> factionTints = new();
     private readonly List<bool> groundGlows = new();
     private readonly List<Vector3> ricochetSizes = new();
+    private readonly List<ProjectileWeight> domeWeights = new();
+    private readonly List<Vector3> domeTracerSizes = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private readonly List<bool> launchEffects = new();
@@ -34,6 +36,8 @@ public sealed class ProjectileCatalog
     internal bool HasGroundGlow => groundGlows.Contains(true);
     internal bool UsesGroundGlow(int index) => groundGlows[index];
     // Zero means disabled. Cache the source mesh dimensions once, not on impact.
+    internal ProjectileWeight DomeWeight(int index) => domeWeights[index];
+    internal Vector3 DomeTracerSize(int index) => domeTracerSizes[index];
     internal Vector3 RicochetSize(int index) => ricochetSizes[index];
 
     internal bool HasLaunchEffects => launchEffects.Contains(true);
@@ -71,13 +75,15 @@ public sealed class ProjectileCatalog
                 ? (float.IsFinite(definition.ExplosionRadius) ? Mathf.Clamp(definition.ExplosionRadius, 0.1f, 64f) : 7f)
                 : 0f,
             edge >= 0f ? edge : float.IsFinite(definition.ExplosionEdgeFraction) ? Mathf.Clamp(definition.ExplosionEdgeFraction, 0f, 1f) : 0.3125f));
+        domeWeights.Add(definition.DomeImpactWeight);
         meshes.Add(mesh);
         scales.Add(scale * (float.IsFinite(definition.VisualSizeMultiplier)
             ? Mathf.Clamp(definition.VisualSizeMultiplier, 0.1f, 4f) : 1f));
+        domeTracerSizes.Add(mesh.GetAabb().Size * scales[index]);
         factionTints.Add(definition.TintByFaction);
         groundGlows.Add(definition.UseGroundGlow);
         ricochetSizes.Add(definition.ShieldRicochetEnabled && flights[index].ExplosionRadius <= 0f
-            ? mesh.GetAabb().Size * scales[index] : Vector3.Zero);
+            ? domeTracerSizes[index] : Vector3.Zero);
         launchEffects.Add(definition.UseLaunchEffects);
         flightSmoke.Add(definition.UseLaunchEffects && definition.UseFlightSmoke);
         return index;

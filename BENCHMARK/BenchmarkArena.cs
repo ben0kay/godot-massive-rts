@@ -683,7 +683,7 @@ public partial class BenchmarkArena : Node3D
         units = CreateUnitState((uint)settings.Seed);
         if (autoBattlerPlaytestMap != null && (openingOverlay != null || redOrders?.Count > 0))
             units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, OrderFor, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
-        defenseSystem?.RegisterShieldEmitters(units);
+        defenseSystem?.RegisterStructureDomes(units);
         units.Forest = autoBattlerForest;
         units.MarshCells = autoBattlerPaint?.MarshCells;
         var redTraps = autoBattlerPlaytestMap?.AutoBattlerRules.RedDisruptorCells;
@@ -986,6 +986,7 @@ public partial class BenchmarkArena : Node3D
         if (units.OpeningOrders?.Advance(units, dt) == false) units.OpeningOrders = null;
         deathFeedback.BeginTick();
         units.Disruptors?.Step(units, dt);
+        units.StructureDomes.Step(dt, panel.ShieldsEnabled);
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {
