@@ -53,3 +53,11 @@ Use **Red staging** in the AutoBattler palette to paint a reserve formation on a
 Choose **Base Terrain** beside **+ New Level**. Industrial is the default and Steel Slate provides the earlier look. To switch an existing level, open **Map Size…**, choose a base terrain, and save the level.
 
 During a tactical test battle, click a tower to show its health, kills, and range. Click empty ground to clear the selection.
+
+## Ruins & Rubble
+
+Open **Terrain → Ruins & Rubble**. Choose **Small rubble** for decoration, **Heavy rubble** to slow ground units, or **Structural ruins** for movement and sight blockers. Set the density and use the brush or **Rectangle fill**. Right-drag or use **Erase** to remove rubble. Strokes support undo and redo. Heavy rubble speed and ruin dimensions are configurable in the map’s WorldPaint data.
+
+## Tiered Elevation
+
+Open **Terrain → Tiered Elevation** and pick Level 1–7. Left-drag with the brush or enable **Rectangle fill**. The cursor previews the footprint and the readout shows the target and sampled heights. Set the brush radius and minimum slope width. Larger height differences can widen the transition. **Organic Elevation** still offers Raise / Lower and Set Height.

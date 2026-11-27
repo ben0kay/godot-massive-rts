@@ -87,6 +87,7 @@ public partial class WorldPaint : Node3D
             new HashSet<Vector2I>(data?.WaterCells ?? new Cells()));
         RebuildForest();
         RebuildMarsh();
+        RebuildRubble();
         UpdateConfigurationWarnings();
     }
 
@@ -174,6 +175,7 @@ public partial class WorldPaint : Node3D
         {
             RebuildForest();
             RebuildMarsh();
+            RebuildRubble();
             visualDirty = false;
             displayedHalfWidth = MapHalfWidth;
         }
@@ -184,7 +186,7 @@ public partial class WorldPaint : Node3D
                 if (BridgeFits(bridge))
                     bridgeAreas.Add(new Rect2((Vector2)bridge.Position * CellSize, (Vector2)bridge.Size * CellSize));
         BridgeAreas = bridgeAreas.ToArray();
-        return (rockAreas, waterAreas);
+        return (AppendRuins(rockAreas), waterAreas);
     }
 
     // =========================================================

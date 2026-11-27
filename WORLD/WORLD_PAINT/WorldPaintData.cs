@@ -43,6 +43,19 @@ public partial class WorldPaintData : Resource
         set { marshCells = value ?? new Cells(); EmitChanged(); }
     }
 
+    private Godot.Collections.Dictionary<Vector2I, int> rubbleCells = new();
+
+    [Export]
+    public Godot.Collections.Dictionary<Vector2I, int> RubbleCells
+    {
+        get => rubbleCells;
+        set { rubbleCells = value ?? new(); EmitChanged(); }
+    }
+
+    [Export(PropertyHint.Range, "0.1,1,0.05")] public float HeavyRubbleSpeed { get; set; } = 0.75f;
+    [Export(PropertyHint.Range, "0.35,1,0.05")] public float RuinWidthFraction { get; set; } = 0.9f;
+    [Export(PropertyHint.Range, "0.5,8,0.1")] public float RuinHeight { get; set; } = 1.8f;
+
     [Export] public Cells BlueWallCells { get; set; } = new();
     [Export] public Cells RedWallCells { get; set; } = new();
     [Export(PropertyHint.Range, "0.5,80,0.5")] public float FactionWallHeight { get; set; } = 2.5f;

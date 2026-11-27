@@ -110,7 +110,7 @@ internal sealed partial class WreckField : Node3D
         return false;
     }
 
-    private MultiMesh CreateHuskBatch()
+    internal static Mesh SharedHuskMesh()
     {
         if (sharedHuskMesh == null)
         {
@@ -137,9 +137,14 @@ internal sealed partial class WreckField : Node3D
             Slab(0.05f, 0.36f, -0.04f, 0.16f, 0.035f, 0.12f, new Color("#815033"));
             sharedHuskMesh = surface.Commit();
         }
+        return sharedHuskMesh;
+    }
+
+    private MultiMesh CreateHuskBatch()
+    {
         var batch = new MultiMesh
         {
-            Mesh = sharedHuskMesh, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            Mesh = SharedHuskMesh(), TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             InstanceCount = Capacity, VisibleInstanceCount = 0
         };
         AddChild(new MultiMeshInstance3D { Name = "BuildingHusks", Multimesh = batch,

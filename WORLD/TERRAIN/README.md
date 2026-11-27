@@ -17,3 +17,7 @@ Command levels compile only the chunks around authored hills. The shared surface
 ## Procedural level authoring
 
 `PROCEDURAL/ProceduralBattlefield.cs` generates seeded elevation samples and `WorldPaintData` for the Level Editor. River Divide keeps the banks level for crossings placed manually with Draw bridge. Units find routes through the generated terrain during play. The editor checks the candidate against the existing world-paint compiler before applying it. Generated maps save the editable output and use the existing terrain rendering and navigation systems in play.
+
+## Tiered elevation
+
+The Tiered Elevation tool writes absolute plateau heights with blended edges to the same samples as Organic Elevation. The default levels are 0, 3, 6, 9, 12, 15 and 18 world units. Edit `CommandTerrain.ElevationTierHeights` to customize the brush targets. Saved terrain and gameplay use the sampled surface.

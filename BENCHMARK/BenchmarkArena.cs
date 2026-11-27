@@ -686,6 +686,8 @@ public partial class BenchmarkArena : Node3D
         defenseSystem?.RegisterStructureDomes(units);
         units.Forest = autoBattlerForest;
         units.MarshCells = autoBattlerPaint?.MarshCells;
+        units.HeavyRubbleCells = autoBattlerPaint?.HeavyRubbleCells;
+        units.HeavyRubbleSpeed = autoBattlerPaint?.HeavyRubbleSpeed ?? 0.75f;
         var redTraps = autoBattlerPlaytestMap?.AutoBattlerRules.RedDisruptorCells;
         if (redTraps != null && (redTraps.Count > 0 || blueDisruptors.Count > 0))
             units.Disruptors = new DisruptorGrid(blueDisruptors, redTraps);

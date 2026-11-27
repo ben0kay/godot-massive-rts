@@ -195,6 +195,8 @@ public partial class LevelEditor
 
     private void EndElevation()
     {
+        tierStart = null;
+        tierWeights.Clear();
         if (workingElevation == null) return;
         FlushElevation();
         var terrain = elevationTerrain;

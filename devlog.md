@@ -778,3 +778,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Shield Generator buildings now charge a shared interception dome in place of unit shield coverage. Projectile definitions select Light, Standard or Heavy contact behavior, with friendly pass-through and localized shield ripples. Source review only; Godot validation pending.
 
 - 2026-11-27 — Increased the Shield Generator dome radius from 21 to 24.15 world units and made the dome active whenever it has positive energy.
+
+- 2026-11-27 — RUBBLE1 / ELEV2: Added three neutral rubble paint variants with batched husks, ground slowdown and structural cover. Added configurable seven-level elevation painting on the shared heightfield, with brush, rectangle and undo. Godot owner validation pending.

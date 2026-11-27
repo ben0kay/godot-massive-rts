@@ -22,6 +22,16 @@ public partial class CommandTerrain : Node3D
         set { elevation = value ?? new(); elevationRevision++; }
     }
 
+    [Export] public float[] ElevationTierHeights { get; set; } = new[] { 0f, 3f, 6f, 9f, 12f, 15f, 18f };
+
+    internal float TierHeight(int level)
+    {
+        int index = Mathf.Clamp(level - 1, 0, 6);
+        var heights = ElevationTierHeights;
+        return heights != null && index < heights.Length && float.IsFinite(heights[index])
+            ? Mathf.Clamp(heights[index], -80f, 80f) : index * 3f;
+    }
+
     private MeshInstance3D Ground => GetParent()?.GetNodeOrNull<MeshInstance3D>("Ground");
 
     private int fingerprint;
