@@ -712,3 +712,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added click-to-inspect towers in tactical editor tests. Selection shows a footprint highlight, health bar, kills, and a lightly filled range circle. Kill credit follows tower beams and pooled projectiles, including splash.
 
 - 2026-11-26 — Increased Twin Minigun Tower maximum range from 26 to 39 (1.5×) and Railgun Tower maximum range from 36 to 50.4 (1.4×). Minimum ranges and all other authored stats unchanged. Configuration-only source review; gameplay validation pending.
+
+- 2026-11-26 — Softened the Railgun ground illumination with a rounded capsule falloff at both ends, retaining central brightness, width, faction tint, terrain fade and existing batch layout. Shader-only visual change; owner validation pending.
