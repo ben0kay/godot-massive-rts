@@ -4,14 +4,23 @@ using Godot;
 
 namespace MassiveRts;
 
+internal enum LevelEditorSection { Skirmishes, Missions, FortressDefense }
+
 internal sealed record LevelEditorMode(string CampaignId, string Folder, bool IsAutoBattler)
 {
+    internal LevelEditorSection Section => !IsAutoBattler ? LevelEditorSection.FortressDefense :
+        CampaignCatalog.IsSkirmish(CampaignId) ? LevelEditorSection.Skirmishes : LevelEditorSection.Missions;
+    internal string SectionName => Section == LevelEditorSection.FortressDefense ? "Fortress Defense" : Section.ToString();
+
     private const string Template = "res://BENCHMARK/RTS/CommandSandbox.tscn";
     public static readonly LevelEditorMode[] Supported =
     {
         new("SkirmishClash", "res://LEVELS/Skirmishes/Clash", true),
         new("SkirmishDefense", "res://LEVELS/Skirmishes/Defense", true),
         new("Offense", "res://LEVELS/Offense", true),
+        new(AutoBattlerCampaignStore.CampaignId, "res://LEVELS/AutoBattler", true),
+        new("CampaignOffense", "res://LEVELS/Campaign/Offense", true),
+        new("CampaignDefense", "res://LEVELS/Campaign/Defense", true),
         new("OpenRTS", "res://LEVELS/FortressDefense", false)
     };
 

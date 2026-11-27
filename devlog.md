@@ -730,3 +730,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Anti-air towers now emit artillery-style smoke from the launch socket on successful guided missile launches. Barrage puffs use 0.55× scale and the long-range plume uses 1.60×, sharing the existing muzzle-smoke batch.
 
 - 2026-11-27 — Added Conquest and Missions under Campaign on the profile menu. Conquest has a placeholder page, Missions opens the existing campaign entries, and Skirmishes remains directly accessible.
+
+- 2026-11-27 — Added Skirmishes and Missions selectors above the Clash, Offense, and Defense tabs in the Level Editor. Both use their existing separate save destinations. Fortress Defense retains its own level list.

@@ -18,7 +18,8 @@ public partial class LevelEditor : Node
     private GridContainer levelGrid;
     private Button returnToLevel;
     private string selectedCampaignId;
-    private bool authoringFortressDefense;
+    private LevelEditorSection authoringSection;
+    private Button[] authoringButtons;
     private BuildingDefinition[] defenseDefinitions;
     private LineEdit levelTitle;
     private TextEdit levelDescription;
@@ -73,6 +74,24 @@ public partial class LevelEditor : Node
         home.AddChild(start);
         Heading(start, "Level Editor", 34);
         Heading(start, "Choose a mode", 18);
+        var sections = new HBoxContainer();
+        start.AddChild(sections);
+        var sectionGroup = new ButtonGroup();
+        string[] sectionNames = { "Skirmishes", "Missions", "Fortress Defense" };
+        authoringButtons = new Button[sectionNames.Length];
+        for (int i = 0; i < sectionNames.Length; i++)
+        {
+            var section = (LevelEditorSection)i;
+            var button = Button(sections, sectionNames[i], () =>
+            {
+                authoringSection = section;
+                ShowStart();
+            });
+            button.ToggleMode = true;
+            button.ButtonGroup = sectionGroup;
+            button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            authoringButtons[i] = button;
+        }
         campaignButtons = new HBoxContainer();
         start.AddChild(campaignButtons);
         Heading(start, "Available levels", 18);
@@ -190,10 +209,15 @@ public partial class LevelEditor : Node
         try
         {
             catalog = CampaignCatalog.Load(fresh: true);
-            var supported = catalog.Campaigns.Where(entry =>
-                LevelEditorMode.Supported.Any(adapter => adapter.CampaignId == entry.Id) &&
-                (authoringFortressDefense ? entry.Id == "OpenRTS" : CampaignCatalog.IsSkirmish(entry.Id)))
-                .OrderBy(entry => Array.IndexOf(new[] { "Clash", "Offense", "Defense" }, entry.DisplayName)).ToArray();
+            authoringButtons[(int)authoringSection].ButtonPressed = true;
+            var supported = catalog.Campaigns.Where(entry => LevelEditorMode.Supported.Any(adapter =>
+                adapter.CampaignId == entry.Id && adapter.Section == authoringSection))
+                .OrderBy(entry => CampaignCatalog.BattleType(entry.Id) switch
+                {
+                    "Offense" => 1,
+                    "Defense" => 2,
+                    _ => 0
+                }).ToArray();
             if (!supported.Any(entry => entry.Id == selectedCampaignId))
                 selectedCampaignId = supported.FirstOrDefault()?.Id;
             foreach (Node child in campaignButtons.GetChildren())
@@ -201,12 +225,7 @@ public partial class LevelEditor : Node
                 campaignButtons.RemoveChild(child);
                 child.QueueFree();
             }
-            var sections = new OptionButton();
-            sections.AddItem("Skirmishes");
-            sections.AddItem("Fortress Defense");
-            sections.Select(authoringFortressDefense ? 1 : 0);
-            sections.ItemSelected += index => { authoringFortressDefense = index == 1; ShowStart(); };
-            campaignButtons.AddChild(sections);
+            campaignButtons.Visible = authoringSection != LevelEditorSection.FortressDefense;
             var tabs = new ButtonGroup();
             foreach (var entry in supported)
             {
@@ -298,7 +317,7 @@ public partial class LevelEditor : Node
         dirty = previewing = false;
         mode = adapter;
         selectedCampaignId = mode.CampaignId;
-        authoringFortressDefense = mode.CampaignId == "OpenRTS";
+        authoringSection = mode.Section;
         testButton.Text = mode.IsAutoBattler ? "Test " + CampaignCatalog.BattleType(mode.CampaignId) : "Test Fortress";
         campaign = catalog.Campaigns.Single(entry => entry.Id == mode.CampaignId);
         activeId = existing?.Id;
@@ -335,7 +354,7 @@ public partial class LevelEditor : Node
     }
 
     private void SetStatus(string message = "") =>
-        status.Text = $"{campaign.DisplayName}   /   {activeId ?? "New level"}{(dirty ? "  •  Unsaved" : "")}    {message}";
+        status.Text = $"{(mode.IsAutoBattler ? mode.SectionName + " / " : "")}{campaign.DisplayName}   /   {activeId ?? "New level"}{(dirty ? "  •  Unsaved" : "")}    {message}";
 
     // =========================================================
     private void SaveAs()
@@ -400,7 +419,7 @@ public partial class LevelEditor : Node
             catch (Exception error) { SetStatus(error.Message); }
         }
         if (target.Existing == null) Save();
-        else Confirm($"Overwrite {campaign.DisplayName} / {id}?",
+        else Confirm($"Overwrite {mode.SectionName} / {campaign.DisplayName} / {id}?",
             "This replaces the scene and level settings. A recovery copy is kept in .godot/level-editor.", Save);
     }
 
