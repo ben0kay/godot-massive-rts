@@ -224,7 +224,16 @@ internal partial class DreadnaughtCombat : Node3D
         if (!indirect && obstacles?.BlocksSight(muzzle, aim) == true) return;
         if (projectiles.LaunchFrom(muzzle, aim, units.Faction[id], projectile,
             (rocket ? cannon.Damage : settings.Damage) * boost, DamageRules.NeutralType))
+        {
             units.HitFeedback?.OnAttack(units, id);
+            var definition = units.Catalog.Definition(units.Type[id]);
+            if (!rocket && definition.EjectShellCasings)
+            {
+                Basis yaw = new(Vector3.Up, gun.Yaw);
+                projectiles.EmitShellCasing(mount + yaw * new Vector3(0.35f * gun.VisualScale, 0.15f, 0.12f),
+                    yaw * new Vector3(1f, 0f, 0.25f), definition.ShellCasingScale);
+            }
+        }
         gun.Cooldown = (rocket ? cannon.Interval : settings.Interval) / Mathf.Max(0.01f, fireRate);
     }
 

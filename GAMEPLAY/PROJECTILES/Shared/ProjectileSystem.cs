@@ -22,6 +22,9 @@ public sealed class ProjectileSystem
     public int Dropped { get; private set; }
     public bool Dirty { get; set; }
     internal event System.Action<Vector3, int> ShotLaunched;
+    internal event System.Action<Vector3, Vector3, float> ShellCasingRequested;
+    internal void EmitShellCasing(Vector3 port, Vector3 outward, float scale) =>
+        ShellCasingRequested?.Invoke(port, outward, scale);
     internal event System.Action<Vector3, float> MuzzleSmokeRequested;
     internal void EmitMuzzleSmoke(Vector3 muzzle, float scale) => MuzzleSmokeRequested?.Invoke(muzzle, scale);
     internal event System.Action<Vector3, Vector3, byte, float> PrismBeamFired;
@@ -104,6 +107,21 @@ public sealed class ProjectileSystem
             againstStructure ? type.StructureDamageType : type.UnitDamageType);
         if (launched && !againstStructure)
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
+        if (launched && definition.EjectShellCasings && ShellCasingRequested != null)
+        {
+            // Generic ground-unit fallback: eject from the side of the receiver
+            // near the shooter, not from the tip of a long gun.
+            Vector3 forward = aim - muzzle;
+            forward.Y = 0f;
+            forward = forward.Normalized();
+            if (forward.LengthSquared() > 0.001f)
+            {
+                Vector3 side = forward.Cross(Vector3.Up);
+                Vector3 port = units.Position[shooter] + Vector3.Up * (type.Height * 0.70f)
+                    + side * Mathf.Clamp(type.Outline.RadiusX * 0.8f, 0.12f, 2f);
+                EmitShellCasing(port, side - forward * 0.25f, definition.ShellCasingScale);
+            }
+        }
         if (launched && mounts.Length > 1) units.AdvanceRocketMount(shooter, mounts.Length);
         return launched;
     }

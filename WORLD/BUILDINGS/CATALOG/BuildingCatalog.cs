@@ -56,7 +56,8 @@ public sealed class RuntimeBuildingCatalog
                     definition.ShieldRegenerationPerSecond, definition.ShieldDecayPerSecond),
                 new AirDefenseStats(Mathf.Clamp(definition.AirMissileMagazine, 0, 12),
                     Clamp(definition.AirMissileReloadSeconds, 0.1f, 30f, 8f),
-                    Clamp(definition.AirMissileVisualScale, 0.5f, 3f, 1f))));
+                    Clamp(definition.AirMissileVisualScale, 0.5f, 3f, 1f)),
+                definition.EjectShellCasings, Clamp(definition.ShellCasingScale, 0.1f, 3f, 0.4f)));
         }
     }
 
@@ -72,7 +73,8 @@ public readonly record struct AirDefenseStats(int Magazine, float ReloadSeconds,
 }
 
 public readonly record struct BuildingStats(string Id, string Name, int Width, int Depth, float MinimumRange,
-    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType, ShieldEmitterStats ShieldEmitter, AirDefenseStats AirDefense)
+    float MaximumRange, float Damage, float Interval, float TurnRate, float BeamSeconds, bool RequiresLineOfSight, bool AttacksSoldiers, int DamageType, float Health, int ArmourClass, float Armour, int ProjectileType, ShieldEmitterStats ShieldEmitter, AirDefenseStats AirDefense,
+    bool EjectShellCasings = false, float ShellCasingScale = 0.4f)
 {
     internal TowerWeapon Weapon => AirDefense.Enabled ? TowerWeapon.AntiAir : !AttacksSoldiers ? TowerWeapon.None
         : ProjectileType >= 0 ? TowerWeapon.Projectile : TowerWeapon.DirectBeam;

@@ -183,6 +183,7 @@ internal sealed class DefenseSystem
                         tower.Stats.Damage, tower.Stats.DamageType, tower.Footprint, structure) == true)
                     {
                         renderer.EmitFlash(muzzle, tower.Yaw, 1.0f);
+                        EjectCasing(in tower, projectiles, tower.NextRocketMuzzle, heavy: false);
                         tower.NextRocketMuzzle ^= 1;
                         tower.Cooldown = Mathf.Max(0f, tower.Cooldown + tower.Stats.Interval);
                     }
@@ -197,6 +198,7 @@ internal sealed class DefenseSystem
                         tower.Stats.Damage, tower.Stats.DamageType, firingTower: structure) == true)
                     {
                         renderer.EmitFlash(muzzle, tower.Yaw, 2.6f);
+                        EjectCasing(in tower, projectiles, tower.NextRocketMuzzle, heavy: true);
                         renderer.EmitGroundFlash(muzzle, tower.Faction, units.Grounding?.Field);
                         if (useLeft) tower.LeftRecoil = 0.30f;
                         else tower.RightRecoil = 0.30f;
@@ -255,6 +257,19 @@ internal sealed class DefenseSystem
             tower.AirCooldown = tower.AirAmmo == 0
                 ? Mathf.Max(tower.Stats.Interval, tower.Stats.AirDefense.ReloadSeconds) : tower.Stats.Interval;
         }
+    }
+
+    // =========================================================
+    // Use the rotating receiver side, not the projectile muzzle. Only successful
+    // projectile launches reach this hook. Each alternating barrel has its own side.
+    private static void EjectCasing(in Tower tower, ProjectileSystem projectiles, int barrel, bool heavy)
+    {
+        if (!tower.Stats.EjectShellCasings) return;
+        float side = barrel == 0 ? -1f : 1f;
+        Basis yaw = new(Vector3.Up, tower.Yaw);
+        Vector3 port = tower.Pivot + yaw * new Vector3(side * (heavy ? 1.96f : 1.10f),
+            heavy ? 0.75f : 0.20f, heavy ? 0.62f : 0.55f);
+        projectiles.EmitShellCasing(port, yaw * new Vector3(side, 0f, 0.30f), tower.Stats.ShellCasingScale);
     }
 
     private static void Acquire(ref Tower tower, UnitState units, SpatialGrid grid, ObstacleField obstacles)

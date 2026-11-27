@@ -19,5 +19,7 @@ TurretDegreesPerSecond = 125.0
 RequiresLineOfSight = false
 Projectile = ExtResource("2")
 ProjectileVisualScale = 1.8
+EjectShellCasings = true
+ShellCasingScale = 1.0
 ProjectileArcScale = 1.1
 ExplosionRadiusMultiplier = 2.0

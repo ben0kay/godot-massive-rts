@@ -65,6 +65,10 @@ public partial class UnitEditorPanel
             value => Unit.LeavesNavigationWreck = value, () => Unit.SizeTier >= 3f);
         Flag(nameof(Unit.LeavesTreadMarks), "Leaves tread marks", Unit.LeavesTreadMarks,
             value => Unit.LeavesTreadMarks = value, () => true);
+        Flag(nameof(Unit.EjectShellCasings), "Eject shell casings", Unit.EjectShellCasings,
+            value => Unit.EjectShellCasings = value, () => true);
+        Number(nameof(Unit.ShellCasingScale), "Casing size", () => Unit.ShellCasingScale,
+            value => Unit.ShellCasingScale = value, 0.1, 3, 0.05, "×", () => Unit.EjectShellCasings);
         Number(nameof(Unit.Width), "Base width", () => Unit.Width, v => Unit.Width = v, 0.001, 100, 0.001, " u", unbounded: true);
         Number(nameof(Unit.Height), "Base height", () => Unit.Height, v => Unit.Height = v, 0.001, 100, 0.001, " u", unbounded: true);
         Number(nameof(Unit.SizeMultiplier), "Size multiplier", () => Unit.SizeMultiplier, v => Unit.SizeMultiplier = v, 0.5, 3, 0.05, "×");
@@ -324,6 +328,11 @@ public partial class UnitEditorPanel
         }
         else Flag(nameof(defense.RequiresLineOfSight), "Requires line of sight", defense.RequiresLineOfSight,
             value => defense.RequiresLineOfSight = value, () => defense.AttacksSoldiers);
+
+        Flag(nameof(defense.EjectShellCasings), "Eject shell casings", defense.EjectShellCasings,
+            value => defense.EjectShellCasings = value, () => defense.Projectile != null && defense.AirMissileMagazine == 0);
+        Number(nameof(defense.ShellCasingScale), "Casing size", () => defense.ShellCasingScale,
+            value => defense.ShellCasingScale = value, 0.1, 3, 0.05, "×", () => defense.EjectShellCasings);
 
         AbilitySection("Shield emitter", nameof(defense.ShieldEmitterEnabled), defense.ShieldEmitterEnabled,
             value => defense.ShieldEmitterEnabled = value, () => true, () => defense.ShieldEmitterEnabled);

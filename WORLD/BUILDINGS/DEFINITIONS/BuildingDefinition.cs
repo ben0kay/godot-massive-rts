@@ -31,6 +31,9 @@ public partial class BuildingDefinition : Resource
     [Export(PropertyHint.Range, "0.5,8,0.1")] public float ExplosionRadiusMultiplier { get; set; } = 1f;
     [Export] public bool AttacksSoldiers { get; set; } = true;
     [Export] public bool RequiresLineOfSight { get; set; } = true;
+    // Presentation only; guided missiles and continuous beams do not eject shells.
+    [Export] public bool EjectShellCasings { get; set; }
+    [Export(PropertyHint.Range, "0.1,3,0.05")] public float ShellCasingScale { get; set; } = 0.4f;
     [ExportGroup("Guided anti-air")]
     // Zero magazine disables AA. One round is a slow heavy interceptor.
     [Export(PropertyHint.Range, "0,12,1")] public int AirMissileMagazine { get; set; }

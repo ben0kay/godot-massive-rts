@@ -22,6 +22,8 @@ public partial class ProjectileRenderer : Node3D
     private Vector2 smokeWind;
     private ProjectileSystem beamSource;
     private PrismBeamEffects prismBeams;
+    private ShellCasingEffects shellCasings;
+    private TerrainHeightField casingTerrain;
     private int prismEffectCap = -1;
 
     public void Initialize(int maximum, ProjectileCatalog catalog, ProjectileSystem projectiles, Vector2 smokeWind,
@@ -52,6 +54,8 @@ public partial class ProjectileRenderer : Node3D
         }
         beamSource = projectiles;
         beamSource.PrismBeamFired += OnPrismBeam;
+        casingTerrain = terrain;
+        beamSource.ShellCasingRequested += OnShellCasing;
         var visuals = UnitVisualConfig.Load();
         if (catalog.HasLaunchEffects && visuals.UseProjectileLaunchEffects)
         {
@@ -107,10 +111,17 @@ public partial class ProjectileRenderer : Node3D
         prismBeams.Emit(from, to, faction, seconds);
     }
 
+    private void OnShellCasing(Vector3 port, Vector3 outward, float scale)
+    {
+        shellCasings ??= new ShellCasingEffects(this, casingTerrain);
+        shellCasings.Emit(port, outward, scale);
+    }
+
     internal void AdvanceEffects(float delta)
     {
         smoke?.Advance(delta);
         prismBeams?.Advance(delta);
+        shellCasings?.Advance(delta);
     }
 
     public override void _ExitTree()
@@ -120,7 +131,11 @@ public partial class ProjectileRenderer : Node3D
             smokeSource.ShotLaunched -= OnShotLaunched;
             smokeSource.MuzzleSmokeRequested -= EmitMuzzleSmoke;
         }
-        if (beamSource != null) beamSource.PrismBeamFired -= OnPrismBeam;
+        if (beamSource != null)
+        {
+            beamSource.PrismBeamFired -= OnPrismBeam;
+            beamSource.ShellCasingRequested -= OnShellCasing;
+        }
     }
 
     public void Sync(ProjectileSystem projectiles)

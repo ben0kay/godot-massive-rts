@@ -29,6 +29,9 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "1,5,0.5,or_greater")] public float SizeTier { get; set; } = 1f;
     [Export] public bool LeavesNavigationWreck { get; set; }
     [Export] public bool LeavesTreadMarks { get; set; }
+    // Optional cosmetic casing ejection on successful ground projectile shots.
+    [Export] public bool EjectShellCasings { get; set; }
+    [Export(PropertyHint.Range, "0.1,3,0.05")] public float ShellCasingScale { get; set; } = 0.4f;
     // Serialized legacy input for Diamond mesh length. Collision uses the compiled outline.
     [Export] public float FootprintRadius { get; set; } = 0.57f;
 

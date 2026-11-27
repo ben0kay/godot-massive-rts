@@ -67,3 +67,7 @@ The two static, shared armor meshes display twelve launch cells or one large rai
 ### Reactive building visuals
 
 Barrage socket lights indicate the actual remaining magazine and restore on reload. Railgun induction coils brighten white from rear to front as the real recovery cooldown completes; they remain bright while firing. Existing faction panels and damage cracks are preserved. Shield coverage domes have faint upward faction-colored waves. Damaged buildings at or below 25% health emit dark pooled smoke and occasional electrical glints; damaged tower base lights flicker; destruction emits a scaled visual-only burst, fragments, scorch mark and smoke through the existing effect pools. No extra damage, collision or permanent debris. Owner visual validation pending.
+
+### Optional shell casing ejection
+
+Broadside Artillery alone enables `EjectShellCasings` by default, with `ShellCasingScale = 1`. A successful alternating shot ejects a brass casing from the matching rotating receiver side. Other ground projectile towers can opt in under Entity Editor → Defenses (Eject shell casings, Casing size). Beams and guided AA launchers do not use this hook. Casings are purely visual, with no ammo or balance change.
