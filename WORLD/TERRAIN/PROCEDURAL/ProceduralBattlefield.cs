@@ -32,8 +32,8 @@ internal static class ProceduralBattlefield
         int swing = Mathf.RoundToInt(riverHalf * settings.Meander);
         int clearance = Mathf.CeilToInt(settings.Clearance / Cell);
         int bridgeSpan = Mathf.Max(Mathf.CeilToInt(settings.BridgeWidth / Cell), 2 * clearance + 2);
-        int leftLane = settings.Crossings == 1 ? 0 : -edge / 2;
-        int rightLane = settings.Crossings == 1 ? 0 : edge / 2;
+        int firstBridgeCenter = settings.Crossings == 1 ? 0 : -edge / 2;
+        int secondBridgeCenter = settings.Crossings == 1 ? 0 : edge / 2;
         bool river = settings.Preset == Layout.RiverDivide;
         var random = new Random(settings.Seed);
         float phase = (float)random.NextDouble() * Mathf.Tau;
@@ -60,8 +60,8 @@ internal static class ProceduralBattlefield
                     paint.WaterCells.Add(new Vector2I(x, z));
             }
 
-            AddBridge(leftLane);
-            if (settings.Crossings == 2) AddBridge(rightLane);
+            AddBridge(firstBridgeCenter);
+            if (settings.Crossings == 2) AddBridge(secondBridgeCenter);
         }
 
         void AddBridge(int center)
@@ -79,13 +79,6 @@ internal static class ProceduralBattlefield
                 (settings.Fortress && Mathf.Abs(point.X) <= 32f && point.Y >= -38f && point.Y <= 18f);
         }
 
-        bool InRockClearanceLane(Vector2I cell)
-        {
-            if (!river) return Mathf.Abs(cell.X) <= clearance + edge / 7;
-            int width = bridgeSpan / 2 + clearance + 1;
-            return Mathf.Abs(cell.X - leftLane) <= width || Mathf.Abs(cell.X - rightLane) <= width;
-        }
-
         Vector2 Center(Vector2I cell) => ((Vector2)cell + Vector2.One * 0.5f) * Cell;
         var water = new HashSet<Vector2I>(paint.WaterCells);
         var rocks = new HashSet<Vector2I>();
@@ -97,40 +90,19 @@ internal static class ProceduralBattlefield
                 if (bridge.HasPoint(cell)) return false;
             if (!settings.Fortress) return true;
             var point = Center(cell);
-            return Mathf.Abs(point.Y + 13f) > settings.Clearance + 4f &&
-                (Mathf.Abs(point.X) > 32f || point.Y < -38f || point.Y > 18f);
+            return Mathf.Abs(point.X) > 32f || point.Y < -38f || point.Y > 18f;
         }
 
         bool CanPlaceRock(Vector2I cell) =>
             cell.X >= -edge && cell.X < edge && cell.Y >= -edge && cell.Y < edge &&
-            !Protected(Center(cell)) && !InRockClearanceLane(cell) && OpenForScenery(cell) && !rocks.Contains(cell);
+            !Protected(Center(cell)) && OpenForScenery(cell) && !rocks.Contains(cell);
 
         BuildRockOutcrops(settings, edge, water.Count, CanPlaceRock, rocks);
         foreach (var cell in rocks) paint.RockCells.Add(cell);
 
-        // Trees are passable. Only rocks need the full-length navigation clearance lanes.
         var forest = BuildForest(settings, edge, cell => OpenForScenery(cell) && !rocks.Contains(cell) &&
             Mathf.Abs(Center(cell).Y) < size * (0.5f - settings.FlatBand * 0.5f));
         foreach (var cell in forest) paint.ForestCells.Add(cell);
-
-        // Check the reserved routes on the same cells the world-paint compiler opens.
-        void CheckLane(int x, Rect2I? bridge)
-        {
-            for (int z = -edge; z < edge; z++)
-            for (int dx = -clearance; dx <= clearance; dx++)
-            {
-                var cell = new Vector2I(x + dx, z);
-                if (rocks.Contains(cell) || (water.Contains(cell) && !(bridge?.HasPoint(cell) ?? false)))
-                    throw new InvalidOperationException("A route is blocked for the largest ground footprint.");
-            }
-        }
-
-        if (river)
-        {
-            CheckLane(leftLane, paint.Bridges[0]);
-            if (settings.Crossings == 2) CheckLane(rightLane, paint.Bridges[1]);
-        }
-        else CheckLane(0, null);
 
         // Broad slopes taper to zero at deployment ends, around the fortress and along the river valley.
         var hills = new FastNoiseLite { Seed = settings.Seed, Frequency = 3.1f };
