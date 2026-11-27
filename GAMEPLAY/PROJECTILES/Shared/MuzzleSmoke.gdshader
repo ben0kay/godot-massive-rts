@@ -8,7 +8,7 @@ varying flat float seed;
 void vertex() {
     age = INSTANCE_CUSTOM.x;
     seed = INSTANCE_CUSTOM.y;
-    float size = mix(0.85, 3.3, sqrt(age));
+    float size = mix(0.85, 3.3, sqrt(age)) * INSTANCE_CUSTOM.z;
     VERTEX = MODELVIEW_MATRIX[3].xyz + vec3((UV - 0.5) * size, 0.0);
 }
 

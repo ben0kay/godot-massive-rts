@@ -222,7 +222,7 @@ internal sealed class DefenseSystem
 
     // =========================================================
     // Fixed-step magazine scheduler; failed launches do not consume ammunition.
-    internal void StepAir(AirSquadron air, float dt)
+    internal void StepAir(AirSquadron air, ProjectileSystem effects, float dt)
     {
         if (air == null) return;
         for (int i = 0; i < towers.Length; i++)
@@ -239,6 +239,7 @@ internal sealed class DefenseSystem
                 tower.AirCooldown = 0.2f;
                 continue;
             }
+            effects?.EmitMuzzleSmoke(muzzle, tower.Stats.Id == AntiAirTowerMeshes.HeavyId ? 1.60f : 0.55f);
             tower.AirSocket = (tower.AirSocket + 1) % AntiAirTowerMeshes.SocketCount(variant);
             tower.AirAmmo--;
             tower.AirCooldown = tower.AirAmmo == 0

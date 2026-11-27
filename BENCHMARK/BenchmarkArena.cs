@@ -823,7 +823,7 @@ public partial class BenchmarkArena : Node3D
                 else
                 {
                     airSquadron?.Step(Config.TickSeconds, units, grid, projectiles, shockwaves);
-                    defenseSystem?.StepAir(airSquadron, Config.TickSeconds);
+                    defenseSystem?.StepAir(airSquadron, projectiles, Config.TickSeconds);
                 }
                 accumulator -= Config.TickSeconds;
                 steps++;
@@ -1010,7 +1010,7 @@ public partial class BenchmarkArena : Node3D
             }
             start = Stamp();
             airSquadron?.Step(dt, units, grid, projectiles, shockwaves);
-            defenseSystem?.StepAir(airSquadron, dt);
+            defenseSystem?.StepAir(airSquadron, projectiles, dt);
             units.HitFeedback?.Advance(units, dt);
             units.RangedRecoil?.Advance(units, dt);
             defenseSystem?.Step(units, grid, BattleSight, projectiles, dt, acquisitionStep, targetingStepSeconds);

@@ -8,6 +8,7 @@ script = ExtResource("1")
 Id = "v_wing"
 DisplayName = "V-wing"
 Role = "Air interceptor"
+SizeTier = 1.0
 AircraftIcon = ExtResource("2")
 CanTargetAircraft = true
 Health = 75.0

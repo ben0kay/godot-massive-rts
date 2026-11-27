@@ -9,6 +9,7 @@ script = ExtResource("1")
 Id = "heavy_bomber"
 DisplayName = "Heavy Bomber"
 Role = "Ground-attack aircraft"
+SizeTier = 2.0
 AircraftIcon = ExtResource("2")
 CanBombGround = true
 BombProjectile = ExtResource("3")
