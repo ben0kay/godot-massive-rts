@@ -742,3 +742,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — MAPGEN1-A/B: Added Blank and Procedural new-level choices, seeded map previews, editable elevation/scenery, and footprint-checked River Divide bridges. Generation uses the normal editor history and save flow. Owner Godot validation pending.
 
 - 2026-11-27 — MAPGEN1 scenery: Added whole-map forest targets, Scattered Groves and Large Forest patterns, more varied rock outcrops and rolling terrain, and actual coverage in the preview. Owner Godot validation pending.
+
+- 2026-11-27 — MAPGEN1: Allowed Large Forest to grow through the passable center lane on dry maps, removing the straight clearing. Bridge approaches and the rock clearance checks remain in place.
