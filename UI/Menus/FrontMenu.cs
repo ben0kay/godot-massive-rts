@@ -8,7 +8,7 @@ namespace MassiveRts;
 
 public partial class FrontMenu : Control
 {
-    public enum MenuScreen { Boot, Main, Campaign, Options, Skirmishes, FortressDefense, About }
+    public enum MenuScreen { Boot, Main, Campaign, Options, Skirmishes, FortressDefense, About, Conquest, Missions }
     [Export] public MenuScreen Screen { get; set; }
     internal string ReturnCampaignId { get; set; }
     private VBoxContainer campaignModes;
@@ -35,6 +35,8 @@ public partial class FrontMenu : Control
             MenuScreen.Boot => "Select Profile",
             MenuScreen.Main => "Godot Massive RTS",
             MenuScreen.Campaign => "Campaign",
+            MenuScreen.Conquest => "Conquest",
+            MenuScreen.Missions => "Missions",
             MenuScreen.Skirmishes => "Skirmishes",
             MenuScreen.FortressDefense => "Fortress Defense",
             MenuScreen.About => "About",
@@ -53,7 +55,16 @@ public partial class FrontMenu : Control
         {
             case MenuScreen.Boot: BuildBoot(); break;
             case MenuScreen.Main: BuildMain(); break;
-            case MenuScreen.Campaign: BuildCampaign(); break;
+            case MenuScreen.Campaign:
+                AddButton("Conquest", () => MenuNavigation.OpenMode(this, MenuScreen.Conquest), UIButtonStyle.Primary).GrabFocus();
+                AddButton("Missions", () => MenuNavigation.OpenMode(this, MenuScreen.Missions), UIButtonStyle.Primary);
+                AddButton("Back", Back);
+                break;
+            case MenuScreen.Conquest:
+                content.AddChild(MenuLayout.Label("The territory-map campaign is planned.", muted: true));
+                AddButton("Back", Back).GrabFocus();
+                break;
+            case MenuScreen.Missions: BuildCampaign(); break;
             case MenuScreen.FortressDefense: BuildCampaign(); break;
             case MenuScreen.Skirmishes: BuildSkirmishes(); break;
             case MenuScreen.About:
@@ -332,13 +343,15 @@ public partial class FrontMenu : Control
             MenuNavigation.Open(this, MenuNavigation.Boot);
             ProfileStore.ClearSelection();
         }
-        else if (Screen == MenuScreen.Campaign && campaignLevels?.Visible == true)
+        else if (Screen == MenuScreen.Missions && campaignLevels?.Visible == true)
         {
             campaignLevels.Hide();
             campaignModes.Show();
             Report("");
             lastModeButton?.GrabFocus();
         }
+        else if (Screen is MenuScreen.Conquest or MenuScreen.Missions)
+            MenuNavigation.Open(this, MenuNavigation.Campaign);
         else MenuNavigation.Open(this, MenuNavigation.Main);
     }
 

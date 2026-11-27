@@ -121,7 +121,7 @@ internal sealed partial class AutoBattlerCampaignHeadquarters : Control
         Back();
     }
 
-    private void Back() => Run(() => MenuNavigation.Open(this, MenuNavigation.Campaign));
+    private void Back() => Run(() => MenuNavigation.OpenMode(this, FrontMenu.MenuScreen.Missions));
 
     private void Run(Action action)
     {

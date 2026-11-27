@@ -43,9 +43,7 @@ internal static class MenuNavigation
             OpenMode(source, FrontMenu.MenuScreen.FortressDefense, campaignId);
             return;
         }
-        var menu = LoadScene(Campaign).Instantiate<FrontMenu>();
-        menu.ReturnCampaignId = campaignId;
-        Change(source, menu);
+        OpenMode(source, FrontMenu.MenuScreen.Missions, campaignId);
     }
 
     public static void OpenHeadquarters(Node source, CampaignDefinition campaign, bool recruitment = false) =>
