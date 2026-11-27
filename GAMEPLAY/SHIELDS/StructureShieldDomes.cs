@@ -87,7 +87,7 @@ internal sealed class StructureShieldDomes
             bool rippling = dome.RippleTime > 0f;
             dome.RippleTime = Mathf.Max(0f, dome.RippleTime - dt);
             if (enabled) dome.Energy = Mathf.Min(dome.Stats.Capacity, dome.Energy + dome.Stats.Recharge * dt);
-            dome.Active = enabled && dome.Energy > 0f && (wasActive || dome.Energy >= dome.Stats.Capacity * 0.25f);
+            dome.Active = enabled && dome.Energy > 0f;
             if (wasActive != dome.Active || rippling) dome.Render(dome);
         }
     }
