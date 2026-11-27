@@ -95,7 +95,7 @@ public partial class ProjectileRenderer : Node3D
     {
         if (prismEffectCap < 0) prismEffectCap = Mathf.Clamp(UnitVisualConfig.Load().MaxPrismBeamEffects, 0, 512);
         if (prismEffectCap == 0) return;
-        prismBeams ??= new PrismBeamEffects(this, prismEffectCap);
+        prismBeams ??= new PrismBeamEffects(this, prismEffectCap, groundGlowTerrain);
         prismBeams.Emit(from, to, faction, seconds);
     }
 

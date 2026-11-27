@@ -1,4 +1,4 @@
-// Draws pooled, fading Prism beam flashes using three shared MultiMesh batches.
+// Draws pooled Prism beams, muzzle flashes, and terrain-following ground glow.
 using Godot;
 
 namespace MassiveRts;
@@ -7,26 +7,33 @@ internal sealed class PrismBeamEffects
 {
     private readonly record struct Shot(Vector3 From, Vector3 To, Color Tint, float Life, float Remaining);
     private readonly Shot[] shots;
-    private readonly MultiMesh core, halo, muzzle;
+    private readonly MultiMesh beams, muzzle;
+    private readonly BeamGroundGlow groundGlow;
+    private readonly TerrainHeightField terrain;
     private int count;
 
-    internal PrismBeamEffects(Node3D parent, int capacity)
+    internal PrismBeamEffects(Node3D parent, int capacity, TerrainHeightField terrain)
     {
         shots = new Shot[capacity];
+        this.terrain = terrain;
         var material = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded
         };
-        core = Batch(parent, new BoxMesh { Material = material });
-        halo = Batch(parent, new BoxMesh { Material = material });
+        var beamMaterial = new ShaderMaterial
+        {
+            Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/RailgunBeam.gdshader")
+        };
+        beams = Batch(parent, new PlaneMesh { Size = Vector2.One, Material = beamMaterial }, useCustomData: true);
+        groundGlow = new BeamGroundGlow(parent, capacity, 3.0f);
         muzzle = Batch(parent, new SphereMesh { Material = material, RadialSegments = 8, Rings = 4 });
     }
 
-    private MultiMesh Batch(Node3D parent, Mesh mesh)
+    private MultiMesh Batch(Node3D parent, Mesh mesh, bool useCustomData = false)
     {
         var batch = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-            UseColors = true, Mesh = mesh, InstanceCount = shots.Length, VisibleInstanceCount = 0 };
+            UseColors = true, UseCustomData = useCustomData, Mesh = mesh, InstanceCount = shots.Length, VisibleInstanceCount = 0 };
         parent.AddChild(new MultiMeshInstance3D
         {
             Multimesh = batch, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
@@ -38,8 +45,10 @@ internal sealed class PrismBeamEffects
     {
         if (count >= shots.Length || from.DistanceSquaredTo(to) < 0.000001f) return;
         shots[count] = new Shot(from, to, Factions.Color(faction).Lightened(0.32f), duration, duration);
-        Write(count++);
-        core.VisibleInstanceCount = halo.VisibleInstanceCount = muzzle.VisibleInstanceCount = count;
+        groundGlow.Write(count, from, to, shots[count].Tint, terrain);
+        WritePose(count);
+        WriteFade(count++);
+        SyncCount();
     }
 
     internal void Advance(float dt)
@@ -50,30 +59,46 @@ internal sealed class PrismBeamEffects
             float remaining = shots[i].Remaining - dt;
             if (remaining <= 0f)
             {
-                shots[i] = shots[--count];
-                if (i == count) continue;
+                int last = --count;
+                groundGlow.Remove(i, last);
+                if (i == last) continue;
+                shots[i] = shots[last];
+                WritePose(i);
             }
             else shots[i] = shots[i] with { Remaining = remaining };
-            Write(i);
+            WriteFade(i);
         }
-        core.VisibleInstanceCount = halo.VisibleInstanceCount = muzzle.VisibleInstanceCount = count;
+        SyncCount();
     }
 
-    private void Write(int slot)
+    private void SyncCount()
+    {
+        beams.VisibleInstanceCount = muzzle.VisibleInstanceCount = count;
+        groundGlow.SetVisibleCount(count);
+    }
+
+    private void WritePose(int slot)
     {
         Shot shot = shots[slot];
-        float fade = shot.Remaining / shot.Life;
         Vector3 delta = shot.To - shot.From;
         float length = delta.Length();
         Basis facing = Basis.LookingAt(delta, Mathf.Abs(delta.Y) > length * 0.98f ? Vector3.Right : Vector3.Up);
         Vector3 middle = (shot.From + shot.To) * 0.5f;
-        core.SetInstanceTransform(slot, new Transform3D(facing * Basis.Identity.Scaled(new Vector3(0.17f, 0.17f, length)), middle));
-        halo.SetInstanceTransform(slot, new Transform3D(facing * Basis.Identity.Scaled(new Vector3(0.52f, 0.52f, length)), middle));
-        muzzle.SetInstanceTransform(slot, new Transform3D(Basis.Identity.Scaled(Vector3.One * (0.4f + 0.55f * fade)), shot.From));
-        core.SetInstanceColor(slot, new Color(1f, 1f, 1f, fade));
+        beams.SetInstanceCustomData(slot, new Color(0f, 0f, 0f, 0f));
+        beams.SetInstanceTransform(slot,
+            new Transform3D(facing * Basis.FromScale(new Vector3(0.65f, 1f, length)), middle));
+    }
+
+    private void WriteFade(int slot)
+    {
+        Shot shot = shots[slot];
+        float fade = shot.Remaining / shot.Life;
+        muzzle.SetInstanceTransform(slot,
+            new Transform3D(Basis.FromScale(Vector3.One * (0.4f + 0.55f * fade)), shot.From));
         Color tint = shot.Tint;
-        tint.A = fade * 0.48f;
-        halo.SetInstanceColor(slot, tint);
+        tint.A = fade;
+        beams.SetInstanceColor(slot, tint);
+        groundGlow.SetTint(slot, tint);
         muzzle.SetInstanceColor(slot, new Color(0.65f, 0.94f, 1f, fade));
     }
 }

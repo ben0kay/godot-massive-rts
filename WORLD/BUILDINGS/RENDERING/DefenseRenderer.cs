@@ -13,8 +13,6 @@ public partial class DefenseRenderer : Node3D
     private const float FlashSeconds = 0.16f;
     private const float GroundFlashSeconds = 0.32f;
     private const int GroundFlashCapacity = 64;
-    private const int BeamGroundSegments = 12;
-    private const float BeamGroundWidth = 3.6f;
     private static readonly ShaderMaterial LitTowerMaterial = new()
     {
         Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/TowerArmor.gdshader")
@@ -65,8 +63,7 @@ public partial class DefenseRenderer : Node3D
     private readonly bool[] rocketSlots = new bool[DeploymentLayout.MaxBuildings];
     private readonly int[] beamSlots = new int[DeploymentLayout.MaxBuildings];
     private readonly int[] beamOwners = new int[DeploymentLayout.MaxBuildings];
-    private MultiMesh beamGround;
-    private readonly int[] beamGroundCounts = new int[DeploymentLayout.MaxBuildings];
+    private BeamGroundGlow beamGround;
     private int liveBeams, liveFlashes;
     private MultiMesh shieldTowers;
     private MultiMesh minigunBase, minigunHead, minigunBarrels;
@@ -148,12 +145,7 @@ public partial class DefenseRenderer : Node3D
     {
         InitializeBatches();
         liveGroundFlashes = 0;
-        if (beamGround != null)
-        {
-            for (int i = 0; i < beamGround.VisibleInstanceCount; i++) beamGround.SetInstanceTransform(i, Hidden);
-            beamGround.VisibleInstanceCount = 0;
-            Array.Clear(beamGroundCounts);
-        }
+        beamGround?.Clear();
         if (groundFlashes != null) groundFlashes.VisibleInstanceCount = 0;
         shieldDomes?.Clear();
         ResetMinigunBatch(minigunBase);
@@ -485,7 +477,9 @@ public partial class DefenseRenderer : Node3D
             beamGlows.VisibleInstanceCount = liveBeams * 2;
             beams.VisibleInstanceCount = liveBeams;
         }
-        WriteBeamGround(slot, from, to, faction, terrain);
+        beamGround ??= new BeamGroundGlow(this, DeploymentLayout.MaxBuildings, 3.6f);
+        beamGround.Write(slot, from, to, Factions.Color(faction), terrain);
+        beamGround.SetVisibleCount(liveBeams);
         beams.SetInstanceTransform(slot, new Transform3D(basis, (from + to) * 0.5f));
         beamGlows.SetInstanceTransform(slot * 2, new Transform3D(Basis.Identity, from));
         beamGlows.SetInstanceCustomData(slot * 2 + 1, new Color(2f, impact.HasValue ? 1f : 0f, 0f, 0f));
@@ -495,99 +489,13 @@ public partial class DefenseRenderer : Node3D
 
     // One shared batch for all live beam ground strips. UV.y runs from the
     // segment start to its end, so only the two ends of the full beam fade.
-    private static Mesh BuildBeamGroundMesh()
-    {
-        using var surface = new SurfaceTool();
-        surface.Begin(Mesh.PrimitiveType.Triangles);
-        void Vertex(float x, float z)
-        {
-            surface.SetUV(new Vector2(x + 0.5f, z + 0.5f));
-            surface.AddVertex(new Vector3(x, 0f, z));
-        }
-        Vertex(-0.5f, -0.5f); Vertex(0.5f, -0.5f); Vertex(0.5f, 0.5f);
-        Vertex(-0.5f, -0.5f); Vertex(0.5f, 0.5f); Vertex(-0.5f, 0.5f);
-        return surface.Commit();
-    }
-
-    private void WriteBeamGround(int slot, Vector3 from, Vector3 to, byte faction, TerrainHeightField terrain)
-    {
-        if (beamGround == null)
-        {
-            var material = new ShaderMaterial
-            {
-                Shader = GD.Load<Shader>("res://WORLD/BUILDINGS/RENDERING/RailgunGroundGlow.gdshader")
-            };
-            beamGround = Batch(BuildBeamGroundMesh(), DeploymentLayout.MaxBuildings * BeamGroundSegments,
-                material, useCustomData: true);
-            for (int i = 0; i < beamGround.InstanceCount; i++) beamGround.SetInstanceTransform(i, Hidden);
-        }
-
-        Vector3 horizontal = new(to.X - from.X, 0f, to.Z - from.Z);
-        float length = horizontal.Length();
-        int count = length < 0.001f ? 0 : terrain == null ? 1 :
-            Mathf.Clamp(Mathf.CeilToInt(length / 3f), 1, BeamGroundSegments);
-        int first = slot * BeamGroundSegments;
-        if (count > 0)
-        {
-            Vector3 right = new Vector3(horizontal.Z, 0f, -horizontal.X) / length * BeamGroundWidth;
-            Color tint = Factions.Color(faction);
-            Vector3 previous = from;
-            float previousHeight = terrain?.At(previous.X, previous.Z) ?? 0f;
-            for (int i = 0; i < count; i++)
-            {
-                float t0 = i / (float)count, t1 = (i + 1f) / count;
-                Vector3 next = from.Lerp(to, t1);
-                float nextHeight = terrain?.At(next.X, next.Z) ?? 0f;
-                Vector3 start = new(previous.X, previousHeight + 0.09f, previous.Z);
-                Vector3 end = new(next.X, nextHeight + 0.09f, next.Z);
-                // Match neighboring endpoints exactly; don't stretch one plane
-                // between distant hills. Height fade is interpolated in shader.
-                float alpha0 = 1f - Mathf.Clamp((previous.Y - previousHeight) / 8f, 0f, 1f);
-                float alpha1 = 1f - Mathf.Clamp((next.Y - nextHeight) / 8f, 0f, 1f);
-                int instance = first + i;
-                beamGround.SetInstanceTransform(instance, new Transform3D(
-                    new Basis(right, Vector3.Up, end - start), (start + end) * 0.5f));
-                beamGround.SetInstanceColor(instance, tint);
-                beamGround.SetInstanceCustomData(instance, new Color(t0, t1, alpha0, alpha1));
-                previous = next;
-                previousHeight = nextHeight;
-            }
-        }
-        for (int i = count; i < beamGroundCounts[slot]; i++)
-            beamGround.SetInstanceTransform(first + i, Hidden);
-        beamGroundCounts[slot] = count;
-        beamGround.VisibleInstanceCount = liveBeams * BeamGroundSegments;
-    }
-
-    private void RemoveBeamGround(int slot, int last)
-    {
-        if (beamGround == null) return;
-        int count = beamGroundCounts[last];
-        if (slot != last)
-        {
-            int destination = slot * BeamGroundSegments, source = last * BeamGroundSegments;
-            for (int i = 0; i < count; i++)
-            {
-                beamGround.SetInstanceTransform(destination + i, beamGround.GetInstanceTransform(source + i));
-                beamGround.SetInstanceColor(destination + i, beamGround.GetInstanceColor(source + i));
-                beamGround.SetInstanceCustomData(destination + i, beamGround.GetInstanceCustomData(source + i));
-            }
-            for (int i = count; i < beamGroundCounts[slot]; i++)
-                beamGround.SetInstanceTransform(destination + i, Hidden);
-            beamGroundCounts[slot] = count;
-        }
-        for (int i = 0; i < count; i++)
-            beamGround.SetInstanceTransform(last * BeamGroundSegments + i, Hidden);
-        beamGroundCounts[last] = 0;
-        beamGround.VisibleInstanceCount = liveBeams * BeamGroundSegments;
-    }
-
     internal void HideBeam(int index)
     {
         if (beams == null || beamSlots[index] < 0) return;
         int slot = beamSlots[index], last = --liveBeams;
         beamSlots[index] = -1;
-        RemoveBeamGround(slot, last);
+        beamGround?.Remove(slot, last);
+        beamGround?.SetVisibleCount(liveBeams);
         if (slot != last)
         {
             int moved = beamOwners[last];

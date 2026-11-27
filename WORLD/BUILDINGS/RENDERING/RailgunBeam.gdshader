@@ -4,7 +4,7 @@ render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabl
 
 varying flat float effect;
 varying flat float contact;
-varying flat vec3 team;
+varying flat vec4 team;
 varying flat float beam_length;
 varying flat float seed;
 
@@ -12,7 +12,7 @@ void vertex() {
     vec3 center = MODELVIEW_MATRIX[3].xyz;
     effect = INSTANCE_CUSTOM.x;
     contact = INSTANCE_CUSTOM.y;
-    team = COLOR.rgb;
+    team = COLOR;
     beam_length = length(MODELVIEW_MATRIX[2].xyz);
     seed = dot(MODEL_MATRIX[3].xz, vec2(0.11, 0.07));
     if (effect < 0.5) {
@@ -28,8 +28,8 @@ void vertex() {
 }
 
 void fragment() {
-    vec3 tint = mix(team, vec3(1.0), 0.08);
-    vec3 hot_core = mix(team, vec3(1.0), 0.58) * 1.3;
+    vec3 tint = mix(team.rgb, vec3(1.0), 0.08);
+    vec3 hot_core = mix(team.rgb, vec3(1.0), 0.58) * 1.3;
     if (effect < 0.5) {
         float edge = abs(UV.x * 2.0 - 1.0);
         float aa = clamp(fwidth(edge), 0.02, 0.40);
@@ -38,7 +38,9 @@ void fragment() {
         float halo = 1.0 - smoothstep(0.0, 0.98, edge);
         float shimmer = 0.86 + 0.14 * sin(UV.y * beam_length * 4.0 - TIME * 24.0);
         ALBEDO = mix(tint, hot_core, core);
-        ALPHA = min(core * 0.93 + sheath * shimmer * 0.52 + halo * halo * 0.30, 1.0);
+        float tip = min(UV.y, 1.0 - UV.y);
+        float taper = smoothstep(0.0, clamp(1.2 / max(beam_length, 0.001), 0.035, 0.18), tip);
+        ALPHA = team.a * taper * min(core * 0.93 + sheath * shimmer * 0.52 + halo * halo * 0.30, 1.0);
     } else {
         vec2 p = UV * 2.0 - 1.0;
         float radius = length(p);

@@ -720,3 +720,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-26 — Added temporary ground scorch marks for explosive projectile impacts and aircraft crashes, using a capped MultiMesh with slow fade updates and terrain sampling at impact.
 
 - 2026-11-26 — Added Missile Barrage Tower (34 range, 12-round magazine, 6 shots/s, 8 s reload) and Long-Range AA Tower (95 range, heavy 2.2× missile, 6 s interval), sharing existing guided Interceptor missile pool and air grid. Added faction-armored vertical launch meshes, catalog/placement/inspection/Entity Editor and Fortress build registration. Aircraft combat runs in existing AirSquadron-enabled battles; Fortress air waves not implemented. Godot validation pending.
+
+- 2026-11-26 — Shared the Railgun ground glow with Prism Lance and softened both beam tips. Reduced the Prism firing cycle from 9 to 6 seconds by shortening recovery. Increased Siege Ram speed from 1.4 to 1.54.

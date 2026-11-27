@@ -2,11 +2,11 @@
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled;
 
-varying flat vec3 team;
+varying flat vec4 team;
 varying flat vec4 span;
 
 void vertex() {
-    team = COLOR.rgb;
+    team = COLOR;
     span = INSTANCE_CUSTOM;
 }
 
@@ -23,6 +23,6 @@ void fragment() {
     float radius = length(vec2(across, cap));
     float soft = 1.0 - smoothstep(0.0, 1.0, radius);
     float center = 1.0 - smoothstep(0.0, 0.30, radius);
-    ALBEDO = mix(team, vec3(1.0), 0.10 + center * 0.12);
-    ALPHA = (soft * soft * 0.43 + center * 0.15) * height_fade;
+    ALBEDO = mix(team.rgb, vec3(1.0), 0.10 + center * 0.12);
+    ALPHA = (soft * soft * 0.43 + center * 0.15) * height_fade * team.a;
 }
