@@ -29,3 +29,4 @@ ArcHeightPerDistance = 0.0
 VisualMesh = SubResource("Mesh")
 TintByFaction = true
 UseGroundGlow = true
+ShieldRicochetEnabled = true

@@ -14,6 +14,7 @@ public sealed class ProjectileCatalog
     private readonly List<float> scales = new();
     private readonly List<bool> factionTints = new();
     private readonly List<bool> groundGlows = new();
+    private readonly List<Vector3> ricochetSizes = new();
     private readonly ProjectileDefinition basicArrow = GD.Load<ProjectileDefinition>(BasicArrowPath);
 
     private readonly List<bool> launchEffects = new();
@@ -32,6 +33,8 @@ public sealed class ProjectileCatalog
 
     internal bool HasGroundGlow => groundGlows.Contains(true);
     internal bool UsesGroundGlow(int index) => groundGlows[index];
+    // Zero means disabled. Cache the source mesh dimensions once, not on impact.
+    internal Vector3 RicochetSize(int index) => ricochetSizes[index];
 
     internal bool HasLaunchEffects => launchEffects.Contains(true);
     internal bool UsesLaunchEffects(int index) => launchEffects[index];
@@ -73,6 +76,8 @@ public sealed class ProjectileCatalog
             ? Mathf.Clamp(definition.VisualSizeMultiplier, 0.1f, 4f) : 1f));
         factionTints.Add(definition.TintByFaction);
         groundGlows.Add(definition.UseGroundGlow);
+        ricochetSizes.Add(definition.ShieldRicochetEnabled && flights[index].ExplosionRadius <= 0f
+            ? mesh.GetAabb().Size * scales[index] : Vector3.Zero);
         launchEffects.Add(definition.UseLaunchEffects);
         flightSmoke.Add(definition.UseLaunchEffects && definition.UseFlightSmoke);
         return index;

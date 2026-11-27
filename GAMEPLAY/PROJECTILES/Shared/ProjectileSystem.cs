@@ -191,8 +191,9 @@ public sealed class ProjectileSystem
                 else
                     blocked = obstacles != null && flight.BlocksOnObstacles &&
                         obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
+                float contactFraction = wallHit;
                 int victim = wallHit > 0f
-                    ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out _, wallHit)
+                    ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out contactFraction, wallHit)
                     : -1;
                 if (victim >= 0 || blocked)
                 {
@@ -204,7 +205,22 @@ public sealed class ProjectileSystem
                             forest.DropLeaves(units.Position[victim] + Vector3.Up * units.Catalog[units.Type[victim]].Height * 0.65f);
                         else
                         {
+                            float before = units.Health[victim];
+                            Vector3 ricochetSize = rings != null ? catalog.RicochetSize(Type[i]) : Vector3.Zero;
+                            float shieldBefore = ricochetSize != Vector3.Zero ? units.Shields?.Amount(victim) ?? 0f : 0f;
                             units.Damage(victim, damage[i], damageTypes[i]);
+                            if (rings != null)
+                            {
+                                Vector3 contact = Position[i] + segment * Mathf.Clamp(contactFraction, 0f, 1f);
+                                ref readonly var target = ref units.Catalog[units.Type[victim]];
+                                if (units.Health[victim] < before)
+                                    rings.EmitBulletImpact(contact, target.Footprint);
+                                else if (shieldBefore > 0f && (units.Shields?.Amount(victim) ?? 0f) < shieldBefore)
+                                    rings.EmitShieldRicochet(contact, segment,
+                                        units.Position[victim] + Vector3.Up * (target.Height * 0.5f),
+                                        Mathf.Max(config.ProjectileHitRadius, target.Footprint),
+                                        sourceFaction[i], ricochetSize);
+                            }
                             if (units.Health[victim] <= 0f && firingTowers?[i] is { } tower) tower.Kills++;
                         }
                     }

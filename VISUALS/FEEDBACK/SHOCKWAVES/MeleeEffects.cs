@@ -42,8 +42,8 @@ internal sealed class MeleeEffects
         int x = Mathf.FloorToInt(point.X / 3f), z = Mathf.FloorToInt(point.Z / 3f);
         int bucket = unchecked((x * 73856093 ^ z * 19349663 ^ kind * 83492791) & (CooldownBuckets - 1));
         if (clock < nextEmission[bucket]) return;
-        nextEmission[bucket] = clock + (kind == 2 ? 0.22f : 0.13f);
-        float duration = kind == 2 ? 0.35f : kind == 1 ? 0.17f : 0.13f;
+        nextEmission[bucket] = clock + (kind == 3 ? 0.07f : kind == 2 ? 0.22f : 0.13f);
+        float duration = kind == 3 ? 0.15f : kind == 2 ? 0.35f : kind == 1 ? 0.17f : 0.13f;
         effects[count++] = new Effect(point, direction.Normalized(), size, duration, kind, 0f);
         dirty = true;
     }

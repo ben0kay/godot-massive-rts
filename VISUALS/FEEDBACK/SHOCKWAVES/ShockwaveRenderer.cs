@@ -13,6 +13,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     private readonly Ring[] rings = new Ring[Capacity];
     private MultiMesh bursts, chips, rallyMarkers;
     private MeleeEffects meleeEffects;
+    private ShieldRicochetEffects shieldRicochets;
     private ScorchMarks scorchMarks;
     private readonly CavalryDust cavalryDust = new();
     private TreadMarks treads;
@@ -109,6 +110,21 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
         scorchMarks.Emit(ground, blastRadius, terrain);
     }
 
+    // Ranged contact glints share the existing bounded spark batch.
+    internal void EmitBulletImpact(Vector3 contact, float footprint)
+    {
+        meleeEffects ??= new MeleeEffects(this);
+        meleeEffects.Emit(contact, Vector2.Zero, Mathf.Clamp(footprint * 1.6f, 0.65f, 1.35f), 3);
+    }
+
+    internal void EmitShieldRicochet(Vector3 contact, Vector3 incoming, Vector3 center,
+        float radius, byte faction, Vector3 size)
+    {
+        if (incoming.LengthSquared() < 0.000001f) return;
+        shieldRicochets ??= new ShieldRicochetEffects(this);
+        shieldRicochets.Emit(contact, incoming, center, radius, faction, size);
+    }
+
     internal void EmitMelee(Vector3 contact, Vector2 direction, float footprint, bool cleave)
     {
         meleeEffects ??= new MeleeEffects(this);
@@ -193,6 +209,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     public void Advance(float dt)
     {
         meleeEffects?.Advance(dt);
+        shieldRicochets?.Advance(dt);
         scorchMarks?.Advance(dt);
         treads?.Advance(dt);
         buildingSmoke?.Advance(dt);
@@ -210,6 +227,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     {
         SyncRallyMarkers(units);
         meleeEffects?.Sync();
+        shieldRicochets?.Sync();
         if (!dirty) return;
         int ringCount = 0, flashCount = 0, chipCount = 0;
         for (int i = 0; i < count; i++)
@@ -304,6 +322,7 @@ public partial class ShockwaveRenderer : MultiMeshInstance3D
     {
         cavalryDust.Clear();
         meleeEffects?.Clear();
+        shieldRicochets?.Clear();
         scorchMarks?.Clear();
         treads?.Clear();
         buildingSmoke?.Clear();

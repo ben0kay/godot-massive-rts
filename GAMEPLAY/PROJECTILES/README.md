@@ -43,3 +43,7 @@ Explosive projectile impacts and aircraft crashes leave temporary ground
 scorch marks. Marks size to the blast, follow the local terrain slope, and
 fade over the last four seconds of a nine-second lifetime. The shared renderer
 retains up to 128 marks in one MultiMesh and clears them on battle reset.
+
+### Direct impact sparks and shield ricochets
+
+Non-explosive swept unit contacts that actually reduce health emit a small metallic spark burst at the existing hit fraction. Shield-only contacts do not emit body sparks. `ProjectileDefinition.ShieldRicochetEnabled` is a visual-only opt-in, initially enabled only on `LaserBolt.tres` (Triangle Archer) and `MinigunRound.tres` (Dreadnaught and Twin Minigun Tower). The compiled catalogue caches the opted-in mesh dimensions. A fully absorbed hit, including an exact shield break, spawns a cosmetic reflected tracer if enabled; shield overflow produces the normal shield flash and body sparks instead. The original projectile is removed normally. No damage, targeting, RNG, flight or collision rules change.

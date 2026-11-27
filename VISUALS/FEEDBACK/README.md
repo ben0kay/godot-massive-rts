@@ -42,3 +42,7 @@ First Crack Health and Heavy Crack Health default to 75% and 25%. The intermedia
 ### Reactive buildings and treads
 
 ShockwaveRenderer samples low-health structures at 0.7-second intervals (up to 12 smoke emissions per sample, with a subset emitting contact-pool sparks), and existing destruction cleanup triggers one building explosion, chips, scorch and three dark smoke puffs. Shared smoke shader supports dark puffs without changing ordinary muzzle smoke. Siege Ram alone opts into `LeavesTreadMarks` (Entity Editor → Appearance and size); other unit types can opt in later. TreadMarks tracks eligible moving units at 0.16-second cadence, emits paired ground marks by distance, and caps the lazy batch at 512 marks with 12-second lifetime and 4-second fade. Ground slope is approximated; sharp slopes skip marks. No navigation or combat changes.
+
+### Projectile contact feedback
+
+`ShockwaveRenderer.EmitBulletImpact` reuses `MeleeEffects` (kind 3, 0.15-second metallic sparks, shared 256-effect cap and spatial cooldown). `ShieldRicochetEffects` is one lazy 256-instance MultiMesh of short faction-tinted cosmetic tracers. Reflection uses the existing hit point and approximate unit collision sphere, with independent cosmetic scatter. The pool is advanced, synchronized and cleared alongside the other battle feedback; it drops excess effects rather than queueing them. No new spatial queries or per-projectile nodes. Owner validation pending.
