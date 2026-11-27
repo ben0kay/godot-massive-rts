@@ -105,7 +105,7 @@ public partial class LevelEditor : Node
         newLevelTerrain.AddItem("Steel Slate", (int)CommandSandbox.BaseTerrainStyle.SteelSlate);
         newLevelTerrain.Select(0);
         creation.AddChild(newLevelTerrain);
-        var newLevel = Button(creation, "+ New Level", () => Open(null));
+        var newLevel = Button(creation, "+ New Level", ChooseNewLevel);
         newLevel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         newLevel.CustomMinimumSize = new Vector2(0, 38);
         startStatus = Heading(start, "", 15);
@@ -286,13 +286,14 @@ public partial class LevelEditor : Node
         OpenMap(adapter, existing);
     }
 
-    private void OpenMap(LevelEditorMode adapter, LevelDefinition existing)
+    private void OpenMap(LevelEditorMode adapter, LevelDefinition existing, ProceduralBattlefield.Candidate generated = null)
     {
         CommandSandbox next;
         LevelDefinition nextMetadata;
         try { next = adapter.Open(existing, out nextMetadata); }
         catch (Exception error) { startStatus.Text = error.Message; return; }
         if (existing == null) next.BaseTerrain = (CommandSandbox.BaseTerrainStyle)newLevelTerrain.GetSelectedId();
+        if (generated != null) nextMetadata.MapSize = generated.Size;
         EndElevation();
         CancelBridge();
         CancelWallStroke();
@@ -336,7 +337,8 @@ public partial class LevelEditor : Node
         map.AddChild(cursor, false, InternalMode.Back);
         SetTools();
         FrameEditor();
-        RefreshMap();
+        if (generated == null) RefreshMap();
+        else ApplyGeneratedTerrain(generated);
         ShowEditor();
         SetStatus();
     }

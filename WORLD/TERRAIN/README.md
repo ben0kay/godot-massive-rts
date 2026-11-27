@@ -13,3 +13,7 @@ See the [TERR1 implementation plan](TERR1_IMPLEMENTATION_PLAN.md).
 ## Command-level authoring
 
 Command levels compile only the chunks around authored hills. The shared surface drives the visible terrain, pointer projection, troop grounding and building placement. [Level setup instructions](../../LEVELS/README.md) cover hill and unit placement scenes. Hills use radius and rise controls in this first pass. The command map still uses XZ obstacle routing on slopes.
+
+## Procedural level authoring
+
+`PROCEDURAL/ProceduralBattlefield.cs` generates seeded elevation samples and `WorldPaintData` for the Level Editor. River Divide reserves one or two clear crossing corridors and validates them for the largest catalogued ground footprint. The editor checks the candidate against the existing world-paint compiler before applying it. Generated maps save the editable output and use the existing terrain rendering and navigation systems in play.
