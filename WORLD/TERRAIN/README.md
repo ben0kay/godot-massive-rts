@@ -16,4 +16,4 @@ Command levels compile only the chunks around authored hills. The shared surface
 
 ## Procedural level authoring
 
-`PROCEDURAL/ProceduralBattlefield.cs` generates seeded elevation samples and `WorldPaintData` for the Level Editor. River Divide sizes its bridge decks for the largest catalogued ground footprint and keeps scenery off the decks. Units find routes through the generated terrain during play. The editor checks the candidate against the existing world-paint compiler before applying it. Generated maps save the editable output and use the existing terrain rendering and navigation systems in play.
+`PROCEDURAL/ProceduralBattlefield.cs` generates seeded elevation samples and `WorldPaintData` for the Level Editor. River Divide keeps the banks level for crossings placed manually with Draw bridge. Units find routes through the generated terrain during play. The editor checks the candidate against the existing world-paint compiler before applying it. Generated maps save the editable output and use the existing terrain rendering and navigation systems in play.

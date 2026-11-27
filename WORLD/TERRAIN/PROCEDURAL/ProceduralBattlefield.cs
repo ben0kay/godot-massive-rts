@@ -15,7 +15,7 @@ internal static class ProceduralBattlefield
     private const float Cell = WorldPaint.CellSize;
 
     internal sealed record Settings(int Seed, int Size, Layout Preset, float Relief, float Forest, ForestPattern Trees, float Rock,
-        int RiverWidth, int Crossings, int BridgeWidth, float Meander, float FlatBand, float Clearance, bool Fortress);
+        int RiverWidth, float Meander, float FlatBand, bool Fortress);
 
     internal sealed record Candidate(int Size, Samples Elevation, WorldPaintData Paint, Image Preview);
 
@@ -30,14 +30,13 @@ internal static class ProceduralBattlefield
         int riverCenter = settings.Fortress ? Mathf.RoundToInt(edge * 0.48f) : 0;
         int riverHalf = Mathf.CeilToInt(settings.RiverWidth / (2f * Cell));
         int swing = Mathf.RoundToInt(riverHalf * settings.Meander);
-        int clearance = Mathf.CeilToInt(settings.Clearance / Cell);
-        int bridgeSpan = Mathf.Max(Mathf.CeilToInt(settings.BridgeWidth / Cell), 2 * clearance + 2);
-        int firstBridgeCenter = settings.Crossings == 1 ? 0 : -edge / 2;
-        int secondBridgeCenter = settings.Crossings == 1 ? 0 : edge / 2;
         bool river = settings.Preset == Layout.RiverDivide;
         var random = new Random(settings.Seed);
         float phase = (float)random.NextDouble() * Mathf.Tau;
         var paint = new WorldPaintData { ResourceLocalToScene = true };
+
+        float RiverCenterAt(float x) =>
+            riverCenter + swing * Mathf.Sin((x / size + 0.5f) * 9.6f + phase);
 
         int RiverRow(int column)
         {
@@ -47,8 +46,6 @@ internal static class ProceduralBattlefield
 
         if (river)
         {
-            if (bridgeSpan + 2 >= edge)
-                throw new InvalidOperationException("Increase the map size or reduce the bridge width.");
             if (settings.Fortress && (riverCenter - riverHalf - swing) * Cell <= 18f)
                 throw new InvalidOperationException("The river reaches the fortress build area. Narrow it or increase the map size.");
 
@@ -59,17 +56,6 @@ internal static class ProceduralBattlefield
                 for (int z = Math.Min(row, previous) - riverHalf; z < Math.Max(row, previous) + riverHalf; z++)
                     paint.WaterCells.Add(new Vector2I(x, z));
             }
-
-            AddBridge(firstBridgeCenter);
-            if (settings.Crossings == 2) AddBridge(secondBridgeCenter);
-        }
-
-        void AddBridge(int center)
-        {
-            int left = center - bridgeSpan / 2;
-            int low = riverCenter - swing - riverHalf - clearance - 1;
-            int high = riverCenter + swing + riverHalf + clearance + 1;
-            paint.Bridges.Add(new Rect2I(left, low, bridgeSpan, high - low));
         }
 
         bool Protected(Vector2 point)
@@ -82,12 +68,9 @@ internal static class ProceduralBattlefield
         Vector2 Center(Vector2I cell) => ((Vector2)cell + Vector2.One * 0.5f) * Cell;
         var water = new HashSet<Vector2I>(paint.WaterCells);
         var rocks = new HashSet<Vector2I>();
-        var bridges = new List<Rect2I>(paint.Bridges);
         bool OpenForScenery(Vector2I cell)
         {
             if (water.Contains(cell)) return false;
-            foreach (var bridge in bridges)
-                if (bridge.HasPoint(cell)) return false;
             if (!settings.Fortress) return true;
             var point = Center(cell);
             return Mathf.Abs(point.X) > 32f || point.Y < -38f || point.Y > 18f;
@@ -119,8 +102,10 @@ internal static class ProceduralBattlefield
             }
             if (river)
             {
-                float bank = (riverHalf + swing + clearance + 2) * Cell;
-                envelope *= Mathf.SmoothStep(0f, size * 0.12f, Mathf.Abs(point.Y - riverCenter * Cell) - bank);
+                // Keep both banks level for an editor-placed bridge anywhere along the river.
+                float bankDistance = Mathf.Abs(point.Y - RiverCenterAt(point.X) * Cell);
+                float landingWidth = (riverHalf + swing * 0.8f + 2f) * Cell + TerrainHeightField.Spacing * 2f;
+                envelope *= Mathf.SmoothStep(0f, size * 0.18f, bankDistance - landingWidth);
             }
             float u = point.X / size, v = point.Y / size;
             float shape = hills.GetNoise2D(u * 0.9f, v) * 1.45f +
@@ -161,8 +146,6 @@ internal static class ProceduralBattlefield
             if (forest.Contains(cell)) color = new Color("#28543d").Lightened(Mathf.Clamp((height + 9f) / 110f, 0f, 0.3f));
             if (rocks.Contains(cell)) color = new Color("#626b75");
             if (water.Contains(cell)) color = new Color("#287692");
-            foreach (var bridge in bridges)
-                if (bridge.HasPoint(cell)) { color = new Color("#b7a785"); break; }
             preview.SetPixel(x, z, color);
         }
         return new Candidate(size, heights, paint, preview);

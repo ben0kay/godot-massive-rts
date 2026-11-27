@@ -1,7 +1,6 @@
 // Provides the new-level choice and previews procedural terrain before opening the map.
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 
 namespace MassiveRts;
@@ -77,8 +76,6 @@ public partial class LevelEditor
         form.AddChild(riverOptions);
         var riverWidth = Number(riverOptions, "River width", 16, 8, 40, 4);
         var meander = Number(riverOptions, "River meander (%)", 45, 0, 75, 5);
-        var crossings = Number(riverOptions, "Bridge count", 2, 1, 2);
-        var bridgeWidth = Number(riverOptions, "Minimum bridge width", 24, 12, 48, 4);
 
         var previewPanel = new VBoxContainer { CustomMinimumSize = new Vector2(310, 0) };
         body.AddChild(previewPanel);
@@ -88,11 +85,6 @@ public partial class LevelEditor
         var message = Heading(previewPanel, "", 15);
         message.CustomMinimumSize = new Vector2(300, 0);
         message.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-
-        float clearance = 0f;
-        foreach (var unit in units)
-            clearance = Mathf.Max(clearance, UnitOutline.FromDefinition(unit, UnitOutline.EffectiveSize(unit)).Footprint);
-        clearance += WorldPaint.CellSize;
 
         ProceduralBattlefield.Candidate candidate = null;
         var buttons = new HBoxContainer();
@@ -111,7 +103,7 @@ public partial class LevelEditor
             Invalidate();
         };
         trees.ItemSelected += _ => Invalidate();
-        foreach (var field in new[] { seed, size, relief, forest, rock, flat, riverWidth, meander, crossings, bridgeWidth })
+        foreach (var field in new[] { seed, size, relief, forest, rock, flat, riverWidth, meander })
             field.ValueChanged += _ => Invalidate();
         RefreshPreview();
         dialog.PopupCentered();
@@ -130,9 +122,8 @@ public partial class LevelEditor
             {
                 var settings = new ProceduralBattlefield.Settings((int)seed.Value, (int)size.Value,
                     (ProceduralBattlefield.Layout)preset.GetSelectedId(), (float)relief.Value, (float)forest.Value / 100f,
-                    (ProceduralBattlefield.ForestPattern)trees.GetSelectedId(), (float)rock.Value / 100f, (int)riverWidth.Value, (int)crossings.Value,
-                    (int)bridgeWidth.Value, (float)meander.Value / 100f, (float)flat.Value / 100f,
-                    clearance, !adapter.IsAutoBattler);
+                    (ProceduralBattlefield.ForestPattern)trees.GetSelectedId(), (float)rock.Value / 100f, (int)riverWidth.Value,
+                    (float)meander.Value / 100f, (float)flat.Value / 100f, !adapter.IsAutoBattler);
                 var result = ProceduralBattlefield.Generate(settings);
                 ValidateGeneratedPaint(result);
                 image.Texture = ImageTexture.CreateFromImage(result.Preview);
@@ -142,7 +133,9 @@ public partial class LevelEditor
                 float forestCoverage = result.Paint.ForestCells.Count / mapCells;
                 float rockCoverage = result.Paint.RockCells.Count / mapCells;
                 message.Text = $"{result.Size} × {result.Size} · Seed {settings.Seed}\n" +
-                    $"Forest {forestCoverage:P1} of map · Rock {rockCoverage:P1} · Bridges {result.Paint.Bridges.Count}";
+                    $"Forest {forestCoverage:P1} of map · Rock {rockCoverage:P1}";
+                if (settings.Preset == ProceduralBattlefield.Layout.RiverDivide)
+                    message.Text += "\nUse Draw bridge in the Level Editor to add crossings.";
                 if (forestCoverage + 0.0001f < settings.Forest)
                     message.Text += result.Paint.ForestCells.Count == WorldPaint.MaxPaintedCells
                         ? "\nForest coverage limited by the paint cell budget."
@@ -178,8 +171,7 @@ public partial class LevelEditor
             root.AddChild(world);
             if (candidate.Paint.ForestCells.Count > WorldPaint.MaxPaintedCells ||
                 !world.TryMerge(new HashSet<Vector2I>(candidate.Paint.RockCells),
-                    new HashSet<Vector2I>(candidate.Paint.WaterCells), out _, out _) ||
-                candidate.Paint.Bridges.Any(bridge => !world.BridgeFits(bridge)))
+                    new HashSet<Vector2I>(candidate.Paint.WaterCells), out _, out _))
                 throw new InvalidOperationException("This terrain exceeds the world-paint budget. Reduce the river, forest or rock settings.");
         }
         finally { root.Free(); }

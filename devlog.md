@@ -756,3 +756,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — MAPGEN1: Removed map-spanning scenery clearance strips and straight-route validation from procedural layouts. Kept local clearance for bridge decks and the starting fortress.
 
 - 2026-11-27 — Enabled cosmetic shield ricochets for the Marksman's LongLaserBolt via the existing projectile opt-in. No gameplay or rendering-system changes; owner validation pending.
+
+- 2026-11-27 — MAPGEN1: Smoothed River Divide’s banks along the meander and removed auto-generated bridges. Crossings can be drawn manually in the editor.
