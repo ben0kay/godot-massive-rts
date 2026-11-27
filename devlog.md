@@ -766,3 +766,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Upgraded Commander rally markers to pulsing overhead faction chevrons tied to buff expiry; added 30-second burnt building husks to the existing capped wreck field, with tier-4 movement collision, higher-tier crush and placement protection. Shared rubble mesh, existing destruction effects retained; owner validation pending.
 
 - 2026-11-27 — Restored the LINQ import required by the procedural level picker’s `Single` call.
+
+- 2026-11-27 — Tuned procedural elevation levels below 9 for gentler relief and reduced small-scale variation. Level 0 is flat and level 1 uses one ninth of its previous relief amplitude.

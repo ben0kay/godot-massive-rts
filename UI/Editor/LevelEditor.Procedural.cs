@@ -64,7 +64,7 @@ public partial class LevelEditor
         seed.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         Button(seedRow, "Randomize", () => seed.Value = Random.Shared.Next());
         var size = Number(form, "Map width and depth", 256, ProceduralBattlefield.MinSize, ProceduralBattlefield.MaxSize, 4);
-        var relief = Number(form, "Elevation intensity", 9, 0, 24);
+        var relief = Number(form, "Elevation (0 flat · 1 very gentle)", 9, 0, 24);
         Heading(form, "Forest pattern", 15);
         var trees = new OptionButton();
         trees.AddItem("Scattered Groves", (int)ProceduralBattlefield.ForestPattern.Groves);

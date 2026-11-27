@@ -87,6 +87,11 @@ internal static class ProceduralBattlefield
             Mathf.Abs(Center(cell).Y) < size * (0.5f - settings.FlatBand * 0.5f));
         foreach (var cell in forest) paint.ForestCells.Add(cell);
 
+        // Keep the default relief and give the low end finer control over nearly flat maps.
+        float relief = settings.Relief < 9f ? settings.Relief * settings.Relief / 9f : settings.Relief;
+        float detailScale = Mathf.Min(1f, settings.Relief / 9f);
+        float sampleThreshold = 0.035f * Mathf.Clamp(relief / 9f, 0.01f, 1f);
+
         // Broad slopes taper to zero at deployment ends, around the fortress and along the river valley.
         var hills = new FastNoiseLite { Seed = settings.Seed, Frequency = 3.1f };
         var foothills = new FastNoiseLite { Seed = unchecked(settings.Seed + 1), Frequency = 7f };
@@ -109,10 +114,10 @@ internal static class ProceduralBattlefield
             }
             float u = point.X / size, v = point.Y / size;
             float shape = hills.GetNoise2D(u * 0.9f, v) * 1.45f +
-                foothills.GetNoise2D(u, v * 1.15f) * 0.35f;
+                foothills.GetNoise2D(u, v * 1.15f) * 0.35f * detailScale;
             if (settings.Preset == Layout.MountainPass)
                 shape += 1.4f * Mathf.SmoothStep(0.16f, 0.43f, Mathf.Abs(u));
-            return shape * settings.Relief * envelope;
+            return shape * relief * envelope;
         }
 
         const float spacing = TerrainHeightField.Spacing;
@@ -123,7 +128,7 @@ internal static class ProceduralBattlefield
         {
             var key = new Vector2I(x, z);
             float height = Height((Vector2)key * spacing);
-            if (Mathf.Abs(height) >= 0.035f) heights.Add(key, height);
+            if (Mathf.Abs(height) >= sampleThreshold) heights.Add(key, height);
         }
 
         float Sample(Vector2 point)
