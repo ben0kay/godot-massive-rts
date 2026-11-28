@@ -2,22 +2,34 @@
 
 A small, presentation-only HUD area independent of benchmark tooling and menu screens.
 
-## Army balance bar
+## Tactical battle HUD
 
-`ArmyBalanceHud.cs` / `ArmyBalanceHud.tscn` draw a 12px-high, centered top-of-screen army-strength strip. **Blue fills from the left; Red fills from the right.** In three-faction matches, Green appears between them with its own live count. The segment widths represent **proportions of living soldiers** rather than each faction's original troop count or total health.
+**HUD1 — Source implemented / Awaiting owner validation.** Skirmishes and Missions use
+`TacticalBattleHud` after deployment. `TacticalHudStyle` supplies the shared frames
+and typography. The benchmark and command sandbox continue to use
+`ArmyBalanceHud.tscn` for ratio diagnostics.
 
-Examples:
-- Blue 5,000, Red 1,000: Blue occupies 83.3%, Red 16.7%.
-- Blue 4,800, Red 200: Blue 96%, Red 4%.
-- A wiped-out team has no remaining segment. If every faction is eliminated, only the dark background remains.
+The shared arena supplies the level title and objective, the actual Citadel health
+reference, reinforcement status, and executed fixed-step time. The speed control
+cycles 0.5×, 1×, 2× and 4× on the same fixed-step scheduler. F1 toggles the tactical
+HUD during battle. The Battle Overview remembers its collapsed state for the
+session. Larger faction rosters are paged four at a time.
 
-The controlling arena calls `BeginBattle(UnitState)` after incremental troop initialization is complete, `RefreshCounts()` at its existing 0.3-second diagnostics cadence, and `Reset()` when clearing/re-editing. Refresh reads the **three cached `UnitState.FactionAlive` counters**—no per-soldier pass, no extra death hooks, no progress I/O, and no changes to gameplay math.
+Ground and air statistics are updated at existing spawn, damage and death
+boundaries. Strength sums living BattleRating values and health is the ratio of
+current to maximum living HP. Casualties count deaths independently of arrivals.
+The HUD polls the cached totals roughly every 0.3 seconds without scanning units.
 
-Proportions interpolate with a lightweight exponential ease only after count changes; `_Process` disables itself when the fractions settle. Counts update directly. A live comparison stays consistent in paused, render-only and movement-only modes. The bar disappears while spawning and during deployment painting.
+`TacticalMinimap` caches a low-resolution terrain texture from the authored
+heightfield, cover, water and bridges. At up to 4 Hz it bins living ground units
+into a 48×48 density texture, and draws aircraft and structures separately.
+Enemy trench concealment uses the shared visibility rule from the outside-ground
+observer's perspective. The camera outline follows the current view and left
+click or drag pans the existing camera. The HUD creates no second 3D view.
 
-The HUD is one `Control` inside one `CanvasLayer` above the benchmark's two side panels; drawing is pointer-transparent. Its screen-space width adapts to the viewport, reserving space for left/right panels. Combat data is supplied explicitly; it does not reach into the benchmark scene by path.
-
-**Source implemented; pending owner visual validation.** Check the bar in blue/red and green-included battles, respawns, casualties, pause, and different window widths. No performance guarantee is asserted.
+Owner checks include the three objectives, reinforcement and casualty totals,
+pause/speed, retry, minimap clicks and drag, 1080p and 1440p layout, and large-army
+frame timing with the HUD shown and hidden.
 
 ## Selection bar
 
@@ -35,6 +47,8 @@ In Fortress Defense, tap Ctrl and choose **Railgun Tower** to place one for 750 
 
 The shared bottom HUD now describes Carbon Deposits as untapped, assigned, under construction, active (Carbon/s), or depleted. The **Carbon Extractor** entry in the Ctrl build tray lets you choose a deposit or unfinished rig. Placement assigns the nearest available Worker. Selected Extractors display building HP and active income or construction progress in the same existing bottom HUD frame; no second panel was added.
 
-### Offense objective
+### Citadel objectives
 
-Offense battles supply the actual Red Citadel `StructureHealth` to the shared army HUD. A separate centered red HP strip below the living-army counts shows current/max HP and empties with **ENEMY CITADEL · DESTROYED** at victory. It reads one objective at the existing HUD refresh cadence and refreshes immediately on a terminal result. Reset/retry clears the reference and hides the objective row; other modes retain their original HUD.
+Offense shows the Red Citadel and Defense shows the Blue Citadel. Clash omits the
+objective panel. The level editor's benchmark playtest retains its existing
+objective strip.

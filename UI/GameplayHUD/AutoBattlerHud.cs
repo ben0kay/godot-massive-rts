@@ -16,15 +16,14 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     internal VBoxContainer DeploymentOrderControls { get; private set; }
     private readonly Label status = MenuLayout.Label("", muted: true);
     private readonly Label strength = MenuLayout.Label("");
-    private readonly Label arrival = MenuLayout.Label("", muted: true);
     private readonly Label result = MenuLayout.Label("");
-    private readonly Button fight, retry, withdraw;
+    private readonly Button fight, retry;
     private readonly Action refreshReserve;
     private readonly Dictionary<byte, Label> roster = new();
 
     public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
         Action<byte> select, Action<int> brush, Action clear, Action start,
-        Action reset, Action retreat, Action leave, Func<byte, int> maxReserve,
+        Action reset, Action leave, Func<byte, int> maxReserve,
         Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged, CheckButton circleMeshToggle, bool skirmish = false)
     {
         Layer = 3;
@@ -117,15 +116,11 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
         }
         fight = UIButtonFactory.Create("Fight", start, UIButtonStyle.Primary);
         deployment.AddChild(fight);
-        body.AddChild(arrival);
-        arrival.Hide();
         body.AddChild(result);
         body.AddChild(status);
         body.AddChild(circleMeshToggle);
         retry = UIButtonFactory.Create("Retry Deployment", reset, UIButtonStyle.Primary);
-        withdraw = UIButtonFactory.Create("Withdraw", retreat);
         body.AddChild(retry);
-        body.AddChild(withdraw);
         body.AddChild(UIButtonFactory.Create(skirmish ? "Back to Skirmishes" : "Headquarters", leave));
     }
 
@@ -186,13 +181,13 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
 
     internal void ShowDeployment(Func<byte, string> counts, string rating, string blocked)
     {
+        body.GetParent<Control>().Position = new Vector2(16, 16);
+        body.GetParent<Control>().Show();
         deployment.Show();
         deploymentBar?.Show();
-        arrival.Hide();
         refreshReserve?.Invoke();
         result.Hide();
         retry.Hide();
-        withdraw.Hide();
         foreach (var row in roster) row.Value.Text = counts(row.Key);
         strength.Text = rating;
         fight.Disabled = blocked != null;
@@ -208,22 +203,15 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
 
     internal void ShowBattle()
     {
-        Report(null);
-        withdraw.Show();
-    }
-
-    internal void ShowArrivals(string text)
-    {
-        if (arrival.Text != text) arrival.Text = text;
-        arrival.Visible = text.Length > 0;
+        body.GetParent<Control>().Hide();
     }
 
     internal void ShowResult(string outcome, string detail)
     {
-        arrival.Hide();
+        body.GetParent<Control>().Position = new Vector2(16, 154);
+        body.GetParent<Control>().Show();
         result.Text = outcome + "\n" + detail;
         result.Show();
-        withdraw.Hide();
         retry.Show();
         Report(null);
     }

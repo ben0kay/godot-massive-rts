@@ -37,8 +37,8 @@ public partial class BenchmarkArena
 
     private void ShowAutoBattlerClock(bool visible)
     {
-        if (autoBattlerClock == null) return;
         autoBattlerElapsedTicks = 0;
+        if (autoBattlerClock == null) return;
         autoBattlerClock.Text = "00:00";
         autoBattlerClock.Visible = visible;
         panel.MakeRoomForBattleClock(visible);
@@ -46,11 +46,13 @@ public partial class BenchmarkArena
 
     private void AdvanceAutoBattlerClock(int steps)
     {
-        if (autoBattlerClock == null || steps == 0) return;
+        if (steps == 0 || autoBattlerPlaytestMap == null) return;
         int previousSecond = (int)AutoBattlerElapsedSeconds;
         autoBattlerElapsedTicks += steps;
         int seconds = (int)AutoBattlerElapsedSeconds;
-        if (seconds != previousSecond) autoBattlerClock.Text = $"{seconds / 60:00}:{seconds % 60:00}";
+        if (seconds == previousSecond) return;
+        if (autoBattlerClock != null) autoBattlerClock.Text = $"{seconds / 60:00}:{seconds % 60:00}";
+        tacticalHud?.SetClock(AutoBattlerElapsedSeconds);
     }
     private bool campaignBattleRunning;
     private string campaignMapError;
@@ -90,7 +92,7 @@ public partial class BenchmarkArena
         campaignHud = new AutoBattlerHud(autoBattlerPlaytestMap.LevelSettings.MenuName, choices,
             type => painter.BrushType = type, size => painter.SoldierBrushSize = size,
             painter.Clear, StartCampaignBattle, () => EnterDeployment(),
-            () => FinishCampaignBattle("Withdrawn"), ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
+            ReturnFromCampaignBattle, MaxReserve, Reserved, SetReserve, seconds => blueReserveSeconds = seconds,
             spread => painter.SoldierBrushSpread = spread, CreateCircleMeshToggle(), skirmish: CampaignCatalog.IsSkirmish(battleCampaignId));
         AddChild(campaignHud);
         campaignHud.AddDisruptorControls(campaignRoster.OwnedDisruptorTiles, enabled =>
@@ -202,7 +204,6 @@ public partial class BenchmarkArena
     private void UpdateCampaignOutcome(int steps)
     {
         if (!campaignBattleRunning || steps == 0 || airSquadron?.HasCrashes == true) return;
-        if (ReserveCapacity > 0) campaignHud.ShowArrivals(ReserveCountdown());
         if (HasCitadelObjective && TryFinishOffense()) return;
         if (IsDefense)
         {
@@ -234,6 +235,10 @@ public partial class BenchmarkArena
             $"\nBlue reserve survivors {units.FactionAlive[Factions.Blue] - survivors:N0} / {arrived:N0} arrived";
         string survivorLabel = blueWave == null ? "Blue survivors" : "Blue opening survivors";
         armyBalanceHud?.RefreshCounts();
+        tacticalHud?.Refresh();
+        tacticalHud?.SetArrivals("");
+        UpdateTacticalControls();
+        RefreshTacticalMinimap();
         string airResult = airSquadron == null ? "" :
             $"\nAircraft remaining: Blue {airSquadron.Alive(Factions.Blue)} / {BlueAircraftCount} · Red {airSquadron.Alive(Factions.Red)} / {RedAircraftCount}";
         campaignHud.ShowResult(result,

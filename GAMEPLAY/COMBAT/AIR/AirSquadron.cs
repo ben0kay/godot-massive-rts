@@ -32,6 +32,9 @@ public partial class AirSquadron : Node3D
     }
 
     private Fighter[] fighters;
+    internal System.ReadOnlySpan<Fighter> TacticalAircraft => fighters;
+    internal UnitState.ArmyTotals ArmyStatistics(byte faction) => armyStatistics[faction];
+    private readonly UnitState.ArmyTotals[] armyStatistics = new UnitState.ArmyTotals[Factions.Count];
     private AirSpatialGrid grid;
     private AirSquadronVisuals visuals;
     private InterceptorLauncher interceptors;
@@ -75,6 +78,11 @@ public partial class AirSquadron : Node3D
     {
         var (unit, faction, count, starts, bombOrder) = flight;
         int bombType = unit.CanBombGround && unit.BombProjectile != null ? projectiles.Register(unit.BombProjectile) : -1;
+        float maximumHealth = Mathf.Max(1f, unit.Health);
+        ref var total = ref armyStatistics[faction];
+        total.Strength += (long)count * Mathf.Clamp(unit.BattleRating, 0, UnitDefinition.MaxBattleRating);
+        total.Health += count * (double)maximumHealth;
+        total.MaxHealth += count * (double)maximumHealth;
         float direction = faction == Factions.Blue ? 1f : -1f;
         int columns = Mathf.Min(8, count);
         float spacing = Mathf.Min(3.6f, boundary / 10f);
@@ -94,7 +102,7 @@ public partial class AirSquadron : Node3D
                 heading = Mathf.Atan2(-x, -z);
             fighters[id] = new Fighter
             {
-                Unit = unit, Faction = faction, BombType = bombType, BombOrder = bombOrder, Health = Mathf.Max(1f, unit.Health), Target = -1,
+                Unit = unit, Faction = faction, BombType = bombType, BombOrder = bombOrder, Health = maximumHealth, Target = -1,
                 Speed = Mathf.Max(2f, unit.Speed), TurnRate = Mathf.DegToRad(Mathf.Max(1f, unit.TurnDegreesPerSecond)),
                 FireRangeSquared = unit.Reach * unit.Reach, ShotInterval = Mathf.Max(0.001f, unit.Interval),
                 Damage = unit.Damage, DamageType = damageRules.DamageType(unit.DamageType),
@@ -218,6 +226,10 @@ public partial class AirSquadron : Node3D
 
     private void BeginCrash(ref Fighter fighter, int id)
     {
+        ref var total = ref armyStatistics[fighter.Faction];
+        total.Casualties++;
+        total.Strength -= Mathf.Clamp(fighter.Unit.BattleRating, 0, UnitDefinition.MaxBattleRating);
+        total.MaxHealth -= Mathf.Max(1f, fighter.Unit.Health);
         if (fighter.Faction == Factions.Blue) blueAlive--;
         else redAlive--;
         fighter.Crashing = true;
@@ -351,7 +363,9 @@ public partial class AirSquadron : Node3D
     {
         ref var enemy = ref fighters[target];
         if (enemy.Health <= 0f) return;
+        float previous = enemy.Health;
         enemy.Health -= damageRules.Resolve(damage, damageType, enemy.Armour, enemy.DamageTaken);
+        armyStatistics[enemy.Faction].Health += (double)Mathf.Max(0f, enemy.Health) - previous;
         if (enemy.Health <= 0f) BeginCrash(ref enemy, target);
     }
 

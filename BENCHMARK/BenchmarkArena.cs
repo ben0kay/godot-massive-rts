@@ -191,15 +191,19 @@ public partial class BenchmarkArena : Node3D
         AddChild(gameplayHudLayer);
         if (autoBattlerPlaytestMap != null)
         {
-            AddAutoBattlerClock(gameplayHudLayer);
+            if (campaignRoster != null) CreateTacticalHud(gameplayHudLayer);
+            else AddAutoBattlerClock(gameplayHudLayer);
             if (campaignRoster == null)
             {
                 towerInspection = new TowerInspection { MouseFilter = Control.MouseFilterEnum.Ignore };
                 gameplayHudLayer.AddChild(towerInspection);
             }
         }
-        armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
-        gameplayHudLayer.AddChild(armyBalanceHud);
+        if (tacticalHud == null)
+        {
+            armyBalanceHud = GD.Load<PackedScene>("res://UI/GameplayHUD/ArmyBalanceHud.tscn").Instantiate<ArmyBalanceHud>();
+            gameplayHudLayer.AddChild(armyBalanceHud);
+        }
         deploymentStrengthBar = new DeploymentStrengthBar { Visible = false };
         gameplayHudLayer.AddChild(deploymentStrengthBar);
         Config.ObstacleHeight = float.IsFinite(Config.ObstacleHeight) ? Mathf.Clamp(Config.ObstacleHeight, 0.2f, 8f) : 1f;
@@ -249,7 +253,7 @@ public partial class BenchmarkArena : Node3D
             painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId((int)index);
         painter.SoldierBrushSize = panel.SoldierBrushSizeChoice.GetItemId(panel.SoldierBrushSizeChoice.Selected);
         panel.FactionSelected += faction => painter.BrushFaction = faction;
-        panel.PauseRequested += () => { if (offenseBattleEnded) return; paused = !paused; panel.PauseButton.Text = paused ? "Resume" : "Pause"; };
+        panel.PauseRequested += ToggleBattlePause;
         shockwaves = new ShockwaveRenderer();
         AddChild(shockwaves);
         deathFeedback = new DeathFeedbackSystem(unitVisuals);
@@ -278,6 +282,8 @@ public partial class BenchmarkArena : Node3D
     {
         generatedMixedRoster = false;
         armyBalanceHud?.Reset();
+        tacticalHud?.Reset();
+        battleSpeedIndex = 1;
         ShowAutoBattlerClock(false);
         campaignBattleRunning = false;
         if (airSquadron != null)
@@ -388,6 +394,7 @@ public partial class BenchmarkArena : Node3D
         WreckField wrecks = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? WreckField.Create(this, catalog) : null;
         return new UnitState(capacity, catalog, feedback, terrain, recoil)
         {
+            ArmyStatistics = tacticalHud != null ? new UnitState.ArmyTotals[Factions.Count] : null,
             CircleUsesFacing = unitVisuals.UseCircleRobotMesh,
             Wrecks = wrecks,
             DeathFeedback = mode is BenchmarkMode.Melee or BenchmarkMode.Ranged ? deathFeedback : null
@@ -789,13 +796,13 @@ public partial class BenchmarkArena : Node3D
                     dreadnaughts.SyncVisuals();
                 }
                 spawning = false; panel.Status.Text = $"Requested {requested:N0}\nSpawned {units.Count:N0} • {mode}";
-                armyBalanceHud.BeginBattle(units, HasCitadelObjective ? offenseCitadel : null, airSquadron);
+                armyBalanceHud?.BeginBattle(units, HasCitadelObjective ? offenseCitadel : null, airSquadron);
                 ShowAutoBattlerClock(true);
                 if (campaignHud != null)
                 {
                     campaignBattleRunning = true;
                     campaignHud.ShowBattle();
-                    campaignHud.ShowArrivals(ReserveCountdown());
+                    StartTacticalHud();
                 }
                 panel.Summary.ResetSamples();
             }
@@ -814,10 +821,10 @@ public partial class BenchmarkArena : Node3D
             }
             bool smooth = panel.SmoothMotion && panel.Separation != SeparationMode.Hard;
             if (!smooth && smoothingWasEnabled) armyRenderer.ClearPoseHistory();
-            accumulator += delta;
+            accumulator += delta * BattleSpeed;
             timeSinceArmySync += delta;
             int steps = 0;
-            while (!offenseBattleEnded && accumulator >= Config.TickSeconds && steps < Config.MaxStepsPerFrame)
+            while (!offenseBattleEnded && accumulator >= Config.TickSeconds && steps < Config.MaxStepsPerFrame * Mathf.CeilToInt(BattleSpeed))
             {
                 if (ReservesPending) ReleaseReserves(Config.TickSeconds);
                 if (smooth)
@@ -865,7 +872,11 @@ public partial class BenchmarkArena : Node3D
             }
             smoothingWasEnabled = smooth;
             AdvanceAutoBattlerClock(steps);
-            if (campaignHud != null) UpdateCampaignOutcome(steps);
+            if (campaignHud != null)
+            {
+                UpdateCampaignOutcome(steps);
+                AdvanceTacticalMinimap(delta, steps);
+            }
             else if (!offenseBattleEnded && ReserveCapacity > 0)
             {
                 string countdown = ReserveCountdown();
@@ -887,6 +898,9 @@ public partial class BenchmarkArena : Node3D
         if (hudClock >= 0.3)
         {
             armyBalanceHud?.RefreshCounts();
+            tacticalHud?.Refresh();
+            if (campaignBattleRunning && tacticalHud?.Visible == true && ReserveCapacity > 0)
+                tacticalHud.SetArrivals(ReserveCountdown());
             if (campaignRoster == null) UpdateOverlay();
             hudClock = 0;
             ResetTimings();

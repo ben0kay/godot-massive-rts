@@ -80,10 +80,17 @@ public sealed class UnitState
 
     internal bool CanDetectGroundTarget(Vector3 observer, int target)
     {
-        if (Trenches == null || Catalog[Type[target]].SizeTier > 1f || IsAirborne(target) ||
-            (trenchRevealUntil != null && trenchRevealUntil[target] > trenchClock)) return true;
-        var concealment = Trenches.Occupied(Position[target]);
+        var concealment = TargetTrench(target);
         return concealment == null || Trenches.Occupied(observer, includeRamps: true) == concealment;
+    }
+
+    internal bool CanDetectGroundTargetFromOutsideTrench(int target) => TargetTrench(target) == null;
+
+    private TerrainTrench TargetTrench(int target)
+    {
+        if (Trenches == null || Catalog[Type[target]].SizeTier > 1f || IsAirborne(target) ||
+            (trenchRevealUntil != null && trenchRevealUntil[target] > trenchClock)) return null;
+        return Trenches.Occupied(Position[target]);
     }
 
     internal void RevealFromTrench(int id)
@@ -174,6 +181,14 @@ public sealed class UnitState
         return Dirty[id] = true;
     }
 
+    internal struct ArmyTotals
+    {
+        internal long Strength;
+        internal double Health, MaxHealth;
+        internal int Casualties;
+    }
+    internal ArmyTotals[] ArmyStatistics { get; set; }
+
     public float MaxFootprint { get; private set; }
     public int Alive { get; private set; }
     internal bool HasStructureAttackers { get; private set; }
@@ -207,6 +222,13 @@ public sealed class UnitState
         FactionAlive[faction]++;
         Alive++;
         ref readonly var stats = ref Catalog[type];
+        if (ArmyStatistics != null)
+        {
+            ref var total = ref ArmyStatistics[faction];
+            total.Strength += Catalog.BattleRating(type);
+            total.Health += Health[id];
+            total.MaxHealth += stats.Health;
+        }
         if (Catalog.PrimaryRockets(type).Length > 1) nextRocketMount ??= new int[Health.Length];
         HasStructureAttackers |= stats.TargetsStructures;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
@@ -275,6 +297,7 @@ public sealed class UnitState
         float resolved = Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken);
         resolved = Shields?.Absorb(id, resolved) ?? resolved;
         Health[id] = Mathf.Max(0, previous - resolved);
+        if (ArmyStatistics != null) ArmyStatistics[Faction[id]].Health -= previous - Health[id];
         if (Health[id] == 0) RecordDeath(id);
         else if (Health[id] < previous)
         {
@@ -286,6 +309,7 @@ public sealed class UnitState
     internal void Kill(int id)
     {
         if (Health[id] <= 0) return;
+        if (ArmyStatistics != null) ArmyStatistics[Faction[id]].Health -= Health[id];
         Health[id] = 0;
         RecordDeath(id);
     }
@@ -294,6 +318,13 @@ public sealed class UnitState
     {
         FactionAlive[Faction[id]]--;
         Alive--;
+        if (ArmyStatistics != null)
+        {
+            ref var total = ref ArmyStatistics[Faction[id]];
+            total.Strength -= Catalog.BattleRating(Type[id]);
+            total.MaxHealth -= Catalog[Type[id]].Health;
+            total.Casualties++;
+        }
         Shields?.RemoveRecipient(id);
         firstHitTargets?.Remove(id);
         if (Catalog[Type[id]].PrismBeam.Enabled)

@@ -110,6 +110,14 @@ public partial class IsometricCamera : Camera3D
     }
     // =========================================================
     public void Frame(float battlefieldSize) { targetSize = Mathf.Clamp(battlefieldSize, 30, Mathf.Min(1800f, MaximumZoomSize)); }
+    internal void PanTo(Vector3 point)
+    {
+        velocity = Vector3.Zero;
+        if (FreeRoam) Position += point - focus;
+        focus = point;
+        if (!FreeRoam) Reposition();
+    }
+
     public void SetOpeningView(Vector3 center, float zoom, float yaw)
     {
         focus = center;

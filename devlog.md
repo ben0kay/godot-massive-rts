@@ -788,3 +788,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — GEO1: Added neutral, placeable geothermal vents with configurable cycles, pooled steam visuals and tier-scaled ground-unit launches. Flight uses shared terrain and obstacle checks. Owner Godot validation pending.
 
 - 2026-11-27 — TRENCH1: Added two-click trench authoring, heightfield excavation and end ramps, movement-only tier restrictions, and ground targeting concealment with a firing reveal. Source review only; owner Godot validation pending.
+
+- 2026-11-27 — HUD1 — Added the tactical combat HUD for Skirmishes and Missions, including fixed-step time and speed controls, Citadel health, cached faction statistics and an interactive terrain/density minimap. Source implemented pending Godot visual and large-battle validation.
