@@ -79,3 +79,5 @@ Destroyed authored defenses and Fortress Defense structures leave a low, charred
 ## Light Barricades
 
 Light Barricades are authored defensive paint with 70 HP per segment. Hostile light ground units move at 25% speed during contact and deal 7 HP per second of traversal. Tier 2 and larger units crush a segment on contact at 75% speed for the contact step. Friendly ground units and aircraft pass freely. Tune health, damage per second, height, speeds and the crush threshold on WorldPaint data.
+
+The stationary Shield Generator reuses the Mobile Generator's animated reactor geometry and shader include. Only the central exposed core animates; the tower's existing armor, pylon trim, dome and collision remain unchanged. No additional draw call or per-tower state.

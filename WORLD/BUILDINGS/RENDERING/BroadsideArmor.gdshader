@@ -3,6 +3,7 @@ shader_type spatial;
 #include "res://WORLD/BUILDINGS/RENDERING/TowerLighting.gdshaderinc"
 
 #include "res://VISUALS/FEEDBACK/UNIT_HITS/SurfaceCracks.gdshaderinc"
+#include "res://VISUALS/RENDERING/ShieldReactor.gdshaderinc"
 
 varying vec3 armor_mask;
 varying vec2 plate_point;
@@ -48,6 +49,13 @@ void fragment() {
         float phase = TIME * 7.0 + dot(NODE_POSITION_WORLD.xz, vec2(0.37, 0.23));
         float flicker = mix(0.32, 1.0, smoothstep(-0.5, -0.25, sin(phase) * sin(phase * 2.7)));
         EMISSION -= (indicator + paint * 1.15) * armor_mask.b * (1.0 - flicker);
+    }
+
+    // The shield generator marks only its exposed central reactor via mesh UV.
+    // Every other tower and ordinary armor face retains the existing mask behavior.
+    if (shield_reactor_surface(UV)) {
+        ALBEDO = shield_reactor_albedo(paint, UV, TIME);
+        EMISSION = shield_reactor_emission(paint, UV, TIME);
     }
 
     // Railgun: white induction rings progress from rear to muzzle, using the

@@ -254,3 +254,7 @@ A unit can author one primary replacement alongside legacy secondary mounts.
 Tank size/material adjustment: `SizeMultiplier` is 1.395 (10% below 1.55), using the existing shared scaling for body dimensions, collision outline and authored turret mount offsets. The enhanced mesh now favors neutral gunmetal with faction accents on the front glacis, turret roof, central skirt panels and existing trim. Geometry proportions, Tier 4 classification, weapon stats, animations and legacy mesh remain unchanged; owner visual and muzzle alignment checks pending.
 
 The Tank also has a 12-unit roof minigun with separate targeting, aim and cooldown. Its mount uses Attach To Primary Turret, and its visual shares the Tank MultiMesh batch.
+
+### Mobile Shield Generator visual refinement
+
+The Tier 2 Mobile Generator uses a modern two-tone hexagonal armored carrier with four drive pods, vents and radial emitter pylons. Its central faceted reactor shares geometry and a shader animation with the stationary generator: two circulating helical energy bands, a rising wave and a gentle faction-tinted pulse. All geometry is baked into the existing shared unit mesh; no extra batch, lights, particles or per-unit state. Original dimensions, footprint, movement, melee attack and shield values remain unchanged. The core is a continuous cosmetic animation, not an indication of actual shield charge. Owner visual validation pending.

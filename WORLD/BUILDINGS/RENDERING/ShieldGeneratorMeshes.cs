@@ -13,6 +13,7 @@ internal static class ShieldGeneratorMeshes
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
+        surface.SetUV(Vector2.Zero); // Ordinary tower armor has no reactor tag.
 
         // Heavy beveled foundation and chamfered upper deck.
         Plate(surface, new Vector3(0f, 0.10f, 0f), new Vector3(1f, 0.20f, 1f), 0.25f, 0.95f, Steel(0.50f));
@@ -42,7 +43,6 @@ internal static class ShieldGeneratorMeshes
         // Nested reactor collar, illuminated inner core and dark cap.
         Plate(surface, new Vector3(0f, 0.65f, 0f), new Vector3(0.50f, 0.20f, 0.50f), 0.68f, 0.86f, Steel(0.60f));
         Plate(surface, new Vector3(0f, 0.77f, 0f), new Vector3(0.42f, 0.12f, 0.42f), 0.66f, 0.90f, Paint());
-        Plate(surface, new Vector3(0f, 1.00f, 0f), new Vector3(0.30f, 0.42f, 0.30f), 0.62f, 0.89f, Trim(0.85f));
         Plate(surface, new Vector3(0f, 1.22f, 0f), new Vector3(0.37f, 0.15f, 0.37f), 0.65f, 0.77f, Steel(0.91f));
         Plate(surface, new Vector3(0f, 1.32f, 0f), new Vector3(0.22f, 0.09f, 0.22f), 0.58f, 0.78f, Trim());
 
@@ -67,6 +67,8 @@ internal static class ShieldGeneratorMeshes
             Block(surface, new Vector3(0f, 1.216f, side * 0.25f),
                 new Vector3(0.095f, 0.035f, 0.066f), Trim());
         }
+        ShieldReactorGeometry.Append(surface, new Vector3(0f, 1.00f, 0f),
+            new Vector3(0.15f, 0.42f, 0.15f), Trim(1f));
         return surface.Commit();
     }
 }

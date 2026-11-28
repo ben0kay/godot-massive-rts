@@ -13,8 +13,10 @@ public partial class ProductionRecipes : Resource
         for (byte type = 0; type < recipes.Length; type++)
         {
             bool hasRecipe = Batches.TryGetValue(catalog[type].Id, out Vector3I value);
-            if (!hasRecipe && catalog[type].AllowedTargets == TargetCategory.None) continue;
-            if (!hasRecipe || value.X <= 0 || value.X > 256 || value.Y < 0 || value.Z <= 0)
+            // A registered unit is not necessarily available for Fabricator production.
+            // Zero-sized default slots are already excluded by the production HUD.
+            if (!hasRecipe) continue;
+            if (value.X <= 0 || value.X > 256 || value.Y < 0 || value.Z <= 0)
                 throw new System.InvalidOperationException($"Invalid production recipe for {catalog[type].Id}.");
             recipes[type] = new BatchRecipe(type, value.X, value.Y, value.Z);
         }

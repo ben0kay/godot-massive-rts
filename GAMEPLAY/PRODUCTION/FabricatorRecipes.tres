@@ -18,5 +18,6 @@ Batches = Dictionary[String, Vector3i]({
 "twin_rocket_launcher": Vector3i(4, 220, 15),
 "prism_lance": Vector3i(2, 240, 18),
 "mobile_generator": Vector3i(1, 180, 14),
-"h_breacher": Vector3i(6, 165, 12)
+"h_breacher": Vector3i(6, 165, 12),
+"tank": Vector3i(1, 220, 22)
 })

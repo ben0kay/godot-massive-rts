@@ -157,6 +157,7 @@ public static class FacetedSoldierMeshes
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
         id == RuntimeUnitCatalog.SiegeRamId || id == RuntimeUnitCatalog.TankId || id == RuntimeUnitCatalog.RallyCommanderId ||
+        id == RuntimeUnitCatalog.MobileGeneratorId ||
         (visuals.UseObliteratorAssaultMesh && id == RuntimeUnitCatalog.ObliteratorId) ||
         (visuals.UsePrismLanceMesh && id == RuntimeUnitCatalog.PrismLanceId) ||
         (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
@@ -228,6 +229,7 @@ public static class FacetedSoldierMeshes
                 if (enhancedTank) AppendSleekTank(surface, outline, height, !compactTurret);
                 else AppendTank(surface, outline, height, !compactTurret);
             }
+            else if (unit.Id == RuntimeUnitCatalog.MobileGeneratorId) AppendMobileGenerator(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -260,13 +262,6 @@ public static class FacetedSoldierMeshes
             sideShade: SoldierSideShade, rimmedCap: enhancedCircle, topCapBrightness: enhancedHexagon ? 0.55f : 1f);
         if (enhancedHexagon)
             AppendHexagonSiegeArmor(surface, outline, height);
-        if (unit.Id == RuntimeUnitCatalog.MobileGeneratorId)
-        {
-            AppendPrism(surface, 6, outline.RadiusX * 0.68f, outline.RadiusZ * 0.68f,
-                height * 0.24f, outline.Rotation, Vector3.Up * height * 0.50f, new Color(0.37f, 0.53f, 0.58f));
-            AppendPrism(surface, 6, outline.RadiusX * 0.39f, outline.RadiusZ * 0.39f,
-                height * 0.68f, outline.Rotation, Vector3.Up * height * 0.69f, new Color(0.72f, 1f, 1f));
-        }
         if (unit.Shape == UnitShape.Prism)
         {
             for (int side = -1; side <= 1; side += 2)
@@ -577,6 +572,51 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // Compact demolition walker. Keep both ends of the H open: two side
     // housings connected by a central crossbar, with twin sliding rams (-Z).
+    private static void AppendMobileGenerator(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        const float diagonal = 0.70710678f;
+        float x = outline.RadiusX, z = outline.RadiusZ;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Hull(float y, float r, float h, Color mask) =>
+            AppendPrism(surface, 6, x * r, z * r, height * h, outline.Rotation,
+                Vector3.Up * (height * y), mask, sideShade: SoldierSideShade, armorMask: true);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask) =>
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * 0.25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true);
+
+        // Compact hexagonal armored carrier, with four grounded drive pods.
+        Hull(-0.19f, 0.77f, 0.38f, Steel(0.72f));
+        Hull(0.08f, 0.92f, 0.37f, Paint(0.92f));
+        Hull(0.29f, 0.75f, 0.16f, Steel(0.98f));
+        Hull(0.43f, 0.49f, 0.16f, Steel(0.63f));
+        Hull(0.53f, 0.39f, 0.10f, Paint(0.99f));
+        for (int side = -1; side <= 1; side += 2)
+        {
+            for (int end = -1; end <= 1; end += 2)
+            {
+                Block(side * 0.50f, -0.33f, end * 0.38f, 0.30f, 0.34f, 0.32f, Steel(0.55f));
+                Block(side * 0.50f, -0.14f, end * 0.38f, 0.33f, 0.13f, 0.35f, Paint(0.89f));
+            }
+            // Radial emitter pylons leave gaps so the central core is visible.
+            Block(side * 0.46f, 0.52f, 0f, 0.19f, 0.40f, 0.25f, Steel(0.94f));
+            Block(0f, 0.52f, side * 0.46f, 0.25f, 0.40f, 0.19f, Steel(0.94f));
+            Block(side * 0.46f, 0.76f, 0f, 0.22f, 0.13f, 0.24f, Paint(0.98f));
+            Block(0f, 0.76f, side * 0.46f, 0.24f, 0.13f, 0.22f, Paint(0.98f));
+            Block(side * 0.46f, 0.84f, 0f, 0.10f, 0.045f, 0.11f, Trim(1f));
+            Block(0f, 0.84f, side * 0.46f, 0.11f, 0.045f, 0.10f, Trim(1f));
+            for (int vent = -1; vent <= 1; vent++)
+                Block(side * 0.69f, 0.20f, vent * 0.14f, 0.09f, 0.075f, 0.09f, Steel(0.38f));
+        }
+        // Same animated reactor geometry and UV contract as the stationary tower.
+        // Keep it last so its special UVs cannot leak into ordinary armor.
+        ShieldReactorGeometry.Append(surface, Vector3.Up * (height * 0.76f),
+            new Vector3(x * 0.29f, height * 0.52f, z * 0.29f), Colors.White);
+    }
+
+    // =========================================================
     private static void AppendSiegeRam(SurfaceTool surface, UnitOutline outline, float height)
     {
         const float corner = 0.70710678f;

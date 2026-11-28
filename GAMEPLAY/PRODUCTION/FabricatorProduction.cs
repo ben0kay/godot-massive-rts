@@ -38,7 +38,7 @@ internal sealed class FabricatorProduction
     {
         if (remainingUnits == 0)
         {
-            if (!Automatic || RecipeIndex < 0)
+            if (!Automatic || RecipeIndex < 0 || RecipeIndex >= recipes.Length || recipes[RecipeIndex].Size == 0)
             {
                 Status = "Idle";
                 return;
