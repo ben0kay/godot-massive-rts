@@ -800,3 +800,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — CLIFF2 — Prevented painted ground-cover triangles from bridging cliff tops and lower terrain.
 
 - 2026-11-27 — Narrowed and lined trenches with steel and asphalt, moved their entries to opposite sides, and added a Tier 4 direct-fire tank with a tracked chassis and firing recoil.
+
+- 2026-11-27 — Fixed editor ground material updates overwriting steel and asphalt trench lining, and narrowed the side ramp openings.

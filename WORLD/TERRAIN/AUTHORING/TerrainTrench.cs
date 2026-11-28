@@ -21,7 +21,7 @@ public partial class TerrainTrench : Node3D
     internal float FloorWidth => Width * .5f;
     internal Vector2 Axis => (End - Start).Normalized();
     internal Vector2 Across => new(-Axis.Y, Axis.X);
-    internal float EntryWidth => Mathf.Min(6f, Mathf.Max(4.2f, FloorWidth));
+    internal float EntryWidth => Mathf.Clamp(FloorWidth * .8f, 3.4f, 4.8f);
     internal Vector2 RampInner(bool far) =>
         (far ? End - Axis * (EntryWidth * .5f) : Start + Axis * (EntryWidth * .5f)) +
         Across * (FloorWidth * .5f * (far ? -1f : 1f));
