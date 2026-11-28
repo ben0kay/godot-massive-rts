@@ -21,7 +21,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
     private readonly Action refreshReserve;
     private readonly Dictionary<byte, Label> roster = new();
 
-    public AutoBattlerHud(string title, (byte Type, string Name)[] choices,
+    public AutoBattlerHud(string title, (byte Type, string Name, float SizeTier)[] choices,
         Action<byte> select, Action<int> brush, Action clear, Action start,
         Action reset, Action leave, Func<byte, int> maxReserve,
         Func<byte, int> reserved, Action<byte, int> reserve, Action<float> arrivalSeconds, Action<float> densityChanged, CheckButton circleMeshToggle, bool skirmish = false)
@@ -69,7 +69,8 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             var group = new ButtonGroup();
             foreach (var choice in choices)
             {
-                var button = UIButtonFactory.Create(choice.Name, () => select(choice.Type), UIButtonStyle.Compact);
+                var button = UIButtonFactory.Create($"{choice.Name} · {UnitPlacementBar.TierLabel(choice.SizeTier)}",
+                    () => select(choice.Type), UIButtonStyle.Compact);
                 button.ToggleMode = true;
                 button.ButtonGroup = group;
                 if (roster.Count == 0) button.SetPressedNoSignal(true);

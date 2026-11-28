@@ -69,8 +69,8 @@ internal partial class UnitPlacementBar : PanelContainer
         int count = catalog.Count + aircraft.Length;
         unitCards = BuildCards(body, count, (count + 1) / 2,
             i => i < catalog.Count ? catalog[i].Name : aircraft[i - catalog.Count].DisplayName,
-            i => i < catalog.Count ? Stats(catalog[i].Health, catalog[i].Damage) :
-                Stats(aircraft[i - catalog.Count].Health, aircraft[i - catalog.Count].Damage),
+            i => i < catalog.Count ? Stats(catalog[i].Health, catalog[i].Damage, catalog[i].SizeTier) :
+                Stats(aircraft[i - catalog.Count].Health, aircraft[i - catalog.Count].Damage, aircraft[i - catalog.Count].SizeTier),
             (icon, i) =>
             {
                 if (i < catalog.Count) icon.SetOutline(catalog[i].Outline);
@@ -143,7 +143,11 @@ internal partial class UnitPlacementBar : PanelContainer
         return brushRow;
     }
 
-    internal static string Stats(float hp, float damage) => $"HP {hp:0.#}   DMG {damage:0.#}";
+    internal static string TierLabel(float tier) => $"Lvl. {tier:0.#}";
+
+    internal static string Stats(float hp, float damage, float? tier = null) => tier is float sizeTier
+        ? $"{TierLabel(sizeTier)}  HP {hp:0.#}  DMG {damage:0.#}"
+        : $"HP {hp:0.#}   DMG {damage:0.#}";
 
     internal Control BuildCards(VBoxContainer body, int count, int columns, Func<int, string> nameFor,
         Func<int, string> statsFor, Action<UnitSilhouette, int> setIcon, Action<int> select,

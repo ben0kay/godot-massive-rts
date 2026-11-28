@@ -108,7 +108,7 @@ public partial class LevelEditor
                 i =>
                 {
                     var unit = i < units.Length ? units[i] : aircraft[i - units.Length];
-                    return UnitPlacementBar.Stats(unit.Health, unit.Damage);
+                    return UnitPlacementBar.Stats(unit.Health, unit.Damage, unit.SizeTier);
                 }, (icon, i) =>
                 {
                     if (i < units.Length)

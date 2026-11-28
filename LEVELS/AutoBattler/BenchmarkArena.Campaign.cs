@@ -86,7 +86,7 @@ public partial class BenchmarkArena
             .Select(index => (Type: (byte)index, Unit: catalog[index]))
             .Where(entry => campaignRoster.Owned(entry.Unit.Id) > 0 &&
                 (allowedCampaignUnits.Count == 0 || allowedCampaignUnits.Contains(entry.Unit.Id)))
-            .Select(entry => (entry.Type, entry.Unit.Name)).ToArray();
+            .Select(entry => (entry.Type, entry.Unit.Name, entry.Unit.SizeTier)).ToArray();
         if (choices.Length > 0) painter.BrushType = choices[0].Type;
 
         campaignHud = new AutoBattlerHud(autoBattlerPlaytestMap.LevelSettings.MenuName, choices,
