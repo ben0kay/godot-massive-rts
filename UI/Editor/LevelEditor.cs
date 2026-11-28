@@ -39,6 +39,7 @@ public partial class LevelEditor : Node
     private string activeId;
     private bool dirty, previewing;
     private UnitDefinition[] units, aircraft;
+    private Button undoButton, redoButton;
     private readonly Stack<(Action Undo, Action Redo)> undo = new(), redo = new();
     private readonly List<Node3D> detached = new();
 
@@ -130,9 +131,9 @@ public partial class LevelEditor : Node
         Heading(buttons, "Level Editor   ", 22);
         Button(buttons, "Save", () => { if (activeId == null) SaveAs(); else RequestSave(activeId); });
         Button(buttons, "Save As", SaveAs);
+        undoButton = AddHistoryButton(buttons, "↶ Undo", "Undo (Ctrl+Z)", true);
+        redoButton = AddHistoryButton(buttons, "↷ Redo", "Redo (Ctrl+Shift+Z)", false);
         Button(buttons, "Load / New", ShowStart);
-        Button(buttons, "Undo", () => ApplyHistory(undo, redo, true));
-        Button(buttons, "Redo", () => ApplyHistory(redo, undo, false));
         Button(buttons, "Map Size…", ShowMapSettings);
         Button(buttons, "Preview Layout", ToggleLayout);
         testButton = Button(buttons, "Test Fortress", StartTest);
@@ -294,7 +295,7 @@ public partial class LevelEditor : Node
         catch (Exception error) { startStatus.Text = error.Message; return; }
         if (existing == null) next.BaseTerrain = (CommandSandbox.BaseTerrainStyle)newLevelTerrain.GetSelectedId();
         if (generated != null) nextMetadata.MapSize = generated.Size;
-        EndElevation();
+        EndPaint();
         CancelBridge();
         CancelWallStroke();
         CancelCliffStroke();
@@ -309,6 +310,7 @@ public partial class LevelEditor : Node
         detached.Clear();
         undo.Clear();
         redo.Clear();
+        RefreshHistoryButtons();
         selected = null;
         layout = null;
         placementBatches = null;
@@ -353,6 +355,7 @@ public partial class LevelEditor : Node
         toolSidebar.OffsetBottom = placementPalette.Visible ? -placementPalette.BarHeight - 24 : -12;
         map.Visible = runningTest == null;
         if (redOrderOverlay != null) redOrderOverlay.Visible = toolSidebar.Visible;
+        RefreshHistoryButtons();
     }
 
     private void SetStatus(string message = "") =>
@@ -541,6 +544,24 @@ public partial class LevelEditor : Node
         label.AddThemeFontSizeOverride("font_size", size);
         parent.AddChild(label);
         return label;
+    }
+
+    private Button AddHistoryButton(Control parent, string text, string tooltip, bool back)
+    {
+        var button = UIButtonFactory.Create(text, () => ApplyHistory(back), UIButtonStyle.Compact);
+        button.TooltipText = tooltip;
+        button.FocusMode = Control.FocusModeEnum.None;
+        button.MouseFilter = Control.MouseFilterEnum.Stop;
+        button.Disabled = true;
+        parent.AddChild(button);
+        return button;
+    }
+
+    private void RefreshHistoryButtons()
+    {
+        bool available = map != null && runningTest == null;
+        undoButton.Disabled = !available || undo.Count == 0;
+        redoButton.Disabled = !available || redo.Count == 0;
     }
 
     private static Button Button(Control parent, string text, Action action)

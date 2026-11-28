@@ -436,9 +436,9 @@ public partial class LevelEditor
         if (map == null || !map.Visible || runningTest != null) return;
         if (input is InputEventKey { Pressed: true, Echo: false, CtrlPressed: true, Keycode: Key.Z } key)
         {
-            if (key.ShiftPressed) ApplyHistory(redo, undo, false);
-            else ApplyHistory(undo, redo, true);
+            ApplyHistory(!key.ShiftPressed);
             GetViewport().SetInputAsHandled();
+            return;
         }
         if (previewing) return;
         if (tool == Tool.Aircraft && !editingReserve && HandleAircraftPaint(input))
@@ -1092,21 +1092,26 @@ public partial class LevelEditor
         }
         undo.Push((back, forward));
         redo.Clear();
+        RefreshHistoryButtons();
         dirty = true;
         SetStatus();
     }
 
-    private void ApplyHistory(Stack<(Action Undo, Action Redo)> from, Stack<(Action Undo, Action Redo)> to, bool back)
+    private void ApplyHistory(bool back)
     {
         if (runningTest != null || map == null) return;
         EndPaint();
         CancelBridge();
         CancelWallStroke();
         CancelCliffStroke();
+        rectangleStart = null;
+        var from = back ? undo : redo;
+        var to = back ? redo : undo;
         if (!from.TryPop(out var edit)) return;
         if (back) edit.Undo(); else edit.Redo();
         if (tool == Tool.RedOrders) { CloseRedOrders(); OpenRedOrders(); }
         to.Push(edit);
+        RefreshHistoryButtons();
         UpdateTool();
         dirty = true;
         SetStatus();
