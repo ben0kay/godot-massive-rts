@@ -55,10 +55,12 @@ public static class AreaDamage
     // Reusable impact circle. Caller supplies maximum displacement since the grid rebuild.
     public static int Radial(UnitState units, SpatialGrid grid, int sourceFaction, Vector3 impact,
         float radius, float damage, float edgeDamageFraction, float movementPadding, ObstacleField cover = null, int damageType = 0, bool melee = false,
-        Vector3? protectedDomeCenter = null, float protectedDomeRadius = 0f)
+        Vector3? protectedDomeCenter = null, float protectedDomeRadius = 0f,
+        bool heavyProjectile = false, Vector2 trajectory = default, int directVictim = -1)
     {
         if (!float.IsFinite(radius) || radius <= 0f || damage <= 0f) return 0;
         int kills = 0;
+        var feedback = heavyProjectile ? units.HitFeedback?.HeavyImpact : null;
         float edge = Mathf.Clamp(edgeDamageFraction, 0f, 1f);
         float radiusSquared = radius * radius;
         var candidates = grid.GetCandidates(impact, radius + movementPadding, sourceFaction);
@@ -76,7 +78,17 @@ public static class AreaDamage
             float distanceSquared = offset.X * offset.X + offset.Z * offset.Z;
             if (distanceSquared > radiusSquared || cover?.BlocksSight(impact, units.Position[id]) == true) continue;
             float fraction = Mathf.Sqrt(distanceSquared) / radius;
-            units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType, melee);
+            if (feedback == null)
+                units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType, melee);
+            else
+            {
+                Vector2 away = ObstacleField.Xz(offset);
+                bool direct = id == directVictim;
+                Vector2 direction = direct ? trajectory : away;
+                if (direction.LengthSquared() < .000001f) direction = direct ? away : trajectory;
+                units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType, melee,
+                    direction, direct ? 1f : feedback.SplashStrength * (1f - fraction));
+            }
             if (units.Health[id] <= 0f) kills++;
         }
         return kills;

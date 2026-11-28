@@ -36,6 +36,7 @@ internal partial class DreadnaughtCombat : Node3D
         public int Target;
         public float RefreshAt, Cooldown, Yaw, VisualScale;
         public MeshInstance3D Model;
+        public Vector3 ModelScale;
         public MountedRocket? Rocket;
     }
 
@@ -123,7 +124,7 @@ internal partial class DreadnaughtCombat : Node3D
                         Position = new Vector3(side * 0.17f, 0.025f, -BarrelLength * 0.5f) });
             }
             AddChild(model);
-            hull.Guns[slot] = new Gun { Model = model, VisualScale = visualScale, Rocket = mount,
+            hull.Guns[slot] = new Gun { Model = model, ModelScale = model.Scale, VisualScale = visualScale, Rocket = mount,
                 Yaw = mount.HasValue ? InitialYaw(id, mount.Value) : 0f,
                 Target = -1, RefreshAt = time + ((index + slot) % GunsPerHull) * TargetRefresh / GunsPerHull };
         }
@@ -135,13 +136,22 @@ internal partial class DreadnaughtCombat : Node3D
         {
             int id = hull.Id;
             bool alive = units.Health[id] > 0;
+            Basis tilt = Basis.Identity;
+            float lift = 0f;
+            if (alive && units.HitFeedback?.HeavyImpact is { } impact)
+            {
+                var outline = units.Catalog[units.Type[id]].Outline;
+                impact.TryTransform(id, Mathf.Max(outline.RadiusX, outline.RadiusZ), out tilt, out lift);
+            }
             for (int slot = 0; slot < hull.Guns.Length; slot++)
             {
                 ref var gun = ref hull.Guns[slot];
                 gun.Model.Visible = alive;
                 if (!alive) continue;
-                gun.Model.Position = Mount(id, slot, gun.Rocket);
-                gun.Model.Rotation = new Vector3(0, gun.Yaw, 0);
+                Vector3 ground = units.Position[id];
+                Vector3 position = ground + tilt * (Mount(id, slot, gun.Rocket) - ground) + Vector3.Up * lift;
+                Basis basis = tilt * TurretAiming.Rotation(gun.Yaw) * Basis.FromScale(gun.ModelScale);
+                gun.Model.Transform = new Transform3D(basis, position);
             }
         }
     }

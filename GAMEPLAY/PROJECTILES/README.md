@@ -59,3 +59,8 @@ The shared projectile sweep tests hostile barricades at their physical height be
 An independent primary weapon launches through the ordinary unit projectile path
 with a rotated muzzle and casing port. Structure shots retain their structure
 target reference. The Tank uses its existing shell, glow and track smoke.
+
+Heavy projectile impacts reuse the dome weight classification. A direct
+contact uses the swept direction. Other explosion victims use outward
+direction and proximity falloff in the same radial damage pass. Protection
+is checked before personal shield absorption, including shield-breaking hits.

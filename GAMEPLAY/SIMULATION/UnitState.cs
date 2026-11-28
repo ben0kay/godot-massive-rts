@@ -305,12 +305,15 @@ public sealed class UnitState
         Dirty[id] = true;
     }
 
-    public void Damage(int id, float damage, int damageType = 0, bool melee = false)
+    public void Damage(int id, float damage, int damageType = 0, bool melee = false, Vector2 heavyDirection = default, float heavyStrength = 0f)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;
         float previous = Health[id];
         ref readonly var defender = ref Catalog[Type[id]];
         float resolved = Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken);
+        var impact = heavyStrength > 0f ? HitFeedback?.HeavyImpact : null;
+        bool react = impact != null && defender.SizeTier >= impact.MinimumTier &&
+            Shields?.IsProtecting(id) != true;
         resolved = Shields?.Absorb(id, resolved) ?? resolved;
         Health[id] = Mathf.Max(0, previous - resolved);
         if (ArmyStatistics != null) ArmyStatistics[Faction[id]].Health -= previous - Health[id];
@@ -318,6 +321,7 @@ public sealed class UnitState
         else if (Health[id] < previous)
         {
             HitFeedback?.OnHit(id, melee);
+            if (react) impact.Register(this, id, defender.SizeTier, heavyDirection, heavyStrength);
             Dirty[id] = true;
         }
     }

@@ -828,3 +828,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Added UNIT-STD1, a mandatory unit creation standard grounded in the current ground/air roster, compiled catalogue, combat/mount paths, visual opt-ins, editor and mode integration. Linked from root guidance, unit README and visual authoring guide. Documentation only; no runtime or balance changes.
 
 - 2026-11-28 — Added provisional Tank Fabricator recipe (1 / 220 Carbon / 22s) and allowed intentionally absent recipes to remain unavailable instead of preventing catalogue compilation. Upgraded Mobile Generator to two-tone radial reactor carrier, sharing animated faceted energy core with stationary Shield Generator through existing mesh/material batches. No shield/combat changes; owner validation pending.
+
+- 2026-11-28 — IMPACT1 — Added configurable directional Heavy-projectile rocking for surviving, unshielded Tier 2+ units using the existing damage and render passes.

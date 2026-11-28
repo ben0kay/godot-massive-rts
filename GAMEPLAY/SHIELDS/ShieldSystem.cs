@@ -50,6 +50,8 @@ internal sealed class ShieldSystem
     internal void AddMobile(int id, ShieldEmitterStats stats) => emitters.Add(new Emitter(id, null, stats));
     internal void AddTower(StructureHealth tower, ShieldEmitterStats stats) => emitters.Add(new Emitter(-1, tower, stats));
 
+    internal bool IsProtecting(int id) => enabled && amount[id] > 0f;
+
     internal float Absorb(int id, float damage)
     {
         if (!enabled || damage <= 0f || amount[id] <= 0f) return damage;

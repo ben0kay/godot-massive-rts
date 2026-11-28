@@ -189,3 +189,7 @@ configurable procedural mount on another vehicle.
 ### Shared shield reactor
 
 Both Mobile Generator and Shield Generator use ShieldReactorGeometry.cs and ShieldReactor.gdshaderinc in VISUALS/RENDERING. Bake the core into the existing surface with UV.x = 32 + normalized azimuth, UV.y = normalized height; reserve this range outside existing weapon/gait tags. Append the core last and initialize ordinary tower UVs to zero. UnitArmor and BroadsideArmor share the same faction-tinted, TIME-driven energy function; no additional batch, real light, emitter or gameplay state. The animation is decorative, not a live charge indicator.
+
+Heavy projectile impact tilt is applied to the existing unit transform around
+a lower pivot. Batched geometry follows that tilt while separately rendered
+weapons can apply the same tilt to their visual mount pose.

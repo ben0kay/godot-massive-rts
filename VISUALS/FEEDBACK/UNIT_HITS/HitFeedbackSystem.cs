@@ -39,9 +39,11 @@ public sealed class HitFeedbackSystem
     private readonly float duration, flashDuration, pulseDuration, riseDuration, fallDuration, peakExpansion;
     private int activeCount;
     private bool hitRegistered;
+    internal HeavyImpactFeedback HeavyImpact { get; }
 
     public HitFeedbackSystem(int capacity, HitFeedbackSettings settings)
     {
+        if (settings.UseHeavyImpactReaction) HeavyImpact = new HeavyImpactFeedback(settings);
         flashDuration = Clamp(settings.WhiteFlashDuration, 0f, 2f, 0.12f);
         pulseDuration = settings.PulseEnabled ? Clamp(settings.PulseDuration, 0.01f, 2f, 0.18f) : 0f;
         peakExpansion = Clamp(settings.PulseMaxScale, 1f, 1.25f, 1.06f) - 1f;
@@ -106,7 +108,7 @@ public sealed class HitFeedbackSystem
             if (attackRemaining[id] == 0f) attackingIds[slot] = attackingIds[--attackingCount];
             if (alive) changed = units.Dirty[id] = true;
         }
-        return changed;
+        return (HeavyImpact?.Advance(units, dt) == true) || changed;
     }
 
     // Longer weapon motion is purely visual; the original attack pulse stays 0.16s.

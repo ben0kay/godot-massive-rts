@@ -477,12 +477,30 @@ public partial class ArmyRenderer : Node3D
             float recovery = phase < 0f ? 1f : Mathf.Clamp(phase * Mathf.Max(.16f, recoilSeconds) / recoilSeconds, 0f, 1f);
             buffer[offset + 17] = turret.RecoilDistance * (1f - Mathf.SmoothStep(0f, 1f, recovery));
         }
-        buffer[offset] = buffer[offset + 10] = cosine * scale;
-        buffer[offset + 2] = sine * scale;
-        buffer[offset + 8] = -buffer[offset + 2];
-        buffer[offset + 5] = scale;
+        var x = new Vector3(cosine, 0f, -sine) * scale;
+        var y = Vector3.Up * scale;
+        var z = new Vector3(sine, 0f, cosine) * scale;
+        float halfHeight = halfHeights[type];
+        if (units.HitFeedback?.HeavyImpact?.TryTransform(id,
+            Mathf.Max(stats.Outline.RadiusX, stats.Outline.RadiusZ) * scale, out var tilt, out float lift) == true)
+        {
+            x = tilt * x;
+            y = tilt * y;
+            z = tilt * z;
+            position.Y += lift;
+        }
+        position += y * halfHeight;
+        buffer[offset] = x.X;
+        buffer[offset + 1] = y.X;
+        buffer[offset + 2] = z.X;
         buffer[offset + 3] = position.X;
-        buffer[offset + 7] = position.Y + halfHeights[units.Type[id]] * scale;
+        buffer[offset + 4] = x.Y;
+        buffer[offset + 5] = y.Y;
+        buffer[offset + 6] = z.Y;
+        buffer[offset + 7] = position.Y;
+        buffer[offset + 8] = x.Z;
+        buffer[offset + 9] = y.Z;
+        buffer[offset + 10] = z.Z;
         buffer[offset + 11] = position.Z;
         Color color = FactionColor(units.Faction[id]);
         if (white) color = color.Lerp(Colors.White, flash);
@@ -540,9 +558,9 @@ public partial class ArmyRenderer : Node3D
                 var position = new Vector3(buffer[offset + 3], buffer[offset + 7], buffer[offset + 11]);
                 // Packed transforms are affine rows, while Basis takes columns.
                 Basis basis = new(
-                    new Vector3(buffer[offset], 0f, buffer[offset + 8]),
-                    new Vector3(0f, buffer[offset + 5], 0f),
-                    new Vector3(buffer[offset + 2], 0f, buffer[offset + 10]));
+                    new Vector3(buffer[offset], buffer[offset + 4], buffer[offset + 8]),
+                    new Vector3(buffer[offset + 1], buffer[offset + 5], buffer[offset + 9]),
+                    new Vector3(buffer[offset + 2], buffer[offset + 6], buffer[offset + 10]));
                 mesh.SetInstanceTransform(slot, new Transform3D(basis, position));
                 mesh.SetInstanceColor(slot, new Color(buffer[offset + 12], buffer[offset + 13], buffer[offset + 14], buffer[offset + 15]));
                 if (stride == InfantryWalkStride)

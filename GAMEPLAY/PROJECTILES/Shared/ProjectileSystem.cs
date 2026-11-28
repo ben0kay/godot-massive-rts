@@ -321,7 +321,9 @@ public sealed class ProjectileSystem
                             float before = units.Health[victim];
                             Vector3 ricochetSize = rings != null ? catalog.RicochetSize(Type[i]) : Vector3.Zero;
                             float shieldBefore = ricochetSize != Vector3.Zero ? units.Shields?.Amount(victim) ?? 0f : 0f;
-                            units.Damage(victim, damage[i], damageTypes[i]);
+                            if (units.HitFeedback?.HeavyImpact != null && catalog.DomeWeight(Type[i]) == ProjectileWeight.Heavy)
+                                units.Damage(victim, damage[i], damageTypes[i], heavyDirection: ObstacleField.Xz(segment), heavyStrength: 1f);
+                            else units.Damage(victim, damage[i], damageTypes[i]);
                             if (rings != null)
                             {
                                 Vector3 contact = Position[i] + segment * Mathf.Clamp(contactFraction, 0f, 1f);
@@ -366,7 +368,7 @@ public sealed class ProjectileSystem
             ? terrain.SurfaceHit(from, segment, Mathf.Min(hit, 1f))
             : (from.Y + segment.Y <= 0f && segment.Y < 0f ? Mathf.Clamp(-from.Y / segment.Y, 0f, 1f) : float.PositiveInfinity);
         hit = Mathf.Min(hit, groundHit);
-        grid.FirstProjectileHit(units, sourceFaction[index], from, segment, config.ProjectileHitRadius,
+        int directVictim = grid.FirstProjectileHit(units, sourceFaction[index], from, segment, config.ProjectileHitRadius,
             movementPadding, out float firstHit, hit);
         hit = firstHit;
         if (barricade is { } wallCell && barricadeHit <= hit && barricadeHit < domeHit)
@@ -385,7 +387,9 @@ public sealed class ProjectileSystem
         if (hit > 1f && elapsed[index] < duration[index]) return false;
         Vector3 impact = from + segment * Mathf.Min(hit, 1f);
         int kills = AreaDamage.Radial(units, grid, sourceFaction[index], impact, flight.ExplosionRadius,
-            damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index]);
+            damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index],
+            heavyProjectile: catalog.DomeWeight(Type[index]) == ProjectileWeight.Heavy,
+            trajectory: ObstacleField.Xz(segment), directVictim: directVictim);
         if (firingTowers?[index] is { } tower) tower.Kills += kills;
         Vector3 burstOrigin = impact;
         impact.Y = terrain?.At(impact.X, impact.Z) ?? 0f;
@@ -433,7 +437,9 @@ public sealed class ProjectileSystem
         if (flight.ExplosionRadius <= 0f) return;
         int kills = AreaDamage.Radial(units, grid, sourceFaction[index], point, flight.ExplosionRadius,
             damage[index], flight.ExplosionEdgeFraction, movementPadding, damageType: damageTypes[index],
-            protectedDomeCenter: dome.Center, protectedDomeRadius: dome.Radius);
+            protectedDomeCenter: dome.Center, protectedDomeRadius: dome.Radius,
+            heavyProjectile: catalog.DomeWeight(Type[index]) == ProjectileWeight.Heavy,
+            trajectory: ObstacleField.Xz(Direction[index]));
         if (firingTowers?[index] is { } tower) tower.Kills += kills;
         rings?.Emit(point, flight.ExplosionRadius, point, sourceFaction[index]);
     }

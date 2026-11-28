@@ -258,3 +258,7 @@ The Tank also has a 12-unit roof minigun with separate targeting, aim and cooldo
 ### Mobile Shield Generator visual refinement
 
 The Tier 2 Mobile Generator uses a modern two-tone hexagonal armored carrier with four drive pods, vents and radial emitter pylons. Its central faceted reactor shares geometry and a shader animation with the stationary generator: two circulating helical energy bands, a rising wave and a gentle faction-tinted pulse. All geometry is baked into the existing shared unit mesh; no extra batch, lights, particles or per-unit state. Original dimensions, footprint, movement, melee attack and shield values remain unchanged. The core is a continuous cosmetic animation, not an indication of actual shield charge. Owner visual validation pending.
+
+Surviving Tier 2+ ground units can visibly rock on Heavy projectile damage
+when personal shields are down. Higher size tiers use smaller angles.
+This visual leaves movement, facing, weapons and collision intact.
