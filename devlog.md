@@ -796,3 +796,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Fixed trench placement on mouse release and added a Scenery palette for persistent, crushable destroyed buildings using the shared wreck mesh and navigation system.
 
 - 2026-11-27 — CLIFF2: Increased deterministic cliff-face relief and broad irregular buttresses; added varied stone strata and plateau surface detail. Authored rim, plateau height and navigation unchanged. Source review only; owner visual validation pending.
+
+- 2026-11-27 — CLIFF2 — Prevented painted ground-cover triangles from bridging cliff tops and lower terrain.

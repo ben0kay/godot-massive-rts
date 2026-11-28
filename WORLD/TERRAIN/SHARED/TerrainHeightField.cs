@@ -19,14 +19,25 @@ public sealed class TerrainHeightField
 
     private bool TryPlateau(Vector2 point, out float height)
     {
-        foreach (var plateau in plateaus)
-            if (plateau.Bounds.HasPoint(point) && InsideOutline(point, plateau.Outline))
-            {
-                height = plateau.Height;
-                return true;
-            }
-        height = 0f;
-        return false;
+        int index = PlateauIndex(point);
+        height = index >= 0 ? plateaus[index].Height : 0f;
+        return index >= 0;
+    }
+
+    private int PlateauIndex(Vector2 point)
+    {
+        for (int i = 0; i < plateaus.Length; i++)
+        {
+            var plateau = plateaus[i];
+            if (plateau.Bounds.HasPoint(point) && InsideOutline(point, plateau.Outline)) return i;
+        }
+        return -1;
+    }
+
+    internal (float Height, int Plateau) SampleGroundCover(Vector2 point)
+    {
+        int index = PlateauIndex(point);
+        return (index >= 0 ? plateaus[index].Height : BaseHeight(point.X, point.Y), index);
     }
 
     internal bool TryPlateauRay(Vector3 origin, Vector3 direction, out Vector3 hit)
