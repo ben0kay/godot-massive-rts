@@ -794,3 +794,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — TRENCH1 — Fixed a compile error by passing the concealment flag through recursive pursuit searches.
 
 - 2026-11-27 — Fixed trench placement on mouse release and added a Scenery palette for persistent, crushable destroyed buildings using the shared wreck mesh and navigation system.
+
+- 2026-11-27 — CLIFF2: Increased deterministic cliff-face relief and broad irregular buttresses; added varied stone strata and plateau surface detail. Authored rim, plateau height and navigation unchanged. Source review only; owner visual validation pending.

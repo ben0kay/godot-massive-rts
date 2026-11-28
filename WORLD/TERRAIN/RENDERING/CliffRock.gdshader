@@ -25,10 +25,13 @@ void fragment() {
     vec3 p = world_position;
     float large = stone_noise(p * vec3(0.65, 1.5, 0.65));
     float grit = stone_noise(p * 13.0);
-    float strata = smoothstep(0.67, 0.88, fract(p.y * 1.55 + large * 0.48));
+    float broad = stone_noise(p * vec3(0.19, 0.45, 0.19));
+    float strata = smoothstep(0.58, 0.83, fract(p.y * 0.82 + broad * 0.65 + large * 0.22));
+    float fine_strata = smoothstep(0.78, 0.94, fract(p.y * 2.1 + broad * 0.7));
+    float cap_cracks = smoothstep(0.04, 0.12, abs(stone_noise(p * vec3(0.85, 0.4, 0.85)) - 0.5));
     float fissure = smoothstep(0.62, 0.86, stone_noise(p * vec3(2.1, 0.34, 2.1)));
-    vec3 rock = mix(vec3(0.19, 0.22, 0.27), vec3(0.31, 0.33, 0.36), cap);
-    ALBEDO = rock * (0.78 + large * 0.29 + grit * 0.10 - (1.0 - cap) * (strata * 0.18 + fissure * 0.23));
+    vec3 rock = mix(vec3(0.22, 0.22, 0.21), vec3(0.29, 0.29, 0.27), cap);
+    ALBEDO = rock * (0.70 + broad * 0.32 + large * 0.24 + grit * 0.12 - (1.0 - cap) * (strata * 0.24 + fine_strata * 0.09 + fissure * 0.25) - cap * (1.0 - cap_cracks) * 0.22);
     EMISSION = ALBEDO * 0.43;
     ROUGHNESS = 1.0;
 }

@@ -99,14 +99,14 @@ public partial class TerrainCliff : Node3D
         // between the exact top and buried base is displaced.
         bool clockwise = Geometry2D.IsPolygonClockwise(outline);
         int layers = Mathf.Clamp(Mathf.CeilToInt(Rise / 1.4f), 5, 28);
-        float relief = Mathf.Min(0.65f, Rise * 0.12f);
+        float relief = Mathf.Min(1.45f, Rise * 0.20f);
         for (int i = 0; i < outline.Length; i++)
         {
             var a = outline[i];
             var b = outline[(i + 1) % outline.Length];
             var edge = b - a;
             var normal = new Vector3(edge.Y, 0f, -edge.X).Normalized() * (clockwise ? -1f : 1f);
-            int sections = Mathf.Clamp(Mathf.CeilToInt(edge.Length() / 1.4f), 2, 512);
+            int sections = Mathf.Clamp(Mathf.CeilToInt(edge.Length() / 1.1f), 2, 512);
             var vertices = new Vector3[sections + 1, layers + 1];
             for (int section = 0; section <= sections; section++)
             {
@@ -115,15 +115,18 @@ public partial class TerrainCliff : Node3D
                 float bottom = Mathf.Min(plateau.Height - 0.05f, (ground?.At(p.X, p.Y) ?? 0f) - 0.08f);
                 // Fade displacement at polygon joints so adjacent faces share exact seams.
                 float joint = Mathf.Clamp(Mathf.Min(u, 1f - u) * edge.Length() / 1.2f, 0f, 1f);
-                float column = Mathf.Sin(p.X * 0.71f + p.Y * 0.43f) * 0.55f +
-                    Mathf.Sin(p.X * 1.83f - p.Y * 1.21f) * 0.45f;
+                float column = Mathf.Sin(p.X * 0.31f + p.Y * 0.27f) * 0.48f +
+                    Mathf.Sin(p.X * 0.83f - p.Y * 0.61f) * 0.32f +
+                    Mathf.Sin(p.X * 1.83f - p.Y * 1.21f) * 0.20f;
                 for (int layer = 0; layer <= layers; layer++)
                 {
                     float t = layer / (float)layers;
                     float envelope = layer == 0 || layer == layers ? 0f : Mathf.Sin(t * Mathf.Pi);
                     float band = Mathf.Sin(layer * 2.4f + 0.35f * Mathf.Sin(p.X * 0.12f + p.Y * 0.15f));
-                    float shelf = band * 0.58f + column * 0.42f;
-                    float offset = relief * envelope * joint * shelf;
+                    float fracture = Mathf.Sin(p.X * 0.91f + p.Y * 0.73f + layer * 0.39f);
+                    float shelf = band * 0.36f + column * 0.48f + fracture * 0.16f;
+                    // Stronger broad rock buttresses, tapering to the unchanged plateau rim.
+                    float offset = relief * envelope * joint * (shelf - 0.12f);
                     float warped = t + envelope * 0.22f / layers * Mathf.Sin(p.X * 0.23f + p.Y * 0.31f + layer * 1.7f);
                     vertices[section, layer] = new Vector3(p.X, Mathf.Lerp(bottom, plateau.Height, warped), p.Y) + normal * offset;
                 }
