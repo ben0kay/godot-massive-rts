@@ -2,7 +2,7 @@
 
 > **Status:** Shared faction art direction established by owner feedback on Broadside and Light Artillery. Railgun, Shield Generator and the refined Light Artillery are source implemented; individual visual and FPS acceptance remains with the owner. This guide applies to future approved visual work, not permission to redesign the entire roster.
 >
-> **Read first:** root [README](../README.md), [CodePreferences](../CodePreferences.md), [endgoal](../endgoal.md), [battlefield visual plan](visual.md), [Tower Implementation Standard](../WORLD/BUILDINGS/TOWER_IMPLEMENTATION_STANDARD.md) for structures, and [unit catalogue guide](../GAMEPLAY/UNITS/README.md) for units. Those documents govern gameplay, placement and lifecycle; this guide governs faction appearance.
+> **Read first:** root [README](../README.md), [CodePreferences](../CodePreferences.md), [endgoal](../endgoal.md), [battlefield visual plan](visual.md), [Tower Implementation Standard](../WORLD/BUILDINGS/TOWER_IMPLEMENTATION_STANDARD.md) for structures, and [Unit Implementation Standard](../GAMEPLAY/UNITS/UNIT_IMPLEMENTATION_STANDARD.md) and [unit catalogue guide](../GAMEPLAY/UNITS/README.md) for units. Those documents govern gameplay, placement and lifecycle; this guide governs faction appearance.
 
 ## 1. Shared art direction and faction identity
 

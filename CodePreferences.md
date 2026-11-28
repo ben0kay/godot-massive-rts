@@ -9,7 +9,7 @@ Adapted from the owner's Godot Tower Defense coding preferences. These rules gui
 ## Before every AI task
 
 1. Confirm the **repository, branch, requested scope and actual files** before editing. Read the root README, this file and relevant feature documentation; check current source instead of trusting old plans. Read `AGENTS.md` if present.
-   For faction unit, tower or structure visual work, also read [VISUALS/authoring.md](VISUALS/authoring.md).
+   For adding or materially changing units, read the mandatory [Unit Implementation Standard](GAMEPLAY/UNITS/UNIT_IMPLEMENTATION_STANDARD.md). For faction unit, tower or structure visual work, also read [VISUALS/authoring.md](VISUALS/authoring.md).
 2. Identify the current owner of the feature and reuse shared systems, scene patterns and configuration rather than adding parallel implementations.
 3. Keep the change **focused**. Preserve unrelated work, test scenes, authored content, balance and visuals unless explicitly asked to change them. Avoid speculative features and unrelated refactoring.
 4. Prefer **one Git commit per authorized job**, not many small commits. Push authorized work by default unless the owner says not to; report the commit SHA and changed files. Never force-reset, force-push or overwrite unrelated changes.

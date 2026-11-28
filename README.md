@@ -143,6 +143,6 @@ These milestone names establish planning vocabulary; they do **not** authorize i
 
 ## AI development workflow
 
-Before a task, read the root README, [Code Preferences](NOTES/CodePreferences.md), any `AGENTS.md` and relevant feature documentation. Confirm the actual project state and work only on the requested milestone.
+Before a task, read the root README, [Code Preferences](CodePreferences.md), any `AGENTS.md` and relevant feature documentation. For unit creation or material unit changes, read the [Unit Implementation Standard](GAMEPLAY/UNITS/UNIT_IMPLEMENTATION_STANDARD.md). Confirm the actual project state and work only on the requested milestone.
 
 Prefer one focused commit per task; push authorized changes to the designated branch and report the SHA, affected files, basic checks and any owner-side Godot testing. Don't mistake a successful build for visual or performance acceptance. Keep the new project small, modular and measurable from day one.

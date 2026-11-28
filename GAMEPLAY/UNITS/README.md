@@ -1,6 +1,6 @@
 # UNITS — Soldier Catalogue
 
-For unit appearance and shared faction coloring, read [Faction Visual Authoring Guide](../../VISUALS/authoring.md) before modifying meshes or materials.
+For new units and material unit changes, follow the mandatory [Unit Implementation Standard](UNIT_IMPLEMENTATION_STANDARD.md). For unit appearance and shared faction coloring, read [Faction Visual Authoring Guide](../../VISUALS/authoring.md) before modifying meshes or materials.
 
 **Status:** UNIT0–UNIT3 source implemented. Awaiting owner validation.
 
