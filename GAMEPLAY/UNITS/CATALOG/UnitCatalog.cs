@@ -404,6 +404,9 @@ public sealed class RuntimeUnitCatalog
             damage, ClampStat(minimum, 0f, maximum, 0f), maximum, interval, mount.TwinMinigunModel);
     }
 
+    // A full two-tier gap anchors the heavier unit against contact from the lighter one.
+    internal static bool CanShove(float moverTier, float defenderTier) => defenderTier - moverTier < 2f;
+
     private static float CompileSizeTier(float tier) =>
         float.IsFinite(tier) && tier >= 1f ? (float)(Math.Round(tier * 2d, MidpointRounding.AwayFromZero) / 2d) : 1f;
 

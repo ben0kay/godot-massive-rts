@@ -804,3 +804,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Fixed editor ground material updates overwriting steel and asphalt trench lining, and narrowed the side ramp openings.
 
 - 2026-11-27 — Gave the tank a recoiling barrel, hull pitch, track smoke and a 3-unit shell blast, and disabled its firing size pulse.
+
+- 2026-11-27 — Enforced a two-tier shove limit in crowd separation, allied yielding and cavalry charges.

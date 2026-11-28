@@ -25,6 +25,7 @@ public sealed class SeparationSystem
     private AlliedYieldSettings yieldSettings;
     // Indexed by slot, which is the soldier's position in cell order. Neighbours are adjacent in memory.
     private readonly int[] slotId, slotContacts;
+    private readonly float[] slotTier;
     private readonly float[] slotX, slotZ, slotRadius, slotPushX, slotPushZ;
 
     private int[] cellStart = Array.Empty<int>();
@@ -51,6 +52,7 @@ public sealed class SeparationSystem
     {
         cellOfId = new int[capacity];
         slotId = new int[capacity];
+        slotTier = new float[capacity];
         slotContacts = new int[capacity];
         slotX = new float[capacity];
         slotZ = new float[capacity];
@@ -187,6 +189,7 @@ public sealed class SeparationSystem
             slotX[slot] = p.X;
             slotZ[slot] = p.Z;
             slotRadius[slot] = footprintByType[type[id]];
+            slotTier[slot] = units.Catalog[type[id]].SizeTier;
             if (voluntaryMovement != null)
             {
                 slotFlags[slot] = (byte)((units.Faction[id] << 1) |
@@ -305,7 +308,8 @@ public sealed class SeparationSystem
         float correction = strong ? penetration + MathF.Min(penetration * 0.35f, Slop) : penetration;
         float radiusA = slotRadius[i], radiusB = slotRadius[j];
         // The larger body takes a smaller share of the same overlap correction.
-        float pushA = correction * (!weighted || radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
+        float pushA = correction * TierAwareShare(i, j,
+            !weighted || radiusA == radiusB ? 0.5f : radiusB / (radiusA + radiusB));
         float pushB = correction - pushA;
         slotPushX[i] += nx * pushA; slotPushZ[i] += nz * pushA; slotContacts[i]++;
         slotPushX[j] -= nx * pushB; slotPushZ[j] -= nz * pushB; slotContacts[j]++;
@@ -313,6 +317,13 @@ public sealed class SeparationSystem
         OverlapPairs++;
         penetrationSum += penetration;
         if (penetration > MaxPenetration) MaxPenetration = penetration;
+    }
+
+    private float TierAwareShare(int i, int j, float share)
+    {
+        if (!RuntimeUnitCatalog.CanShove(slotTier[j], slotTier[i])) return 0f;
+        if (!RuntimeUnitCatalog.CanShove(slotTier[i], slotTier[j])) return 1f;
+        return share;
     }
 
     private void ResolveAlliedPair(int i, int j, float dx, float dz, float d2, float fullLimit, byte a, byte b)
@@ -335,6 +346,7 @@ public sealed class SeparationSystem
         float penetration = limit - distance;
         float pairCap = yielding ? yieldSettings.PairCap : yieldSettings.ExitCap;
         float share = yielding ? (firstIsMelee ? yieldSettings.MeleeShare : 1f - yieldSettings.MeleeShare) : 0.5f;
+        share = TierAwareShare(i, j, share);
         Vector2 correction = direction * Mathf.Min(penetration, pairCap);
         yieldPush[i] += correction * share;
         yieldPush[j] -= correction * (1f - share);

@@ -104,8 +104,8 @@ internal sealed class HardSeparation
                     // successful nudges can accumulate even when this move still can't fit.
                     Add(id, from);
                     float nudge = Mathf.Min(move.Length(), 0.08f);
-                    if (!Yield(units, blocker, units.Faction[id], side * nudge, obstacles, boundary))
-                        Yield(units, blocker, units.Faction[id], -side * nudge, obstacles, boundary);
+                    if (!Yield(units, blocker, units.Faction[id], units.Catalog[units.Type[id]].SizeTier, side * nudge, obstacles, boundary))
+                        Yield(units, blocker, units.Faction[id], units.Catalog[units.Type[id]].SizeTier, -side * nudge, obstacles, boundary);
                     Remove(id, from);
                 }
 
@@ -133,10 +133,10 @@ internal sealed class HardSeparation
         firstMover = (firstMover + 1) % units.Count;
     }
 
-    private bool Yield(UnitState units, int id, byte faction, Vector2 shift, ObstacleField obstacles, float boundary)
+    private bool Yield(UnitState units, int id, byte faction, float moverTier, Vector2 shift, ObstacleField obstacles, float boundary)
     {
         yieldCount = 0;
-        bool moved = TryYield(units, id, faction, shift, obstacles, boundary, MaxYieldChain);
+        bool moved = TryYield(units, id, faction, moverTier, shift, obstacles, boundary, MaxYieldChain);
         if (!moved)
         {
             // Restore the failed attempt in reverse order. None of it reaches the unit state.
@@ -158,18 +158,19 @@ internal sealed class HardSeparation
         return true;
     }
 
-    private bool TryYield(UnitState units, int id, byte faction, Vector2 shift,
+    private bool TryYield(UnitState units, int id, byte faction, float moverTier, Vector2 shift,
         ObstacleField obstacles, float boundary, int remaining)
     {
         if (remaining == 0 || yielded[id] || units.Faction[id] != faction ||
-            !units.Catalog[units.Type[id]].Ranged) return false;
+            !units.Catalog[units.Type[id]].Ranged ||
+            !RuntimeUnitCatalog.CanShove(moverTier, units.Catalog[units.Type[id]].SizeTier)) return false;
 
         Vector2 from = accepted[id], to = from + shift;
         float radius = units.Catalog[units.Type[id]].Footprint;
         Remove(id, from);
         var movementField = obstacles?.ForTier(units.Catalog[units.Type[id]].SizeTier);
         bool fits = FitsStep(units, from, to, radius, movementField, boundary, out int blocker);
-        if (!fits && blocker >= 0 && TryYield(units, blocker, faction, shift, obstacles, boundary, remaining - 1))
+        if (!fits && blocker >= 0 && TryYield(units, blocker, faction, moverTier, shift, obstacles, boundary, remaining - 1))
             fits = FitsStep(units, from, to, radius, movementField, boundary, out _);
 
         Add(id, fits ? to : from);

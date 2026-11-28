@@ -229,7 +229,7 @@ public sealed class TrampleSystem
                 feedback?.EmitMelee(units.OnTerrain(new Vector3(impact.X, 0f, impact.Y)) + Vector3.Up * 0.3f,
                     charge.Heading, type.Footprint, cleave: false);
             }
-            if (!penetrates)
+            if (!penetrates || !RuntimeUnitCatalog.CanShove(type.SizeTier, units.Catalog[units.Type[defender]].SizeTier))
             {
                 blocked = true;
                 travel = Mathf.Max(0f, contact - 0.01f);
