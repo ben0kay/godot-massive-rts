@@ -312,7 +312,7 @@ public sealed class UnitState
         ref readonly var defender = ref Catalog[Type[id]];
         float resolved = Catalog.DamageRules.Resolve(damage, damageType, defender.ArmourClass, defender.DamageTaken);
         var impact = heavyStrength > 0f ? HitFeedback?.HeavyImpact : null;
-        bool react = impact != null && defender.SizeTier >= impact.MinimumTier &&
+        bool react = impact != null && impact.IncludesTier(defender.SizeTier) &&
             Shields?.IsProtecting(id) != true;
         resolved = Shields?.Absorb(id, resolved) ?? resolved;
         Health[id] = Mathf.Max(0, previous - resolved);

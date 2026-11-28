@@ -12,7 +12,9 @@ internal sealed class HeavyImpactFeedback
     private readonly float duration, strength, counter;
     private readonly Vector4 tierAngles;
     private readonly float tierFiveAngle;
-    internal float MinimumTier { get; }
+    private const float ImmuneTier = 6f;
+    private float MinimumTier { get; }
+    internal bool IncludesTier(float tier) => tier >= MinimumTier && tier < ImmuneTier;
     internal float SplashStrength { get; }
 
     internal HeavyImpactFeedback(HitFeedbackSettings settings)

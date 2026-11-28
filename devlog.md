@@ -834,3 +834,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Fixed direct explosive hits on large units whose centers fall outside the blast radius. Raised Tank cannon damage to 180 and shell splash radius to 3.45.
 
 - 2026-11-28 — Added compact size tier labels to unit cards in the editor, benchmark and battle deployment bars.
+
+- 2026-11-28 — Made Tier 6 and larger units immune to cosmetic Heavy projectile wobble.

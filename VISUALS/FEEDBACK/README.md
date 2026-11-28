@@ -54,7 +54,7 @@ The existing 384-slot rally marker batch now shows small camera-facing faction c
 ### Heavy projectile impact reaction
 
 The shared HitFeedbackSettings resource controls a .40-second directional
-rock for surviving Tier 2+ units. The active list updates only during the
+rock for surviving Tier 2–5.5 units by default. The active list updates only during the
 reaction. ArmyRenderer applies it to the existing instance basis, including
 the final neutral pose. The Tank's integrated turret moves with the rendered
 hull, and separate Dreadnaught weapon models share its tilt and ground pivot.
