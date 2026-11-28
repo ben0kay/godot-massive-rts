@@ -83,7 +83,7 @@ internal sealed class ForestCover
             int index = trees.Count;
             uint seed = unchecked(((uint)cell.X * 0x9E3779B9u) ^ ((uint)cell.Y * 0x85EBCA6Bu));
             seed ^= seed >> 16;
-            float height = 0.65f + (seed & 255) / 255f * 0.95f;
+            float height = 0.65f + (seed & 255) / 255f * 1.10f;
             float width = 0.72f + ((seed >> 8) & 255) / 255f * 0.51f;
             Vector2 low = (Vector2)cell * cellSize;
             // Jitter only the tree visuals, not the forest cell or its gameplay effects.
@@ -95,12 +95,22 @@ internal sealed class ForestCover
             Vector2 offset = new((jitter & 0xFFFFu) / 65535f * 2f - 1f,
                 (jitter >> 16) / 65535f * 2f - 1f);
             Vector2 center = low + Vector2.One * (cellSize * 0.5f) + offset * (cellSize * 0.15f);
+            // Vary the silhouette independently of the position hash. Keep the maximum
+            // crown radius unchanged so occupancy can still use the painted cell.
+            uint shape = unchecked(jitter * 0x9E3779B9u + 0x85EBCA6Bu);
+            shape ^= shape >> 16;
+            float yaw = (shape & 255u) / 255f * Mathf.Tau;
+            float narrow = 0.84f + ((shape >> 8) & 255u) / 255f * 0.16f;
+            float crownHeight = (0.6f + height * 0.65f) *
+                (0.90f + ((shape >> 16) & 255u) / 255f * 0.24f);
+            var crownBasis = new Basis(Vector3.Up, yaw) *
+                Basis.Identity.Scaled(new Vector3(width, crownHeight, width * narrow));
             float radius = CrownRadius * width;
             trees.Add(cell, new Tree(index, center, radius * radius));
             float ground = Ground(center);
             trunks.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, height, width)),
                 new Vector3(center.X, ground + height * 0.5f, center.Y)));
-            crowns.SetInstanceTransform(index, new Transform3D(Basis.Identity.Scaled(new Vector3(width, 0.6f + height * 0.65f, width)),
+            crowns.SetInstanceTransform(index, new Transform3D(crownBasis,
                 new Vector3(center.X, ground + height + 0.25f, center.Y)));
             Vector2 cast = GroundShadowMeshes.SceneryOffset(height + 0.35f);
             Vector2 along = cast.Normalized();
@@ -127,13 +137,23 @@ internal sealed class ForestCover
         {
             float radius = CrownRadius * (1f - 0.23f * tier);
             float bottom = -0.4f + 0.29f * tier;
-            var tip = Vector3.Up * (bottom + 0.63f);
+            // Stagger branch whorls and vary the rim instead of using three perfect cones.
+            float rotation = tier * 0.41f;
+            float lean = 0.035f + 0.012f * tier;
+            var tip = new Vector3(Mathf.Sin(rotation + 0.7f) * lean,
+                bottom + 0.63f + (tier == 1 ? 0.045f : 0f), Mathf.Cos(rotation + 0.7f) * lean);
+            Vector3 Rim(int side)
+            {
+                side %= sides;
+                float angle = Mathf.Tau * side / sides + rotation;
+                float irregular = 0.92f + 0.08f * Mathf.Sin(side * 2.39f + tier * 1.83f);
+                float y = bottom + 0.036f * Mathf.Sin(side * 1.97f + tier * 2.1f);
+                return new Vector3(Mathf.Cos(angle) * radius * irregular, y, Mathf.Sin(angle) * radius * irregular);
+            }
             for (int side = 0; side < sides; side++)
             {
-                float angle = Mathf.Tau * side / sides;
-                float next = Mathf.Tau * (side + 1) / sides;
-                var a = new Vector3(Mathf.Cos(angle) * radius, bottom, Mathf.Sin(angle) * radius);
-                var b = new Vector3(Mathf.Cos(next) * radius, bottom, Mathf.Sin(next) * radius);
+                var a = Rim(side);
+                var b = Rim(side + 1);
                 surface.SetNormal((tip - a).Cross(b - a).Normalized());
                 surface.SetColor(Colors.White.Darkened(0.14f - 0.05f * tier));
                 surface.AddVertex(a);

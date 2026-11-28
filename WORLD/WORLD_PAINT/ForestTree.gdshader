@@ -9,7 +9,10 @@ varying float opacity;
 void vertex() {
     opacity = COLOR.a;
     if (foliage && INSTANCE_CUSTOM.b > 0.0) {
-        vec2 push = INSTANCE_CUSTOM.rg * 2.0 - 1.0;
+        vec2 world_push = INSTANCE_CUSTOM.rg * 2.0 - 1.0;
+        // Crowns have individual yaw; keep heavy-unit sway pointing along world travel.
+        vec2 push = vec2(dot(world_push, normalize(MODEL_MATRIX[0].xz)),
+                         dot(world_push, normalize(MODEL_MATRIX[2].xz)));
         float tip = smoothstep(-0.4, 0.75, VERTEX.y);
         float sway = 0.60 + 0.40 * sin(TIME * 13.0 + MODEL_MATRIX[3].x);
         VERTEX.xz += push * tip * sway * INSTANCE_CUSTOM.b * 0.20;

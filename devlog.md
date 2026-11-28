@@ -812,3 +812,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — TURRET1 — Added independent primary turret aiming, authored Tank mount and batched turret visuals, Entity Editor mount controls, and append-only Dreadnaught reinforcement state. Awaiting Godot validation.
 
 - 2026-11-28 — Increased stationary Shield Generator radius by 20% (24.15 to 28.98 world units), keeping dome visuals and gameplay coverage/interception aligned. Mobile Generator and other shield stats unchanged.
+
+- 2026-11-28 — TREE visual polish: Added deterministic taller pines, varied crown proportions and yaw, and irregular staggered branch tiers using the existing batches. Preserved forest gameplay, canopy fade and world-direction sway. Source review only; owner visual validation pending.
