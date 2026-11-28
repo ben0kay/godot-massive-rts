@@ -1,9 +1,26 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/TankShell/TankShell.tres" id="2"]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/RocketMount.cs" id="3"]
+
+[ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/MinigunRound/MinigunRound.tres" id="4"]
+
+[sub_resource type="Resource" id="RoofMinigun"]
+script = ExtResource("3")
+IndependentAim = true
+AttachToPrimaryTurret = true
+Position = Vector3(0, 0.42, 0)
+MuzzleOffset = Vector3(0, 0.055, -0.45)
+RotationSpeed = 240.0
+AlignmentTolerance = 5.0
+AllowedTargets = 1
+Projectile = ExtResource("4")
+Damage = 3.0
+MinimumRange = 0.0
+MaximumRange = 12.0
+Interval = 0.18
 
 [sub_resource type="Resource" id="PrimaryCannon"]
 script = ExtResource("3")
@@ -44,4 +61,4 @@ AllowedTargets = 3
 StructureDetectionRange = 42.0
 Projectile = ExtResource("2")
 PulseOnAttack = false
-RocketMounts = Array[ExtResource("3")]([SubResource("PrimaryCannon")])
+RocketMounts = Array[ExtResource("3")]([SubResource("PrimaryCannon"), SubResource("RoofMinigun")])

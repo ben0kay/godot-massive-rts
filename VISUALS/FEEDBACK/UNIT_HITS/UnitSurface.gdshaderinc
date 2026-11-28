@@ -14,6 +14,7 @@ uniform bool tank = false;
 uniform bool independent_turret = false;
 uniform bool turret_preview = false;
 uniform float preview_turret_yaw = 0.0;
+uniform vec3 roof_pivot = vec3(0.0);
 uniform vec3 turret_pivot = vec3(0.0);
 uniform bool long_marksman = false;
 uniform bool pikeman = false;
@@ -39,7 +40,15 @@ void vertex() {
         stomping = hexagon_siege && swing > 0.0 && INSTANCE_CUSTOM.z > 0.5;
         if (tank || independent_turret) {
             if (independent_turret && UV.x > 8.5) {
-                if (!turret_preview && UV.x > 12.5) VERTEX.z += INSTANCE_CUSTOM.y;
+                if (!turret_preview && UV.x > 16.5) {
+                    float roof_yaw = INSTANCE_CUSTOM.z;
+                    float cr = cos(roof_yaw), sr = sin(roof_yaw);
+                    mat2 roof_rotate = mat2(vec2(cr, -sr), vec2(sr, cr));
+                    VERTEX.xz = roof_pivot.xz + roof_rotate * (VERTEX.xz - roof_pivot.xz);
+                    NORMAL.xz = roof_rotate * NORMAL.xz;
+                } else if (!turret_preview && UV.x > 12.5) {
+                    VERTEX.z += INSTANCE_CUSTOM.y;
+                }
                 float yaw = turret_preview ? preview_turret_yaw : INSTANCE_CUSTOM.x;
                 float cy = cos(yaw), sy = sin(yaw);
                 mat2 rotate = mat2(vec2(cy, -sy), vec2(sy, cy));

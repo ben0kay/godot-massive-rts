@@ -13,6 +13,7 @@ public partial class RocketMount : Resource
     [Export] public Vector3 ModelScale { get; set; } = Vector3.One;
     [Export] public bool TwinMinigunModel { get; set; }
     [Export] public bool IndependentAim { get; set; }
+    [Export] public bool AttachToPrimaryTurret { get; set; }
     [Export] public bool ReplacePrimaryWeapon { get; set; }
     [Export] public TurretModel Model { get; set; }
     [Export] public float RotationSpeed { get; set; } = 100f;

@@ -187,6 +187,8 @@ public sealed class RuntimeUnitCatalog
     private readonly UnitDefinition[] definitionsByType = new UnitDefinition[OrderedIds.Length];
     internal MountedRocket[] PrimaryRockets(int type) => primaryRockets[type];
     private readonly PrimaryTurret?[] primaryTurrets = new PrimaryTurret?[OrderedIds.Length];
+    private readonly RoofWeapon?[] roofWeapons = new RoofWeapon?[OrderedIds.Length];
+    internal RoofWeapon? RoofWeaponFor(int type) => roofWeapons[type];
     internal PrimaryTurret? IndependentPrimary(int type) => primaryTurrets[type];
     internal MountedRocket[] IndependentRockets(int type) => independentRockets[type];
     internal UnitDefinition Definition(int type) => definitionsByType[type];
@@ -313,6 +315,14 @@ public sealed class RuntimeUnitCatalog
             var independent = new List<MountedRocket>();
             foreach (var mount in d.RocketMounts ?? new())
             {
+                if (mount is { IndependentAim: true, AttachToPrimaryTurret: true, Projectile: not null })
+                {
+                    if (roofWeapons[i].HasValue) throw new ArgumentException($"Unit {id} has multiple roof weapons.");
+                    roofWeapons[i] = new RoofWeapon(CompileMount(mount, d, size),
+                        mount.MuzzleOffset * size, Mathf.DegToRad(ClampStat(mount.RotationSpeed, 1f, 720f, 240f)),
+                        Mathf.DegToRad(ClampStat(mount.AlignmentTolerance, .1f, 90f, 5f)));
+                    continue;
+                }
                 if (mount is { IndependentAim: true, ReplacePrimaryWeapon: true } &&
                     d.Style == AttackStyle.Ranged && !d.PrismBeamEnabled)
                 {

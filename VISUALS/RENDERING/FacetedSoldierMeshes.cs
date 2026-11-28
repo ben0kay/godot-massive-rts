@@ -41,7 +41,8 @@ public static class FacetedSoldierMeshes
                 cracked.SetShaderParameter("show_fracture", crackMask != null);
                 cracked.SetShaderParameter("use_two_tone_armor", twoToneArmor);
                 ConfigureInfantryAnimation(cracked, visuals, type.Id, type.Height);
-                if (primary is PrimaryTurret turret) ConfigureTurret(cracked, turret.Weapon.Pose.Origin);
+                if (primary is PrimaryTurret turret)
+                    ConfigureTurret(cracked, turret.Weapon.Pose.Origin, catalog.RoofWeaponFor(i)?.Weapon.Pose.Origin);
                 if (crackMask != null) cracked.SetShaderParameter("crack_mask", crackMask);
                 cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
@@ -74,7 +75,7 @@ public static class FacetedSoldierMeshes
             armor.SetShaderParameter("use_two_tone_armor", twoToneArmor);
             if (mount != null)
             {
-                ConfigureTurret(armor, mount.Position * size);
+                ConfigureTurret(armor, mount.Position * size, RoofMount(unit)?.Position * size);
                 armor.SetShaderParameter("turret_preview", true);
                 armor.SetShaderParameter("preview_turret_yaw", Mathf.DegToRad(mount.YawDegrees));
             }
@@ -95,10 +96,18 @@ public static class FacetedSoldierMeshes
         return null;
     }
 
-    internal static void ConfigureTurret(ShaderMaterial material, Vector3 pivot)
+    private static RocketMount RoofMount(UnitDefinition unit)
+    {
+        foreach (var mount in unit.RocketMounts ?? new())
+            if (mount is { IndependentAim: true, AttachToPrimaryTurret: true, Projectile: not null }) return mount;
+        return null;
+    }
+
+    internal static void ConfigureTurret(ShaderMaterial material, Vector3 pivot, Vector3? roofOffset = null)
     {
         material.SetShaderParameter("independent_turret", true);
         material.SetShaderParameter("turret_pivot", pivot);
+        if (roofOffset.HasValue) material.SetShaderParameter("roof_pivot", pivot + roofOffset.Value);
         material.SetShaderParameter("infantry_attack", true);
         material.SetShaderParameter("infantry_walk", false);
     }
@@ -176,7 +185,7 @@ public static class FacetedSoldierMeshes
         if (twoToneArmor) surface.SetUV(Vector2.Zero);
         foreach (var mount in unit.RocketMounts ?? new())
         {
-            if (mount == null || (mount.IndependentAim && mount.ReplacePrimaryWeapon) || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
+            if (mount == null || (mount.IndependentAim && (mount.ReplacePrimaryWeapon || mount.AttachToPrimaryTurret)) || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
             Transform3D pose = MountedRocket.LocalPose(mount, UnitOutline.EffectiveSize(unit));
             if (enhancedRocket && !mount.IndependentAim && !mount.TwinMinigunModel)
                 AppendEnhancedRocketBarrel(surface, pose);
@@ -191,6 +200,8 @@ public static class FacetedSoldierMeshes
         bool compactTurret = turretMount != null &&
             (turretMount.Model == TurretModel.CompactCannon || unit.Id != RuntimeUnitCatalog.TankId);
         if (compactTurret) AppendCompactTurret(surface, turretMount, UnitOutline.EffectiveSize(unit));
+        if (turretMount != null && RoofMount(unit) is RocketMount roof)
+            AppendRoofMinigun(surface, roof, turretMount, UnitOutline.EffectiveSize(unit));
         surface.SetUV(Vector2.Zero);
 
         if (twoToneArmor)
@@ -689,6 +700,21 @@ public static class FacetedSoldierMeshes
             Block(side * .77f, -.04f, .12f, .41f, .18f, 1.54f, paint);
             Block(side * .56f, .10f, -.69f, .21f, .07f, .07f, trim);
         }
+    }
+
+    private static void AppendRoofMinigun(SurfaceTool surface, RocketMount roof, RocketMount primary, float size)
+    {
+        const float corner = .70710678f;
+        Vector3 pivot = (primary.Position + roof.Position) * size;
+        void Block(Vector3 offset, Vector3 dimensions, Color tint, int part) =>
+            AppendPrism(surface, 4, dimensions.X * size * corner, dimensions.Z * size * corner,
+                dimensions.Y * size, Mathf.Pi * .25f, pivot + offset * size, tint,
+                sideShade: SoldierSideShade, armorMask: true, turretPart: part);
+
+        Block(Vector3.Down * .025f, new Vector3(.24f, .09f, .24f), new Color(.64f, 0f, 0f), 1);
+        Block(new Vector3(0f, .055f, .025f), new Vector3(.19f, .15f, .24f), new Color(.85f, 0f, 0f), 3);
+        Block(new Vector3(0f, .055f, -.25f), new Vector3(.09f, .08f, .37f), new Color(.66f, 0f, 0f), 3);
+        Block(new Vector3(0f, .055f, -.42f), new Vector3(.13f, .12f, .06f), new Color(.85f, 0f, 0f), 3);
     }
 
     private static void AppendCompactTurret(SurfaceTool surface, RocketMount mount, float size)

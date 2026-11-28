@@ -252,3 +252,5 @@ reusable procedural model for other vehicles. Projectile paths accept a
 A unit can author one primary replacement alongside legacy secondary mounts.
 
 Tank size/material adjustment: `SizeMultiplier` is 1.395 (10% below 1.55), using the existing shared scaling for body dimensions, collision outline and authored turret mount offsets. The enhanced mesh now favors neutral gunmetal with faction accents on the front glacis, turret roof, central skirt panels and existing trim. Geometry proportions, Tier 4 classification, weapon stats, animations and legacy mesh remain unchanged; owner visual and muzzle alignment checks pending.
+
+The Tank also has a 12-unit roof minigun with separate targeting, aim and cooldown. Its mount uses Attach To Primary Turret, and its visual shares the Tank MultiMesh batch.

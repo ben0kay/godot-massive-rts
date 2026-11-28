@@ -468,6 +468,11 @@ public partial class ArmyRenderer : Node3D
             float yaw = units.PrimaryTurrets?.WorldYaw(units, id, turret, hasPreviousPose ? poseBlend : 1f)
                 ?? hullYaw + turret.RestYaw;
             buffer[offset + 16] = TurretAiming.Wrap(yaw - hullYaw);
+            if (units.Catalog.RoofWeaponFor(type).HasValue)
+            {
+                float roofYaw = units.RoofWeapons?.WorldYaw(id, yaw, hasPreviousPose ? poseBlend : 1f) ?? yaw;
+                buffer[offset + 18] = TurretAiming.Wrap(roofYaw - yaw);
+            }
             float phase = units.HitFeedback?.AttackPhase(id, type, recoilSeconds) ?? -1f;
             float recovery = phase < 0f ? 1f : Mathf.Clamp(phase * Mathf.Max(.16f, recoilSeconds) / recoilSeconds, 0f, 1f);
             buffer[offset + 17] = turret.RecoilDistance * (1f - Mathf.SmoothStep(0f, 1f, recovery));
@@ -619,7 +624,7 @@ public partial class ArmyRenderer : Node3D
         for (int id = 0; id < units.Count; id++)
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
-                (previousPositions[id] != units.Position[id] || units.PrimaryTurrets?.IsTurning(id) == true ||
+                (previousPositions[id] != units.Position[id] || units.PrimaryTurrets?.IsTurning(id) == true || units.RoofWeapons?.IsTurning(id) == true ||
                  ((units.Type[id] != RuntimeUnitCatalog.Circle || useCircleRobotHeading) && previousFacing[id] != units.Facing[id]));
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;

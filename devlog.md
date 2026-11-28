@@ -816,3 +816,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — TREE visual polish: Added deterministic taller pines, varied crown proportions and yaw, and irregular staggered branch tiers using the existing batches. Preserved forest gameplay, canopy fade and world-direction sway. Source review only; owner visual validation pending.
 
 - 2026-11-28 — Reduced Tank size multiplier by 10% (1.55 to 1.395) and shifted enhanced hull, turret housing and track skirts to gunmetal with retained faction glacis, roof and central skirt accents. Existing turret scaling, Tier 4, combat stats and other units unchanged. Source review only; owner validation pending.
+
+- 2026-11-28 — Added an independently aimed short-range roof minigun to the Tank, with a separate cooldown and shared projectile and rendering systems.

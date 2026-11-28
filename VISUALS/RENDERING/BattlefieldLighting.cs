@@ -40,7 +40,7 @@ internal static class BattlefieldLighting
                 FacetedSoldierMeshes.UsesTwoToneArmor(catalog[i].Id, outline, unitVisuals));
             FacetedSoldierMeshes.ConfigureInfantryAnimation(material, unitVisuals, catalog[i].Id, catalog[i].Height);
             if (catalog.IndependentPrimary(i) is PrimaryTurret turret)
-                FacetedSoldierMeshes.ConfigureTurret(material, turret.Weapon.Pose.Origin);
+                FacetedSoldierMeshes.ConfigureTurret(material, turret.Weapon.Pose.Origin, catalog.RoofWeaponFor(i)?.Weapon.Pose.Origin);
             if (crackMask != null) material.SetShaderParameter("crack_mask", crackMask);
             material.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
             material.SetShaderParameter("darkness", Mathf.Clamp(unitVisuals.CrackDarkness, 0f, 1f));

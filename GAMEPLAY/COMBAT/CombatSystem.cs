@@ -200,6 +200,9 @@ public static class CombatSystem
                     visualsChanged = units.Dirty[i] = true;
             }
             var turret = units.HasIndependentPrimary ? units.Catalog.IndependentPrimary(units.Type[i]) : null;
+            if (turret is PrimaryTurret primary && units.Catalog.RoofWeaponFor(units.Type[i]) is RoofWeapon roof &&
+                (commands?.HasCommand(i) != true || commands.IsAttackMove(i)))
+                visualsChanged |= units.EnsureRoofWeapons().Step(units, i, primary, roof, grid, projectiles, obstacles, dt, fireRateMultiplier);
             if (turret.HasValue) units.PrimaryTurrets?.BeginTick(i);
             if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];

@@ -17,6 +17,8 @@ public sealed class UnitState
     private Dictionary<int, HashSet<int>> firstHitTargets;
     private int[] nextRocketMount;
     internal bool HasIndependentPrimary { get; private set; }
+    internal RoofWeaponState RoofWeapons { get; private set; }
+    internal RoofWeaponState EnsureRoofWeapons() => RoofWeapons ??= new RoofWeaponState();
     internal PrimaryTurretState PrimaryTurrets { get; private set; }
     internal PrimaryTurretState EnsurePrimaryTurrets() => PrimaryTurrets ??= new PrimaryTurretState();
     internal List<int> InterceptorIds { get; private set; }
@@ -321,6 +323,7 @@ public sealed class UnitState
     private void RecordDeath(int id)
     {
         PrimaryTurrets?.Remove(id);
+        RoofWeapons?.Remove(id);
         FactionAlive[Faction[id]]--;
         Alive--;
         if (ArmyStatistics != null)
