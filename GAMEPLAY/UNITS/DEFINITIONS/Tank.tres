@@ -1,7 +1,19 @@
-[gd_resource type="Resource" script_class="UnitDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="UnitDefinition" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/UnitDefinition.cs" id="1"]
 [ext_resource type="Resource" path="res://GAMEPLAY/PROJECTILES/Types/TankShell/TankShell.tres" id="2"]
+
+[ext_resource type="Script" path="res://GAMEPLAY/UNITS/DEFINITIONS/RocketMount.cs" id="3"]
+
+[sub_resource type="Resource" id="PrimaryCannon"]
+script = ExtResource("3")
+IndependentAim = true
+ReplacePrimaryWeapon = true
+Position = Vector3(0, 0.448, 0.305)
+MuzzleOffset = Vector3(0, 0.028, -2.387)
+CasingPortOffset = Vector3(0.56, 0, 0)
+BarrelRecoilEnabled = true
+RecoilDistance = 0.336
 
 [resource]
 script = ExtResource("1")
@@ -32,3 +44,4 @@ AllowedTargets = 3
 StructureDetectionRange = 42.0
 Projectile = ExtResource("2")
 PulseOnAttack = false
+RocketMounts = Array[ExtResource("3")]([SubResource("PrimaryCannon")])

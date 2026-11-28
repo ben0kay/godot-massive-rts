@@ -139,7 +139,7 @@ public partial class ArmyRenderer : Node3D
         int batchCount = typeCount * Factions.Count;
         batchStrides = new int[batchCount];
         for (int b = 0; b < batchCount; b++)
-            batchStrides[b] = WalkEnabled(b % typeCount) || (animateHexagonAttack && b % typeCount == RuntimeUnitCatalog.Hexagon) ||
+            batchStrides[b] = units.Catalog.IndependentPrimary(b % typeCount).HasValue || WalkEnabled(b % typeCount) || (animateHexagonAttack && b % typeCount == RuntimeUnitCatalog.Hexagon) ||
                 (animatePrismWeapon && b % typeCount == RuntimeUnitCatalog.PrismLance)
                 ? InfantryWalkStride : InstanceStride;
         members = new int[batchCount][];
@@ -406,7 +406,9 @@ public partial class ArmyRenderer : Node3D
         int offset = slot * stride;
         float[] buffer = buffers[batch];
         byte type = units.Type[id];
-        var (flash, scale) = units.HitFeedback?.Evaluate(id, type, units.Catalog.Definition(type).PulseOnAttack) ?? (0f, 1f);
+        var primary = units.HasIndependentPrimary ? units.Catalog.IndependentPrimary(type) : null;
+        float recoilSeconds = primary?.RecoilSeconds ?? 0f;
+        var (flash, scale) = units.HitFeedback?.Evaluate(id, type, units.Catalog.Definition(type).PulseOnAttack, recoilSeconds) ?? (0f, 1f);
         bool white = flash > 0f;
         if (stride == InfantryWalkStride)
         {
@@ -460,6 +462,16 @@ public partial class ArmyRenderer : Node3D
                 sine = positiveX ? -facing.Y : -facing.X;
             }
         }
+        if (primary is PrimaryTurret turret)
+        {
+            float hullYaw = Mathf.Atan2(sine, cosine);
+            float yaw = units.PrimaryTurrets?.WorldYaw(units, id, turret, hasPreviousPose ? poseBlend : 1f)
+                ?? hullYaw + turret.RestYaw;
+            buffer[offset + 16] = TurretAiming.Wrap(yaw - hullYaw);
+            float phase = units.HitFeedback?.AttackPhase(id, type, recoilSeconds) ?? -1f;
+            float recovery = phase < 0f ? 1f : Mathf.Clamp(phase * Mathf.Max(.16f, recoilSeconds) / recoilSeconds, 0f, 1f);
+            buffer[offset + 17] = turret.RecoilDistance * (1f - Mathf.SmoothStep(0f, 1f, recovery));
+        }
         buffer[offset] = buffer[offset + 10] = cosine * scale;
         buffer[offset + 2] = sine * scale;
         buffer[offset + 8] = -buffer[offset + 2];
@@ -481,12 +493,12 @@ public partial class ArmyRenderer : Node3D
             uint variant = unchecked((uint)id * 2654435761u) >> 30;
             color.A = stage == 0 ? 1f : (stage * 4 + variant) / 255f;
         }
-        if (AttackEnabled(type))
+        if (primary.HasValue || AttackEnabled(type))
         {
             // Keep the existing RGBA instance stride: low nibble is fracture,
             // high nibble is attack phase (0 idle, 1..15 animated).
             int fractureCode = color.A == 1f ? 0 : Mathf.RoundToInt(color.A * 255f);
-            float phase = units.HitFeedback?.AttackPhase(id, type) ?? -1f;
+            float phase = units.HitFeedback?.AttackPhase(id, type, recoilSeconds) ?? -1f;
             int swingCode = phase < 0f ? 0 : 1 + Mathf.RoundToInt(phase * 14f);
             color.A = (fractureCode + swingCode * 16) / 255f;
         }
@@ -607,7 +619,7 @@ public partial class ArmyRenderer : Node3D
         for (int id = 0; id < units.Count; id++)
         {
             bool moving = hasPreviousPose && units.Health[id] > 0f &&
-                (previousPositions[id] != units.Position[id] ||
+                (previousPositions[id] != units.Position[id] || units.PrimaryTurrets?.IsTurning(id) == true ||
                  ((units.Type[id] != RuntimeUnitCatalog.Circle || useCircleRobotHeading) && previousFacing[id] != units.Facing[id]));
             bool wasUnsettled = unsettled != null && unsettled[id];
             if (unsettled != null) unsettled[id] = moving && blend < 1f;

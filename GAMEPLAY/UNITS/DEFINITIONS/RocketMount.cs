@@ -3,6 +3,8 @@ using Godot;
 
 namespace MassiveRts;
 
+public enum TurretModel { Integrated, CompactCannon }
+
 [GlobalClass]
 public partial class RocketMount : Resource
 {
@@ -11,6 +13,20 @@ public partial class RocketMount : Resource
     [Export] public Vector3 ModelScale { get; set; } = Vector3.One;
     [Export] public bool TwinMinigunModel { get; set; }
     [Export] public bool IndependentAim { get; set; }
+    [Export] public bool ReplacePrimaryWeapon { get; set; }
+    [Export] public TurretModel Model { get; set; }
+    [Export] public float RotationSpeed { get; set; } = 100f;
+    [Export] public float RotationArc { get; set; } = 360f;
+    [Export] public float AlignmentTolerance { get; set; } = 3f;
+    [Export] public bool FireWhileMoving { get; set; } = true;
+    [Export] public TargetCategory AllowedTargets { get; set; } = TargetCategory.Both;
+    [Export] public Vector3 MuzzleOffset { get; set; } = Vector3.Forward;
+    [Export] public Vector3 CasingPortOffset { get; set; }
+    [Export] public bool EjectShellCasings { get; set; }
+    [Export] public float CasingScale { get; set; } = -1f;
+    [Export] public bool BarrelRecoilEnabled { get; set; }
+    [Export] public float RecoilDistance { get; set; } = .24f;
+    [Export] public float RecoilRecoverySeconds { get; set; } = .32f;
     [Export] public ProjectileDefinition Projectile { get; set; }
     [Export] public float Damage { get; set; } = -1f;
     [Export] public float MinimumRange { get; set; } = -1f;

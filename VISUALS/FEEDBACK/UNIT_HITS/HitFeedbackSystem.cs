@@ -71,7 +71,7 @@ public sealed class HitFeedbackSystem
     public bool OnAttack(UnitState units, int id, bool stomp = false)
     {
         if (attackRemaining[id] <= 0f) attackingIds[attackingCount++] = id;
-        attackRemaining[id] = AttackDurationFor(units.Type[id]);
+        attackRemaining[id] = AttackDurationFor(units.Type[id], units.Catalog.IndependentPrimary(units.Type[id])?.RecoilSeconds ?? 0f);
         if (hexagonStomp != null && units.Type[id] == RuntimeUnitCatalog.Hexagon) hexagonStomp[id] = stomp;
         return units.Dirty[id] = true;
     }
@@ -110,7 +110,8 @@ public sealed class HitFeedbackSystem
     }
 
     // Longer weapon motion is purely visual; the original attack pulse stays 0.16s.
-    private float AttackDurationFor(byte type) =>
+    private float AttackDurationFor(byte type, float recoilSeconds = 0f) =>
+        recoilSeconds > 0f ? Mathf.Max(.16f, recoilSeconds) :
         type == RuntimeUnitCatalog.SiegeRam ? 0.8f :
         type == RuntimeUnitCatalog.Tank ? 0.32f :
         ExtendCircleSword && type == RuntimeUnitCatalog.Circle ? CircleSwordDuration :
@@ -125,12 +126,12 @@ public sealed class HitFeedbackSystem
         ExtendPrismFire && type == RuntimeUnitCatalog.PrismLance ? PrismFireDuration :
         hexagonStomp != null && type == RuntimeUnitCatalog.Hexagon ? HexagonAttackDuration : AttackDuration;
 
-    internal float AttackPhase(int id, byte type) => attackRemaining[id] > 0f
-        ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type), 0f, 1f) : -1f;
+    internal float AttackPhase(int id, byte type, float recoilSeconds = 0f) => attackRemaining[id] > 0f
+        ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type, recoilSeconds), 0f, 1f) : -1f;
 
-    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue, bool pulseOnAttack = true)
+    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue, bool pulseOnAttack = true, float recoilSeconds = 0f)
     {
-        float attackAge = (AttackDurationFor(type) - attackRemaining[id]) / AttackDuration;
+        float attackAge = (AttackDurationFor(type, recoilSeconds) - attackRemaining[id]) / AttackDuration;
         float attackScale = pulseOnAttack && attackRemaining[id] > 0f && attackAge >= 0f && attackAge < 1f ? 0.15f * (attackAge < 0.28f
             ? Smooth(attackAge / 0.28f) : Smooth((1f - attackAge) / 0.72f)) : 0f;
         if (remaining[id] <= 0f) return (0f, 1f + attackScale);

@@ -215,17 +215,28 @@ internal sealed class StructureCombat
         StructureHealth target = targets[id];
         bool ram = units.Type[id] == RuntimeUnitCatalog.SiegeRam;
         if (ram) return AttackWithRam(id, target, dt, sight, effects);
-        if (target?.Destroyed != false || units.Health[id] <= 0f || units.IsAirborne(id) || units.Cooldown[id] > 0f) return false;
+        if (target?.Destroyed != false || units.Health[id] <= 0f || units.IsAirborne(id)) return false;
         ref readonly var type = ref units.Catalog[units.Type[id]];
-        if (!CanHit(id, type, target, sight)) return false;
+        var turret = units.HasIndependentPrimary ? units.Catalog.IndependentPrimary(units.Type[id]) : null;
+        if (turret.HasValue && !type.TargetsStructures) return false;
+        if (!turret.HasValue && units.Cooldown[id] > 0f) return false;
         Vector2 from = ObstacleField.Xz(units.Position[id]);
         Vector2 edge = Edge(target.Area, from);
-        if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f))
+        Vector3 aim = units.OnTerrain(Ground(edge)) + Vector3.Up * 1.5f;
+        bool aligned = !turret.HasValue || units.EnsurePrimaryTurrets().Aim(units, id, aim, turret.Value, dt);
+        if (units.Cooldown[id] > 0f || !CanHit(id, type, target, sight))
+            return turret.HasValue && units.PrimaryTurrets.IsTurning(id);
+        if (turret.HasValue)
+        {
+            if (!aligned || !ProjectileSystem.TurretHasSight(units, id, turret.Value, aim, sight, target.Area))
+                return true;
+        }
+        else if (!SoldierFacing.Aim(units, id, edge - from, dt, type.Outline.IsChevron ? 0.995f : 0.97f))
             return true;
 
         if (type.Ranged)
         {
-            if (!projectiles.FireAtStructure(id, units, units.OnTerrain(Ground(edge)) + Vector3.Up * 1.5f, target)) return false;
+            if (!projectiles.FireAtStructure(id, units, aim, target)) return false;
         }
         else target.Damage(type.AgainstStructures(type.Damage) * units.AttackMultiplier(id), type.StructureDamageType);
         units.HitFeedback?.OnAttack(units, id);

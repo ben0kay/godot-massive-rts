@@ -186,6 +186,8 @@ public sealed class RuntimeUnitCatalog
     private readonly MountedRocket[][] independentRockets = new MountedRocket[OrderedIds.Length][];
     private readonly UnitDefinition[] definitionsByType = new UnitDefinition[OrderedIds.Length];
     internal MountedRocket[] PrimaryRockets(int type) => primaryRockets[type];
+    private readonly PrimaryTurret?[] primaryTurrets = new PrimaryTurret?[OrderedIds.Length];
+    internal PrimaryTurret? IndependentPrimary(int type) => primaryTurrets[type];
     internal MountedRocket[] IndependentRockets(int type) => independentRockets[type];
     internal UnitDefinition Definition(int type) => definitionsByType[type];
     internal (int Projectile, Vector4 Min, Vector4 Max, float Interval, float Damage) DreadnaughtGuns { get; }
@@ -311,6 +313,23 @@ public sealed class RuntimeUnitCatalog
             var independent = new List<MountedRocket>();
             foreach (var mount in d.RocketMounts ?? new())
             {
+                if (mount is { IndependentAim: true, ReplacePrimaryWeapon: true } &&
+                    d.Style == AttackStyle.Ranged && !d.PrismBeamEnabled)
+                {
+                    if (primaryTurrets[i].HasValue) throw new ArgumentException($"Unit {id} has multiple primary weapons.");
+                    var weapon = CompileMount(mount, d, size);
+                    primaryTurrets[i] = new PrimaryTurret(weapon, Mathf.DegToRad(mount.YawDegrees),
+                        Mathf.DegToRad(ClampStat(mount.RotationSpeed, 1f, 720f, 100f)),
+                        Mathf.DegToRad(ClampStat(mount.RotationArc, 0f, 360f, 360f) * .5f),
+                        Mathf.DegToRad(ClampStat(mount.AlignmentTolerance, .1f, 90f, 3f)),
+                        mount.FireWhileMoving, d.AllowedTargets & mount.AllowedTargets,
+                        mount.MuzzleOffset * size, mount.CasingPortOffset * size,
+                        mount.EjectShellCasings || d.EjectShellCasings,
+                        ClampStat(mount.CasingScale < 0f ? d.ShellCasingScale : mount.CasingScale, .1f, 4f, 1f),
+                        mount.BarrelRecoilEnabled ? ClampStat(mount.RecoilDistance, 0f, 4f, .24f) * size : 0f,
+                        ClampStat(mount.RecoilRecoverySeconds, .05f, 2f, .32f));
+                    continue;
+                }
                 if (mount == null || (mount.IndependentAim && mount.Projectile == null && !mount.TwinMinigunModel))
                     continue;
                 var destination = mount.IndependentAim ? independent : primary;
@@ -328,7 +347,8 @@ public sealed class RuntimeUnitCatalog
                     Damage = d.TurretRocketDamage
                 }, d, size));
             }
-            primaryRockets[i] = primary.ToArray();
+            var turret = primaryTurrets[i];
+            primaryRockets[i] = turret.HasValue ? Array.Empty<MountedRocket>() : primary.ToArray();
             independentRockets[i] = independent.ToArray();
             bool combat = d.AllowedTargets != TargetCategory.None;
             bool ranged = combat && d.Style == AttackStyle.Ranged;
@@ -338,7 +358,7 @@ public sealed class RuntimeUnitCatalog
                 ClampStat(d.PrismBeamRadius, 0.01f, 2f, 0.25f),
                 Mathf.Clamp(d.PrismMaxHits, 1, PrismBeamStats.MaxHitCapacity),
                 ClampStat(d.PrismFlashSeconds, 0.02f, 1f, 0.18f));
-            float reach = !beam && ranged && primary.Count > 0 ? primary[0].MaximumRange : Positive(d.Reach, 1.6f);
+            float reach = turret?.Weapon.MaximumRange ?? (!beam && ranged && primary.Count > 0 ? primary[0].MaximumRange : Positive(d.Reach, 1.6f));
             if (!ranged) reach *= size;
             float angle = float.IsFinite(d.CleaveAngleDegrees) ? Mathf.Clamp(d.CleaveAngleDegrees, 1f, 180f) : 100f;
             float cosine = Mathf.Max(0f, Mathf.Cos(Mathf.DegToRad(angle * 0.5f)));
@@ -363,15 +383,15 @@ public sealed class RuntimeUnitCatalog
                 shockwaveDamage, d.EffectiveShockwaveOuterDamage(shockwaveDamage) / shockwaveDamage, d.ShockwaveRespectsCover);
             stats[i] = new UnitStats(id, string.IsNullOrWhiteSpace(d.DisplayName) ? id : d.DisplayName, d.Shape,
                 outline, Positive(d.Height, 1.1f) * size, footprint, Positive(d.Health, 100f), Positive(d.Speed, 5f) * movementScale,
-                combat ? Positive(d.Damage, 20f) : 0f,
-                !beam && ranged && primary.Count > 0 ? primary[0].Interval : Positive(d.Interval, 0.9f), reach,
+                combat ? turret?.Weapon.Damage ?? Positive(d.Damage, 20f) : 0f,
+                turret?.Weapon.Interval ?? (!beam && ranged && primary.Count > 0 ? primary[0].Interval : Positive(d.Interval, 0.9f)), reach,
                 1f - Mathf.Clamp(float.IsFinite(d.Armour) ? d.Armour : 0f, 0f, 1f), ranged,
-                ranged && !beam ? (primary.Count == 0 ? Projectiles.Register(d.Projectile) : primary[0].Projectile) : -1,
-                ranged ? (!beam && primary.Count > 0 ? primary[0].MinimumRange : ClampStat(d.MinimumFireRange, 0f, reach, 0f)) : 0f,
+                ranged && !beam ? turret?.Weapon.Projectile ?? (primary.Count == 0 ? Projectiles.Register(d.Projectile) : primary[0].Projectile) : -1,
+                ranged ? turret?.Weapon.MinimumRange ?? (!beam && primary.Count > 0 ? primary[0].MinimumRange : ClampStat(d.MinimumFireRange, 0f, reach, 0f)) : 0f,
                 d.CleaveEnabled && d.Style == AttackStyle.Melee, d.EffectiveCleaveExtraReach, cosine * cosine, secondary, Mathf.Clamp(d.CleaveMaxAdditionalTargets, 0, UnitDefinition.MaxCleaveAdditionalTargets),
                 facingCosine * facingCosine, trample,
                 accelerationSeconds > 0f ? 1f / accelerationSeconds : 0f, shockwave, recoil,
-                DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), beam ? d.AllowedTargets & TargetCategory.Units : d.AllowedTargets, d.PreferredTarget,
+                DamageRules.DamageType(d.DamageType), DamageRules.ArmourClass(d.ArmourClass), beam ? d.AllowedTargets & TargetCategory.Units : turret?.Targets ?? d.AllowedTargets, d.PreferredTarget,
                 ClampStat(d.StructureDetectionRange, 0f, 100f, 12f), ClampStat(d.TurnDegreesPerSecond, 0f, 720f, 0f),
                 ranged ? 0f : ClampStat(d.MeleeLungeDistance, 0f, 1f, 0f),
                 ClampStat(d.UnitDamagePercent, -1f, 1000f, -1f), ClampStat(d.StructureDamagePercent, -1f, 1000f, -1f),
@@ -392,12 +412,12 @@ public sealed class RuntimeUnitCatalog
     {
         int projectile = Projectiles.Register(mount.Projectile ?? unit.Projectile, mount.ProjectileScale,
             mount.SplashRadiusOverride, mount.SplashEdgeFractionOverride, arcScale: mount.ArcScale);
-        float defaultReach = mount.TwinMinigunModel ? 30f : mount.IndependentAim ? 38f : Positive(unit.Reach, 1.6f);
+        float defaultReach = mount.TwinMinigunModel ? 30f : mount.IndependentAim && !mount.ReplacePrimaryWeapon ? 38f : Positive(unit.Reach, 1.6f);
         float maximum = Positive(mount.MaximumRange, defaultReach);
         float minimum = mount.MinimumRange >= 0f ? mount.MinimumRange :
-            mount.TwinMinigunModel ? 3f : mount.IndependentAim ? 7f : unit.MinimumFireRange;
+            mount.TwinMinigunModel ? 3f : mount.IndependentAim && !mount.ReplacePrimaryWeapon ? 7f : unit.MinimumFireRange;
         float interval = Positive(mount.Interval, mount.TwinMinigunModel ? Positive(unit.TurretShotInterval, 0.15f) :
-            mount.IndependentAim ? 3f : Positive(unit.Interval, 0.9f));
+            mount.IndependentAim && !mount.ReplacePrimaryWeapon ? 3f : Positive(unit.Interval, 0.9f));
         float damage = mount.Damage >= 0f ? mount.Damage :
             mount.TwinMinigunModel ? ClampStat(unit.TurretDamage, 0f, 200f, 3f) : Positive(unit.Damage, 20f);
         return new MountedRocket(MountedRocket.LocalPose(mount, size), projectile,

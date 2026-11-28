@@ -78,25 +78,46 @@ public sealed class ProjectileSystem
         return true;
     }
 
+    private static Transform3D PrimaryTurretPose(UnitState units, int id, in PrimaryTurret turret) =>
+        new(TurretAiming.Rotation(units.EnsurePrimaryTurrets().WorldYaw(units, id, turret)),
+            TurretAiming.Mount(units, id, turret.Weapon.Pose.Origin));
+
+    internal static bool TurretHasSight(UnitState units, int id, in PrimaryTurret turret, Vector3 aim,
+        ObstacleField sight, ObstacleRectangle? target = null)
+    {
+        if (units.Catalog.Projectiles.Flight(turret.Weapon.Projectile).ObstacleFire == ObstacleFireMode.IndirectFire)
+            return true;
+        Vector3 muzzle = PrimaryTurretPose(units, id, turret) * turret.Muzzle;
+        if (target.HasValue)
+        {
+            if (sight?.FirstSightHitExcept(muzzle, aim - muzzle, target.Value) < .999f) return false;
+        }
+        else if (sight?.BlocksSight(muzzle, aim) == true) return false;
+        return units.Trenches?.BlocksFire(muzzle, aim) != true;
+    }
+
     private bool Launch(int shooter, UnitState units, Vector3 aim, in UnitStats type, bool againstStructure)
     {
         var mounts = units.Catalog.PrimaryRockets(units.Type[shooter]);
         int projectile = type.ProjectileType;
         float shotDamage = type.Damage;
         Vector3 muzzle = units.Position[shooter] + Vector3.Up * (type.Height * 0.5f);
-        if (mounts.Length > 0)
+        var primary = units.Catalog.IndependentPrimary(units.Type[shooter]);
+        Transform3D turretPose = default;
+        if (primary is PrimaryTurret turret)
+        {
+            turretPose = PrimaryTurretPose(units, shooter, turret);
+            muzzle = turretPose * turret.Muzzle;
+            projectile = turret.Weapon.Projectile;
+            shotDamage = turret.Weapon.Damage;
+        }
+        else if (mounts.Length > 0)
         {
             var mount = mounts[units.RocketMountIndex(shooter)];
             var hull = MountedRocket.HullBasis(units.Facing[shooter], type.Shape);
             muzzle += hull * (mount.Pose * MountedRocket.Muzzle);
             projectile = mount.Projectile;
             shotDamage = mount.Damage;
-        }
-        else if (units.Type[shooter] == RuntimeUnitCatalog.Tank)
-        {
-            Vector2 heading = units.Facing[shooter];
-            float barrel = type.Outline.RadiusZ * .70710678f * 1.16f;
-            muzzle += new Vector3(heading.X * barrel, type.Height * .34f, heading.Y * barrel);
         }
         else if (type.Outline.IsChevron)
         {
@@ -129,19 +150,11 @@ public sealed class ProjectileSystem
         }
         if (launched && !againstStructure)
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
-        if (launched && definition.EjectShellCasings && ShellCasingRequested != null)
+        if (launched && (primary?.EjectCasings ?? definition.EjectShellCasings) && ShellCasingRequested != null)
         {
-            if (units.Type[shooter] == RuntimeUnitCatalog.Tank)
-            {
-                // Tank receiver follows the actual hull facing, not shot spread.
-                // Local +X is the ejection side; +Z points behind the barrel.
-                const float diagonal = .70710678f;
-                Basis hull = MountedRocket.HullBasis(units.Facing[shooter], type.Shape);
-                Vector3 localPort = new(type.Outline.RadiusX * diagonal * .56f,
-                    type.Height * .32f, type.Outline.RadiusZ * diagonal * .17f);
-                Vector3 port = units.Position[shooter] + Vector3.Up * (type.Height * .5f) + hull * localPort;
-                EmitShellCasing(port, hull * new Vector3(1f, 0f, .25f), definition.ShellCasingScale);
-            }
+            if (primary is PrimaryTurret mounted)
+                EmitShellCasing(turretPose * mounted.CasingPort,
+                    turretPose.Basis * new Vector3(1f, 0f, .25f), mounted.CasingScale);
             else
             {
                 // Generic ground-unit fallback: receiver side, not the muzzle.

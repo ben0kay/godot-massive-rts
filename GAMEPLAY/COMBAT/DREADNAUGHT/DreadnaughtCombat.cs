@@ -13,7 +13,8 @@ internal partial class DreadnaughtCombat : Node3D
     private const float TargetRefresh = 0.2f;
 
     private readonly UnitState units;
-    private readonly Hull[] hulls;
+    private readonly List<Hull> hulls = new();
+    private Mesh housing, basePlate, topCap, barrel, rocketHousing, rocketPedestal, rocketBarrel;
     private float time;
 
     private sealed class Hull
@@ -39,10 +40,10 @@ internal partial class DreadnaughtCombat : Node3D
     }
 
     // =========================================================
-    public static DreadnaughtCombat Create(UnitState units)
+    public static DreadnaughtCombat Create(UnitState units, int first = 0)
     {
         var ids = new List<int>();
-        for (int i = 0; i < units.Count; i++)
+        for (int i = first; i < units.Count; i++)
             if (units.Type[i] == RuntimeUnitCatalog.Dreadnaught ||
                 units.Catalog.IndependentRockets(units.Type[i]).Length > 0) ids.Add(i);
         return ids.Count == 0 ? null : new DreadnaughtCombat(units, ids);
@@ -53,7 +54,7 @@ internal partial class DreadnaughtCombat : Node3D
     private DreadnaughtCombat(UnitState units, List<int> ids)
     {
         this.units = units;
-        hulls = new Hull[ids.Count];
+
         var housingMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             AlbedoColor = new Color("#344353") };
         var baseMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
@@ -61,58 +62,70 @@ internal partial class DreadnaughtCombat : Node3D
         var capMaterial = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             AlbedoColor = new Color("#657B8D") };
         // All hulls reuse the same turret meshes and materials.
-        var housing = new BoxMesh { Material = housingMaterial, Size = new Vector3(0.88f, 0.38f, 0.88f) };
-        var basePlate = new BoxMesh { Material = baseMaterial, Size = new Vector3(1.08f, 0.13f, 1.08f) };
-        var topCap = new BoxMesh { Material = capMaterial, Size = new Vector3(0.57f, 0.055f, 0.55f) };
-        var barrel = new BoxMesh { Material = baseMaterial, Size = new Vector3(0.16f, 0.16f, BarrelLength) };
-        var rocketHousing = new BoxMesh { Material = housingMaterial, Size = new Vector3(1.36f, 0.68f, 1.30f) };
-        var rocketPedestal = new BoxMesh { Material = baseMaterial, Size = new Vector3(1.6f, 0.68f, 1.5f) };
+        housing = new BoxMesh { Material = housingMaterial, Size = new Vector3(0.88f, 0.38f, 0.88f) };
+        basePlate = new BoxMesh { Material = baseMaterial, Size = new Vector3(1.08f, 0.13f, 1.08f) };
+        topCap = new BoxMesh { Material = capMaterial, Size = new Vector3(0.57f, 0.055f, 0.55f) };
+        barrel = new BoxMesh { Material = baseMaterial, Size = new Vector3(0.16f, 0.16f, BarrelLength) };
+        rocketHousing = new BoxMesh { Material = housingMaterial, Size = new Vector3(1.36f, 0.68f, 1.30f) };
+        rocketPedestal = new BoxMesh { Material = baseMaterial, Size = new Vector3(1.6f, 0.68f, 1.5f) };
         using var rocketSurface = new SurfaceTool();
         rocketSurface.Begin(Mesh.PrimitiveType.Triangles);
         rocketSurface.SetMaterial(capMaterial);
         FacetedSoldierMeshes.AppendRocketBarrel(rocketSurface, Transform3D.Identity);
-        var rocketBarrel = rocketSurface.Commit();
-        for (int i = 0; i < ids.Count; i++)
+        rocketBarrel = rocketSurface.Commit();
+        foreach (int id in ids) AddHull(id);
+    }
+
+    internal void AddReinforcements(int first)
+    {
+        for (int id = first; id < units.Count; id++)
+            if (units.Type[id] == RuntimeUnitCatalog.Dreadnaught ||
+                units.Catalog.IndependentRockets(units.Type[id]).Length > 0)
+                AddHull(id);
+    }
+
+    private void AddHull(int id)
+    {
+        int index = hulls.Count;
+        byte type = units.Type[id];
+        var rockets = units.Catalog.IndependentRockets(type);
+        bool legacy = type == RuntimeUnitCatalog.Dreadnaught && units.Catalog.Definition(type).UseLegacyMiniguns;
+        var hull = new Hull(id, legacy ? GunsPerHull : 0, rockets.Length);
+        hulls.Add(hull);
+        // The reference half-width is 4 for an 8-unit authored hull.
+        // Using the compiled outline keeps both the guns and their muzzles
+        // in proportion when the Dreadnaught SizeMultiplier changes.
+        float visualScale = units.Catalog[type].Outline.RadiusX / 4f;
+        for (int slot = 0; slot < hull.Guns.Length; slot++)
         {
-            byte type = units.Type[ids[i]];
-            var rockets = units.Catalog.IndependentRockets(type);
-            bool legacy = type == RuntimeUnitCatalog.Dreadnaught && units.Catalog.Definition(type).UseLegacyMiniguns;
-            var hull = hulls[i] = new Hull(ids[i], legacy ? GunsPerHull : 0, rockets.Length);
-            // The reference half-width is 4 for an 8-unit authored hull.
-            // Using the compiled outline keeps both the guns and their muzzles
-            // in proportion when the Dreadnaught SizeMultiplier changes.
-            float visualScale = units.Catalog[type].Outline.RadiusX / 4f;
-            for (int slot = 0; slot < hull.Guns.Length; slot++)
+            MountedRocket? mount = slot >= hull.Miniguns ? rockets[slot - hull.Miniguns] : null;
+            bool rocket = mount is { TwinMinigunModel: false };
+            var model = new MeshInstance3D { Mesh = rocket ? rocketHousing : housing, Scale = Vector3.One * visualScale };
+            model.AddChild(new MeshInstance3D { Mesh = rocket ? rocketPedestal : basePlate,
+                Position = Vector3.Down * (rocket ? 0.55f : 0.25f) });
+            if (rocket)
             {
-                MountedRocket? mount = slot >= hull.Miniguns ? rockets[slot - hull.Miniguns] : null;
-                bool rocket = mount is { TwinMinigunModel: false };
-                var model = new MeshInstance3D { Mesh = rocket ? rocketHousing : housing, Scale = Vector3.One * visualScale };
-                model.AddChild(new MeshInstance3D { Mesh = rocket ? rocketPedestal : basePlate,
-                    Position = Vector3.Down * (rocket ? 0.55f : 0.25f) });
-                if (rocket)
-                {
-                    var rocketPose = mount.Value.Pose;
-                    Vector3 size = new(rocketPose.Basis.X.Length(), rocketPose.Basis.Y.Length(), rocketPose.Basis.Z.Length());
-                    model.AddChild(new MeshInstance3D { Mesh = rocketBarrel, Scale = size / visualScale });
-                }
-                else
-                {
-                    if (mount is MountedRocket minigun)
-                    {
-                        Basis pose = minigun.Pose.Basis;
-                        model.Scale = new Vector3(pose.X.Length() / 0.16f, pose.Y.Length() / 0.16f,
-                            pose.Z.Length() / BarrelLength);
-                    }
-                    model.AddChild(new MeshInstance3D { Mesh = topCap, Position = new Vector3(0f, 0.22f, 0.03f) });
-                    for (int side = -1; side <= 1; side += 2)
-                        model.AddChild(new MeshInstance3D { Mesh = barrel,
-                            Position = new Vector3(side * 0.17f, 0.025f, -BarrelLength * 0.5f) });
-                }
-                AddChild(model);
-                hull.Guns[slot] = new Gun { Model = model, VisualScale = visualScale, Rocket = mount,
-                    Yaw = mount.HasValue ? InitialYaw(ids[i], mount.Value) : 0f,
-                    Target = -1, RefreshAt = ((i + slot) % GunsPerHull) * TargetRefresh / GunsPerHull };
+                var rocketPose = mount.Value.Pose;
+                Vector3 size = new(rocketPose.Basis.X.Length(), rocketPose.Basis.Y.Length(), rocketPose.Basis.Z.Length());
+                model.AddChild(new MeshInstance3D { Mesh = rocketBarrel, Scale = size / visualScale });
             }
+            else
+            {
+                if (mount is MountedRocket minigun)
+                {
+                    Basis pose = minigun.Pose.Basis;
+                    model.Scale = new Vector3(pose.X.Length() / 0.16f, pose.Y.Length() / 0.16f,
+                        pose.Z.Length() / BarrelLength);
+                }
+                model.AddChild(new MeshInstance3D { Mesh = topCap, Position = new Vector3(0f, 0.22f, 0.03f) });
+                for (int side = -1; side <= 1; side += 2)
+                    model.AddChild(new MeshInstance3D { Mesh = barrel,
+                        Position = new Vector3(side * 0.17f, 0.025f, -BarrelLength * 0.5f) });
+            }
+            AddChild(model);
+            hull.Guns[slot] = new Gun { Model = model, VisualScale = visualScale, Rocket = mount,
+                Yaw = mount.HasValue ? InitialYaw(id, mount.Value) : 0f,
+                Target = -1, RefreshAt = time + ((index + slot) % GunsPerHull) * TargetRefresh / GunsPerHull };
         }
     }
 
@@ -137,8 +150,7 @@ internal partial class DreadnaughtCombat : Node3D
     {
         ref readonly var stats = ref units.Catalog[units.Type[id]];
         if (rocket is MountedRocket cannon)
-            return units.Position[id] + Vector3.Up * (stats.Height * 0.5f) +
-                MountedRocket.HullBasis(units.Facing[id], stats.Shape) * cannon.Pose.Origin;
+            return TurretAiming.Mount(units, id, cannon.Pose.Origin);
 
         Vector2 forward = Forward(units, id);
         Vector2 right = new(-forward.Y, forward.X);
@@ -214,10 +226,8 @@ internal partial class DreadnaughtCombat : Node3D
         Vector2 horizontal = ObstacleField.Xz(aim - mount);
         float distanceSquared = horizontal.LengthSquared();
         if (distanceSquared < min * min || distanceSquared > max * max || distanceSquared < 0.00001f) return;
-        float desired = Mathf.Atan2(-horizontal.X, -horizontal.Y);
-        float error = Mathf.Wrap(desired - gun.Yaw, -Mathf.Pi, Mathf.Pi);
         float turn = Mathf.Pi * 2f * dt;
-        gun.Yaw = Mathf.Wrap(gun.Yaw + Mathf.Clamp(error, -turn, turn), -Mathf.Pi, Mathf.Pi);
+        float error = TurretAiming.Turn(ref gun.Yaw, TurretAiming.Yaw(horizontal), turn);
         if (gun.Cooldown > 0 || Mathf.Abs(error) > turn) return;
         float barrelLength = rocket ? cannon.Pose.Basis.Z.Length() : BarrelLength * gun.VisualScale;
         Vector3 muzzle = mount + Vector3.Forward.Rotated(Vector3.Up, gun.Yaw) * barrelLength;

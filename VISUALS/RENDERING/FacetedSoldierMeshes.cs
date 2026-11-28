@@ -34,12 +34,14 @@ public static class FacetedSoldierMeshes
             UnitOutline outline = type.Outline;
             Material unitMaterial = material;
             bool twoToneArmor = UsesTwoToneArmor(type.Id, outline, visuals);
-            if (crackShader != null && (crackMask != null || twoToneArmor))
+            var primary = catalog.IndependentPrimary(i);
+            if (crackShader != null && (crackMask != null || twoToneArmor || primary.HasValue))
             {
                 var cracked = new ShaderMaterial { Shader = crackShader };
                 cracked.SetShaderParameter("show_fracture", crackMask != null);
                 cracked.SetShaderParameter("use_two_tone_armor", twoToneArmor);
                 ConfigureInfantryAnimation(cracked, visuals, type.Id, type.Height);
+                if (primary is PrimaryTurret turret) ConfigureTurret(cracked, turret.Weapon.Pose.Origin);
                 if (crackMask != null) cracked.SetShaderParameter("crack_mask", crackMask);
                 cracked.SetShaderParameter("half_extent", new Vector2(outline.RadiusX, outline.RadiusZ));
                 cracked.SetShaderParameter("darkness", Mathf.Clamp(visuals.CrackDarkness, 0f, 1f));
@@ -64,11 +66,18 @@ public static class FacetedSoldierMeshes
         bool twoToneArmor = UsesTwoToneArmor(unit.Id, outline, visuals);
         Material material = new StandardMaterial3D { AlbedoColor = tint, VertexColorUseAsAlbedo = true,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
-        if (twoToneArmor)
+        var mount = PrimaryMount(unit);
+        if (twoToneArmor || mount != null)
         {
             var armor = new ShaderMaterial { Shader = GD.Load<Shader>("res://VISUALS/FEEDBACK/UNIT_HITS/UnitCracks.gdshader") };
             armor.SetShaderParameter("show_fracture", false);
-            armor.SetShaderParameter("use_two_tone_armor", true);
+            armor.SetShaderParameter("use_two_tone_armor", twoToneArmor);
+            if (mount != null)
+            {
+                ConfigureTurret(armor, mount.Position * size);
+                armor.SetShaderParameter("turret_preview", true);
+                armor.SetShaderParameter("preview_turret_yaw", Mathf.DegToRad(mount.YawDegrees));
+            }
             armor.SetShaderParameter("armor_tint", tint);
             material = armor;
         }
@@ -76,6 +85,22 @@ public static class FacetedSoldierMeshes
             visuals.UseEnhancedMeshes && unit.Id == RuntimeUnitCatalog.CircleId,
             visuals.UseEnhancedHexagonMesh && unit.Id == RuntimeUnitCatalog.HexagonId,
             unit, includeIndependent: true, twoToneArmor: twoToneArmor, enhancedTank: visuals.UseEnhancedTankMesh);
+    }
+
+    private static RocketMount PrimaryMount(UnitDefinition unit)
+    {
+        if (unit.Style != AttackStyle.Ranged || unit.PrismBeamEnabled || unit.RocketMounts == null) return null;
+        foreach (var mount in unit.RocketMounts)
+            if (mount is { IndependentAim: true, ReplacePrimaryWeapon: true }) return mount;
+        return null;
+    }
+
+    internal static void ConfigureTurret(ShaderMaterial material, Vector3 pivot)
+    {
+        material.SetShaderParameter("independent_turret", true);
+        material.SetShaderParameter("turret_pivot", pivot);
+        material.SetShaderParameter("infantry_attack", true);
+        material.SetShaderParameter("infantry_walk", false);
     }
 
     // Shared by the lit and unlit battle materials. Placement previews remain at rest.
@@ -151,7 +176,7 @@ public static class FacetedSoldierMeshes
         if (twoToneArmor) surface.SetUV(Vector2.Zero);
         foreach (var mount in unit.RocketMounts ?? new())
         {
-            if (mount == null || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
+            if (mount == null || (mount.IndependentAim && mount.ReplacePrimaryWeapon) || (mount.IndependentAim && (!includeIndependent || mount.Projectile == null))) continue;
             Transform3D pose = MountedRocket.LocalPose(mount, UnitOutline.EffectiveSize(unit));
             if (enhancedRocket && !mount.IndependentAim && !mount.TwinMinigunModel)
                 AppendEnhancedRocketBarrel(surface, pose);
@@ -161,6 +186,12 @@ public static class FacetedSoldierMeshes
                 AppendRocketBarrel(surface, pose);
             }
         }
+
+        var turretMount = PrimaryMount(unit);
+        bool compactTurret = turretMount != null &&
+            (turretMount.Model == TurretModel.CompactCannon || unit.Id != RuntimeUnitCatalog.TankId);
+        if (compactTurret) AppendCompactTurret(surface, turretMount, UnitOutline.EffectiveSize(unit));
+        surface.SetUV(Vector2.Zero);
 
         if (twoToneArmor)
         {
@@ -183,8 +214,8 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.PrismLanceId) AppendPrismLance(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.TankId)
             {
-                if (enhancedTank) AppendSleekTank(surface, outline, height);
-                else AppendTank(surface, outline, height);
+                if (enhancedTank) AppendSleekTank(surface, outline, height, !compactTurret);
+                else AppendTank(surface, outline, height, !compactTurret);
             }
             else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
@@ -574,21 +605,21 @@ public static class FacetedSoldierMeshes
     // =========================================================
     // Faceted assault tank. Keep original track centers, rest muzzle and
     // recoil tags. All detail is baked into the existing masked surface.
-    private static void AppendSleekTank(SurfaceTool surface, UnitOutline outline, float height)
+    private static void AppendSleekTank(SurfaceTool surface, UnitOutline outline, float height, bool integratedTurret)
     {
         const float diagonal = .70710678f;
         float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
         Color Steel(float shade) => new(shade, 0f, 0f);
         Color Paint(float shade) => new(0f, shade, 0f);
         Color Trim(float shade) => new(0f, 0f, shade);
-        void Block(float px, float py, float pz, float w, float h, float d, Color mask, bool barrel = false) =>
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask, bool barrel = false, bool housing = false) =>
             AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
                 Mathf.Pi * .25f, new Vector3(px * x, py * height, pz * z), mask,
-                sideShade: SoldierSideShade, armorMask: true, swingPart: barrel);
-        void Plate(float px, float py, float pz, float rx, float h, float rz, Color mask, Vector2[] points) =>
+                sideShade: SoldierSideShade, armorMask: true, turretPart: barrel ? 2 : housing ? 1 : 0);
+        void Plate(float px, float py, float pz, float rx, float h, float rz, Color mask, Vector2[] points, bool housing = false) =>
             AppendPrism(surface, points.Length, rx * x, rz * z, h * height, 0f,
                 new Vector3(px * x, py * height, pz * z), mask,
-                sideShade: SoldierSideShade, armorMask: true, visualOutline: points);
+                sideShade: SoldierSideShade, armorMask: true, visualOutline: points, turretPart: housing ? 1 : 0);
 
         // Convex cut-corner hulls with a swept nose and clipped aft shoulders.
         Vector2[] wedge = { new(-.60f,-1f), new(.60f,-1f), new(1f,-.49f),
@@ -598,19 +629,20 @@ public static class FacetedSoldierMeshes
         Plate(0f,-.18f,.10f,.84f,.45f,.775f,Steel(.88f),wedge);
         Plate(0f,.065f,.05f,.78f,.24f,.79f,Paint(.96f),wedge);
         Plate(0f,.16f,-.38f,.61f,.12f,.35f,Paint(.99f),wedge);
-        // Low angular turret, dark collar and contrasting armored roof.
-        Plate(0f,.32f,.17f,.51f,.39f,.425f,Paint(.92f),turret);
-        Plate(0f,.535f,.20f,.36f,.09f,.285f,Paint(1f),turret);
-        Block(0f,.525f,.05f,.34f,.055f,.15f,Steel(.72f));
-        Block(0f,.55f,-.03f,.24f,.04f,.035f,Trim(.92f));
-        Block(0f,.34f,-.23f,.39f,.25f,.24f,Steel(.95f));
+        // Fixed collar and independently rotating turret housing.
+        Plate(0f,.19f,.17f,.47f,.10f,.38f,Steel(.65f),turret);
+        if (integratedTurret) Plate(0f,.32f,.17f,.51f,.39f,.425f,Paint(.92f),turret, housing: true);
+        if (integratedTurret) Plate(0f,.535f,.20f,.36f,.09f,.285f,Paint(1f),turret, housing: true);
+        if (integratedTurret) Block(0f,.525f,.05f,.34f,.055f,.15f,Steel(.72f), housing: true);
+        if (integratedTurret) Block(0f,.55f,-.03f,.24f,.04f,.035f,Trim(.92f), housing: true);
+        if (integratedTurret) Block(0f,.34f,-.23f,.39f,.25f,.24f,Steel(.95f), housing: true);
 
         // Segmented recoiling barrel: original forward endpoint -1.16*z.
-        Block(0f,.34f,-.52f,.20f,.16f,1.18f,Steel(.98f),barrel:true);
-        Block(0f,.34f,-.39f,.27f,.21f,.38f,Steel(.84f),barrel:true);
-        Block(0f,.34f,-.82f,.23f,.19f,.12f,Steel(.92f),barrel:true);
-        Block(0f,.34f,-1.07f,.30f,.24f,.18f,Steel(.65f),barrel:true);
-        Block(0f,.34f,-1.153f,.16f,.12f,.014f,Steel(.28f),barrel:true);
+        if (integratedTurret) Block(0f,.34f,-.52f,.20f,.16f,1.18f,Steel(.98f),barrel:true);
+        if (integratedTurret) Block(0f,.34f,-.39f,.27f,.21f,.38f,Steel(.84f),barrel:true);
+        if (integratedTurret) Block(0f,.34f,-.82f,.23f,.19f,.12f,Steel(.92f),barrel:true);
+        if (integratedTurret) Block(0f,.34f,-1.07f,.30f,.24f,.18f,Steel(.65f),barrel:true);
+        if (integratedTurret) Block(0f,.34f,-1.153f,.16f,.12f,.014f,Steel(.28f),barrel:true);
 
         for (int side = -1; side <= 1; side += 2)
         {
@@ -628,33 +660,49 @@ public static class FacetedSoldierMeshes
         }
         // Right-side receiver casing port: shared launch anchor is (+.56*x,
         // .32*height, +.17*z) relative to the centered hull.
-        Block(.50f,.32f,.17f,.12f,.13f,.25f,Steel(.74f));
-        Block(.565f,.32f,.17f,.018f,.074f,.17f,Steel(.25f));
+        if (integratedTurret) Block(.50f,.32f,.17f,.12f,.13f,.25f,Steel(.74f), housing: true);
+        if (integratedTurret) Block(.565f,.32f,.17f,.018f,.074f,.17f,Steel(.25f), housing: true);
     }
 
-    private static void AppendTank(SurfaceTool surface, UnitOutline outline, float height)
+    private static void AppendTank(SurfaceTool surface, UnitOutline outline, float height, bool integratedTurret)
     {
         const float diagonal = .70710678f;
         float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
         Color steel = new(.91f, 0f, 0f), tracks = new(.39f, 0f, 0f);
         Color paint = new(0f, .92f, 0f), trim = new(0f, 0f, .90f);
-        void Block(float px, float py, float pz, float w, float h, float d, Color color, bool barrel = false) =>
+        void Block(float px, float py, float pz, float w, float h, float d, Color color, bool barrel = false, bool housing = false) =>
             AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
                 Mathf.Pi * .25f, new Vector3(px * x, py * height, pz * z), color,
-                sideShade: SoldierSideShade, armorMask: true, swingPart: barrel);
+                sideShade: SoldierSideShade, armorMask: true, turretPart: barrel ? 2 : housing ? 1 : 0);
 
         Block(0f, -.18f, .1f, 1.68f, .45f, 1.55f, steel);
         Block(0f, .12f, -.36f, 1.45f, .22f, .68f, steel);
-        Block(0f, .32f, .17f, 1.02f, .39f, .85f, steel);
-        Block(0f, .54f, .20f, .72f, .08f, .57f, paint);
-        Block(0f, .34f, -.52f, .20f, .16f, 1.18f, steel, barrel: true);
-        Block(0f, .34f, -1.07f, .30f, .24f, .18f, tracks, barrel: true);
+        Block(0f, .17f, .17f, .91f, .10f, .74f, tracks);
+        if (integratedTurret) Block(0f, .32f, .17f, 1.02f, .39f, .85f, steel, housing: true);
+        if (integratedTurret) Block(0f, .54f, .20f, .72f, .08f, .57f, paint, housing: true);
+        if (integratedTurret) Block(0f, .34f, -.52f, .20f, .16f, 1.18f, steel, barrel: true);
+        if (integratedTurret) Block(0f, .34f, -1.07f, .30f, .24f, .18f, tracks, barrel: true);
         for (int side = -1; side <= 1; side += 2)
         {
             Block(side * .77f, -.31f, .10f, .43f, .37f, 1.74f, tracks);
             Block(side * .77f, -.04f, .12f, .41f, .18f, 1.54f, paint);
             Block(side * .56f, .10f, -.69f, .21f, .07f, .07f, trim);
         }
+    }
+
+    private static void AppendCompactTurret(SurfaceTool surface, RocketMount mount, float size)
+    {
+        const float diagonal = .70710678f;
+        Vector3 pivot = mount.Position * size;
+        Vector3 scale = mount.ModelScale * size;
+        Vector3 muzzle = mount.MuzzleOffset * size;
+        AppendPrism(surface, 4, Mathf.Abs(scale.X) * .4f, Mathf.Abs(scale.Z) * .32f,
+            Mathf.Abs(scale.Y) * .34f, Mathf.Pi * .25f, pivot, new Color(0f, .92f, 0f),
+            armorMask: true, turretPart: 1);
+        float length = Mathf.Max(.05f, -muzzle.Z);
+        AppendPrism(surface, 4, Mathf.Abs(scale.X) * .13f * diagonal, length * diagonal,
+            Mathf.Abs(scale.Y) * .14f, Mathf.Pi * .25f, pivot + new Vector3(muzzle.X, muzzle.Y, -length * .5f),
+            new Color(.92f, 0f, 0f), armorMask: true, turretPart: 2);
     }
 
     private static void AppendHBreacher(SurfaceTool surface, UnitOutline outline, float height)
@@ -1293,16 +1341,16 @@ public static class FacetedSoldierMeshes
         float height, float rotation, Vector3 center, Color tint, float rectangleInset = 0f,
         UnitOutline? customOutline = null, float sideShade = 1f, bool rimmedCap = false,
         float yaw = 0f, float topCapBrightness = 1f, float pitch = 0f, bool armorMask = false,
-        Vector2[] visualOutline = null, bool swingPart = false, bool walkPart = false)
+        Vector2[] visualOutline = null, bool swingPart = false, bool walkPart = false, int turretPart = 0)
     {
         // The artillery barrel is tilted once during mesh construction, never per soldier.
         Basis tilt = pitch == 0f ? Basis.Identity : new Basis(Vector3.Right, pitch);
         Vector3 Point(Vector3 p) => pitch == 0f ? p : center + tilt * (p - center);
         Vector3 Normal(Vector3 n) => pitch == 0f ? n : tilt * n;
         void Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 normal, Color color) =>
-            AddTriangle(surface, Point(a), Point(b), Point(c), Normal(normal), color, armorMask, swingPart, walkPart);
+            AddTriangle(surface, Point(a), Point(b), Point(c), Normal(normal), color, armorMask, swingPart, walkPart, turretPart);
         void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Color color) =>
-            AddQuad(surface, Point(a), Point(b), Point(c), Point(d), Normal(normal), color, armorMask, swingPart, walkPart);
+            AddQuad(surface, Point(a), Point(b), Point(c), Point(d), Normal(normal), color, armorMask, swingPart, walkPart, turretPart);
         float half = height * 0.5f;
         float bevelRise = Mathf.Min(height * 0.16f, Mathf.Min(radiusX, radiusZ) * 0.15f);
         float insetDistance = Mathf.Min(radiusX, radiusZ) * TopInsetFraction;
@@ -1412,14 +1460,14 @@ public static class FacetedSoldierMeshes
     }
 
     private static void AddQuad(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c, Vector3 d,
-        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false)
+        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false, int turretPart = 0)
     {
-        AddTriangle(surface, a, b, c, normal, tint, armorMask, swingPart, walkPart);
-        AddTriangle(surface, a, c, d, normal, tint, armorMask, swingPart, walkPart);
+        AddTriangle(surface, a, b, c, normal, tint, armorMask, swingPart, walkPart, turretPart);
+        AddTriangle(surface, a, c, d, normal, tint, armorMask, swingPart, walkPart, turretPart);
     }
 
     private static void AddTriangle(SurfaceTool surface, Vector3 a, Vector3 b, Vector3 c,
-        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false)
+        Vector3 normal, Color tint, bool armorMask = false, bool swingPart = false, bool walkPart = false, int turretPart = 0)
     {
         surface.SetNormal(normal);
         if (armorMask)
@@ -1428,7 +1476,7 @@ public static class FacetedSoldierMeshes
             // white so the existing instance RGB and fracture alpha survive.
             float kind = tint.R > 0f ? 1f : tint.G > 0f ? 2f : 3f;
             // Negative kinds mark the arm; +4 marks boots. Material stays the same.
-            float taggedKind = swingPart ? -kind : walkPart ? kind + 4f : kind;
+            float taggedKind = turretPart > 0 ? 4f + turretPart * 4f + kind : swingPart ? -kind : walkPart ? kind + 4f : kind;
             surface.SetUV(new Vector2(taggedKind, Mathf.Max(tint.R, Mathf.Max(tint.G, tint.B))));
             surface.SetColor(Colors.White);
         }

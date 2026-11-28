@@ -32,3 +32,12 @@ Set **First hit per enemy** above 1× in the Entity Editor to boost a unit's fir
 Twin Rocket Launcher and Light Artillery can target both soldiers and structures through the shared structure combat system. Their structure detection matches their weapon range (35 and 70 world units respectively). They prefer structures where the mode honors target preference and retain the painted benchmark's nearest-target rule. Shots use the existing projectile flight, minimum range, and structure damage rules.
 
 Tower-capable soldiers check reachability when a static tower requires an approach. A valid shot from the current position skips routing, and a clear corridor to a valid attack position needs no route request. Blocked approaches use exact attack-position probes in the existing budgeted navigation queue. A queued or deferred probe leaves the soldier free to select another target. If all sampled positions fail, the soldier skips that tower for 120 simulation ticks or until it moves away from the failed origin. A replacement movement field invalidates remembered approaches.
+
+## Independent primary turrets
+
+`TurretAiming` shares wrapped yaw and hull-relative mount transforms with
+Dreadnaught weapons. Independent primary turrets use the existing unit and
+structure targets, one unit cooldown and sparse per-unit yaw state. Tracking
+runs on the fixed step, including reload. Movement still chooses hull facing.
+Dreadnaught secondary weapons retain their existing target searches and cooldowns.
+Reinforcement arrival appends new Dreadnaught weapon state to the existing system.

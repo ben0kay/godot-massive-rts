@@ -14,7 +14,9 @@ public partial class RuntimeEntityEditor : Control
     private sealed record Draft(UnitDefinition Unit, string Path, byte[] Baseline)
     {
         public readonly Dictionary<PropertyInfo, object> Saved = new();
-        public bool Changed => Saved.Any(field => !Equals(field.Value, field.Key.GetValue(Unit)));
+        public string[] SavedMounts { get; set; } = MountSnapshot(Unit);
+        public bool Changed => Saved.Any(field => !Equals(field.Value, field.Key.GetValue(Unit))) ||
+            !SavedMounts.SequenceEqual(MountSnapshot(Unit));
     }
 
     private static readonly PropertyInfo[] EditableFields = typeof(UnitDefinition).GetProperties()
@@ -22,6 +24,14 @@ public partial class RuntimeEntityEditor : Control
             && field.Name != nameof(UnitDefinition.RocketMounts)
             && !field.Name.StartsWith("TurretRocket", StringComparison.Ordinal)
             && field.Name != nameof(UnitDefinition.Projectile)).ToArray();
+
+    private static readonly PropertyInfo[] MountFields = typeof(RocketMount).GetProperties()
+        .Where(field => field.GetCustomAttribute<ExportAttribute>() != null).ToArray();
+
+    private static string[] MountSnapshot(UnitDefinition unit) =>
+        (unit.RocketMounts ?? new()).Select(mount => mount == null ? "" : string.Join("|",
+            MountFields.Select(field => field.GetValue(mount) is Resource resource
+                ? resource.ResourcePath : field.GetValue(mount)?.ToString()))).ToArray();
 
     private readonly List<Draft> drafts = new();
     private readonly List<Button> unitOptions = new();
@@ -118,6 +128,8 @@ public partial class RuntimeEntityEditor : Control
             {
                 var draft = new Draft((UnitDefinition)source.Duplicate(), source.ResourcePath,
                     File.ReadAllBytes(ProjectSettings.GlobalizePath(source.ResourcePath)));
+                draft.Unit.RocketMounts = new Godot.Collections.Array<RocketMount>(
+                    source.RocketMounts.Select(mount => mount == null ? null : (RocketMount)mount.Duplicate()));
                 foreach (var field in EditableFields) draft.Saved.Add(field, field.GetValue(draft.Unit));
                 AddUnitOption(draft);
                 drafts.Add(draft);
@@ -229,12 +241,37 @@ public partial class RuntimeEntityEditor : Control
             if (field.Name == nameof(UnitDefinition.Shape) && current.Unit.Id == RuntimeUnitCatalog.DreadnaughtId) continue;
             AddField(current, field);
         }
+        AddMountFields(current);
         RefreshPreview();
         UpdateStatus();
     }
 
-    private void AddField(Draft draft, PropertyInfo field)
+    private void AddMountFields(Draft draft)
     {
+        fields.AddChild(MenuLayout.Label("Weapon mounts"));
+        fields.AddChild(UIButtonFactory.Create("Add independent mount", () =>
+        {
+            draft.Unit.RocketMounts.Add(new RocketMount { IndependentAim = true, ReplacePrimaryWeapon = true, Model = TurretModel.CompactCannon, Position = Vector3.Up * draft.Unit.Height * .5f });
+            SelectUnit(drafts.IndexOf(draft));
+        }));
+        for (int i = 0; i < draft.Unit.RocketMounts.Count; i++)
+        {
+            int index = i;
+            RocketMount mount = draft.Unit.RocketMounts[i];
+            if (mount == null) continue;
+            fields.AddChild(UIButtonFactory.Create($"Remove mount {i + 1}", () =>
+            {
+                draft.Unit.RocketMounts.RemoveAt(index);
+                SelectUnit(drafts.IndexOf(draft));
+            }));
+            foreach (var field in MountFields)
+                AddField(draft, field, mount);
+        }
+    }
+
+    private void AddField(Draft draft, PropertyInfo field, RocketMount mount = null)
+    {
+        object owner = (object)mount ?? draft.Unit;
         var label = Regex.Replace(field.Name, "(?<!^)([A-Z])", " $1");
         var row = new HBoxContainer();
         fields.AddChild(row);
@@ -243,14 +280,14 @@ public partial class RuntimeEntityEditor : Control
         row.AddChild(title);
         void Apply(object value)
         {
-            field.SetValue(draft.Unit, value);
-            if (field.Name is nameof(UnitDefinition.Width) or nameof(UnitDefinition.Height) or nameof(UnitDefinition.Shape) or
+            field.SetValue(owner, value);
+            if (mount != null || field.Name is nameof(UnitDefinition.Width) or nameof(UnitDefinition.Height) or nameof(UnitDefinition.Shape) or
                 nameof(UnitDefinition.SizeMultiplier) or nameof(UnitDefinition.HullLength) or nameof(UnitDefinition.FootprintRadius))
                 RefreshPreview();
             else if (showDetection) RefreshDetection();
             UpdateStatus();
         }
-        object currentValue = field.GetValue(draft.Unit);
+        object currentValue = field.GetValue(owner);
         if (currentValue is bool flag)
         {
             var check = new CheckBox { ButtonPressed = flag };
@@ -275,6 +312,34 @@ public partial class RuntimeEntityEditor : Control
             picker.Select(picker.GetItemIndex(Convert.ToInt32(currentValue)));
             row.AddChild(picker);
             picker.ItemSelected += index => Apply(Enum.ToObject(field.PropertyType, picker.GetItemId((int)index)));
+        }
+        else if (field.PropertyType == typeof(ProjectileDefinition))
+        {
+            var path = new LineEdit { Text = (currentValue as Resource)?.ResourcePath ?? "",
+                PlaceholderText = "Inherit unit projectile", CustomMinimumSize = new Vector2(240, 0) };
+            row.AddChild(path);
+            path.TextSubmitted += value =>
+            {
+                ProjectileDefinition projectile = string.IsNullOrWhiteSpace(value) ? null :
+                    ResourceLoader.Load<ProjectileDefinition>(value.Trim());
+                if (projectile == null && !string.IsNullOrWhiteSpace(value))
+                    status.Text = "Enter a valid projectile resource path.";
+                else Apply(projectile);
+            };
+        }
+        else if (currentValue is Vector3 position)
+        {
+            for (int axis = 0; axis < 3; axis++)
+            {
+                int component = axis;
+                var number = Number(row, position[axis], -100, 100, .001);
+                number.ValueChanged += value =>
+                {
+                    var updatedPosition = (Vector3)field.GetValue(owner);
+                    updatedPosition[component] = (float)value;
+                    Apply(updatedPosition);
+                };
+            }
         }
         else if (currentValue is Vector4 vector)
         {
@@ -302,7 +367,7 @@ public partial class RuntimeEntityEditor : Control
         {
             bool integer = currentValue is int;
             double value = Convert.ToDouble(currentValue);
-            var number = Number(row, value, Math.Min(-1, value), Math.Max(1000000, value), integer ? 1 : 0.001);
+            var number = Number(row, value, Math.Min(mount == null ? -1 : -360, value), Math.Max(1000000, value), integer ? 1 : 0.001);
             number.ValueChanged += edited => Apply(integer ? (object)(int)edited : (float)edited);
         }
     }
@@ -473,7 +538,8 @@ public partial class RuntimeEntityEditor : Control
             if (!LevelEditorSave.CanWrite) throw new InvalidOperationException("Project saving requires the Godot editor.");
             var changed = draft.Saved.Where(field => !Equals(field.Value, field.Key.GetValue(draft.Unit)))
                 .Select(field => $"{field.Key.Name}: {field.Value} → {field.Key.GetValue(draft.Unit)}");
-            Confirm("Save to Project", draft.Path + "\n\n" + string.Join("\n", changed), () => Publish(draft));
+            string mounts = draft.SavedMounts.SequenceEqual(MountSnapshot(draft.Unit)) ? "" : "\nWeapon mounts updated.";
+            Confirm("Save to Project", draft.Path + "\n\n" + string.Join("\n", changed) + mounts, () => Publish(draft));
         }
         catch (Exception error) { status.Text = error.Message; }
     }
@@ -498,7 +564,8 @@ public partial class RuntimeEntityEditor : Control
             if (result != Error.Ok) throw new IOException($"Could not stage the unit resource ({result}).");
             var staged = ResourceLoader.Load<UnitDefinition>(temporary, cacheMode: ResourceLoader.CacheMode.Ignore);
             if (staged == null || staged.Id != draft.Unit.Id ||
-                EditableFields.Any(field => !Equals(field.GetValue(staged), field.GetValue(draft.Unit))))
+                EditableFields.Any(field => !Equals(field.GetValue(staged), field.GetValue(draft.Unit))) ||
+                !MountSnapshot(staged).SequenceEqual(MountSnapshot(draft.Unit)))
                 throw new IOException("The staged resource failed validation.");
             long uid = ResourceLoader.GetResourceUid(draft.Path);
             if (uid != -1 && ResourceSaver.SetUid(temporary, uid) != Error.Ok)
@@ -508,7 +575,7 @@ public partial class RuntimeEntityEditor : Control
             string stagedPath = ProjectSettings.GlobalizePath(temporary);
             byte[] saved = File.ReadAllBytes(stagedPath);
             File.Move(stagedPath, destination, overwrite: true);
-            var updated = draft with { Baseline = saved };
+            var updated = draft with { Baseline = saved, SavedMounts = MountSnapshot(draft.Unit) };
             foreach (var field in EditableFields) updated.Saved[field] = field.GetValue(draft.Unit);
             int index = drafts.IndexOf(draft);
             drafts[index] = updated;

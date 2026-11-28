@@ -176,3 +176,12 @@ Shell casing ejection is an optional per-unit/per-building visual setting, not a
 Rally markers use the real active recipient list and expiry, with one capped overhead faction-chevron batch. Destroyed structures leave a low charred shared husk fitted to their original footprint, with existing explosion and smoke; collision and expiry belong to WreckField, not visual FX. Do not add rubble to projectile sight fields or live building targeting.
 
 Tier 4 Tank refinement uses the same cached masked surface and independent **Use Enhanced Tank Mesh** switch. Prefer swept convex armor facets and clipped turret shoulders, dark tracks, layered faction-painted glacis, visible casing port and a segmented barrel with all sliding parts tagged for the existing recoil. Preserve original muzzle, track centers, footprint and pitch/track-smoke feedback. Eject from the hull-facing right-side receiver rather than aim spread or the muzzle, only on accepted shots. The world-space port is approximate during visual-only chassis pitch; do not add per-unit attachments or physics bodies to follow it. Use the existing optional casing setting and shared capped pool.
+
+### Independent ground turrets
+
+The Tank's two mesh variants bake hull, turret and barrel into the shared unit
+mesh. Dedicated vertex tags select the turret and barrel in the unit shader.
+Instance data supplies relative yaw and local recoil, so each faction batch
+renders a complete vehicle with its normal hit and fracture feedback. Preview
+meshes show the configured rest angle. Compact Cannon uses the same tags for a
+configurable procedural mount on another vehicle.

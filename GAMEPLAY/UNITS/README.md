@@ -240,3 +240,13 @@ a capped batch of ground ticks marks active recipients.
 ### Tier 4 Tank visual refinement
 
 **Use Enhanced Tank Mesh** in UnitVisualConfig.tres is enabled by default; disable and relaunch to restore the previous blockier tank model. The same masked mesh builder supplies previews and combat: swept cut-corner hull, faction-painted layered glacis, angular low turret, three-piece track skirts, rear cooling grilles, segmented recoiling cannon and dark receiver port. Original outline, tracks, muzzle (-1.16 × half length), attack phase, barrel recoil, chassis pitch, track smoke, tread marks and gameplay stats are preserved. Tank opts into the existing shared shell casing pool at 0.8× size; one cosmetic case ejects from its hull-relative right-side turret receiver after each accepted ground projectile launch, including structure attacks. The port remains approximate on the legacy mesh and during shader-driven chassis pitch. Toggle/size are editable in Entity Editor. No new per-unit nodes or separate draw calls. Owner checks: muzzle/recoil alignment, lit/unlit previews, turret-side casing bounce and dense tank formations.
+
+## TURRET1 — Independent primary weapons
+
+The Tank uses a `RocketMount` with Independent Aim and Replace Primary Weapon
+enabled. The Entity Editor's Weapon Mounts section edits the mount and its weapon
+overrides. Negative damage, range and interval overrides inherit the parent unit's
+settings. The Integrated model uses the Tank's own geometry. Compact Cannon is a
+reusable procedural model for other vehicles. Projectile paths accept a
+`ProjectileDefinition` resource, or an empty field to inherit the unit projectile.
+A unit can author one primary replacement alongside legacy secondary mounts.

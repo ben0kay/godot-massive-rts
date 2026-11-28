@@ -55,3 +55,7 @@ Non-explosive swept unit contacts that actually reduce health emit a small metal
 ## Light Barricade contact
 
 The shared projectile sweep tests hostile barricades at their physical height before resolving the next impact. A projectile that strikes a segment is consumed and damages its health pool. Friendly shots and arcs that clear the top pass through. Target acquisition can still see targets on the other side.
+
+An independent primary weapon launches through the ordinary unit projectile path
+with a rotated muzzle and casing port. Structure shots retain their structure
+target reference. The Tank uses its existing shell, glow and track smoke.

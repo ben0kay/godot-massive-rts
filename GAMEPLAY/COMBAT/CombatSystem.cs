@@ -199,11 +199,16 @@ public static class CombatSystem
                 if (animation.MeleeLungeDistance > 0f && animation.Interval - beforeCooldown < MeleeLungeSeconds)
                     visualsChanged = units.Dirty[i] = true;
             }
+            var turret = units.HasIndependentPrimary ? units.Catalog.IndependentPrimary(units.Type[i]) : null;
+            if (turret.HasValue) units.PrimaryTurrets?.BeginTick(i);
             if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];
             bool robotCircle = type.Shape == UnitShape.Circle && units.CircleUsesFacing;
-            if (target < 0 || units.Health[target] <= 0 || !units.CanDetectGroundTarget(units.Position[i], target) || (units.Cooldown[i] > 0 && !robotCircle)) continue;
+            if (target < 0 || units.Health[target] <= 0 || !units.CanDetectGroundTarget(units.Position[i], target) || (units.Cooldown[i] > 0 && !robotCircle && !turret.HasValue)) continue;
             if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
+            bool turretAligned = !turret.HasValue || units.EnsurePrimaryTurrets().Aim(units, i,
+                units.Position[target], turret.Value, dt);
+            if (turret.HasValue) visualsChanged |= units.PrimaryTurrets.IsTurning(i);
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? units.RangedReach(i, type) :
                 MeleeContact(type.MeleeAttackRadius, units.Catalog[units.Type[target]].Footprint, separationGap) + MeleeContactTolerance;
@@ -245,9 +250,11 @@ public static class CombatSystem
             bool cleaved = false, stomped = false;
             if (type.Ranged)
             {
-                if (!SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
+                if (turret.HasValue ? !turretAligned || !ProjectileSystem.TurretHasSight(units, i, turret.Value,
+                    units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * .5f), attackSight) :
+                    !SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
                     continue;
-                if (type.DirectFire(units.Catalog.Projectiles) && units.Trenches is { } trenches &&
+                if (!turret.HasValue && type.DirectFire(units.Catalog.Projectiles) && units.Trenches is { } trenches &&
                     trenches.BlocksFire(units.Position[i] + Vector3.Up * (type.Height * 0.5f),
                         units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f))) continue;
                 // Only recoil when the projectile pool accepted the shot.
@@ -256,8 +263,9 @@ public static class CombatSystem
                 if (projectiles.Count > before)
                 {
                     visualsChanged |= units.HitFeedback?.OnAttack(units, i) == true;
-                    if (type.RangedRecoil.Distance > 0f) units.RangedRecoil?.OnFire(units, i, target);
+                    if (!turret.HasValue && type.RangedRecoil.Distance > 0f) units.RangedRecoil?.OnFire(units, i, target);
                 }
+                else if (turret.HasValue) continue;
             }
             else if (type.Shockwave.EveryAttacks > 0 && units.IsShockwaveAttack(i, type.Shockwave.EveryAttacks))
             {

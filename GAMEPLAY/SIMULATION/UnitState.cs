@@ -16,6 +16,9 @@ public sealed class UnitState
     private byte[] completedAttacks;
     private Dictionary<int, HashSet<int>> firstHitTargets;
     private int[] nextRocketMount;
+    internal bool HasIndependentPrimary { get; private set; }
+    internal PrimaryTurretState PrimaryTurrets { get; private set; }
+    internal PrimaryTurretState EnsurePrimaryTurrets() => PrimaryTurrets ??= new PrimaryTurretState();
     internal List<int> InterceptorIds { get; private set; }
 
     internal int RocketMountIndex(int id) => nextRocketMount?[id] ?? 0;
@@ -231,6 +234,7 @@ public sealed class UnitState
         }
         if (Catalog.PrimaryRockets(type).Length > 1) nextRocketMount ??= new int[Health.Length];
         HasStructureAttackers |= stats.TargetsStructures;
+        HasIndependentPrimary |= Catalog.IndependentPrimary(type).HasValue;
         HasMeleeLunge |= stats.MeleeLungeDistance > 0f;
         if (stats.PrismBeam.Enabled) prismAlive++;
         if (type == RuntimeUnitCatalog.RallyCommander) (Rally ??= new RallyPulse(Health.Length)).AddCommander(id);
@@ -316,6 +320,7 @@ public sealed class UnitState
 
     private void RecordDeath(int id)
     {
+        PrimaryTurrets?.Remove(id);
         FactionAlive[Faction[id]]--;
         Alive--;
         if (ArmyStatistics != null)

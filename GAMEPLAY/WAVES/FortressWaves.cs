@@ -174,7 +174,7 @@ internal sealed class FortressWaves
             {
                 if (engagePrism && idleMoved) RebuildGrid();
                 attackVisualsChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
-                    obstacles: idleField, shockwaves: impactRings, commands: movement);
+                    obstacles: idleField, shockwaves: impactRings, structureCombat: structures, commands: movement);
                 if (engageStructures) AttackStructures(delta, idleField, Factions.Blue);
             }
             bool towerTargets = buildings.HasDefenses && units.FactionAlive[Factions.Red] > 0;
@@ -220,7 +220,7 @@ internal sealed class FortressWaves
                 units.Target[id] = -1;
         }
         bool weaponChanged = CombatSystem.Step(units, grid, Projectiles, 1f, delta, SeparationPadding, SeparationGap,
-            obstacles: field, shockwaves: impactRings, commands: movement);
+            obstacles: field, shockwaves: impactRings, structureCombat: structures, commands: movement);
 
         if (units.HasStructureAttackers) AttackStructures(delta, field, Factions.Blue);
         for (int i = 0; i < enemyCount && !Defeat; i++)

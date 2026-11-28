@@ -11,6 +11,10 @@ uniform bool diamond_cavalry = false;
 uniform bool h_breacher = false;
 uniform bool siege_ram = false;
 uniform bool tank = false;
+uniform bool independent_turret = false;
+uniform bool turret_preview = false;
+uniform float preview_turret_yaw = 0.0;
+uniform vec3 turret_pivot = vec3(0.0);
 uniform bool long_marksman = false;
 uniform bool pikeman = false;
 uniform bool obliterator_assault = false;
@@ -33,11 +37,18 @@ void vertex() {
         float swing = floor(fracture / 16.0);
         fracture = mod(fracture, 16.0);
         stomping = hexagon_siege && swing > 0.0 && INSTANCE_CUSTOM.z > 0.5;
-        if (tank) {
-            if (swing > 0.0) {
+        if (tank || independent_turret) {
+            if (independent_turret && UV.x > 8.5) {
+                if (!turret_preview && UV.x > 12.5) VERTEX.z += INSTANCE_CUSTOM.y;
+                float yaw = turret_preview ? preview_turret_yaw : INSTANCE_CUSTOM.x;
+                float cy = cos(yaw), sy = sin(yaw);
+                mat2 rotate = mat2(vec2(cy, -sy), vec2(sy, cy));
+                VERTEX.xz = turret_pivot.xz + rotate * (VERTEX.xz - turret_pivot.xz);
+                NORMAL.xz = rotate * NORMAL.xz;
+            }
+            if (tank && !turret_preview && swing > 0.0) {
                 float age = (swing - 1.0) / 14.0;
                 float kick = 1.0 - smoothstep(0.0, 1.0, age);
-                if (UV.x < -0.5) VERTEX.z += infantry_height * 0.24 * kick;
                 float angle = 0.075 * kick;
                 float c = cos(angle), s = sin(angle);
                 mat2 pitch = mat2(vec2(c, s), vec2(-s, c));
@@ -189,7 +200,7 @@ global uniform float battlefield_ambient_fill;
 
 void fragment() {
     vec3 tint = COLOR.rgb * armor_tint.rgb;
-    ALBEDO = use_two_tone_armor ? unit_armor_albedo(tint, UV) : COLOR.rgb;
+    ALBEDO = (use_two_tone_armor || UV.x > 8.5) ? unit_armor_albedo(tint, UV) : COLOR.rgb;
     if (show_fracture && fracture >= 4.0 && fracture < 16.0 && upper_facet > 0.0) {
         float stage = floor(fracture / 4.0);
         float variant = mod(fracture, 4.0);
@@ -208,7 +219,7 @@ void fragment() {
 #else
     EMISSION = vec3(0.0);
 #endif
-    if (use_two_tone_armor) {
+    if (use_two_tone_armor || UV.x > 8.5) {
         EMISSION += unit_armor_emission(tint, UV);
     }
 }

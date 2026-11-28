@@ -244,15 +244,10 @@ public partial class BenchmarkArena
         }
         if (Enumerable.Range(first, units.Count - first).Any(id => catalog[units.Type[id]].Trample.Enabled))
             trample = TrampleSystem.Create(units, autoAttackCount, autoAttackIds, trample);
-        if (Enumerable.Range(first, units.Count - first).Any(id => units.Type[id] == RuntimeUnitCatalog.Dreadnaught ||
-            catalog.IndependentRockets(units.Type[id]).Length > 0))
+        if (dreadnaughts != null) dreadnaughts.AddReinforcements(first);
+        else
         {
-            if (dreadnaughts != null)
-            {
-                RemoveChild(dreadnaughts);
-                dreadnaughts.QueueFree();
-            }
-            dreadnaughts = DreadnaughtCombat.Create(units);
+            dreadnaughts = DreadnaughtCombat.Create(units, first);
             if (dreadnaughts != null) AddChild(dreadnaughts);
         }
 
