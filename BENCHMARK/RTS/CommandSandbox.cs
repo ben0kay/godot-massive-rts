@@ -203,6 +203,8 @@ public partial class CommandSandbox : Node3D
         units.HeavyRubbleSpeed = paint?.HeavyRubbleSpeed ?? 0.75f;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
             WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, (paint?.MovementWater ?? water).Concat(GetNodeOrNull<CommandTerrain>("Terrain")?.TrenchBlockers ?? System.Array.Empty<ObstacleRectangle>()).ToArray(), paint?.BridgeAreas ?? System.Array.Empty<Rect2>(), StartingCarbon);
+        units.Wrecks.SeedAuthored(this, terrain);
+        buildings.RefreshWreckObstacles();
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (Node child in fabricators.GetChildren())
                 if (child is Node3D marker) buildings.AddStartingFabricator(marker.GlobalPosition, Factions.Blue);

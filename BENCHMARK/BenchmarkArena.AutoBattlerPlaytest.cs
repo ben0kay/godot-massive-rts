@@ -185,7 +185,9 @@ public partial class BenchmarkArena
         if (HasCitadelObjective && offenseCitadelSlot < 0) campaignMapError = "This battle requires exactly one objective Citadel.";
         autoBattlerTrenchBlockers = map.GetNodeOrNull<CommandTerrain>("Terrain")?.TrenchBlockers ?? System.Array.Empty<ObstacleRectangle>();
         autoBattlerPaintCollision = BuildAutoBattlerField(autoBattlerCover.Concat(autoBattlerWater).Concat(autoBattlerTrenchBlockers)
-            .Concat(autoBattlerDefenses.Select(defense => defense.Footprint(buildings))));
+            .Concat(autoBattlerDefenses.Select(defense => defense.Footprint(buildings)))
+            .Concat(BuildingRuin.AuthoredOn(map).Select(ruin => new ObstacleRectangle
+                { WorldBounds = ruin.BoundsAt(ruin.GlobalPosition) })));
         painter.BrushFaction = Factions.Blue;
         if (campaignRoster == null) painter.PaintRestriction = CanDeployBlue;
         painter.SetPreviewTerrain(terrain);

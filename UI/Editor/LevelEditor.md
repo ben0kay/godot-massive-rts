@@ -54,9 +54,9 @@ Choose **Base Terrain** beside **+ New Level**. Industrial is the default and St
 
 During a tactical test battle, click a tower to show its health, kills, and range. Click empty ground to clear the selection.
 
-## Ruins & Rubble
+## Scenery — Destroyed Building
 
-Open **Terrain → Ruins & Rubble**. Choose **Small rubble** for decoration, **Heavy rubble** to slow ground units, or **Structural ruins** for movement and sight blockers. Set the density and use the brush or **Rectangle fill**. Right-drag or use **Erase** to remove rubble. Strokes support undo and redo. Heavy rubble speed and ruin dimensions are configurable in the map’s WorldPaint data.
+Choose **Scenery → Destroyed Building** and click to place a neutral building husk. Use the normal Select, Move, Erase, Undo and Redo controls. In battle it remains until a unit above Tier 4 crushes it. Authored ruins share the runtime wreck budget. Existing painted rubble remains compatible with saved levels and can be removed with Erase.
 
 ## Tiered Elevation
 
@@ -76,4 +76,4 @@ Choose **Terrain → Geothermal Vent**. The placement disc shows the eruption ra
 
 ## Trench
 
-Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end. The line snaps to the nearest map axis. The preview shows the recessed floor and ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.
+Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end or drag and release. The line snaps to the nearest map axis. The preview shows the recessed floor and ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.

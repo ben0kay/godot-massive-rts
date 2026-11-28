@@ -332,6 +332,7 @@ public partial class BenchmarkArena : Node3D
             RemoveChild(wrecks);
             wrecks.QueueFree();
         }
+        WreckField.RestoreAuthoringPreview(autoBattlerPlaytestMap);
         baseMovementObstacles = obstacles = null; navigation = null; battleWalls.Mesh = null; battleObstacleShadows.Mesh = null;
         meleeSteering = null;
         units = null; projectiles = null; grid = null; separation = null; hardSeparation = null; trample = null; voluntaryMovement = null; deployment = null; spawning = false;
@@ -688,6 +689,11 @@ public partial class BenchmarkArena : Node3D
             offenseCitadel = defenseSystem.Structures[offenseCitadelSlot];
         if (autoBattlerPlaytestMap != null) RefreshAutoBattlerFields();
         units = CreateUnitState((uint)settings.Seed);
+        if (autoBattlerPlaytestMap != null && units.Wrecks is { } authoredWrecks)
+        {
+            authoredWrecks.SeedAuthored(autoBattlerPlaytestMap, terrain);
+            obstacles = authoredWrecks.Combine(baseMovementObstacles, BattleBoundary);
+        }
         if (autoBattlerPlaytestMap != null && (openingOverlay != null || redOrders?.Count > 0))
             units.OpeningOrders = OpeningOrders.Create(snapshot, attackerCount, OrderFor, autoBattlerPlaytestMap.MapSize * 0.5f, catalog);
         defenseSystem?.RegisterStructureDomes(units);

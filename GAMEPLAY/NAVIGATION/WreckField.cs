@@ -7,7 +7,7 @@ namespace MassiveRts;
 internal sealed partial class WreckField : Node3D
 {
     // The corner route graph has quadratic edge construction. Bound this first pass.
-    private const int Capacity = 32;
+    internal const int Capacity = 32;
     private const float SettleSeconds = 0.24f;
     private const float RefreshInterval = 0.15f;
     private readonly List<Wreck> wrecks = new(Capacity);
@@ -79,22 +79,42 @@ internal sealed partial class WreckField : Node3D
     // heavy unit wrecks share the existing 32-obstacle route-graph budget.
     internal bool TryAddBuilding(StructureHealth building, float ground)
     {
-        if (wrecks.Count + husks.Count >= Capacity) return false;
         Vector2 min = building.Area.Min, size = building.Area.Max - min;
-        var footprint = new Rect2(min, size);
+        Vector2 center = min + size * .5f;
+        float yaw = (Mathf.FloorToInt(center.X + center.Y) & 1) == 0 ? 0f : Mathf.Pi;
+        return TryAddHusk(new Rect2(min, size), ground, yaw, HuskLifetime);
+    }
+
+    internal static Vector3 HuskScale(Vector2 size) =>
+        new(size.X, Mathf.Clamp(Mathf.Min(size.X, size.Y) * .27f, .65f, 2f), size.Y);
+
+    internal void SeedAuthored(Node3D map, TerrainHeightField terrain)
+    {
+        foreach (var ruin in BuildingRuin.AuthoredOn(map))
+        {
+            var point = ruin.GlobalPosition;
+            if (TryAddHusk(ruin.BoundsAt(point), terrain?.At(point.X, point.Z) ?? point.Y, 0f, float.PositiveInfinity))
+                ruin.Hide();
+        }
+    }
+
+    internal static void RestoreAuthoringPreview(Node3D map)
+    {
+        foreach (var ruin in BuildingRuin.AuthoredOn(map)) ruin.Show();
+    }
+
+    private bool TryAddHusk(Rect2 footprint, float ground, float yaw, float lifetime)
+    {
+        if (wrecks.Count + husks.Count >= Capacity) return false;
         var area = new ObstacleRectangle
         {
             WorldBounds = footprint, AllowInteriorEscape = true, WreckTier = HuskTier
         };
-        Vector2 center = min + size * 0.5f;
-        float height = Mathf.Clamp(Mathf.Min(size.X, size.Y) * 0.27f, 0.65f, 2.0f);
-        // Rotate a shared asymmetrical rubble layout by half a turn only, keeping
-        // its normalized rectangular foundation within the original bounds.
-        float yaw = (Mathf.FloorToInt(center.X + center.Y) & 1) == 0 ? 0f : Mathf.Pi;
-        var pose = new Transform3D(new Basis(Vector3.Up, yaw) * Basis.FromScale(new Vector3(size.X, height, size.Y)),
+        Vector2 center = footprint.GetCenter();
+        var pose = new Transform3D(new Basis(Vector3.Up, yaw) * Basis.FromScale(HuskScale(footprint.Size)),
             new Vector3(center.X, ground, center.Y));
         huskMesh ??= CreateHuskBatch();
-        husks.Add(new Husk(area, pose, HuskLifetime));
+        husks.Add(new Husk(area, pose, lifetime));
         huskMesh.SetInstanceTransform(husks.Count - 1, pose);
         huskMesh.VisibleInstanceCount = husks.Count;
         RecalculateBounds();
@@ -263,6 +283,7 @@ internal sealed partial class WreckField : Node3D
         for (int i = husks.Count - 1; i >= 0; i--)
         {
             var husk = husks[i];
+            if (float.IsPositiveInfinity(husk.Remaining)) continue;
             husk.Remaining -= delta;
             if (husk.Remaining <= 0f) { RemoveHusk(i); expired = true; }
             else husks[i] = husk;

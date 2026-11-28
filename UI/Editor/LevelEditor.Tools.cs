@@ -10,7 +10,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road, Vent, Trench }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road, Vent, Trench, Ruin }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -45,7 +45,7 @@ public partial class LevelEditor
         toolPicker.Clear();
         foreach (Tool entry in Enum.GetValues<Tool>())
         {
-            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry or Tool.FactionWall or Tool.Aircraft) continue;
+            if (entry is Tool.Soldiers or Tool.Defense or Tool.ReserveEntry or Tool.FactionWall or Tool.Aircraft or Tool.Rubble) continue;
             if (mode.IsAutoBattler && entry is Tool.Citadel or Tool.Fabricator or Tool.Carbon) continue;
             if (!mode.IsAutoBattler && entry is Tool.Deployment or Tool.DeploymentLine or Tool.RedOrders or Tool.Disruptor) continue;
             toolPicker.AddItem(entry switch
@@ -54,7 +54,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Road => "Paint road", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
-                Tool.Wall => "Industrial Walls", Tool.Vent => "Geothermal Vent", Tool.Trench => "Trench", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
+                Tool.Ruin => "Destroyed Building", Tool.Wall => "Industrial Walls", Tool.Vent => "Geothermal Vent", Tool.Trench => "Trench", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -97,6 +97,7 @@ public partial class LevelEditor
         if (terrain != null)
             foreach (Node child in terrain.GetChildren())
                 if (child is GeothermalVent vent) vent.Seat(terrain.Field);
+        foreach (var ruin in BuildingRuin.AuthoredOn(map)) PlaceAt(ruin, ruin.GlobalPosition);
         UpdateEditorGround();
         map.ReadAuthoredWalls(updateVisuals: true);
         paint.Compile();
@@ -588,7 +589,7 @@ public partial class LevelEditor
         {
             Tool.Wall => new(Grid, 1, Grid),
             Tool.Vent => new(ventPlacementRadius * 2f, 1f, ventPlacementRadius * 2f),
-            Tool.Citadel => new(10, 1, 10),
+            Tool.Citadel or Tool.Ruin => new(10, 1, 10),
             Tool.Defense => TowerCursor(),
             Tool.Carbon or Tool.Fabricator => new(6, 1, 6),
             _ when brush => new(Grid * (brushRadius * 2 - 1), 1, Grid * (brushRadius * 2 - 1)),
@@ -808,7 +809,7 @@ public partial class LevelEditor
     // =========================================================
     private IEnumerable<Node3D> Objects()
     {
-        foreach (string path in new[] { "Obstacles", "Terrain", "StartingUnits", "Resources", "StartingFabricators", "StartingDefenses" })
+        foreach (string path in new[] { "Obstacles", "Terrain", "StartingUnits", "Resources", "StartingFabricators", "StartingDefenses", BuildingRuin.Container })
             if (map.GetNodeOrNull<Node3D>(path) is Node3D container)
                 foreach (var child in container.GetChildren())
                     if (child is Node3D node) yield return node;
@@ -832,6 +833,7 @@ public partial class LevelEditor
                     group.Positions(0).Any(position => new Vector2(position.X - point.X, position.Z - point.Z).LengthSquared() <= 4),
                 TerrainHill hill => distance <= Mathf.Min(8, hill.Radius),
                 GeothermalVent => distance <= 1.6f,
+                BuildingRuin ruin => ruin.BoundsAt(ruin.GlobalPosition).HasPoint(ObstacleField.Xz(point)),
                 TerrainTrench trench => trench.Floor.HasPoint(ObstacleField.Xz(point)),
                 _ => distance <= (node.Name == "Citadel" ? 7 : 4)
             };
@@ -889,6 +891,15 @@ public partial class LevelEditor
                 node = new CommandLaserPlacement { Name = "Defense", Definition = SelectedDefense, Red = mode.IsAutoBattler ? !CampaignCatalog.IsDefense(mode.CampaignId) : redTower };
                 parent = "StartingDefenses";
                 break;
+            case Tool.Ruin:
+                if (Objects().OfType<BuildingRuin>().Count() >= WreckField.Capacity)
+                {
+                    SetStatus($"A map supports up to {WreckField.Capacity} destroyed buildings.");
+                    return;
+                }
+                node = new BuildingRuin { Name = "DestroyedBuilding" };
+                parent = BuildingRuin.Container;
+                break;
             case Tool.Vent:
                 if (Objects().OfType<GeothermalVent>().Count() >= GeothermalVent.MaxPerMap)
                 {
@@ -920,6 +931,7 @@ public partial class LevelEditor
 
     private bool TryAddPlacement(Node3D node, string parent, Vector3 point)
     {
+        if (node is BuildingRuin ruin && !RuinSiteClear(ruin, point)) return false;
         if (node is CommandLaserPlacement tower)
         {
             point = tower.SnapCenter(point);
@@ -968,8 +980,18 @@ public partial class LevelEditor
         return true;
     }
 
+    private bool RuinSiteClear(BuildingRuin ruin, Vector3 point)
+    {
+        var bounds = ruin.BoundsAt(point);
+        if (ruin.Fits(point, map.MapSize * .5f) && !Objects().OfType<BuildingRuin>()
+            .Any(other => other != ruin && bounds.Intersects(other.BoundsAt(other.GlobalPosition)))) return true;
+        SetStatus("Keep the destroyed building inside the map and clear of other ruins.");
+        return false;
+    }
+
     private void Move(Node3D node, Vector3 point)
     {
+        if (node is BuildingRuin ruin && !RuinSiteClear(ruin, point)) return;
         if (node is TerrainTrench) { SetStatus("Erase and redraw to relocate a trench."); return; }
         if (node is CommandLaserPlacement tower)
         {

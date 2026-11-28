@@ -179,6 +179,10 @@ internal static class LevelEditorSave
     // =========================================================
     internal static void ValidateContent(LevelEditorMode mode, CommandSandbox map)
     {
+        var ruins = map.GetNodeOrNull<Node3D>(BuildingRuin.Container)?.GetChildren().OfType<BuildingRuin>().ToArray();
+        if (ruins != null && (ruins.Length > WreckField.Capacity ||
+            ruins.Any(ruin => !ruin.Fits(ruin.GlobalPosition, map.MapSize * .5f))))
+            throw new InvalidOperationException("Keep destroyed buildings inside the map and within the wreck budget.");
         var trenches = map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<TerrainTrench>().ToArray();
         if (trenches != null && (trenches.Length > TerrainTrench.MaxPerMap ||
             trenches.Any(trench => !trench.Fits(map.MapSize * 0.5f))))

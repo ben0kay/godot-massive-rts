@@ -15,8 +15,10 @@ public partial class LevelEditor
         Number(context, "Floor width", trenchWidth, 6, 24, 0.5).ValueChanged += value => trenchWidth = (float)value;
         Number(context, "Depth", trenchDepth, 0.5, 8, 0.1).ValueChanged += value => trenchDepth = (float)value;
         Number(context, "Ramp length at each end", trenchRamp, 4, 32, 0.5).ValueChanged += value => trenchRamp = (float)value;
-        Heading(context, "Click the start and end along a map axis. Right-click to cancel or remove.", 15);
+        Heading(context, "Click both ends or drag and release along a map axis. Right-click to cancel or remove.", 15);
     }
+
+    private Vector2? trenchPress;
 
     private bool HandleTrench(InputEvent input)
     {
@@ -26,9 +28,20 @@ public partial class LevelEditor
             else if (trenchPreview != null) trenchPreview.Hide();
             return true;
         }
-        if (input is not InputEventMouseButton { Pressed: true } mouse ||
+        if (input is not InputEventMouseButton mouse ||
             mouse.ButtonIndex is not (MouseButton.Left or MouseButton.Right)) return false;
         GetViewport().SetInputAsHandled();
+        if (!mouse.Pressed)
+        {
+            if (mouse.ButtonIndex == MouseButton.Left && trenchPress is Vector2 start)
+            {
+                trenchPress = null;
+                if (trenchDraft != null && start.DistanceSquaredTo(mouse.Position) > 25f &&
+                    WorldPoint(mouse.Position, out var end))
+                    CommitTrench(ObstacleField.Xz(Snap(end)));
+            }
+            return true;
+        }
         if (mouse.ButtonIndex == MouseButton.Right && trenchDraft != null)
         {
             CancelTrench();
@@ -51,21 +64,28 @@ public partial class LevelEditor
                 return true;
             }
             trenchDraft = new TerrainTrench { Name = "Trench", Start = point, End = point };
-            SetStatus("Click the end of the trench.");
+            trenchPress = mouse.Position;
+            SetStatus("Click the end of the trench or drag and release.");
             return true;
         }
 
+        CommitTrench(point);
+        return true;
+    }
+
+    private void CommitTrench(Vector2 point)
+    {
+        var terrain = map.GetNode<CommandTerrain>("Terrain");
         UpdateTrenchDraft(point);
         if (!CanPlaceTrench(terrain, trenchDraft))
         {
             SetStatus("Use a longer line for both ramps. Keep trenches within the map and clear of other trenches, cliffs, rock and water.");
-            return true;
+            return;
         }
         var placed = trenchDraft;
         trenchDraft = null;
         CancelTrench();
         if (!TryAddPlacement(placed, "Terrain", Vector3.Zero)) placed.Free();
-        return true;
     }
 
     private bool CanPlaceTrench(CommandTerrain terrain, TerrainTrench draft)
@@ -137,6 +157,7 @@ public partial class LevelEditor
 
     private void CancelTrench()
     {
+        trenchPress = null;
         trenchDraft?.Free();
         trenchDraft = null;
         trenchPreview?.QueueFree();

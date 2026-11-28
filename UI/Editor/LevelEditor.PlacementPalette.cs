@@ -24,7 +24,7 @@ public partial class LevelEditor
         var body = placementPalette.BuildShell(154);
         var header = new HBoxContainer();
         body.AddChild(header);
-        string[] tabs = { "Units", "Defenses", "Terrain", "Setup", "Simulation" };
+        string[] tabs = { "Units", "Defenses", "Terrain", "Scenery", "Setup", "Simulation" };
         paletteTabs = new Button[tabs.Length];
         var tabGroup = new ButtonGroup();
         for (int i = 0; i < tabs.Length; i++)
@@ -136,8 +136,9 @@ public partial class LevelEditor
                     if (i >= units.Length) aircraftCards.Add(card);
                 }),
             BuildDefenses(),
-            ToolPage(new[] { "Rocks", "Forest", "Water", "Marsh", "Road", "Ruins & Rubble", "Organic Elevation", "Tiered Elevation", "Bridge", "Industrial Walls", "Cliff Painter", "Geothermal Vent", "Trench" },
-                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Marsh, Tool.Road, Tool.Rubble, Tool.Elevation, Tool.TieredElevation, Tool.Bridge, Tool.Wall, Tool.Cliff, Tool.Vent, Tool.Trench }),
+            ToolPage(new[] { "Rocks", "Forest", "Water", "Marsh", "Road", "Organic Elevation", "Tiered Elevation", "Bridge", "Industrial Walls", "Cliff Painter", "Geothermal Vent", "Trench" },
+                new[] { Tool.Rock, Tool.Forest, Tool.Water, Tool.Marsh, Tool.Road, Tool.Elevation, Tool.TieredElevation, Tool.Bridge, Tool.Wall, Tool.Cliff, Tool.Vent, Tool.Trench }),
+            ToolPage(new[] { "Destroyed Building" }, new[] { Tool.Ruin }),
             ToolPage(new[] { "Blue Deployment Zone", "Deployment Line", "Opening Camera" },
                 new[] { Tool.Deployment, Tool.DeploymentLine, Tool.Camera }),
             simulation

@@ -792,3 +792,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — HUD1 — Added the tactical combat HUD for Skirmishes and Missions, including fixed-step time and speed controls, Citadel health, cached faction statistics and an interactive terrain/density minimap. Source implemented pending Godot visual and large-battle validation.
 
 - 2026-11-27 — TRENCH1 — Fixed a compile error by passing the concealment flag through recursive pursuit searches.
+
+- 2026-11-27 — Fixed trench placement on mouse release and added a Scenery palette for persistent, crushable destroyed buildings using the shared wreck mesh and navigation system.
