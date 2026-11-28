@@ -77,3 +77,12 @@ Choose **Terrain → Geothermal Vent**. The placement disc shows the eruption ra
 ## Trench
 
 Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end or drag and release. The line snaps to the nearest map axis. The preview shows the narrow floor and two side ramps, one near each end on opposite sides. Steel panels line the trench and asphalt marks the ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.
+
+### Clash support sandbox
+
+Open **Test Clash**, deploy Blue troops and start the painted battle. The bottom
+support bar lets you arm **Airstrike** or **Repair pod**, then click the map to
+call it in. Right-click or Esc cancels targeting. Calls have unlimited uses.
+The flyover, payload and repair drones are visual objects outside the combat
+roster. The airstrike damages enemy ground troops in its blast radius. The pod
+deploys three drones for 12 seconds to restore nearby living Blue units.

@@ -189,6 +189,7 @@ public partial class BenchmarkArena : Node3D
         // Keep the gameplay bar separate from BENCHMARK's developer panels.
         var gameplayHudLayer = new CanvasLayer { Layer = 2 };
         AddChild(gameplayHudLayer);
+        if (EnableSupportTest) AddSupportControls(gameplayHudLayer);
         if (autoBattlerPlaytestMap != null)
         {
             if (campaignRoster != null) CreateTacticalHud(gameplayHudLayer);
@@ -280,6 +281,7 @@ public partial class BenchmarkArena : Node3D
     // =========================================================
     private void Clear()
     {
+        ResetSupport();
         generatedMixedRoster = false;
         armyBalanceHud?.Reset();
         tacticalHud?.Reset();
@@ -810,10 +812,11 @@ public partial class BenchmarkArena : Node3D
                     campaignHud.ShowBattle();
                     StartTacticalHud();
                 }
+                supportControls?.Show();
                 panel.Summary.ResetSamples();
             }
         }
-        else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0 || ReservesPending || airSquadron != null))
+        else if (units != null && !paused && mode != BenchmarkMode.RenderingOnly && (units.Alive > 0 || projectiles.Count > 0 || ReservesPending || airSquadron != null || battleSupport?.Active == true))
         {
             if (navigation != null)
             {
@@ -846,6 +849,9 @@ public partial class BenchmarkArena : Node3D
                     airSquadron?.Step(Config.TickSeconds, units, grid, projectiles, shockwaves);
                     defenseSystem?.StepAir(airSquadron, projectiles, Config.TickSeconds);
                 }
+                if (battleSupport?.Active == true)
+                    battleSupport.Step(units, grid, shockwaves, Config.TickSeconds,
+                        2f * (units.MaximumTravelSpeed * Config.TickSeconds + separationPushPerStep), supportDamageType);
                 accumulator -= Config.TickSeconds;
                 steps++;
                 if (offenseBattleEnded) { accumulator = 0; break; }

@@ -295,6 +295,16 @@ public sealed class UnitState
         return targets.Add(defender);
     }
 
+    internal void RestoreHealth(int id, float amount)
+    {
+        if ((uint)id >= (uint)Count || Health[id] <= 0f || amount <= 0f || !float.IsFinite(amount)) return;
+        float restored = Mathf.Min(amount, Catalog[Type[id]].Health - Health[id]);
+        if (restored <= 0f) return;
+        Health[id] += restored;
+        if (ArmyStatistics != null) ArmyStatistics[Faction[id]].Health += restored;
+        Dirty[id] = true;
+    }
+
     public void Damage(int id, float damage, int damageType = 0, bool melee = false)
     {
         if (id < 0 || id >= Count || Health[id] <= 0) return;

@@ -477,6 +477,7 @@ public partial class LevelEditor : Node
                 var arena = MenuNavigation.LoadScene("res://BENCHMARK/BenchmarkArena.tscn").Instantiate<BenchmarkArena>();
                 arena.Config = (BenchmarkConfig)arena.Config.Duplicate();
                 test.LevelSettings = metadata;
+                arena.EnableSupportTest = test.AutoBattlerRules?.Objective == AutoBattlerRules.ObjectiveType.EliminateEnemy;
                 arena.ConfigureAutoBattlerPlaytest(test);
                 var container = new SubViewportContainer { Stretch = true };
                 var viewport = new SubViewport { OwnWorld3D = true };

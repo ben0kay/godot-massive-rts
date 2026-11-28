@@ -818,3 +818,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Reduced Tank size multiplier by 10% (1.55 to 1.395) and shifted enhanced hull, turret housing and track skirts to gunmetal with retained faction glacis, roof and central skirt accents. Existing turret scaling, Tier 4, combat stats and other units unchanged. Source review only; owner validation pending.
 
 - 2026-11-28 — Added an independently aimed short-range roof minigun to the Tank, with a separate cooldown and shared projectile and rendering systems.
+
+- 2026-11-28 — Added unlimited airstrike and repair pod calls to the Level Editor Clash sandbox. Support craft and drones are untargetable visual objects.

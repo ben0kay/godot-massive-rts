@@ -9,6 +9,7 @@ public partial class BenchmarkArena
 
     public override void _UnhandledInput(InputEvent input)
     {
+        if (HandleSupportInput(input)) return;
         if (towerInspection == null || painter == null || painter.Visible || spawning || defenseSystem == null ||
             input is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } click) return;
 
