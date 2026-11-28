@@ -806,3 +806,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — Gave the tank a recoiling barrel, hull pitch, track smoke and a 3-unit shell blast, and disabled its firing size pulse.
 
 - 2026-11-27 — Enforced a two-tier shove limit in crowd separation, allied yielding and cavalry charges.
+
+- 2026-11-27 — TANK-VIS1 — Added optional sleek faceted Tier 4 tank hull/turret, layered track skirts, rear vents and segmented recoiling gun with original muzzle/footprint. Enabled shared shell casing ejection at 0.8× from hull-facing turret port on successful shots. Original model selectable; recoil, chassis pitch, smoke, tread marks and combat unchanged. Source review only; owner Godot visual and casing alignment checks pending.

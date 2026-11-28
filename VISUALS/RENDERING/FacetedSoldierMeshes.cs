@@ -48,7 +48,7 @@ public static class FacetedSoldierMeshes
             meshes[i] = CreateUnitMesh(outline, type.Height, unitMaterial,
                 enhanced && type.Id == RuntimeUnitCatalog.CircleId,
                 visuals.UseEnhancedHexagonMesh && type.Id == RuntimeUnitCatalog.HexagonId,
-                catalog.Definition(i), includeIndependent: false, twoToneArmor: twoToneArmor);
+                catalog.Definition(i), includeIndependent: false, twoToneArmor: twoToneArmor, enhancedTank: visuals.UseEnhancedTankMesh);
         }
         return meshes;
     }
@@ -75,7 +75,7 @@ public static class FacetedSoldierMeshes
         return CreateUnitMesh(outline, Mathf.Max(0.01f, unit.Height) * size, material,
             visuals.UseEnhancedMeshes && unit.Id == RuntimeUnitCatalog.CircleId,
             visuals.UseEnhancedHexagonMesh && unit.Id == RuntimeUnitCatalog.HexagonId,
-            unit, includeIndependent: true, twoToneArmor: twoToneArmor);
+            unit, includeIndependent: true, twoToneArmor: twoToneArmor, enhancedTank: visuals.UseEnhancedTankMesh);
     }
 
     // Shared by the lit and unlit battle materials. Placement previews remain at rest.
@@ -139,7 +139,7 @@ public static class FacetedSoldierMeshes
             (id == RuntimeUnitCatalog.TwinRocketLauncherId && outline.IsDeepFork)));
 
     private static ArrayMesh CreateUnitMesh(UnitOutline outline, float height, Material material,
-        bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent, bool twoToneArmor)
+        bool enhancedCircle, bool enhancedHexagon, UnitDefinition unit, bool includeIndependent, bool twoToneArmor, bool enhancedTank)
     {
         using var surface = new SurfaceTool();
         surface.Begin(Mesh.PrimitiveType.Triangles);
@@ -181,7 +181,11 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.PikemanId) AppendPikeman(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.ObliteratorId) AppendObliteratorAssault(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PrismLanceId) AppendPrismLance(surface, outline, height);
-            else if (unit.Id == RuntimeUnitCatalog.TankId) AppendTank(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.TankId)
+            {
+                if (enhancedTank) AppendSleekTank(surface, outline, height);
+                else AppendTank(surface, outline, height);
+            }
             else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -567,6 +571,67 @@ public static class FacetedSoldierMeshes
 
     // =========================================================
     // Tracked siege chassis with a central armored turret and long cannon.
+    // =========================================================
+    // Faceted assault tank. Keep original track centers, rest muzzle and
+    // recoil tags. All detail is baked into the existing masked surface.
+    private static void AppendSleekTank(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        const float diagonal = .70710678f;
+        float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
+        Color Steel(float shade) => new(shade, 0f, 0f);
+        Color Paint(float shade) => new(0f, shade, 0f);
+        Color Trim(float shade) => new(0f, 0f, shade);
+        void Block(float px, float py, float pz, float w, float h, float d, Color mask, bool barrel = false) =>
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * .25f, new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, swingPart: barrel);
+        void Plate(float px, float py, float pz, float rx, float h, float rz, Color mask, Vector2[] points) =>
+            AppendPrism(surface, points.Length, rx * x, rz * z, h * height, 0f,
+                new Vector3(px * x, py * height, pz * z), mask,
+                sideShade: SoldierSideShade, armorMask: true, visualOutline: points);
+
+        // Convex cut-corner hulls with a swept nose and clipped aft shoulders.
+        Vector2[] wedge = { new(-.60f,-1f), new(.60f,-1f), new(1f,-.49f),
+            new(1f,.60f), new(.72f,1f), new(-.72f,1f), new(-1f,.60f), new(-1f,-.49f) };
+        Vector2[] turret = { new(-.52f,-1f), new(.52f,-1f), new(1f,-.38f),
+            new(1f,.42f), new(.62f,1f), new(-.62f,1f), new(-1f,.42f), new(-1f,-.38f) };
+        Plate(0f,-.18f,.10f,.84f,.45f,.775f,Steel(.88f),wedge);
+        Plate(0f,.065f,.05f,.78f,.24f,.79f,Paint(.96f),wedge);
+        Plate(0f,.16f,-.38f,.61f,.12f,.35f,Paint(.99f),wedge);
+        // Low angular turret, dark collar and contrasting armored roof.
+        Plate(0f,.32f,.17f,.51f,.39f,.425f,Paint(.92f),turret);
+        Plate(0f,.535f,.20f,.36f,.09f,.285f,Paint(1f),turret);
+        Block(0f,.525f,.05f,.34f,.055f,.15f,Steel(.72f));
+        Block(0f,.55f,-.03f,.24f,.04f,.035f,Trim(.92f));
+        Block(0f,.34f,-.23f,.39f,.25f,.24f,Steel(.95f));
+
+        // Segmented recoiling barrel: original forward endpoint -1.16*z.
+        Block(0f,.34f,-.52f,.20f,.16f,1.18f,Steel(.98f),barrel:true);
+        Block(0f,.34f,-.39f,.27f,.21f,.38f,Steel(.84f),barrel:true);
+        Block(0f,.34f,-.82f,.23f,.19f,.12f,Steel(.92f),barrel:true);
+        Block(0f,.34f,-1.07f,.30f,.24f,.18f,Steel(.65f),barrel:true);
+        Block(0f,.34f,-1.153f,.16f,.12f,.014f,Steel(.28f),barrel:true);
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            // Track geometry and ground contact remain at the original coordinates.
+            Block(side*.77f,-.31f,.10f,.43f,.37f,1.74f,Steel(.39f));
+            Plate(side*.77f,-.04f,.12f,.205f,.18f,.77f,Paint(.90f),wedge);
+            // Three armored skirt segments and rear cooling grilles.
+            for (int segment = 0; segment < 3; segment++)
+                Plate(side*.77f,-.095f,-.38f+segment*.49f,.212f,.12f,.215f,
+                    Paint(.83f+segment*.05f),wedge);
+            Block(side*.56f,.10f,-.69f,.21f,.07f,.07f,Trim(.94f));
+            Block(side*.42f,.20f,.60f,.22f,.10f,.25f,Steel(.78f));
+            for (int vent = 0; vent < 3; vent++)
+                Block(side*.42f,.25f,.51f+vent*.075f,.17f,.035f,.035f,Steel(.48f));
+        }
+        // Right-side receiver casing port: shared launch anchor is (+.56*x,
+        // .32*height, +.17*z) relative to the centered hull.
+        Block(.50f,.32f,.17f,.12f,.13f,.25f,Steel(.74f));
+        Block(.565f,.32f,.17f,.018f,.074f,.17f,Steel(.25f));
+    }
+
     private static void AppendTank(SurfaceTool surface, UnitOutline outline, float height)
     {
         const float diagonal = .70710678f;

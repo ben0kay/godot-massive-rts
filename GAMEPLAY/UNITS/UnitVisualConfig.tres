@@ -37,6 +37,7 @@ UseObliteratorAssaultMesh = true
 AnimateObliteratorAttack = true
 AnimateObliteratorWalk = true
 UsePrismLanceMesh = true
+UseEnhancedTankMesh = true
 AnimatePrismWeapon = true
 AnimatePrismWalk = true
 UseEnhancedVWingMesh = true

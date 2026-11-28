@@ -131,17 +131,30 @@ public sealed class ProjectileSystem
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
         if (launched && definition.EjectShellCasings && ShellCasingRequested != null)
         {
-            // Generic ground-unit fallback: eject from the side of the receiver
-            // near the shooter, not from the tip of a long gun.
-            Vector3 forward = aim - muzzle;
-            forward.Y = 0f;
-            forward = forward.Normalized();
-            if (forward.LengthSquared() > 0.001f)
+            if (units.Type[shooter] == RuntimeUnitCatalog.Tank)
             {
-                Vector3 side = forward.Cross(Vector3.Up);
-                Vector3 port = units.Position[shooter] + Vector3.Up * (type.Height * 0.70f)
-                    + side * Mathf.Clamp(type.Outline.RadiusX * 0.8f, 0.12f, 2f);
-                EmitShellCasing(port, side - forward * 0.25f, definition.ShellCasingScale);
+                // Tank receiver follows the actual hull facing, not shot spread.
+                // Local +X is the ejection side; +Z points behind the barrel.
+                const float diagonal = .70710678f;
+                Basis hull = MountedRocket.HullBasis(units.Facing[shooter], type.Shape);
+                Vector3 localPort = new(type.Outline.RadiusX * diagonal * .56f,
+                    type.Height * .32f, type.Outline.RadiusZ * diagonal * .17f);
+                Vector3 port = units.Position[shooter] + Vector3.Up * (type.Height * .5f) + hull * localPort;
+                EmitShellCasing(port, hull * new Vector3(1f, 0f, .25f), definition.ShellCasingScale);
+            }
+            else
+            {
+                // Generic ground-unit fallback: receiver side, not the muzzle.
+                Vector3 forward = aim - muzzle;
+                forward.Y = 0f;
+                forward = forward.Normalized();
+                if (forward.LengthSquared() > 0.001f)
+                {
+                    Vector3 side = forward.Cross(Vector3.Up);
+                    Vector3 port = units.Position[shooter] + Vector3.Up * (type.Height * 0.70f)
+                        + side * Mathf.Clamp(type.Outline.RadiusX * 0.8f, 0.12f, 2f);
+                    EmitShellCasing(port, side - forward * 0.25f, definition.ShellCasingScale);
+                }
             }
         }
         if (launched && mounts.Length > 1) units.AdvanceRocketMount(shooter, mounts.Length);

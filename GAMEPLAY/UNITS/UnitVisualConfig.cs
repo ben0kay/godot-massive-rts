@@ -41,6 +41,7 @@ public partial class UnitVisualConfig : Resource
     [Export] public bool AnimateObliteratorAttack { get; set; }
     [Export] public bool AnimateObliteratorWalk { get; set; }
     [Export] public bool UsePrismLanceMesh { get; set; }
+    [Export] public bool UseEnhancedTankMesh { get; set; }
     [Export] public bool AnimatePrismWeapon { get; set; }
     [Export] public bool AnimatePrismWalk { get; set; }
     [Export] public bool UseEnhancedVWingMesh { get; set; }
