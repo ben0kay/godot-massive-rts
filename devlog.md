@@ -836,3 +836,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Added compact size tier labels to unit cards in the editor, benchmark and battle deployment bars.
 
 - 2026-11-28 — Made Tier 6 and larger units immune to cosmetic Heavy projectile wobble.
+
+- 2026-11-28 — Moved unit size tiers into the top-right corner of placement cards as numbers only.

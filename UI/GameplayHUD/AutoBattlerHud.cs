@@ -69,7 +69,7 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
             var group = new ButtonGroup();
             foreach (var choice in choices)
             {
-                var button = UIButtonFactory.Create($"{choice.Name} · {UnitPlacementBar.TierLabel(choice.SizeTier)}",
+                var button = UIButtonFactory.Create(choice.Name,
                     () => select(choice.Type), UIButtonStyle.Compact);
                 button.ToggleMode = true;
                 button.ButtonGroup = group;
@@ -77,6 +77,9 @@ internal sealed partial class AutoBattlerHud : CanvasLayer
                 var card = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
                 rows.AddChild(card);
                 card.AddChild(button);
+                var tierNumber = UnitPlacementBar.AddTierNumber(button, choice.SizeTier);
+                button.CustomMinimumSize = new Vector2(button.GetCombinedMinimumSize().X +
+                    2f * (tierNumber.GetCombinedMinimumSize().X + 4f), button.CustomMinimumSize.Y);
                 var label = MenuLayout.Label("", muted: true);
                 label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
                 card.AddChild(label);

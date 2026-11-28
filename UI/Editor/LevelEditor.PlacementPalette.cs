@@ -108,7 +108,7 @@ public partial class LevelEditor
                 i =>
                 {
                     var unit = i < units.Length ? units[i] : aircraft[i - units.Length];
-                    return UnitPlacementBar.Stats(unit.Health, unit.Damage, unit.SizeTier);
+                    return UnitPlacementBar.Stats(unit.Health, unit.Damage);
                 }, (icon, i) =>
                 {
                     if (i < units.Length)
@@ -134,7 +134,7 @@ public partial class LevelEditor
                 }, paletteTools, selectFirst: false, configureCard: (card, i) =>
                 {
                     if (i >= units.Length) aircraftCards.Add(card);
-                }),
+                }, tierFor: i => (i < units.Length ? units[i] : aircraft[i - units.Length]).SizeTier),
             BuildDefenses(),
             ToolPage(new[] { "Rocks", "Forest", "Undergrowth", "Water", "Marsh", "Road", "Organic Elevation", "Tiered Elevation", "Bridge", "Industrial Walls", "Cliff Painter", "Geothermal Vent", "Trench" },
                 new[] { Tool.Rock, Tool.Forest, Tool.Undergrowth, Tool.Water, Tool.Marsh, Tool.Road, Tool.Elevation, Tool.TieredElevation, Tool.Bridge, Tool.Wall, Tool.Cliff, Tool.Vent, Tool.Trench }),
