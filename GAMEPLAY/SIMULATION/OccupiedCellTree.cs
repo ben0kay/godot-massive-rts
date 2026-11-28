@@ -77,7 +77,7 @@ internal sealed class OccupiedCellTree
         if (nodes.Count == 0) return -1;
         int best = previous >= 0 && units.Health[previous] > 0 && (!concealment || units.CanDetectGroundTarget(origin, previous)) ? previous : -1;
         float bestDistance = best >= 0 ? origin.DistanceSquaredTo(units.Position[best]) : float.PositiveInfinity;
-        Search(0, units, next, origin, pruneCells, ref best, ref bestDistance);
+        Search(0, units, next, origin, pruneCells, concealment, ref best, ref bestDistance);
         return best;
     }
 
@@ -102,7 +102,7 @@ internal sealed class OccupiedCellTree
         return Bound(min - margin, max + margin, origin);
     }
 
-    private void Search(int index, UnitState units, int[] next, Vector3 origin, bool pruneCells, ref int best, ref float bestDistance)
+    private void Search(int index, UnitState units, int[] next, Vector3 origin, bool pruneCells, bool concealment, ref int best, ref float bestDistance)
     {
         Node node = nodes[index];
         if (Bound(node, origin) >= bestDistance) return;
@@ -110,8 +110,8 @@ internal sealed class OccupiedCellTree
         {
             int near = node.Left, far = node.Right;
             if (Bound(nodes[far], origin) < Bound(nodes[near], origin)) (near, far) = (far, near);
-            Search(near, units, next, origin, pruneCells, ref best, ref bestDistance);
-            Search(far, units, next, origin, pruneCells, ref best, ref bestDistance);
+            Search(near, units, next, origin, pruneCells, concealment, ref best, ref bestDistance);
+            Search(far, units, next, origin, pruneCells, concealment, ref best, ref bestDistance);
             return;
         }
 
