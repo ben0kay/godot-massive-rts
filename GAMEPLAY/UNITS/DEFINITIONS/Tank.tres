@@ -29,6 +29,4 @@ Reach = 42.0
 AllowedTargets = 3
 StructureDetectionRange = 42.0
 Projectile = ExtResource("2")
-RangedRecoilEnabled = true
-RangedRecoilDistance = 0.42
-RangedRecoilReturnSeconds = 0.32
+PulseOnAttack = false

@@ -96,7 +96,9 @@ public static class FacetedSoldierMeshes
         material.SetShaderParameter("obliterator_assault", assault);
         material.SetShaderParameter("prism_lance", prism);
         material.SetShaderParameter("siege_ram", ram);
-        material.SetShaderParameter("infantry_attack", ram || (circle && visuals.AnimateCircleSword) ||
+        bool tank = id == RuntimeUnitCatalog.TankId;
+        material.SetShaderParameter("tank", tank);
+        material.SetShaderParameter("infantry_attack", tank || ram || (circle && visuals.AnimateCircleSword) ||
             (square && visuals.AnimateSquareAttack) || (siege && visuals.AnimateHexagonAttack) ||
             (archer && visuals.AnimateTriangleFire) || (elite && visuals.AnimatePentagonAttack) ||
             (cavalry && visuals.AnimateDiamondAttack) || (breacher && visuals.AnimateHBreacherAttack) ||
@@ -571,17 +573,17 @@ public static class FacetedSoldierMeshes
         float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
         Color steel = new(.91f, 0f, 0f), tracks = new(.39f, 0f, 0f);
         Color paint = new(0f, .92f, 0f), trim = new(0f, 0f, .90f);
-        void Block(float px, float py, float pz, float w, float h, float d, Color color) =>
+        void Block(float px, float py, float pz, float w, float h, float d, Color color, bool barrel = false) =>
             AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
                 Mathf.Pi * .25f, new Vector3(px * x, py * height, pz * z), color,
-                sideShade: SoldierSideShade, armorMask: true);
+                sideShade: SoldierSideShade, armorMask: true, swingPart: barrel);
 
         Block(0f, -.18f, .1f, 1.68f, .45f, 1.55f, steel);
         Block(0f, .12f, -.36f, 1.45f, .22f, .68f, steel);
         Block(0f, .32f, .17f, 1.02f, .39f, .85f, steel);
         Block(0f, .54f, .20f, .72f, .08f, .57f, paint);
-        Block(0f, .34f, -.52f, .20f, .16f, 1.18f, steel);
-        Block(0f, .34f, -1.07f, .30f, .24f, .18f, tracks);
+        Block(0f, .34f, -.52f, .20f, .16f, 1.18f, steel, barrel: true);
+        Block(0f, .34f, -1.07f, .30f, .24f, .18f, tracks, barrel: true);
         for (int side = -1; side <= 1; side += 2)
         {
             Block(side * .77f, -.31f, .10f, .43f, .37f, 1.74f, tracks);

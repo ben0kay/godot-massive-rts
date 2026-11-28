@@ -64,7 +64,8 @@ public sealed class ProjectileSystem
         var mounts = units.Catalog.PrimaryRockets(units.Type[shooter]);
         int projectile = mounts.Length == 0 ? type.ProjectileType : mounts[units.RocketMountIndex(shooter)].Projectile;
         Vector3 aim = units.Position[victim];
-        if (catalog.Flight(projectile).ExplosionRadius <= 0f) aim.Y += target.Height * 0.5f;
+        if (catalog.Flight(projectile).ExplosionRadius <= 0f || units.Type[shooter] == RuntimeUnitCatalog.Tank)
+            aim.Y += target.Height * 0.5f;
         Launch(shooter, units, aim, type, againstStructure: false);
     }
 
@@ -112,7 +113,20 @@ public sealed class ProjectileSystem
         bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
             (againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage)) * units.AttackMultiplier(shooter),
             againstStructure ? type.StructureDamageType : type.UnitDamageType);
-        if (launched) units.RevealFromTrench(shooter);
+        if (launched)
+        {
+            units.RevealFromTrench(shooter);
+            if (units.Type[shooter] == RuntimeUnitCatalog.Tank && MuzzleSmokeRequested != null)
+            {
+                Vector2 heading = units.Facing[shooter];
+                Vector3 lateral = new(-heading.Y, 0f, heading.X);
+                Vector3 smokeBase = units.Position[shooter] -
+                    new Vector3(heading.X, 0f, heading.Y) * (type.Outline.RadiusZ * .38f);
+                Vector3 trackOffset = lateral * (type.Outline.RadiusX * .55f);
+                EmitMuzzleSmoke(units.OnTerrain(smokeBase + trackOffset) + Vector3.Up * .18f, .85f);
+                EmitMuzzleSmoke(units.OnTerrain(smokeBase - trackOffset) + Vector3.Up * .18f, .85f);
+            }
+        }
         if (launched && !againstStructure)
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
         if (launched && definition.EjectShellCasings && ShellCasingRequested != null)

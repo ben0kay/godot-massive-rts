@@ -10,6 +10,7 @@ uniform bool pentagon_elite = false;
 uniform bool diamond_cavalry = false;
 uniform bool h_breacher = false;
 uniform bool siege_ram = false;
+uniform bool tank = false;
 uniform bool long_marksman = false;
 uniform bool pikeman = false;
 uniform bool obliterator_assault = false;
@@ -32,7 +33,19 @@ void vertex() {
         float swing = floor(fracture / 16.0);
         fracture = mod(fracture, 16.0);
         stomping = hexagon_siege && swing > 0.0 && INSTANCE_CUSTOM.z > 0.5;
-        if (stomping) {
+        if (tank) {
+            if (swing > 0.0) {
+                float age = (swing - 1.0) / 14.0;
+                float kick = 1.0 - smoothstep(0.0, 1.0, age);
+                if (UV.x < -0.5) VERTEX.z += infantry_height * 0.24 * kick;
+                float angle = 0.075 * kick;
+                float c = cos(angle), s = sin(angle);
+                mat2 pitch = mat2(vec2(c, s), vec2(-s, c));
+                vec2 pivot = vec2(-infantry_height * 0.5, half_extent.y * 0.6);
+                VERTEX.yz = pivot + pitch * (VERTEX.yz - pivot);
+                NORMAL.yz = pitch * NORMAL.yz;
+            }
+        } else if (stomping) {
             // The radial damage already occurred. Brace sharply, then recover.
             // Both boots stay on the ground during the stomp.
             float t = (swing - 1.0) / 14.0;

@@ -112,6 +112,7 @@ public sealed class HitFeedbackSystem
     // Longer weapon motion is purely visual; the original attack pulse stays 0.16s.
     private float AttackDurationFor(byte type) =>
         type == RuntimeUnitCatalog.SiegeRam ? 0.8f :
+        type == RuntimeUnitCatalog.Tank ? 0.32f :
         ExtendCircleSword && type == RuntimeUnitCatalog.Circle ? CircleSwordDuration :
         ExtendSquareAttack && type == RuntimeUnitCatalog.Square ? SquareAttackDuration :
         ExtendTriangleFire && type == RuntimeUnitCatalog.Triangle ? TriangleFireDuration :
