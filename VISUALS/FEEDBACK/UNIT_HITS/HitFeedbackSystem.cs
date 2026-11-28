@@ -131,7 +131,7 @@ public sealed class HitFeedbackSystem
     internal float AttackPhase(int id, byte type, float recoilSeconds = 0f) => attackRemaining[id] > 0f
         ? Mathf.Clamp(1f - attackRemaining[id] / AttackDurationFor(type, recoilSeconds), 0f, 1f) : -1f;
 
-    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue, bool pulseOnAttack = true, float recoilSeconds = 0f)
+    public (float Flash, float Scale) Evaluate(int id, byte type = byte.MaxValue, bool pulseOnAttack = true, float recoilSeconds = 0f, float sizeTier = 1f)
     {
         float attackAge = (AttackDurationFor(type, recoilSeconds) - attackRemaining[id]) / AttackDuration;
         float attackScale = pulseOnAttack && attackRemaining[id] > 0f && attackAge >= 0f && attackAge < 1f ? 0.15f * (attackAge < 0.28f
@@ -139,7 +139,8 @@ public sealed class HitFeedbackSystem
         if (remaining[id] <= 0f) return (0f, 1f + attackScale);
         float age = duration - remaining[id];
         float flash = age < flashDuration ? (meleeFlash[id] ? 0.35f : 1f) : 0f;
-        return (flash, 1f + Mathf.Max(attackScale, Expansion(id, age)));
+        float tierWeight = Mathf.Clamp((4f - sizeTier) / 3f, 0f, 1f);
+        return (flash, 1f + Mathf.Max(attackScale, Expansion(id, age) * tierWeight));
     }
 
     private float Expansion(int id, float age)

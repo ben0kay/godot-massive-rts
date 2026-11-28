@@ -408,7 +408,7 @@ public partial class ArmyRenderer : Node3D
         byte type = units.Type[id];
         var primary = units.HasIndependentPrimary ? units.Catalog.IndependentPrimary(type) : null;
         float recoilSeconds = primary?.RecoilSeconds ?? 0f;
-        var (flash, scale) = units.HitFeedback?.Evaluate(id, type, units.Catalog.Definition(type).PulseOnAttack, recoilSeconds) ?? (0f, 1f);
+        var (flash, scale) = units.HitFeedback?.Evaluate(id, type, units.Catalog.Definition(type).PulseOnAttack, recoilSeconds, units.Catalog[type].SizeTier) ?? (0f, 1f);
         bool white = flash > 0f;
         if (stride == InfantryWalkStride)
         {

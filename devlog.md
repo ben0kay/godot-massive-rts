@@ -840,3 +840,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Moved unit size tiers into the top-right corner of placement cards as numbers only.
 
 - 2026-11-28 — Reduced the default ground-unit damage pulse from 6% to 3%.
+
+- 2026-11-28 — Tapered ground-unit hit size pulses by tier, with no hit size expansion at Tier 4 or higher.
