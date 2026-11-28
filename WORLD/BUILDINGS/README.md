@@ -38,7 +38,7 @@ Editable values in `DEFINITIONS/RocketTower001.tres` include 1,800 HP, an **18�
 
 ## Shield Generator
 
-The static support tower now uses the same charcoal-metal / faction armor / emissive trim material as Railgun and Broadside. Its distinct radial reactor crown, layered foundation, four armored emitter pylons and illuminated core are baked in `RENDERING/ShieldGeneratorMeshes.cs` into one existing tower batch. Its 2×2 footprint, 1,250 HP, default 21-unit influence radius and shield mechanics are unchanged.
+The static support tower now uses the same charcoal-metal / faction armor / emissive trim material as Railgun and Broadside. Its distinct radial reactor crown, layered foundation, four armored emitter pylons and illuminated core are baked in `RENDERING/ShieldGeneratorMeshes.cs` into one existing tower batch. Its 2×2 footprint, 1,250 HP, current 28.98-unit influence radius uses the same shared shield mechanics.
 
 `RENDERING/ShieldFieldDomeRenderer.cs` draws a separate, lazy compact MultiMesh of shallow open-bottom transparent domes. XZ size uses the compiled shield radius; height is 55% of radius for tactical readability. `RENDERING/ShieldFieldDome.gdshader` uses 1.2% face opacity and up to 12% at grazing edges, no lights, animation, depth writes or shadows. Domes are cosmetic, appear on placement/previews, disappear on destruction/erase/reset, and follow the owning faction. Benchmark → Shields → Show generator domes toggles battle domes independently of soldier shells, and disabling the shield mechanic hides them in battle. On slopes the dome can intersect terrain; the actual field uses XZ distance, not the surface. Owner visual/GPU validation pending.
 

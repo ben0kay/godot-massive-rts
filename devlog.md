@@ -810,3 +810,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — TANK-VIS1 — Added optional sleek faceted Tier 4 tank hull/turret, layered track skirts, rear vents and segmented recoiling gun with original muzzle/footprint. Enabled shared shell casing ejection at 0.8× from hull-facing turret port on successful shots. Original model selectable; recoil, chassis pitch, smoke, tread marks and combat unchanged. Source review only; owner Godot visual and casing alignment checks pending.
 
 - 2026-11-27 — TURRET1 — Added independent primary turret aiming, authored Tank mount and batched turret visuals, Entity Editor mount controls, and append-only Dreadnaught reinforcement state. Awaiting Godot validation.
+
+- 2026-11-28 — Increased stationary Shield Generator radius by 20% (24.15 to 28.98 world units), keeping dome visuals and gameplay coverage/interception aligned. Mobile Generator and other shield stats unchanged.
