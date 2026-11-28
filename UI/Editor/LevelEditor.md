@@ -86,3 +86,11 @@ call it in. Right-click or Esc cancels targeting. Calls have unlimited uses.
 The flyover, payload and repair drones are visual objects outside the combat
 roster. The airstrike damages enemy ground troops in its blast radius. The pod
 deploys three drones for 12 seconds to restore nearby living Blue units.
+
+### Undergrowth
+
+Choose **Terrain → Undergrowth**, then Grassland, Rocky, or Marsh. Set the
+brush radius, density (default 50%), and scale, then paint freehand or use
+**Rectangle fill**. Right-drag or use Erase to remove paint. Undo, redo, and save
+work like the other terrain layers. A new stroke replaces the settings of each
+covered cell. Density 0% leaves existing paint alone.

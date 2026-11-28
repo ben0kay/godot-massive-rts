@@ -52,6 +52,15 @@ public partial class WorldPaintData : Resource
 
     [Export(PropertyHint.Range, "0,0.5,0.01")] public float RoadSpeedBonus { get; set; } = 0.2f;
 
+    private Godot.Collections.Dictionary<Vector2I, int> undergrowthCells = new();
+
+    [Export]
+    public Godot.Collections.Dictionary<Vector2I, int> UndergrowthCells
+    {
+        get => undergrowthCells;
+        set { undergrowthCells = value ?? new(); EmitChanged(); }
+    }
+
     private Godot.Collections.Dictionary<Vector2I, int> rubbleCells = new();
 
     [Export]

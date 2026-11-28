@@ -820,3 +820,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Added an independently aimed short-range roof minigun to the Tank, with a separate cooldown and shared projectile and rendering systems.
 
 - 2026-11-28 — Added unlimited airstrike and repair pod calls to the Level Editor Clash sandbox. Support craft and drones are untargetable visual objects.
+
+- 2026-11-28 — UNDERGROWTH1 — Added Grassland, Rocky and Marsh paint presets with chunked decorative meshes, terrain and building masking, save data and editor stroke history.

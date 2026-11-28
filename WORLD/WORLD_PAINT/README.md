@@ -35,3 +35,14 @@ Ranged ground units standing in forest have 65% of their usual maximum attack ra
 ## Roads
 
 Road cells share the world-paint grid and reuse the terrain-following floor batch with a dark pavement material. Set `WorldPaintData.RoadSpeedBonus` to tune the default 20% speed bonus. Both factions benefit. The road multiplier applies after terrain slowdowns, and repeated paint does not accumulate. Navigation and aircraft use their existing behavior.
+
+### Decorative undergrowth
+
+`UndergrowthCells` stores one compact preset, density and scale stamp per cell.
+The layer uses deterministic clustered placement and shared, opaque low-poly
+meshes. Each 16×16-cell chunk batches its shapes into MultiMeshes with shadows
+off. Brush previews regenerate affected batches and reuse unchanged chunks.
+Terrain surface changes reseat the plants, while cliff edges, incompatible
+paint and building footprints suppress them. Shrinking a map hides out-of-bounds
+cells while retaining their paint data. An absent layer loads empty. The layer
+has no collision or combat effects.

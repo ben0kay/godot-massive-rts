@@ -443,6 +443,7 @@ internal sealed class CommandBuildings
         foreach (var structure in structures)
             if (!structure.Destroyed && structure is not CarbonExtractor) areas.Add(structure.Area);
         CoverField = areas.Count == 0 ? null : new ObstacleField(areas.ToArray(), movement.MapHalfWidth);
+        root.GetNodeOrNull<WorldPaint>("WorldPaint")?.SetUndergrowthBlockers(CoverField);
         areas.AddRange(movementWater);
         baseMovementField = areas.Count == 0 ? null : movementWater.Length == 0 && bridges.Length == 0
             ? CoverField : new ObstacleField(areas.ToArray(), movement.MapHalfWidth, bridges);

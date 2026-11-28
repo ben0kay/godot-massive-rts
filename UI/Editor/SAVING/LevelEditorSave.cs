@@ -199,6 +199,8 @@ internal static class LevelEditorSave
         if (paint?.Data is WorldPaintData barricadeData &&
             barricadeData.BlueBarricadeCells.Count + barricadeData.RedBarricadeCells.Count > WorldPaint.MaxBarricades)
             throw new InvalidOperationException("The light barricade layout exceeds the map paint budget.");
+        if (paint?.Data is WorldPaintData undergrowthData && !WorldPaint.ValidUndergrowth(undergrowthData.UndergrowthCells))
+            throw new InvalidOperationException("Undergrowth exceeds its paint budget or has an invalid preset, density or scale.");
         if (paint?.Data is WorldPaintData rubbleData && !WorldPaint.ValidRubble(rubbleData.RubbleCells))
             throw new InvalidOperationException("Rubble exceeds its paint budget or has an invalid variant.");
         if (paint?.Data is WorldPaintData forestData && forestData.ForestCells.Count > WorldPaint.MaxPaintedCells)
