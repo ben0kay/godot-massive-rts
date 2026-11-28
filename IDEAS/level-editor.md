@@ -1,15 +1,69 @@
-# Procedural Terrain / Map Generator — Codex proposal (MAPGEN1)
+# Level editor
+
+Tools for faster, more flexible terrain and scenario authoring. Read [current editor documentation](../UI/Editor/LevelEditor.md) before implementation.
+
+## Already source implemented
+Manual undergrowth painter (Grassland/Rocky/Marsh with density and scale), visible Undo/Redo, procedural terrain generator baseline, road and marsh paint, rubble, tiered/organic elevation, cliffs, bridges, geothermal vents, trenches and Light Barricades. Retain these systems; investigate specific shortcomings only when requested. Owner visual and gameplay acceptance is separate from implementation.
+
+## Terrain surface painter
+- **Proposal** — Cosmetic-only terrain material brush with soft blended edges, adjustable size and opacity; initial palette includes volcanic rock, dry earth, moss, concrete, snow and scorched earth. Preserve gameplay masks, height and obstacle data.
+- **Goal** — Make different regions and levels visually distinct without creating new terrain mechanics.
+- **Notes** — Use compact masks/chunked textures and shared shader/materials; avoid per-cell nodes. Reuse brush, rectangle fill, erase, undo and persistence.
+
+## Automatic undergrowth
+- **Proposal** — Extend UNDERGROWTH1 with optional deterministic decorative scatter around existing terrain: ferns/bushes at forest fringes, pebbles/scrub at cliff bases, reeds at riverbanks, sparse roadside weeds, stones near rock outcrops and wetland plants in marsh.
+- **Goal** — Quickly decorate authored and procedurally generated maps.
+- **Notes** — Preserve manual stamps, preview before applying, support a single undoable operation, skip incompatible surfaces and cap density. No gameplay effects or per-unit checks.
+
+## Productivity and placement tools
+
+| Idea | Proposal |
+| --- | --- |
+| Mirror painter | Mirror terrain, scenery, structures and optionally faction-swapped deployments across an adjustable axis. Preview and commit one operation. |
+| Region copy/paste | Select a rectangular region; copy selected layers, rotate/mirror where supported, validate bounds and placement before applying. |
+| Prefab library | Save reusable fortress layouts, outposts, artillery batteries, defensive lines and formations as editable authored data with thumbnail and anchor. Stamp, rotate and validate; no new runtime object system. |
+| Polygon fill | Fill arbitrary closed outlines for compatible terrain paints; validate self-intersection and reuse brush data. |
+| Line/spline painter | Continuous straight or winding strokes with width for roads, water and barriers; extend existing line tools only where missing. |
+| Elevation smoothing | Reduce local height discontinuities without intentionally raising/lowering the entire patch; preserve protected surfaces and support undo. |
+| Height eyedropper | Sample actual current terrain elevation to set the existing height tool. |
+| Scatter brush | Deterministic varied rotation/scale/spacing of supported scenery objects, bounded by existing budgets. |
+| Layer visibility | Toggle display of units, defenses, terrain overlays or scenery independently in editor; don't change saved gameplay. |
+| Resize anchor | Choose the direction a map expands/shrinks; show conflicts and preserve or explicitly handle out-of-bounds content. |
+| Measurement tool | Measure world distance, bridge width and map dimensions. |
+| Range preview | Show attack/detection/ability radii of hovered placement, when not already supported. |
+| Navigation overlay | Display representative tier clearance, blocked cells and accessible regions; no thousands of path queries. |
+| Randomize selection | Adjust selected scenery rotations/scales within safe ranges; one undoable action. |
+| Undo history panel | Optional list of meaningful operations; reuse existing history rather than storing duplicate full maps. |
+| Map validation | Report objective/roster validity, inaccessible zones, narrow crossings, invalid placements and budget limits; use bounded connectivity checks. |
+| Test as player | Launch the exact saved Skirmish roster and rules rather than unrestricted editor testing; keep existing playtest. |
+| Level thumbnails | Generate cached overhead thumbnails for level picker and previews using existing terrain data. |
+
+## Environment controls
+Add a level-local Environment section with lighting, ambient color, fog and weather presets. Preview before saving, retain sensible defaults for older maps. See [visual updates](visual-updates.md#terrain-materials-and-atmosphere).
+
+## Scenario authoring
+Add optional event triggers, guard zones, patrols, starting conditions and objective metadata only after agreement on scenario behavior. See [maps and modes](maps-and-modes.md#scenario-events-and-objectives). Reuse current level rules and reserve authoring.
+
+## Generator follow-up priorities
+- Add supported biomes and layouts (Fortress Basin, Twin Plateaus, later Archipelago); use existing terrain data and safe layout constraints.
+- Automatic bridge placement with valid bank connection, sufficient width for relevant tiers and bounded connectivity validation.
+- Optional road routing and automatic undergrowth around supported terrain features.
+- Better candidate warnings, protected deployment/build zones and reproducible preview; do not change saved maps by regenerating them automatically.
+
+## Procedural map generator
+
+### Original MAPGEN1 design brief (retained for reference)
 
 **Repository:** ben0kay/godot-massive-rts · **Branch:** main  
-**Status:** Proposed / not implemented. This document records the owner's interest in a procedural generator and provides a future implementation brief. Implement only when explicitly requested.
+**Status:** Initial generator source implemented; remaining items are future ideas, not implementation authorization. Current Level Editor supports seeded Temperate maps (Open Plains, River Divide, Mountain Pass and Cliffs), 192–1024 map sizes, elevation/scenery settings, preview, forest layouts, river width/meander, manual bridge placement, and editable generated data with undo. Read [current editor documentation](../UI/Editor/LevelEditor.md) and live code before extending. The original proposed phases below are historical; do not repeat completed work.
 
-## 1. Objective
+#### 1. Objective
 
 Create entire editable battlefields from a seed and a small set of controls in the existing in-game Level Editor. The owner should be able to generate a map, immediately inspect it, manually raise/lower/flatten terrain, add or remove cliffs, forests, rocks, rivers and bridges, paint armies/defenses, and save it using the ordinary level workflow.
 
 Large open spaces for thousands of troops are the priority; geography should provide meaningful routes and chokepoints rather than blanket noise or obstacle clutter. Preserve the game's original isometric geometric sci-fi visual style and current ground material direction. The generator is an authoring tool first, not a new game mode or a replacement terrain engine.
 
-## 2. Read first and inspect live source
+#### 2. Read first and inspect live source
 
 - Root README.md, CodePreferences.md, endgoal.md and any applicable AGENTS.md.
 - WORLD/TERRAIN/README.md and WORLD/TERRAIN/TERR1_IMPLEMENTATION_PLAN.md (older design notes: verify actual implementation rather than importing stale assumptions, including simulation frequency and mode names).
@@ -19,7 +73,7 @@ Large open spaces for thousands of troops are the priority; geography should pro
 
 Current source already supports elevation brush offsets and undoable strokes, chunked terrain sampling (currently 32-cell chunks, 2.1 world-unit sample spacing), terrain surface grounding and painted rock/water/forest cells with bounded compilation. LevelEditorSave validates terrain and world-paint limits. Reuse these owners; inspect current limits and data contracts before writing code.
 
-## 3. Editor UX
+#### 3. Editor UX
 
 Add a Generate Terrain / Generate Map panel within the Level Editor, ideally using the existing UI factory/theme.
 
@@ -40,7 +94,7 @@ Provide a useful overhead preview and explicit Generate/Apply action. Changing s
 
 Generate into temporary data, validate, then commit as one logical undoable terrain edit if the existing history system supports it. Confirm replacing already-authored terrain/scenery. Default to preserving placed troops, defenses, structures, objectives, deployments and reinforcements; reject conflicts or require explicit owner confirmation. Never silently erase a level, overwrite a saved map, or resize it unexpectedly. Reuse ordinary save/reload and level identifiers.
 
-## 4. Generation pipeline
+#### 4. Generation pipeline
 
 1. Normalize settings and map bounds using existing level units/grid coordinates. Use a local deterministic seeded PRNG/noise source; separate feature streams for elevation, water, scenery and bridges where practical.
 2. Choose layout anchors: deployment zones, objective/build areas, major routes, river corridors and optional plateau locations. Keep enough genuinely flat open space for mass formations and large footprints. Respect existing authored protected regions if retaining content.
@@ -51,7 +105,7 @@ Generate into temporary data, validate, then commit as one logical undoable terr
 7. Compile a candidate through existing terrain/obstacle pipelines and perform bounded connectivity checks. Fix/reject unusable candidates; report why rather than retrying indefinitely. Keep deterministic retry limits and seed behavior.
 8. Apply candidate authored data through the current editor, refresh affected previews/geometry once, and save normally only when requested.
 
-## 5. Layout presets and playability
+#### 5. Layout presets and playability
 
 | Preset | Intended layout |
 | --- | --- |
@@ -66,7 +120,7 @@ For Clash, connect opposing legal deployment areas for relevant ground footprint
 
 Do not run thousands of individual A* requests. Validate a bounded coarse connectivity/clearance representation for representative footprint classes, then use existing precise checks where needed. This does not prove every combat route succeeds; owner tests remain necessary.
 
-## 6. Biomes and later terrain mechanics
+#### 6. Biomes and later terrain mechanics
 
 - Temperate: subdued ground colors, gently rolling land, forests, water and rock clusters.
 - Desert: dry rocky ground, broad dunes/valleys, sparse vegetation and dry channels.
@@ -74,9 +128,9 @@ Do not run thousands of individual A* requests. Validate a bounded coarse connec
 - Volcanic: dark basalt/rock, lava channels and glowing hot-ground patches.
 - Marshland: wet muddy ground, shallow pools and clustered vegetation.
 
-Ice traction, periodic lava damage and mass-dependent marsh slowdown are separate proposals in [gameplay-mechanics.md](gameplay-mechanics.md). First generator version should use existing supported surfaces, obstacles and materials. Do not represent unsupported mechanics as working; introduce new terrain surface masks, damage/movement policies and weighted routing only under separate approval. If a biome cannot be represented safely by existing systems, defer it or label its initial version cosmetic.
+Ice traction and periodic lava damage remain proposals; mass-dependent marsh slowdown is source implemented. See [gameplay-mechanics.md](gameplay-mechanics.md). First generator version should use existing supported surfaces, obstacles and materials. Do not represent unsupported mechanics as working; introduce new terrain surface masks, damage/movement policies and weighted routing only under separate approval. If a biome cannot be represented safely by existing systems, defer it or label its initial version cosmetic.
 
-## 7. Architecture and performance
+#### 7. Architecture and performance
 
 - Keep the generator and typed settings with terrain/world authoring (e.g. WORLD/TERRAIN/PROCEDURAL/ if justified); UI belongs with the Level Editor. Do not put generation in BenchmarkArena or create per-mode generators.
 - One shared authoritative heightfield, world-paint/obstacle compiler, terrain renderer, surface queries and navigation. Output existing editable elevation offsets/cells, WorldPaintData and supported bridge/cliff/level resources. No parallel map format or duplicate gameplay path.
@@ -86,7 +140,7 @@ Ice traction, periodic lava damage and mass-dependent marsh slowdown are separat
 - Determinism: same generator version + normalized settings + seed + preserved inputs should produce the same height/paint/bridge data, independent of frame timing. Stable ordering and bounded retries. Do not use global random state.
 - No extra battle overhead simply because a map was generated. Keep existing fixed-step timing, targeting, projectile, movement/separation and air/ground contracts intact. Existing limits must not be raised blindly.
 
-## 8. Proposed delivery phases
+#### 8. Proposed delivery phases
 
 | Phase | Scope |
 | --- | --- |
@@ -95,9 +149,9 @@ Ice traction, periodic lava damage and mass-dependent marsh slowdown are separat
 | MAPGEN1-C | Additional layouts and biome materials, richer cliff/plateau generation, editor preview polish; extend only supported terrain features |
 | MAPGEN1-D | Optional separately approved ice/lava/marsh gameplay and future strategic territory integration |
 
-Start with A if the owner asks to implement. Scope later phases independently; do not expand into campaign systems or new movement rules automatically. A future strategic Campaign may store a territory's seed, generated/authored map, biome and persistent fortress/resource state, but that is not needed for editor generation.
+The phases above describe the original design sequence, not the current implementation status. Inspect existing capabilities and scope only the requested remaining work; do not expand into campaign systems or new movement rules automatically. A future strategic Campaign may store a territory's seed, generated/authored map, biome and persistent fortress/resource state, but that is not needed for editor generation.
 
-## 9. Owner acceptance and validation
+#### 9. Owner acceptance and validation
 
 - Same seed/settings reproduce the candidate; a different seed gives meaningful variation.
 - Existing authored levels load unchanged. Generation does not silently delete armies, structures or objectives; undo/replacement and failed candidate behavior are safe.
@@ -106,6 +160,6 @@ Start with A if the owner asks to implement. Scope later phases independently; d
 - Check each applicable battle mode and map size supported by the current editor. Compare generated vs equivalently hand-painted maps with the same roster and count before making performance claims.
 - Follow CodePreferences: brief source/diff review, one practical dotnet build for C# changes if available, owner handles extended Godot/FPS testing. No unmeasured performance promises.
 
-## 10. Codex handoff
+#### 10. Codex handoff
 
 When authorized, read the referenced documents and inspect current editor/terrain/paint/save/navigation code. Report any conflicts with the proposal before broad changes. Implement the smallest agreed phase using existing data contracts and one focused commit, update relevant feature documentation and append the required devlog entry for actual source implementation. Report exact files, commit, checks and outstanding owner tests.
