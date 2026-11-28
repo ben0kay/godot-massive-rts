@@ -262,3 +262,7 @@ The Tier 2 Mobile Generator uses a modern two-tone hexagonal armored carrier wit
 Surviving Tier 2+ ground units can visibly rock on Heavy projectile damage
 when personal shields are down. Higher size tiers use smaller angles.
 This visual leaves movement, facing, weapons and collision intact.
+
+### Optional ground aura
+
+`UseGroundAura`, `GroundAuraScale` and `GroundAuraOpacity` are editable in Entity Editor → Appearance and size. Mobile Generator alone enables this by default: radius 1.4× its compiled footprint, peak intensity 0.16, gentle reactor-matched pulse. The shared ArmyRenderer aura batch follows live interpolated ground positions and removes dead units automatically; maximum 256 glows, lazy allocation. No shield coverage, lighting or combat changes. The small flat plane can intersect steep terrain, like blob shadows; no extra terrain queries. Reserve marching previews omit it until units enter the main battle.

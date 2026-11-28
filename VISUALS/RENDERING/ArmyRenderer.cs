@@ -160,6 +160,7 @@ public partial class ArmyRenderer : Node3D
         for (int i = 0; i < state.Count; i++) capacities[Batch(i)]++;
         batchShapes = shapes;
         batchMaterialOverride = materialOverride;
+        ConfigureGroundAuras();
         for (int b = 0; b < batchCount; b++)
             if (capacities[b] > 0) AllocateBatch(b, capacities[b]);
         shadowMesh = sharedShadow;
@@ -575,6 +576,79 @@ public partial class ArmyRenderer : Node3D
 
     // =========================================================
     private MultiMesh prismChargeLights;
+    private GroundAura[] groundAuraTypes;
+    private MultiMesh groundAuras;
+    private const int GroundAuraCapacity = 256;
+    private readonly record struct GroundAura(int Type, float Radius, float Opacity);
+
+    // =========================================================
+    // Cache opt-in settings once. Reserve-entry renderers use a special clipping
+    // material; omit the ground effect there until the units join the main army.
+    private void ConfigureGroundAuras()
+    {
+        if (batchMaterialOverride != null) return;
+        var enabled = new System.Collections.Generic.List<GroundAura>();
+        for (int type = 0; type < typeCount; type++)
+        {
+            var definition = units.Catalog.Definition(type);
+            if (!definition.UseGroundAura) continue;
+            float scale = float.IsFinite(definition.GroundAuraScale)
+                ? Mathf.Clamp(definition.GroundAuraScale, 0.5f, 3f) : 1.4f;
+            float opacity = float.IsFinite(definition.GroundAuraOpacity)
+                ? Mathf.Clamp(definition.GroundAuraOpacity, 0f, 0.5f) : 0.16f;
+            if (opacity > 0f)
+                enabled.Add(new GroundAura(type, units.Catalog[type].Footprint * scale, opacity));
+        }
+        if (enabled.Count > 0) groundAuraTypes = enabled.ToArray();
+    }
+
+    // Walk only packed live slots of opted-in types, never the whole roster again.
+    // Use the same interpolated ground pose as the blob shadow; death, spawning
+    // and reinforcement arrival are handled by the existing member lifecycle.
+    private void SyncGroundAuras()
+    {
+        if (groundAuraTypes == null) return;
+        int count = 0;
+        foreach (var aura in groundAuraTypes)
+        {
+            if (count >= GroundAuraCapacity) break;
+            Basis basis = Basis.FromScale(new Vector3(aura.Radius, 1f, aura.Radius));
+            for (int faction = 0; faction < Factions.Count && count < GroundAuraCapacity; faction++)
+            {
+                int batch = faction * typeCount + aura.Type;
+                int visible = Mathf.Min(counts[batch], GroundAuraCapacity - count);
+                if (visible == 0) continue;
+                if (groundAuras == null)
+                {
+                    groundAuras = new MultiMesh
+                    {
+                        TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+                        UseColors = true, Mesh = new PlaneMesh { Size = new Vector2(2f, 2f) },
+                        InstanceCount = GroundAuraCapacity, VisibleInstanceCount = 0
+                    };
+                    AddChild(new MultiMeshInstance3D
+                    {
+                        Name = "GroundAuras", Multimesh = groundAuras,
+                        MaterialOverride = new ShaderMaterial
+                        {
+                            Shader = GD.Load<Shader>("res://VISUALS/RENDERING/UnitGroundAura.gdshader")
+                        },
+                        CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
+                    });
+                }
+                Color tint = FactionColor(faction);
+                tint.A = aura.Opacity;
+                for (int slot = 0; slot < visible; slot++)
+                {
+                    Vector3 ground = GroundPose(members[batch][slot]);
+                    ground.Y += 0.055f;
+                    groundAuras.SetInstanceTransform(count, new Transform3D(basis, ground));
+                    groundAuras.SetInstanceColor(count++, tint);
+                }
+            }
+        }
+        if (groundAuras != null) groundAuras.VisibleInstanceCount = count;
+    }
 
     // Uses the packed charging list, so settled and non-Prism soldiers add no work.
     private void SyncPrismCharge()
@@ -675,6 +749,7 @@ public partial class ArmyRenderer : Node3D
             }
         }
         SyncPrismCharge();
+        SyncGroundAuras();
         SyncShieldShells();
         DenseUploads = SparseUploads = ChangedWrites = 0;
         long uploadStart = Stopwatch.GetTimestamp();

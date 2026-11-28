@@ -37,3 +37,7 @@ The shared unshaded ground-shadow material now uses **0.52 alpha instead of 0.26
 ## VIS2-B — Stronger soldier side contrast
 
 The shared soldier meshes now bake **25% darker side faces** and **12.5% darker bevel faces** into the unshaded vertex colors, leaving top faces and faction palette unchanged. Applies to every soldier outline, including H Breacher and artillery, without affecting sizes, collision, batching, hit feedback, or building geometry (the public beveled-rectangle helper retains the previous shade by default). Owner in-game visual validation pending.
+
+### Unit ground aura
+
+ArmyRenderer caches opted-in unit types once and packs their live member slots into one lazy 256-instance additive ground-plane batch during Sync. The shader animates opacity from TIME even when the army is stationary; no per-unit timers, material instances or spatial queries. Position uses GroundPose (same interpolation as the blob shadow). Flat terrain approximation may clip slopes; depth testing stays enabled. Special reserve-entry clip renderers omit the aura. Only Mobile Generator opts in by default.

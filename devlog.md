@@ -842,3 +842,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-28 — Reduced the default ground-unit damage pulse from 6% to 3%.
 
 - 2026-11-28 — Tapered ground-unit hit size pulses by tier, with no hit size expansion at Tier 4 or higher.
+
+- 2026-11-28 — Added opt-in fake faction-tinted ground aura for Mobile Generator (1.4× footprint radius, 0.16 intensity), Entity Editor controls and one lazy 256-slot ArmyRenderer batch. Gentle shader pulse matches the shield reactor; no real lights or gameplay changes. Source review only; owner validation pending.

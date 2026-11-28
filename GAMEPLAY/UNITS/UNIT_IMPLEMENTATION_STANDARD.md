@@ -149,6 +149,7 @@ Select only the features appropriate to the role. The following are reusable whe
 | Infantry gaits and attacks | UnitVisualConfig per-type toggles, FacetedSoldierMeshes and shared animation shaders | Existing robot animation tags; new shape may require explicit wiring |
 | Vehicle exhaust / chassis motion | existing Tank/Siege Ram rendering hooks | Type-specific today; do not assume an exported universal vehicle-smoke flag |
 | Aircraft exhaust / crash | AirSquadronVisuals, AircraftExhaust and crash aftermath | Fighter/bomber hooks; verify mesh anchors, no per-aircraft particle nodes |
+| Fake ground glow | UseGroundAura, GroundAuraScale, GroundAuraOpacity; ArmyRenderer | Mobile Generator; capped additive visual underglow, not a real light or shield radius |
 | Shield shell | ShieldSystem and ShieldShellRenderer | Real recipients only, capped, faction tinted; no new gameplay |
 | Rally pulse/marker | RallyPulse and ShockwaveRenderer | Existing active-recipient visual; no extra buff logic or scans |
 | Piercing beam flash | PrismBeamEffects and shared beam glow | Bounded shot effects; not continuous per-unit lights |

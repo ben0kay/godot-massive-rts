@@ -193,3 +193,5 @@ Both Mobile Generator and Shield Generator use ShieldReactorGeometry.cs and Shie
 Heavy projectile impact tilt is applied to the existing unit transform around
 a lower pivot. Batched geometry follows that tilt while separately rendered
 weapons can apply the same tilt to their visual mount pose.
+
+Optional fake unit ground glows use the shared ArmyRenderer aura batch and UnitGroundAura.gdshader. Author UseGroundAura, radius relative to footprint and peak opacity on the unit definition; default off. Keep the soft faction-tinted glow local to the unit, not its ability radius. Use interpolated ground poses and a capped batch, no lights or extra simulation queries.

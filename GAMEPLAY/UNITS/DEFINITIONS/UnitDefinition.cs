@@ -29,6 +29,10 @@ public partial class UnitDefinition : Resource
     [Export(PropertyHint.Range, "1,5,0.5,or_greater")] public float SizeTier { get; set; } = 1f;
     [Export] public bool LeavesNavigationWreck { get; set; }
     [Export] public bool LeavesTreadMarks { get; set; }
+    // Optional fake ground illumination; radius is relative to compiled footprint.
+    [Export] public bool UseGroundAura { get; set; }
+    [Export(PropertyHint.Range, "0.5,3,0.05")] public float GroundAuraScale { get; set; } = 1.4f;
+    [Export(PropertyHint.Range, "0,0.5,0.01")] public float GroundAuraOpacity { get; set; } = 0.16f;
     // Optional cosmetic casing ejection on successful ground projectile shots.
     [Export] public bool EjectShellCasings { get; set; }
     [Export(PropertyHint.Range, "0.1,3,0.05")] public float ShellCasingScale { get; set; } = 0.4f;

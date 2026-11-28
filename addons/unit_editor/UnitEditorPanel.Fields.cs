@@ -65,6 +65,12 @@ public partial class UnitEditorPanel
             value => Unit.LeavesNavigationWreck = value, () => Unit.SizeTier >= 3f);
         Flag(nameof(Unit.LeavesTreadMarks), "Leaves tread marks", Unit.LeavesTreadMarks,
             value => Unit.LeavesTreadMarks = value, () => true);
+        Flag(nameof(Unit.UseGroundAura), "Fake ground glow", Unit.UseGroundAura,
+            value => Unit.UseGroundAura = value, () => true);
+        Number(nameof(Unit.GroundAuraScale), "Glow radius × footprint", () => Unit.GroundAuraScale,
+            value => Unit.GroundAuraScale = value, 0.5, 3, 0.05, "×", () => Unit.UseGroundAura);
+        Number(nameof(Unit.GroundAuraOpacity), "Glow intensity", () => Unit.GroundAuraOpacity,
+            value => Unit.GroundAuraOpacity = value, 0, 0.5, 0.01, "", () => Unit.UseGroundAura);
         Flag(nameof(Unit.EjectShellCasings), "Eject shell casings", Unit.EjectShellCasings,
             value => Unit.EjectShellCasings = value, () => true);
         Number(nameof(Unit.ShellCasingScale), "Casing size", () => Unit.ShellCasingScale,
