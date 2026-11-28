@@ -46,7 +46,7 @@ public sealed class HitFeedbackSystem
         if (settings.UseHeavyImpactReaction) HeavyImpact = new HeavyImpactFeedback(settings);
         flashDuration = Clamp(settings.WhiteFlashDuration, 0f, 2f, 0.12f);
         pulseDuration = settings.PulseEnabled ? Clamp(settings.PulseDuration, 0.01f, 2f, 0.18f) : 0f;
-        peakExpansion = Clamp(settings.PulseMaxScale, 1f, 1.25f, 1.06f) - 1f;
+        peakExpansion = Clamp(settings.PulseMaxScale, 1f, 1.25f, 1.03f) - 1f;
         riseDuration = pulseDuration * Clamp(settings.PulseRiseFraction, 0.01f, 0.99f, 0.20f);
         fallDuration = pulseDuration - riseDuration;
         duration = Mathf.Max(flashDuration, pulseDuration);

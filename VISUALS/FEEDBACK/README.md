@@ -4,7 +4,7 @@
 
 **[VIS-IDEAS1: Unit and Battlefield Visual Ideas](UNIT_VISUAL_IDEAS_REVIEW.md)** is a **planning-only Codex review backlog** covering melee sparks, battlefield dust, directional hit wobble, large-unit ground disturbance, temporary explosion scars, projectile near-miss detail, extra armour wear and reactive forests. None of these ideas are authorized for implementation by the backlog itself. It builds on existing FX2 cracks/crumbling instead of replacing them.
 
-This major root folder houses reusable **presentation-only** effects. The first family is [UNIT_HITS / FB0](UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md): centralizes the white damage flash and adds a fast, subtle 6% size pulse, with a shared settings resource and no per-unit nodes or materials.
+This major root folder houses reusable **presentation-only** effects. The first family is [UNIT_HITS / FB0](UNIT_HITS/FB0_IMPLEMENTATION_PLAN.md): centralizes the white damage flash and adds a fast, subtle 3% size pulse, with a shared settings resource and no per-unit nodes or materials.
 
 ## Ownership and future growth
 
@@ -25,7 +25,7 @@ Combat and simulation keep authoritative health, damage, world position and unit
 
 Positive nonlethal damage registers a hit with the battle's feedback system. A packed list tracks active IDs so each tick advances only soldiers with active feedback. A new hit refreshes white and starts its pulse from the current visual size. Death removes the instance through the normal renderer path. Pause freezes the effect in simulation time, and respawn creates fresh state.
 
-The shared `UNIT_HITS/HitFeedbackSettings.tres` is used by Fortress Defense and assigned in the default benchmark resource. Defaults are a 0.12-second white flash and a 1.06× pulse over 0.18 seconds, with a fast rise over the first 20%. Disable Pulse Enabled for a white-only comparison. Settings are read when the next battle starts. The grounded scale is applied to the packed renderer transform only. Visual changes are sampled on the 60 Hz core simulation ticks.
+The shared `UNIT_HITS/HitFeedbackSettings.tres` is used by Fortress Defense and assigned in the default benchmark resource. Defaults are a 0.12-second white flash and a 1.03× pulse over 0.18 seconds, with a fast rise over the first 20%. Disable Pulse Enabled for a white-only comparison. Settings are read when the next battle starts. The grounded scale is applied to the packed renderer transform only. Visual changes are sampled on the 60 Hz core simulation ticks.
 
 ## Ranged recoil (visual-only)
 
