@@ -48,6 +48,7 @@ internal static class PrismLanceCombat
         segment *= Clip(units, cover, muzzle, segment);
         budget--;
         Strike(units, grid, id, type, muzzle, segment, padding);
+        units.RevealFromTrench(id);
         effects.EmitPrismBeam(muzzle, muzzle + segment, units.Faction[id], type.PrismBeam.FlashSeconds);
         units.HitFeedback?.OnAttack(units, id);
         units.RangedRecoil?.OnFire(units, id, target);

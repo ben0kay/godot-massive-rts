@@ -69,6 +69,30 @@ public sealed class UnitState
 
     internal HashSet<Vector2I> MarshCells { get; set; }
 
+    internal TrenchField Trenches { get; set; }
+    private float trenchClock;
+    private float[] trenchRevealUntil;
+
+    internal void AdvanceTrenchClock(float delta)
+    {
+        if (Trenches != null) trenchClock += delta;
+    }
+
+    internal bool CanDetectGroundTarget(Vector3 observer, int target)
+    {
+        if (Trenches == null || Catalog[Type[target]].SizeTier > 1f || IsAirborne(target) ||
+            (trenchRevealUntil != null && trenchRevealUntil[target] > trenchClock)) return true;
+        var concealment = Trenches.Occupied(Position[target]);
+        return concealment == null || Trenches.Occupied(observer, includeRamps: true) == concealment;
+    }
+
+    internal void RevealFromTrench(int id)
+    {
+        if (Trenches == null || Catalog[Type[id]].SizeTier > 1f || Trenches.Occupied(Position[id]) == null) return;
+        trenchRevealUntil ??= new float[Position.Length];
+        trenchRevealUntil[id] = trenchClock + 2f;
+    }
+
     internal GeothermalHazards Geothermal { get; set; }
     internal bool IsAirborne(int id) => Geothermal?.IsAirborne(id) == true;
     internal BarricadeField Barricades { get; set; }

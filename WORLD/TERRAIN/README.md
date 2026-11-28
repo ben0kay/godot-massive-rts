@@ -25,3 +25,7 @@ The Tiered Elevation tool writes absolute plateau heights with blended edges to 
 ## Geothermal vents
 
 Vents are neutral terrain objects. Their default cycle is 8 seconds dormant, 2 seconds warning, and 1 second erupting. The eruption launches nearby ground units below Tier 4 once. Launched units temporarily suspend their ground movement and attacks while retaining their orders. Landing uses the shared terrain and movement blockers. Damage defaults to zero. Vents use the soldier spatial grid and track only active launches, with up to 32 vents per map.
+
+## Defensive trenches
+
+Trenches cut the compiled heightfield without baking over authored elevation samples. A trench has a floor and two ramps. Movement-only side blockers direct infantry to the ramps. Tier 1 units can use the interior while larger units route around it. Trench membership is spatially indexed, and direct projectile sweeps near the excavation check the sampled terrain. Tier 1 concealment ends on ramps and is suppressed for two seconds after firing. Ground enemies in the trench can detect its occupants. Overhead attacks still use their normal damage rules. Up to 16 trenches may be authored per map.

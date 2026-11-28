@@ -345,7 +345,7 @@ internal sealed class DefenseSystem
     private static bool InRange(in Tower tower, UnitState units, int id, out float distance)
     {
         distance = ObstacleField.Xz(units.Position[id] - tower.Pivot).LengthSquared();
-        return units.Health[id] > 0f && units.Faction[id] != tower.Faction &&
+        return units.Health[id] > 0f && units.Faction[id] != tower.Faction && units.CanDetectGroundTarget(tower.Pivot, id) &&
             distance >= tower.Stats.MinimumRange * tower.Stats.MinimumRange &&
             distance <= tower.Stats.MaximumRange * tower.Stats.MaximumRange;
     }

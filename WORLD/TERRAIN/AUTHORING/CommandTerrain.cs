@@ -12,6 +12,8 @@ public partial class CommandTerrain : Node3D
     private Node3D preview, cliffPreview;
     private ShaderMaterial cliffRock;
     internal ObstacleRectangle[] CliffObstacles { get; private set; } = Array.Empty<ObstacleRectangle>();
+    internal ObstacleRectangle[] TrenchBlockers { get; private set; } = Array.Empty<ObstacleRectangle>();
+    internal TrenchField Trenches { get; private set; }
     private int elevationRevision;
     private Godot.Collections.Dictionary<Vector2I, float> elevation = new();
 
@@ -69,10 +71,17 @@ public partial class CommandTerrain : Node3D
         var hills = new List<Hill>();
         var hash = new HashCode();
         var cliffs = new List<TerrainCliff>();
+        var trenches = new List<TerrainTrench>();
         float half = GetParent() is CommandSandbox map ? map.MapSize * 0.5f : DeploymentLayout.WorldHalfWidth;
         hash.Add(half);
         foreach (Node child in GetChildren())
         {
+            if (child is TerrainTrench trench && trenches.Count < TerrainTrench.MaxPerMap && trench.Fits(half))
+            {
+                trenches.Add(trench);
+                hash.Add(trench.Start); hash.Add(trench.End);
+                hash.Add(trench.Width); hash.Add(trench.Depth); hash.Add(trench.Ramp);
+            }
             if (child is TerrainCliff cliff)
             {
                 cliffs.Add(cliff);
@@ -111,7 +120,9 @@ public partial class CommandTerrain : Node3D
         }
         CliffObstacles = Array.Empty<ObstacleRectangle>();
         Field = null;
-        if (hills.Count == 0 && elevation.Count == 0 && marsh == null)
+        Trenches = null;
+        TrenchBlockers = Array.Empty<ObstacleRectangle>();
+        if (hills.Count == 0 && elevation.Count == 0 && marsh == null && trenches.Count == 0)
         {
             Ground?.SetInstanceShaderParameter("terrain_replaces_ground", false);
             BuildCliffs(cliffs, half);
@@ -157,7 +168,7 @@ public partial class CommandTerrain : Node3D
         foreach (var chunk in editedChunks)
             regions.Add(new Rect2(((Vector2)chunk + Vector2.One * 0.5f) * (chunkSize * TerrainHeightField.Spacing), Vector2.Zero));
 
-        Field = new TerrainHeightField(regions, point =>
+        float BaseHeight(Vector2 point)
         {
             float height = 0f;
             foreach (var hill in hills)
@@ -169,7 +180,27 @@ public partial class CommandTerrain : Node3D
             }
             var key = (Vector2I)(point / TerrainHeightField.Spacing).Round();
             return height + (elevation.TryGetValue(key, out float change) ? change : 0f) - MarshDepth(point, marsh);
+        }
+        var blockers = new List<ObstacleRectangle>(trenches.Count * 3);
+        foreach (var trench in trenches)
+        {
+            regions.Add(trench.Bounds.Grow(spacing));
+            trench.FloorHeight = Mathf.Min(BaseHeight(trench.Start),
+                Mathf.Min(BaseHeight(trench.End), BaseHeight((trench.Start + trench.End) * 0.5f))) - trench.Depth;
+            trench.AddMovementBlockers(blockers);
+        }
+        TrenchBlockers = blockers.ToArray();
+        Field = new TerrainHeightField(regions, point =>
+        {
+            float height = BaseHeight(point);
+            foreach (var trench in trenches)
+            {
+                if (!trench.Bounds.HasPoint(point)) continue;
+                height = Mathf.Lerp(height, Mathf.Min(height, trench.FloorHeight), trench.Blend(point));
+            }
+            return height;
         });
+        if (trenches.Count > 0) Trenches = new TrenchField(trenches, Field);
         var ground = Ground;
         if (ground?.GetActiveMaterial(0) is ShaderMaterial material)
         {

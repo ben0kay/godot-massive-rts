@@ -10,7 +10,7 @@ namespace MassiveRts;
 
 public partial class LevelEditor
 {
-    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road, Vent }
+    private enum Tool { Select, Move, Erase, Rock, Water, Forest, Elevation, Wall, Soldiers, Deployment, Citadel, Fabricator, Carbon, Camera, Defense, DeploymentLine, Bridge, ReserveEntry, RedOrders, Disruptor, FactionWall, Cliff, Aircraft, Marsh, Rubble, TieredElevation, Barricade, Road, Vent, Trench }
     private const float Grid = DeploymentLayout.CellSize;
     private Tool tool;
     private Node3D selected, layout;
@@ -54,7 +54,7 @@ public partial class LevelEditor
                 Tool.Bridge => "Draw bridge",
                 Tool.DeploymentLine => "Set deployment line",
                 Tool.Rock => "Paint rocks", Tool.Water => "Paint water", Tool.Forest => "Paint forest", Tool.Marsh => "Paint marsh", Tool.Road => "Paint road", Tool.Elevation => "Organic Elevation", Tool.TieredElevation => "Tiered Elevation", Tool.Rubble => "Ruins & Rubble",
-                Tool.Wall => "Industrial Walls", Tool.Vent => "Geothermal Vent", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
+                Tool.Wall => "Industrial Walls", Tool.Vent => "Geothermal Vent", Tool.Trench => "Trench", Tool.Barricade => "Light Barricade", Tool.Cliff => "Cliff Painter",
                 Tool.Deployment => "Paint Blue deployment zone", Tool.Move => "Move selection",
                 Tool.Camera => "Place opening camera", Tool.Carbon => "Place Carbon deposit",
                 Tool.Fabricator => "Place starting Fabricator", Tool.Citadel => "Move Citadel",
@@ -111,7 +111,7 @@ public partial class LevelEditor
             RefreshPlacementBatches();
             RefreshStrength();
         }
-        else RefreshMap(node is TerrainHill or TerrainCliff);
+        else RefreshMap(node is TerrainHill or TerrainCliff or TerrainTrench);
     }
 
     private void RefreshPlacementBatches()
@@ -181,6 +181,9 @@ public partial class LevelEditor
         if (ventSelection != null) VentSettings(ventSelection);
         switch (tool)
         {
+            case Tool.Trench:
+                TrenchControls();
+                break;
             case Tool.Vent:
                 Number(context, "Eruption radius", ventPlacementRadius, 1, 20, 0.5)
                     .ValueChanged += value => ventPlacementRadius = (float)value;
@@ -470,6 +473,7 @@ public partial class LevelEditor
         if (editingReserve && tool is not Tool.Soldiers) return;
         if ((tool is Tool.Wall or Tool.FactionWall or Tool.Barricade) && HandleWallPaint(input)) return;
         if (tool == Tool.Bridge && HandleBridge(input)) return;
+        if (tool == Tool.Trench && HandleTrench(input)) return;
         if ((tool == Tool.Marsh && marshRectangle || tool == Tool.Rubble && rubbleRectangle || tool == Tool.Road && roadRectangle) && HandleSceneryRectangle(input)) return;
         if (tool == Tool.Elevation && HandleElevation(input)) return;
         if (tool == Tool.TieredElevation && HandleTieredElevation(input)) return;
@@ -772,6 +776,7 @@ public partial class LevelEditor
     private void EndPaint()
     {
         CancelSceneryRectangle();
+        CancelTrench();
         EndAircraftStroke();
         EndElevation();
         PublishPaintPreview();
@@ -827,6 +832,7 @@ public partial class LevelEditor
                     group.Positions(0).Any(position => new Vector2(position.X - point.X, position.Z - point.Z).LengthSquared() <= 4),
                 TerrainHill hill => distance <= Mathf.Min(8, hill.Radius),
                 GeothermalVent => distance <= 1.6f,
+                TerrainTrench trench => trench.Floor.HasPoint(ObstacleField.Xz(point)),
                 _ => distance <= (node.Name == "Citadel" ? 7 : 4)
             };
             if (hit && distance < best) { best = distance; nearest = node; }
@@ -964,6 +970,7 @@ public partial class LevelEditor
 
     private void Move(Node3D node, Vector3 point)
     {
+        if (node is TerrainTrench) { SetStatus("Erase and redraw to relocate a trench."); return; }
         if (node is CommandLaserPlacement tower)
         {
             point = tower.SnapCenter(point);

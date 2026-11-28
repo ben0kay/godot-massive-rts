@@ -13,6 +13,7 @@ public sealed class ObstacleField
     private readonly Node[] nodes;
     private int nodeCount;
     private readonly float lowestWreckTier;
+    private readonly float highestMinimumBlockingTier;
     private System.Collections.Generic.Dictionary<float, ObstacleField> tierFields;
     private readonly bool hasInteriorEscape;
     private readonly Vector2?[] airborneHeights;
@@ -65,6 +66,7 @@ public sealed class ObstacleField
         for (int i = 0; i < leaves.Length; i++)
         {
             var area = rectangles[i];
+            highestMinimumBlockingTier = Mathf.Max(highestMinimumBlockingTier, area.MinimumBlockingTier);
             if (area.WreckTier > 0f) lowestWreckTier = Mathf.Min(lowestWreckTier, area.WreckTier);
             leaves[i] = new Leaf(new Box(area.Min, area.Max), area.AirborneHeightRange, area.AllowInteriorEscape);
             hasInteriorEscape |= area.AllowInteriorEscape;
@@ -77,10 +79,10 @@ public sealed class ObstacleField
 
     internal ObstacleField ForTier(float tier)
     {
-        if (tier <= lowestWreckTier) return this;
+        if (tier <= lowestWreckTier && tier >= highestMinimumBlockingTier) return this;
         tierFields ??= new();
         if (tierFields.TryGetValue(tier, out var cached)) return cached;
-        var remaining = Array.FindAll(rectangles, area => area.WreckTier == 0f || area.WreckTier >= tier);
+        var remaining = Array.FindAll(rectangles, area => tier >= area.MinimumBlockingTier && (area.WreckTier == 0f || area.WreckTier >= tier));
         return tierFields[tier] = new ObstacleField(remaining, Boundary, Bridges);
     }
 

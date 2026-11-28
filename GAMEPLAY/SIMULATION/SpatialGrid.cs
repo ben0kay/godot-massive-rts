@@ -170,7 +170,7 @@ public sealed class SpatialGrid
         bool varied = rank > 1 && !seeker.PrismBeam.Enabled;
         Span<(int Id, float Distance)> ranked = varied ? stackalloc (int, float)[3] : Span<(int, float)>.Empty;
         int rankedCount = 0;
-        if (varied && incumbent >= 0)
+        if (varied && incumbent >= 0 && units.CanDetectGroundTarget(position, incumbent))
         {
             float distance = position.DistanceSquaredTo(units.Position[incumbent]);
             if (distance <= bestDistance &&
@@ -207,7 +207,7 @@ public sealed class SpatialGrid
                     for (int other = Head(center.X + dx, center.Y + dz, faction); other >= 0; other = next[other])
                     {
                         if (++examined > budget) { LimitedQueries++; return varied ? ChooseRank(ranked, rankedCount, rank) : best; }
-                        if (units.Health[other] <= 0f || (varied && other == incumbent)) continue;
+                        if (units.Health[other] <= 0f || !units.CanDetectGroundTarget(position, other) || (varied && other == incumbent)) continue;
                         if (minimumSquared > 0f && ObstacleField.Xz(position).DistanceSquaredTo(ObstacleField.Xz(units.Position[other])) < minimumSquared)
                             continue;
                         float distance = position.DistanceSquaredTo(units.Position[other]);
@@ -271,7 +271,7 @@ public sealed class SpatialGrid
                 start = built;
             }
         }
-        int best = FindNearestEnemy(units, units.Position[id], enemies, previous);
+        int best = FindNearestEnemy(units, units.Position[id], enemies, previous, concealment: true);
         if (measure)
         {
             long elapsed = Stopwatch.GetTimestamp() - start;
@@ -327,13 +327,13 @@ public sealed class SpatialGrid
         pursuitTreesReady = true;
     }
 
-    private int FindNearestEnemy(UnitState units, Vector3 position, int enemies, int previous)
+    private int FindNearestEnemy(UnitState units, Vector3 position, int enemies, int previous, bool concealment = false)
     {
-        int best = previous;
+        int best = previous >= 0 && concealment && !units.CanDetectGroundTarget(position, previous) ? -1 : previous;
         for (int mask = enemies; mask != 0; mask &= mask - 1)
         {
             int faction = BitOperations.TrailingZeroCount(mask);
-            int found = pursuitTrees[faction].FindNearest(units, next, position, best, PrunePursuitCells);
+            int found = pursuitTrees[faction].FindNearest(units, next, position, best, PrunePursuitCells, concealment);
             if (found >= 0) best = found;
         }
         return best;

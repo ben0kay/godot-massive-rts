@@ -786,3 +786,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — ROAD1: Added saved road paint with brush and rectangle editing, terrain-following industrial pavement, and a configurable 20% ground movement bonus. Pathfinding remains unchanged. Owner Godot validation pending.
 
 - 2026-11-27 — GEO1: Added neutral, placeable geothermal vents with configurable cycles, pooled steam visuals and tier-scaled ground-unit launches. Flight uses shared terrain and obstacle checks. Owner Godot validation pending.
+
+- 2026-11-27 — TRENCH1: Added two-click trench authoring, heightfield excavation and end ramps, movement-only tier restrictions, and ground targeting concealment with a firing reveal. Source review only; owner Godot validation pending.

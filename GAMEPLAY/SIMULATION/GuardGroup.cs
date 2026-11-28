@@ -41,7 +41,7 @@ public sealed class GuardGroup
             if (!type.TargetsUnits) { units.Target[id] = -1; continue; }
             float engagementRadius = type.Ranged ? units.RangedReach(id, type) : radius;
             int target = units.Target[id];
-            if (type.PrismBeam.Enabled || !IsEngaging(units, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
+            if (type.PrismBeam.Enabled || !IsEngaging(units, id, target, ObstacleField.Xz(post), engagementRadius * engagementRadius))
             {
                 units.Target[id] = grid.FindEnemy(units, id, float.PositiveInfinity,
                     counterattack && !offense && !type.PrismBeam.Enabled ? int.MaxValue : config.QueryCandidateLimit, tick,
@@ -61,8 +61,8 @@ public sealed class GuardGroup
         return true;
     }
 
-    private static bool IsEngaging(UnitState units, int target, Vector2 post, float rangeSquared) =>
-        target >= 0 && units.Health[target] > 0f &&
+    private static bool IsEngaging(UnitState units, int id, int target, Vector2 post, float rangeSquared) =>
+        target >= 0 && units.Health[target] > 0f && units.CanDetectGroundTarget(units.Position[id], target) &&
         post.DistanceSquaredTo(ObstacleField.Xz(units.Position[target])) <= rangeSquared;
 
     public void Move(UnitState units, float dt, float separationGap, ObstacleField obstacles,
@@ -82,7 +82,7 @@ public sealed class GuardGroup
             var movementField = obstacles?.ForTier(type.SizeTier);
             float rangedReach = type.Ranged ? units.RangedReach(id, type) : 0f;
             float engagementRadiusSquared = type.Ranged ? rangedReach * rangedReach : radiusSquared;
-            bool engaging = IsEngaging(units, target, anchor, engagementRadiusSquared);
+            bool engaging = IsEngaging(units, id, target, anchor, engagementRadiusSquared);
             if (!engaging)
             {
                 units.Target[id] = -1;

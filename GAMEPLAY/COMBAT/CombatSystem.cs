@@ -57,7 +57,7 @@ public static class CombatSystem
                 int current = units.Target[i];
                 var cover = StructureCombat.Sight(attacker, units, obstacles);
                 if (current >= 0 &&
-                    (units.Health[current] <= 0f || units.Position[i].DistanceSquaredTo(units.Position[current]) > reach * reach ||
+                    (units.Health[current] <= 0f || !units.CanDetectGroundTarget(units.Position[i], current) || units.Position[i].DistanceSquaredTo(units.Position[current]) > reach * reach ||
                      cover?.BlocksSight(units.Position[i], units.Position[current]) == true))
                     current = -1;
                 if (current < 0 && i % localInterval == localPhase)
@@ -67,7 +67,7 @@ public static class CombatSystem
                 continue;
             }
             int previous = units.Target[i];
-            int target = previous >= 0 && units.Health[previous] > 0 ? previous : -1;
+            int target = previous >= 0 && units.Health[previous] > 0 && units.CanDetectGroundTarget(units.Position[i], previous) ? previous : -1;
 
             if (deadlines != null && target < 0 && previous >= 0 && deadlines[i] == 0)
                 deadlines[i] = tick + delaySteps;
@@ -202,7 +202,7 @@ public static class CombatSystem
             if (trample?.OverridesAttack(i) == true || structureCombat?.Target(i)?.Destroyed == false) continue;
             int target = units.Target[i];
             bool robotCircle = type.Shape == UnitShape.Circle && units.CircleUsesFacing;
-            if (target < 0 || units.Health[target] <= 0 || (units.Cooldown[i] > 0 && !robotCircle)) continue;
+            if (target < 0 || units.Health[target] <= 0 || !units.CanDetectGroundTarget(units.Position[i], target) || (units.Cooldown[i] > 0 && !robotCircle)) continue;
             if (!type.TargetsUnits || (useDreadnaughtContact && type.Outline.IsDreadnaught)) continue;
             Vector3 offset = units.Position[target] - units.Position[i];
             float radius = type.Ranged ? units.RangedReach(i, type) :
@@ -247,6 +247,9 @@ public static class CombatSystem
             {
                 if (!SoldierFacing.Aim(units, i, ObstacleField.Xz(offset), dt, type.Outline.IsChevron ? 0.995f : 0.97f))
                     continue;
+                if (type.DirectFire(units.Catalog.Projectiles) && units.Trenches is { } trenches &&
+                    trenches.BlocksFire(units.Position[i] + Vector3.Up * (type.Height * 0.5f),
+                        units.Position[target] + Vector3.Up * (units.Catalog[units.Type[target]].Height * 0.5f))) continue;
                 // Only recoil when the projectile pool accepted the shot.
                 int before = projectiles.Count;
                 projectiles.Fire(i, target, units);

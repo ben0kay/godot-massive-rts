@@ -13,6 +13,7 @@ public partial class BenchmarkArena
     private SoldierPlacement[] autoBattlerRed;
     private readonly List<BuildingPlacement> autoBattlerDefenses = new();
     private ObstacleRectangle[] autoBattlerCover, autoBattlerWater;
+    private ObstacleRectangle[] autoBattlerTrenchBlockers = System.Array.Empty<ObstacleRectangle>();
     private ForestCover autoBattlerForest;
     private WorldPaint autoBattlerPaint;
     private ObstacleField autoBattlerSight, autoBattlerPaintCollision;
@@ -182,7 +183,8 @@ public partial class BenchmarkArena
                 }
 
         if (HasCitadelObjective && offenseCitadelSlot < 0) campaignMapError = "This battle requires exactly one objective Citadel.";
-        autoBattlerPaintCollision = BuildAutoBattlerField(autoBattlerCover.Concat(autoBattlerWater)
+        autoBattlerTrenchBlockers = map.GetNodeOrNull<CommandTerrain>("Terrain")?.TrenchBlockers ?? System.Array.Empty<ObstacleRectangle>();
+        autoBattlerPaintCollision = BuildAutoBattlerField(autoBattlerCover.Concat(autoBattlerWater).Concat(autoBattlerTrenchBlockers)
             .Concat(autoBattlerDefenses.Select(defense => defense.Footprint(buildings))));
         painter.BrushFaction = Factions.Blue;
         if (campaignRoster == null) painter.PaintRestriction = CanDeployBlue;
@@ -201,7 +203,7 @@ public partial class BenchmarkArena
         bool hasZone = rules.LineAxis != AutoBattlerRules.DeploymentAxis.Disabled || rules.BlueDeploymentCells.Count > 0;
         return Mathf.Abs(position.X) + radius <= half && Mathf.Abs(position.Z) + radius <= half &&
             (!hasZone || rules.AllowsBlueDeployment(position, radius)) &&
-            autoBattlerPaintCollision?.IntersectsCircle(ObstacleField.Xz(position), radius) != true;
+            autoBattlerPaintCollision?.ForTier(catalog[placement.Type].SizeTier).IntersectsCircle(ObstacleField.Xz(position), radius) != true;
     }
 
     private ObstacleField BuildAutoBattlerField(IEnumerable<ObstacleRectangle> areas, Rect2[] bridges = null)
@@ -216,6 +218,6 @@ public partial class BenchmarkArena
             .Select(structure => structure.Area) ?? Enumerable.Empty<ObstacleRectangle>();
         var cover = autoBattlerCover.Concat(survivingDefenses).ToArray();
         autoBattlerSight = BuildAutoBattlerField(cover);
-        SetBattleObstacles(BuildAutoBattlerField(cover.Concat(autoBattlerPaint?.MovementWater ?? autoBattlerWater), autoBattlerPaint?.BridgeAreas), null);
+        SetBattleObstacles(BuildAutoBattlerField(cover.Concat(autoBattlerPaint?.MovementWater ?? autoBattlerWater).Concat(autoBattlerTrenchBlockers), autoBattlerPaint?.BridgeAreas), null);
     }
 }

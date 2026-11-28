@@ -106,6 +106,7 @@ public sealed class ProjectileSystem
         bool launched = LaunchFrom(muzzle, aim, units.Faction[shooter], projectile,
             (againstStructure ? type.AgainstStructures(shotDamage) : type.AgainstUnits(shotDamage)) * units.AttackMultiplier(shooter),
             againstStructure ? type.StructureDamageType : type.UnitDamageType);
+        if (launched) units.RevealFromTrench(shooter);
         if (launched && !againstStructure)
             forestDeflection[slot] = Mathf.Clamp(definition.ForestDeflectionChance, 0f, 1f);
         if (launched && definition.EjectShellCasings && ShellCasingRequested != null)
@@ -239,6 +240,12 @@ public sealed class ProjectileSystem
                 else
                     blocked = obstacles != null && flight.BlocksOnObstacles &&
                         obstacles.FirstHit(ObstacleField.Xz(Position[i]), ObstacleField.Xz(next), 0f, out wallHit);
+                if (firingFootprints?[i] == null && units.Trenches is { } trenches &&
+                    trenches.MayCross(Position[i], next))
+                {
+                    float terrainHit = units.Grounding?.Field.SurfaceHit(Position[i], segment, 1f) ?? float.PositiveInfinity;
+                    if (terrainHit < wallHit) { wallHit = terrainHit; blocked = true; }
+                }
                 float contactFraction = wallHit;
                 int victim = wallHit > 0f
                     ? grid.FirstProjectileHit(units, sourceFaction[i], Position[i], segment, config.ProjectileHitRadius, movementPadding, out contactFraction, wallHit)

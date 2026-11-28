@@ -73,3 +73,7 @@ Select **Terrain → Road**. Drag to paint or enable **Rectangle fill**. Right-d
 ## Geothermal Vent
 
 Choose **Terrain → Geothermal Vent**. The placement disc shows the eruption radius. Click to place a vent, or use **Select** to inspect its radius and tune the cycle, strength, offset and damage. Move and erase use the standard object tools. Vents save with the map and support undo and redo.
+
+## Trench
+
+Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end. The line snaps to the nearest map axis. The preview shows the recessed floor and ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.

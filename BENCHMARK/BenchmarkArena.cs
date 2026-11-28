@@ -687,6 +687,7 @@ public partial class BenchmarkArena : Node3D
         units.Forest = autoBattlerForest;
         units.MarshCells = autoBattlerPaint?.MarshCells;
         units.Geothermal = GeothermalHazards.Create(autoBattlerPlaytestMap, units);
+        units.Trenches = autoBattlerPlaytestMap?.GetNodeOrNull<CommandTerrain>("Terrain")?.Trenches;
         units.RoadCells = autoBattlerPaint?.RoadCells;
         units.RoadSpeedMultiplier = autoBattlerPaint?.RoadSpeedMultiplier ?? 1f;
         units.Barricades = autoBattlerPaint?.BuildBarricades();
@@ -993,6 +994,7 @@ public partial class BenchmarkArena : Node3D
         deathFeedback.BeginTick();
         units.Disruptors?.Step(units, dt);
         units.StructureDomes.Step(dt, panel.ShieldsEnabled);
+        units.AdvanceTrenchClock(dt);
         long total = Stamp(), start;
         if (mode == BenchmarkMode.Melee || mode == BenchmarkMode.Ranged)
         {

@@ -14,6 +14,7 @@ public readonly record struct ObstacleRectangle(
     [JsonIgnore] private int HalfWidth => DeploymentLayout.CellHalfWidth(GridSize);
     // Authored scene meshes can supply exact world bounds. Painted saves use cells.
     [JsonIgnore] public Vector2? AirborneHeightRange { get; init; }
+    [JsonIgnore] internal float MinimumBlockingTier { get; init; }
     [JsonIgnore] internal float WreckTier { get; init; }
     [JsonIgnore] internal bool AllowInteriorEscape { get; init; }
     [JsonIgnore] public Rect2? WorldBounds { get; init; }

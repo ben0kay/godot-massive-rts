@@ -72,10 +72,10 @@ internal sealed class OccupiedCellTree
         return index;
     }
 
-    public int FindNearest(UnitState units, int[] next, Vector3 origin, int previous, bool pruneCells)
+    public int FindNearest(UnitState units, int[] next, Vector3 origin, int previous, bool pruneCells, bool concealment = false)
     {
         if (nodes.Count == 0) return -1;
-        int best = previous >= 0 && units.Health[previous] > 0 ? previous : -1;
+        int best = previous >= 0 && units.Health[previous] > 0 && (!concealment || units.CanDetectGroundTarget(origin, previous)) ? previous : -1;
         float bestDistance = best >= 0 ? origin.DistanceSquaredTo(units.Position[best]) : float.PositiveInfinity;
         Search(0, units, next, origin, pruneCells, ref best, ref bestDistance);
         return best;
@@ -121,7 +121,7 @@ internal sealed class OccupiedCellTree
             if (pruneCells && CellBound(cell, origin) >= bestDistance) continue;
             for (int id = cell.Head; id >= 0; id = next[id])
             {
-                if (units.Health[id] <= 0) continue;
+                if (units.Health[id] <= 0 || (concealment && !units.CanDetectGroundTarget(origin, id))) continue;
                 float distance = origin.DistanceSquaredTo(units.Position[id]);
                 if (distance >= bestDistance) continue;
                 best = id;

@@ -1,5 +1,6 @@
 // Standalone flat-ground scene for testing Fortress Defense squad commands.
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Godot;
@@ -194,13 +195,14 @@ public partial class CommandSandbox : Node3D
         units.Forest = paint?.Forest;
         units.MarshCells = paint?.MarshCells;
         units.Geothermal = GeothermalHazards.Create(this, units);
+        units.Trenches = GetNodeOrNull<CommandTerrain>("Terrain")?.Trenches;
         units.RoadCells = paint?.RoadCells;
         units.RoadSpeedMultiplier = paint?.RoadSpeedMultiplier ?? 1f;
         units.Barricades = paint?.BuildBarricades();
         units.HeavyRubbleCells = paint?.HeavyRubbleCells;
         units.HeavyRubbleSpeed = paint?.HeavyRubbleSpeed ?? 0.75f;
         buildings = new CommandBuildings(this, units, movement, CitadelHealth, ReadAuthoredWalls(groundForPlay: true), GetNodeOrNull<Node3D>("Citadel"),
-            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, paint?.MovementWater ?? water, paint?.BridgeAreas ?? System.Array.Empty<Rect2>(), StartingCarbon);
+            WorkerProductionSettings ?? GD.Load<CitadelWorkerSettings>("res://GAMEPLAY/PRODUCTION/DefaultCitadelWorkerSettings.tres"), rocks, water, (paint?.MovementWater ?? water).Concat(GetNodeOrNull<CommandTerrain>("Terrain")?.TrenchBlockers ?? System.Array.Empty<ObstacleRectangle>()).ToArray(), paint?.BridgeAreas ?? System.Array.Empty<Rect2>(), StartingCarbon);
         if (GetNodeOrNull<Node3D>("StartingFabricators") is Node3D fabricators)
             foreach (Node child in fabricators.GetChildren())
                 if (child is Node3D marker) buildings.AddStartingFabricator(marker.GlobalPosition, Factions.Blue);

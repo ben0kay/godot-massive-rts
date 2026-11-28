@@ -149,6 +149,7 @@ internal sealed class FortressWaves
     {
         if (Defeat || Victory) return false;
         units.StructureDomes.Step(delta);
+        units.AdvanceTrenchClock(delta);
         bool ventMoved = units.Geothermal?.Step(units, grid, buildings.MovementField, buildings.MapHalfWidth, delta) == true;
         SampleTicks++;
         tick++;
@@ -359,7 +360,7 @@ internal sealed class FortressWaves
             Vector3 position = units.Position[id];
             var sight = Sight(type, field);
             if (attackMove && target >= 0 &&
-                (units.Health[target] <= 0 || position.DistanceSquaredTo(units.Position[target]) > range * range ||
+                (units.Health[target] <= 0 || !units.CanDetectGroundTarget(units.Position[id], target) || position.DistanceSquaredTo(units.Position[target]) > range * range ||
                  position.DistanceSquaredTo(units.Position[target]) < type.MinimumFireRange * type.MinimumFireRange ||
                  sight?.BlocksSight(position, units.Position[target]) == true))
                 target = -1;

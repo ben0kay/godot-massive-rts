@@ -179,6 +179,10 @@ internal static class LevelEditorSave
     // =========================================================
     internal static void ValidateContent(LevelEditorMode mode, CommandSandbox map)
     {
+        var trenches = map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<TerrainTrench>().ToArray();
+        if (trenches != null && (trenches.Length > TerrainTrench.MaxPerMap ||
+            trenches.Any(trench => !trench.Fits(map.MapSize * 0.5f))))
+            throw new InvalidOperationException("Keep trenches and both ramps inside the map bounds.");
         if (map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<GeothermalVent>().Count() > GeothermalVent.MaxPerMap)
             throw new InvalidOperationException($"A map supports up to {GeothermalVent.MaxPerMap} vents.");
         var cliffs = map.GetNodeOrNull<CommandTerrain>("Terrain")?.GetChildren().OfType<TerrainCliff>().ToArray()
