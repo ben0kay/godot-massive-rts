@@ -63,7 +63,11 @@ public static class AreaDamage
         var feedback = heavyProjectile ? units.HitFeedback?.HeavyImpact : null;
         float edge = Mathf.Clamp(edgeDamageFraction, 0f, 1f);
         float radiusSquared = radius * radius;
-        var candidates = grid.GetCandidates(impact, radius + movementPadding, sourceFaction);
+        // An explosive shell can hit a large unit's footprint with its center outside the blast.
+        float queryRadius = directVictim >= 0
+            ? Mathf.Max(radius, ObstacleField.Xz(units.Position[directVictim] - impact).Length())
+            : radius;
+        var candidates = grid.GetCandidates(impact, queryRadius + movementPadding, sourceFaction);
         while (candidates.MoveNext())
         {
             int id = candidates.Current;
@@ -76,14 +80,14 @@ public static class AreaDamage
             }
             Vector3 offset = units.Position[id] - impact;
             float distanceSquared = offset.X * offset.X + offset.Z * offset.Z;
-            if (distanceSquared > radiusSquared || cover?.BlocksSight(impact, units.Position[id]) == true) continue;
-            float fraction = Mathf.Sqrt(distanceSquared) / radius;
+            bool direct = id == directVictim;
+            if ((!direct && distanceSquared > radiusSquared) || cover?.BlocksSight(impact, units.Position[id]) == true) continue;
+            float fraction = Mathf.Min(1f, Mathf.Sqrt(distanceSquared) / radius);
             if (feedback == null)
                 units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType, melee);
             else
             {
                 Vector2 away = ObstacleField.Xz(offset);
-                bool direct = id == directVictim;
                 Vector2 direction = direct ? trajectory : away;
                 if (direction.LengthSquared() < .000001f) direction = direct ? away : trajectory;
                 units.Damage(id, damage * Mathf.Lerp(1f, edge, fraction), damageType, melee,
