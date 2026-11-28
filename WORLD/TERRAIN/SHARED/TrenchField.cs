@@ -20,8 +20,8 @@ internal sealed class TrenchField
         foreach (var trench in trenches) bounds = bounds.Merge(trench.Bounds);
         foreach (var trench in trenches)
         {
-            var min = Cell(trench.Floor.Position);
-            var max = Cell(trench.Floor.End);
+            var min = Cell(trench.Bounds.Position);
+            var max = Cell(trench.Bounds.End);
             for (int z = min.Y; z <= max.Y; z++)
             for (int x = min.X; x <= max.X; x++)
             {
@@ -38,7 +38,7 @@ internal sealed class TrenchField
         Vector2 point = ObstacleField.Xz(position);
         if (!cells.TryGetValue(Cell(point), out var bucket)) return null;
         foreach (var trench in bucket)
-            if (includeRamps ? trench.Floor.HasPoint(point) && Mathf.Abs(position.Y - terrain.At(point.X, point.Y)) < 0.55f
+            if (includeRamps ? (trench.Floor.HasPoint(point) || trench.IsRamp(point)) && Mathf.Abs(position.Y - terrain.At(point.X, point.Y)) < 0.55f
                 : trench.Conceals(point) && Mathf.Abs(position.Y - trench.FloorHeight) < 0.55f) return trench;
         return null;
     }

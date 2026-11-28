@@ -76,4 +76,4 @@ Choose **Terrain → Geothermal Vent**. The placement disc shows the eruption ra
 
 ## Trench
 
-Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end or drag and release. The line snaps to the nearest map axis. The preview shows the recessed floor and ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.
+Choose **Terrain → Trench**, set floor width, depth and ramp length, then click the start and end or drag and release. The line snaps to the nearest map axis. The preview shows the narrow floor and two side ramps, one near each end on opposite sides. Steel panels line the trench and asphalt marks the ramps. Right-click cancels the draft or removes a trench under the cursor. Save, undo and redo use the normal object workflow.

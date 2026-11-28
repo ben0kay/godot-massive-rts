@@ -214,6 +214,7 @@ public partial class CommandTerrain : Node3D
         // Chunks are stored in world coordinates, independent of the authoring node.
         preview.TopLevel = true;
         preview.GlobalTransform = Transform3D.Identity;
+        foreach (var trench in trenches) preview.AddChild(TrenchLining.Build(trench, Field));
         BuildCliffs(cliffs, half);
         SurfaceChanged?.Invoke();
     }

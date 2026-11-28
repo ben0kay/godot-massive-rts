@@ -91,6 +91,12 @@ public sealed class ProjectileSystem
             projectile = mount.Projectile;
             shotDamage = mount.Damage;
         }
+        else if (units.Type[shooter] == RuntimeUnitCatalog.Tank)
+        {
+            Vector2 heading = units.Facing[shooter];
+            float barrel = type.Outline.RadiusZ * .70710678f * 1.16f;
+            muzzle += new Vector3(heading.X * barrel, type.Height * .34f, heading.Y * barrel);
+        }
         else if (type.Outline.IsChevron)
         {
             Vector2 heading = units.Facing[shooter];

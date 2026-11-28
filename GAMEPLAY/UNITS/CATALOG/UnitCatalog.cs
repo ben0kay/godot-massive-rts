@@ -173,10 +173,10 @@ public sealed class RuntimeUnitCatalog
 {
     public const string CircleId = "circle_infantry", SquareId = "square_infantry", TriangleId = "triangle_archer",
         DiamondId = "diamond_cavalry", PentagonId = "pentagon_elite", HexagonId = "hexagon_siege", ChevronId = "chevron_artillery", BreacherId = "h_breacher",
-        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher", PrismLanceId = "prism_lance", MobileGeneratorId = "mobile_generator", ObliteratorId = "obliterator", SiegeRamId = "siege_ram", InterceptorId = "interceptor_infantry", RallyCommanderId = "rally_commander";
+        LongTriangleId = "long_triangle_marksman", WorkerId = "worker", PikemanId = "pikeman", DreadnaughtId = "dreadnaught", TwinRocketLauncherId = "twin_rocket_launcher", PrismLanceId = "prism_lance", MobileGeneratorId = "mobile_generator", ObliteratorId = "obliterator", SiegeRamId = "siege_ram", InterceptorId = "interceptor_infantry", RallyCommanderId = "rally_commander", TankId = "tank";
     // Explicit dense mapping. Save files store IDs and never depend on these indices.
-    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12, PrismLance = 13, MobileGenerator = 14, Obliterator = 15, SiegeRam = 16, Interceptor = 17, RallyCommander = 18;
-    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId, PrismLanceId, MobileGeneratorId, ObliteratorId, SiegeRamId, InterceptorId, RallyCommanderId };
+    public const byte Circle = 0, Square = 1, Triangle = 2, Diamond = 3, Pentagon = 4, Hexagon = 5, Chevron = 6, Breacher = 7, LongTriangle = 8, Worker = 9, Pikeman = 10, Dreadnaught = 11, TwinRocketLauncher = 12, PrismLance = 13, MobileGenerator = 14, Obliterator = 15, SiegeRam = 16, Interceptor = 17, RallyCommander = 18, Tank = 19;
+    private static readonly string[] OrderedIds = { CircleId, SquareId, TriangleId, DiamondId, PentagonId, HexagonId, ChevronId, BreacherId, LongTriangleId, WorkerId, PikemanId, DreadnaughtId, TwinRocketLauncherId, PrismLanceId, MobileGeneratorId, ObliteratorId, SiegeRamId, InterceptorId, RallyCommanderId, TankId };
     private readonly UnitStats[] stats = new UnitStats[OrderedIds.Length];
     private readonly int[] battleRatings = new int[OrderedIds.Length];
     private readonly Dictionary<string, byte> indices = new(StringComparer.Ordinal);
@@ -285,6 +285,11 @@ public sealed class RuntimeUnitCatalog
         {
             var commander = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/RallyCommander.tres");
             if (commander != null) byId.Add(RallyCommanderId, commander);
+        }
+        if (!byId.ContainsKey(TankId))
+        {
+            var tank = GD.Load<UnitDefinition>("res://GAMEPLAY/UNITS/DEFINITIONS/Tank.tres");
+            if (tank != null) byId.Add(TankId, tank);
         }
         if (byId.Count != Count) throw new ArgumentException($"The catalogue requires {Count} unit definitions.");
         bool hasRangedRecoil = false;

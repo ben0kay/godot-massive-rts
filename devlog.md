@@ -798,3 +798,5 @@ Concise, chronological record of completed implementation tasks. **Append new en
 - 2026-11-27 — CLIFF2: Increased deterministic cliff-face relief and broad irregular buttresses; added varied stone strata and plateau surface detail. Authored rim, plateau height and navigation unchanged. Source review only; owner visual validation pending.
 
 - 2026-11-27 — CLIFF2 — Prevented painted ground-cover triangles from bridging cliff tops and lower terrain.
+
+- 2026-11-27 — Narrowed and lined trenches with steel and asphalt, moved their entries to opposite sides, and added a Tier 4 direct-fire tank with a tracked chassis and firing recoil.

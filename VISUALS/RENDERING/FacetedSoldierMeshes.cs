@@ -120,7 +120,7 @@ public static class FacetedSoldierMeshes
     }
 
     internal static bool UsesTwoToneArmor(string id, UnitOutline outline, UnitVisualConfig visuals) =>
-        id == RuntimeUnitCatalog.SiegeRamId || id == RuntimeUnitCatalog.RallyCommanderId ||
+        id == RuntimeUnitCatalog.SiegeRamId || id == RuntimeUnitCatalog.TankId || id == RuntimeUnitCatalog.RallyCommanderId ||
         (visuals.UseObliteratorAssaultMesh && id == RuntimeUnitCatalog.ObliteratorId) ||
         (visuals.UsePrismLanceMesh && id == RuntimeUnitCatalog.PrismLanceId) ||
         (visuals.UseLongMarksmanMesh && id == RuntimeUnitCatalog.LongTriangleId) ||
@@ -179,6 +179,7 @@ public static class FacetedSoldierMeshes
             else if (unit.Id == RuntimeUnitCatalog.PikemanId) AppendPikeman(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.ObliteratorId) AppendObliteratorAssault(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.PrismLanceId) AppendPrismLance(surface, outline, height);
+            else if (unit.Id == RuntimeUnitCatalog.TankId) AppendTank(surface, outline, height);
             else if (unit.Id == RuntimeUnitCatalog.SiegeRamId) AppendSiegeRam(surface, outline, height);
             else if (enhancedRocket) AppendTwinRocketArmor(surface, outline, height);
             else AppendLightArtilleryArmor(surface, outline, height);
@@ -560,6 +561,33 @@ public static class FacetedSoldierMeshes
         Block(0f, 0.04f, -0.48f, 0.29f, 0.17f, 0.86f, Steel(1f), piston: true);
         Block(0f, 0.04f, -0.89f, 0.94f, 0.38f, 0.22f, Steel(0.84f), piston: true);
         Block(0f, 0.15f, -0.99f, 0.67f, 0.065f, 0.024f, Trim(0.9f), piston: true);
+    }
+
+    // =========================================================
+    // Tracked siege chassis with a central armored turret and long cannon.
+    private static void AppendTank(SurfaceTool surface, UnitOutline outline, float height)
+    {
+        const float diagonal = .70710678f;
+        float x = outline.RadiusX * diagonal, z = outline.RadiusZ * diagonal;
+        Color steel = new(.91f, 0f, 0f), tracks = new(.39f, 0f, 0f);
+        Color paint = new(0f, .92f, 0f), trim = new(0f, 0f, .90f);
+        void Block(float px, float py, float pz, float w, float h, float d, Color color) =>
+            AppendPrism(surface, 4, w * x * diagonal, d * z * diagonal, h * height,
+                Mathf.Pi * .25f, new Vector3(px * x, py * height, pz * z), color,
+                sideShade: SoldierSideShade, armorMask: true);
+
+        Block(0f, -.18f, .1f, 1.68f, .45f, 1.55f, steel);
+        Block(0f, .12f, -.36f, 1.45f, .22f, .68f, steel);
+        Block(0f, .32f, .17f, 1.02f, .39f, .85f, steel);
+        Block(0f, .54f, .20f, .72f, .08f, .57f, paint);
+        Block(0f, .34f, -.52f, .20f, .16f, 1.18f, steel);
+        Block(0f, .34f, -1.07f, .30f, .24f, .18f, tracks);
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Block(side * .77f, -.31f, .10f, .43f, .37f, 1.74f, tracks);
+            Block(side * .77f, -.04f, .12f, .41f, .18f, 1.54f, paint);
+            Block(side * .56f, .10f, -.69f, .21f, .07f, .07f, trim);
+        }
     }
 
     private static void AppendHBreacher(SurfaceTool surface, UnitOutline outline, float height)

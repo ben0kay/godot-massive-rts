@@ -12,9 +12,9 @@ public partial class LevelEditor
 
     private void TrenchControls()
     {
-        Number(context, "Floor width", trenchWidth, 6, 24, 0.5).ValueChanged += value => trenchWidth = (float)value;
+        Number(context, "Floor width", trenchWidth * .5f, 3, 12, 0.25).ValueChanged += value => trenchWidth = (float)value * 2f;
         Number(context, "Depth", trenchDepth, 0.5, 8, 0.1).ValueChanged += value => trenchDepth = (float)value;
-        Number(context, "Ramp length at each end", trenchRamp, 4, 32, 0.5).ValueChanged += value => trenchRamp = (float)value;
+        Number(context, "Side ramp length", trenchRamp, 4, 32, 0.5).ValueChanged += value => trenchRamp = (float)value;
         Heading(context, "Click both ends or drag and release along a map axis. Right-click to cancel or remove.", 15);
     }
 
@@ -79,7 +79,7 @@ public partial class LevelEditor
         UpdateTrenchDraft(point);
         if (!CanPlaceTrench(terrain, trenchDraft))
         {
-            SetStatus("Use a longer line for both ramps. Keep trenches within the map and clear of other trenches, cliffs, rock and water.");
+            SetStatus("Use a longer line for both side entrances. Keep trenches within the map and clear of other trenches, cliffs, rock and water.");
             return;
         }
         var placed = trenchDraft;
@@ -127,14 +127,10 @@ public partial class LevelEditor
         var tint = valid ? new Color("#ffc383") : new Color("#ff6963");
         Vector2 axis = (draft.End - draft.Start).Normalized();
         Vector2 across = new(-axis.Y, axis.X);
-        float ramp = Mathf.Min(draft.Ramp, draft.Length * 0.5f);
-        Vector2 a = draft.Start + axis * ramp, b = draft.End - axis * ramp;
-        float baseA = Surface(new Vector3(draft.Start.X, 0f, draft.Start.Y));
-        float baseB = Surface(new Vector3(draft.End.X, 0f, draft.End.Y));
-        Vector2 center = (draft.Start + draft.End) * 0.5f;
-        float centerHeight = Surface(new Vector3(center.X, 0f, center.Y));
-        float floor = Mathf.Min(centerHeight, Mathf.Min(baseA, baseB)) - draft.Depth;
-        Vector2 half = across * (draft.Width * 0.5f);
+        float Height(Vector2 point) => Surface(new Vector3(point.X, 0f, point.Y));
+        Vector2 center = (draft.Start + draft.End) * .5f;
+        float floor = Mathf.Min(Height(center), Mathf.Min(Height(draft.Start), Height(draft.End))) - draft.Depth;
+        Vector2 half = across * (draft.FloorWidth * .5f);
         void Line(Vector2 from, float y, Vector2 to, float endY)
         {
             mesh.SurfaceSetColor(tint);
@@ -142,15 +138,18 @@ public partial class LevelEditor
             mesh.SurfaceSetColor(tint);
             mesh.SurfaceAddVertex(new Vector3(to.X, endY + 0.12f, to.Y));
         }
-        foreach (int side in new[] { -1, 1 })
+        Line(draft.Start - half, floor, draft.End - half, floor);
+        Line(draft.Start + half, floor, draft.End + half, floor);
+        Line(draft.Start - half, floor, draft.Start + half, floor);
+        Line(draft.End - half, floor, draft.End + half, floor);
+        foreach (bool far in new[] { false, true })
         {
-            Vector2 shift = half * side;
-            Line(draft.Start + shift, baseA, a + shift, floor);
-            Line(a + shift, floor, b + shift, floor);
-            Line(b + shift, floor, draft.End + shift, baseB);
+            Vector2 inner = draft.RampInner(far), outer = draft.RampOuter(far);
+            Vector2 edge = axis * (draft.EntryWidth * .5f);
+            Line(inner - edge, floor, outer - edge, Height(outer - edge));
+            Line(inner + edge, floor, outer + edge, Height(outer + edge));
+            Line(outer - edge, Height(outer - edge), outer + edge, Height(outer + edge));
         }
-        Line(a - half, floor, a + half, floor);
-        Line(b - half, floor, b + half, floor);
         mesh.SurfaceEnd();
         trenchPreview.Show();
     }
