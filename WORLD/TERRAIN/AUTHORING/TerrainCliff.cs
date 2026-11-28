@@ -95,27 +95,59 @@ public partial class TerrainCliff : Node3D
             surface.AddVertex(Top(outline[triangles[i + 2]]));
         }
 
+        // Keep the walkable plateau and blocked rim authoritative. Only the rock skin
+        // between the exact top and buried base is displaced.
         bool clockwise = Geometry2D.IsPolygonClockwise(outline);
+        int layers = Mathf.Clamp(Mathf.CeilToInt(Rise / 1.4f), 5, 28);
+        float relief = Mathf.Min(0.65f, Rise * 0.12f);
         for (int i = 0; i < outline.Length; i++)
         {
             var a = outline[i];
             var b = outline[(i + 1) % outline.Length];
             var edge = b - a;
             var normal = new Vector3(edge.Y, 0f, -edge.X).Normalized() * (clockwise ? -1f : 1f);
-            int sections = Mathf.Max(1, Mathf.CeilToInt(edge.Length() / TerrainHeightField.Spacing));
-            for (int section = 0; section < sections; section++)
+            int sections = Mathf.Clamp(Mathf.CeilToInt(edge.Length() / 1.4f), 2, 512);
+            var vertices = new Vector3[sections + 1, layers + 1];
+            for (int section = 0; section <= sections; section++)
             {
-                var left = a.Lerp(b, section / (float)sections);
-                var right = a.Lerp(b, (section + 1f) / sections);
-                var lowLeft = new Vector3(left.X, (ground?.At(left.X, left.Y) ?? 0f) - 0.08f, left.Y);
-                var lowRight = new Vector3(right.X, (ground?.At(right.X, right.Y) ?? 0f) - 0.08f, right.Y);
-                surface.SetNormal(normal);
-                surface.AddVertex(Top(left));
-                surface.AddVertex(lowLeft);
-                surface.AddVertex(lowRight);
-                surface.AddVertex(Top(left));
-                surface.AddVertex(lowRight);
-                surface.AddVertex(Top(right));
+                float u = section / (float)sections;
+                var p = a.Lerp(b, u);
+                float bottom = Mathf.Min(plateau.Height - 0.05f, (ground?.At(p.X, p.Y) ?? 0f) - 0.08f);
+                // Fade displacement at polygon joints so adjacent faces share exact seams.
+                float joint = Mathf.Clamp(Mathf.Min(u, 1f - u) * edge.Length() / 1.2f, 0f, 1f);
+                float column = Mathf.Sin(p.X * 0.71f + p.Y * 0.43f) * 0.55f +
+                    Mathf.Sin(p.X * 1.83f - p.Y * 1.21f) * 0.45f;
+                for (int layer = 0; layer <= layers; layer++)
+                {
+                    float t = layer / (float)layers;
+                    float envelope = layer == 0 || layer == layers ? 0f : Mathf.Sin(t * Mathf.Pi);
+                    float band = Mathf.Sin(layer * 2.4f + 0.35f * Mathf.Sin(p.X * 0.12f + p.Y * 0.15f));
+                    float shelf = band * 0.58f + column * 0.42f;
+                    float offset = relief * envelope * joint * shelf;
+                    float warped = t + envelope * 0.22f / layers * Mathf.Sin(p.X * 0.23f + p.Y * 0.31f + layer * 1.7f);
+                    vertices[section, layer] = new Vector3(p.X, Mathf.Lerp(bottom, plateau.Height, warped), p.Y) + normal * offset;
+                }
+            }
+
+            // Faceted normals make the larger shelves and fractures read as real rock.
+            void Face(Vector3 v0, Vector3 v1, Vector3 v2)
+            {
+                var n = (v1 - v0).Cross(v2 - v0).Normalized();
+                if (n.Dot(normal) < 0f) n = -n;
+                surface.SetNormal(n);
+                surface.AddVertex(v0);
+                surface.AddVertex(v1);
+                surface.AddVertex(v2);
+            }
+            for (int section = 0; section < sections; section++)
+            for (int layer = 0; layer < layers; layer++)
+            {
+                var lowLeft = vertices[section, layer];
+                var lowRight = vertices[section + 1, layer];
+                var highLeft = vertices[section, layer + 1];
+                var highRight = vertices[section + 1, layer + 1];
+                Face(highLeft, lowLeft, lowRight);
+                Face(highLeft, lowRight, highRight);
             }
         }
         parent.AddChild(new MeshInstance3D { Mesh = surface.Commit(), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
