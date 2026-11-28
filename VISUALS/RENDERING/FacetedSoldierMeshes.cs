@@ -627,12 +627,12 @@ public static class FacetedSoldierMeshes
         Vector2[] turret = { new(-.52f,-1f), new(.52f,-1f), new(1f,-.38f),
             new(1f,.42f), new(.62f,1f), new(-.62f,1f), new(-1f,.42f), new(-1f,-.38f) };
         Plate(0f,-.18f,.10f,.84f,.45f,.775f,Steel(.88f),wedge);
-        Plate(0f,.065f,.05f,.78f,.24f,.79f,Paint(.96f),wedge);
-        Plate(0f,.16f,-.38f,.61f,.12f,.35f,Paint(.99f),wedge);
+        Plate(0f,.065f,.05f,.78f,.24f,.79f,Steel(.95f),wedge);
+        Plate(0f,.16f,-.38f,.61f,.12f,.35f,Paint(.84f),wedge);
         // Fixed collar and independently rotating turret housing.
         Plate(0f,.19f,.17f,.47f,.10f,.38f,Steel(.65f),turret);
-        if (integratedTurret) Plate(0f,.32f,.17f,.51f,.39f,.425f,Paint(.92f),turret, housing: true);
-        if (integratedTurret) Plate(0f,.535f,.20f,.36f,.09f,.285f,Paint(1f),turret, housing: true);
+        if (integratedTurret) Plate(0f,.32f,.17f,.51f,.39f,.425f,Steel(.98f),turret, housing: true);
+        if (integratedTurret) Plate(0f,.535f,.20f,.36f,.09f,.285f,Paint(.90f),turret, housing: true);
         if (integratedTurret) Block(0f,.525f,.05f,.34f,.055f,.15f,Steel(.72f), housing: true);
         if (integratedTurret) Block(0f,.55f,-.03f,.24f,.04f,.035f,Trim(.92f), housing: true);
         if (integratedTurret) Block(0f,.34f,-.23f,.39f,.25f,.24f,Steel(.95f), housing: true);
@@ -648,11 +648,12 @@ public static class FacetedSoldierMeshes
         {
             // Track geometry and ground contact remain at the original coordinates.
             Block(side*.77f,-.31f,.10f,.43f,.37f,1.74f,Steel(.39f));
-            Plate(side*.77f,-.04f,.12f,.205f,.18f,.77f,Paint(.90f),wedge);
-            // Three armored skirt segments and rear cooling grilles.
+            Plate(side*.77f,-.04f,.12f,.205f,.18f,.77f,Steel(.88f),wedge);
+            // Three armored skirt segments: central faction panel, steel end plates.
+            // Rear cooling grilles retain their neutral metal.
             for (int segment = 0; segment < 3; segment++)
                 Plate(side*.77f,-.095f,-.38f+segment*.49f,.212f,.12f,.215f,
-                    Paint(.83f+segment*.05f),wedge);
+                    segment == 1 ? Paint(.90f) : Steel(.85f+segment*.04f),wedge);
             Block(side*.56f,.10f,-.69f,.21f,.07f,.07f,Trim(.94f));
             Block(side*.42f,.20f,.60f,.22f,.10f,.25f,Steel(.78f));
             for (int vent = 0; vent < 3; vent++)
